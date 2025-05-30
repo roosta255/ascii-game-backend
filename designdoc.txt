@@ -1,0 +1,15 @@
+
+Tenets of the Game Engine (unless you know better ones):
+1. Invalid state is unrepresentable:
+    a: I have my own custom Reference/Pointer classes that I use because I never want to use the standard c++ pointer (it doesn't protect me from null pointers).
+    b: I have my own Array class that i use because i never want to use the standard c++ array (it doesn't protect me from out of bound access).
+    c: I don't ever want dynamic memory, i can use my own Array class with a push_back function that doesn't allow for going over-bounds. I don't use c++ maps/hashmaps unless I really have to.
+    d: Strings are dynamic memory, so they should be avoided. The game logic should totally be implemented with Enums that i can compile against as valid. Enums such as what kind of character exists somewhere will protect against typos and invalid user inputs.
+
+The game i want built is a multiplayer turn-based puzzle dungeon. There would be accounts that people could create. once an account is created, it can create matches, once matches are created, they could join matches. Once matches are started, players can open them and take turns making their moves. The matches would play out in a dungeon. This DungeonMap would be a preset 3d grid, but the dungeon exists in the past as well as the present, so there's also another t dimension of size 2 with 0 being the past and 1 being the future. Specific changes to the dungeon may or may not affect the future dungeon, it depends on the temporal layout of the dungeon. So each dungeon is an array of 32 floorCells. Note that the dungeon's floorCells are agnostic of the grid and their relation to each other. The exact x,y,z,t dimensions of the dungeon is determined by a hardcoded DungeonLayoutEnum that can be used to map exact DungeonRoom(s) to specific kinds of neighbors such as:
+    Pointer<DungeonRoom> DungeonLayoutMapper::getCardinalNeighbor(const Array<DungeonRoom>& floorCells, const DungeonRoom& source, const Cardinal direction)
+    ^^ This Pointer will be empty if the neighbor doesn't exist.
+
+I've built a lot of the classes already, so if you can tell me about a class you want created, i can give you its signature if i've already written it.
+
+DungeonRooms are themselves grids of 4 x 5 cells, where each cell can house a character. Each character is a type of character, with a preset amount 

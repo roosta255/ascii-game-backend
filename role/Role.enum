@@ -1,0 +1,4 @@
+ROLE_DECL(TINKER,    1,  true,  true, 1,  true, 1, 1)
+ROLE_DECL(MINION,    1,  true,  true, 1,  true, 1, 4)
+ROLE_DECL(TOGGLER,   1, false, false, 0, false, 0, 0)
+ROLE_DECL(GENERATOR, 1, false, false, 0, false, 0, 0)
