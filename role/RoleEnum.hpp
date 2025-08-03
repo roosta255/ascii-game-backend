@@ -9,7 +9,7 @@
 // game can be played without it.
 // but it's probably just simpler 
 // to keep it.
-#define ROLE_DECL( name, health, foggy, movey, moves, acty, actions, feats ) ROLE_##name,
+#define ROLE_DECL( name, health, foggy, moves, actions, feats, activator, isActor, isKeyer, isObject ) ROLE_##name,
 enum RoleEnum
 {
 #include "Role.enum"

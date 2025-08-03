@@ -3,8 +3,6 @@
 #include "GeneratorUtility.hpp"
 #include "iLayout.hpp"
 
-#include <drogon/drogon.h>
-
 GeneratorUtility::GeneratorUtility (Array<Room, DUNGEON_ROOM_COUNT>& roomsIn, const iLayout& layoutIn):
     rooms(roomsIn), layout(&layoutIn)
 {
@@ -61,18 +59,13 @@ bool GeneratorUtility::accessRoomWall (const int4& coord, const Cardinal dir, st
             success = true;
             consumer(room1, room1.getWall(dir), room2.getWall(dir.getFlip()), room2); 
         });
-        if(failure) {
-            LOG_ERROR << "GeneratorUtility{size<" << size[0] << "," << size[1] << "," << size[2] << "," << size[3] << ">}::accessRoomWall({coord<" << coord[0] << "," << coord[1] << "," << coord[2] << "," << coord[3] << ">, dir: " << dir.getIndex() << "} failed due to missing room on the opposite wall.";
-        }
     })) {
-        LOG_ERROR << "GeneratorUtility{size<" << size[0] << "," << size[1] << "," << size[2] << "," << size[3] << ">}::accessRoomWall({coord<" << coord[0] << "," << coord[1] << "," << coord[2] << "," << coord[3] << ">, dir: " << dir.getIndex() << "} failed due to missing coordinate.";
     }
     return success;
 }
 
 bool GeneratorUtility::setupHorizontalWalls(std::initializer_list<int> row, int y, int z) {
     if (row.size() != size[0]) {
-        LOG_ERROR << "GeneratorUtility{size<" << size[0] << "," << size[1] << "," << size[2] << "," << size[3] << ">}::setupHorizontalWalls({size: " << row.size() << "}, " << y << ", " << z << ") failed due to row size mismatch.";
         return false;
     }
 
@@ -82,26 +75,18 @@ bool GeneratorUtility::setupHorizontalWalls(std::initializer_list<int> row, int 
             const int4 coord = {x, y, z, t};
             auto found = mapping.find(coord);
             if (found == mapping.end()) {
-                LOG_ERROR << "GeneratorUtility{size<" << size[0] << "," << size[1] << "," << size[2] << "," << size[3] << ">}::setupHorizontalWalls({size: " << row.size() << "}, " << y << ", " << z << ").for(x: " << x << ") is missing mapping for coord<" << coord[0] << "," << coord[1] << "," << coord[2] << "," << coord[3] << ">";
                 continue;
             }
 
             bool isInnerMissing;
             const bool isOuterMissing = !found->second.access([&](Room& roomA) {
-
                 Wall& wallA = roomA.getWall(Cardinal::north());
-
                 isInnerMissing = !layout->getWallNeighbor(rooms, roomA, Cardinal::north()).access([&](Room& roomB) {
                     Wall& wallB = roomB.getWall(Cardinal::south());
                     wallA.door = *it;
                     wallB.door = *it;
-                    // LOG_DEBUG << "GeneratorUtility{size<" << size[0] << "," << size[1] << "," << size[2] << "," << size[3] << ">}::setupHorizontalWalls({size: " << row.size() << "}, " << y << ", " << z << ").for(x: " << x << ") successfully set coord<" << coord[0] << "," << coord[1] << "," << coord[2] << "," << coord[3] << ">, offsets: [" << roomA.getOffset(rooms) << ", " << roomB.getOffset(rooms) << "]";
                 });
             });
-
-            if (isInnerMissing || isOuterMissing) {
-                // LOG_DEBUG << "GeneratorUtility{size<" << size[0] << "," << size[1] << "," << size[2] << "," << size[3] << ">}::setupHorizontalWalls({size: " << row.size() << "}, " << y << ", " << z << ").for(x: " << x << ") is missing room for coord<" << coord[0] << "," << coord[1] << "," << coord[2] << "," << coord[3] << ">" << (isOuterMissing ? "outer wall, possibly also inner." : "inner wall, but outer is present.");
-            }
         }
     }
 
@@ -110,7 +95,6 @@ bool GeneratorUtility::setupHorizontalWalls(std::initializer_list<int> row, int 
 
 bool GeneratorUtility::setupVerticalWalls(std::initializer_list<int> row, int y, int z) {
     if (row.size() != size[0] - 1) {
-        LOG_ERROR << "GeneratorUtility{size<" << size[0] << "," << size[1] << "," << size[2] << "," << size[3] << ">}::setupVerticalWalls({size: " << row.size() << "}, " << y << ", " << z << ") failed due to row size mismatch.";
         return false;
     }
 
@@ -120,7 +104,6 @@ bool GeneratorUtility::setupVerticalWalls(std::initializer_list<int> row, int y,
             int4 coord = {x, y, z, t};
             auto found = mapping.find(coord);
             if (found == mapping.end()) {
-                LOG_ERROR << "GeneratorUtility{size<" << size[0] << "," << size[1] << "," << size[2] << "," << size[3] << ">}::setupVerticalWalls({size: " << row.size() << "}, " << y << ", " << z << ").for(x: " << x << ") is missing mapping for coord<" << coord[0] << "," << coord[1] << "," << coord[2] << "," << coord[3] << ">";
                 continue;
             }
 

@@ -16,7 +16,7 @@ public:
     int depth = 1;
     int times = 1;
     Room& getEntrance(Array<Room, DUNGEON_ROOM_COUNT>& rooms) const override;
-    Pointer<Room> getWallNeighbor(Array<Room, DUNGEON_ROOM_COUNT>& rooms, const Room& src, const Cardinal) const override;
+    bool getWallNeighbor(const Array<Room, DUNGEON_ROOM_COUNT>& rooms, const Room& src, const Cardinal dir, int& offset) const override;
 
     void setDimensions(int,int,int,int);
 

@@ -1,0 +1,18 @@
+name: Validate AI Pull Requests
+
+on:
+  pull_request:
+    branches: [gamma]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build backend Docker image
+        run: docker build -t game-backend .
+
+      - name: Run simulation tests
+        run: docker run --rm game-backend ./test_simulation

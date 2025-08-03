@@ -2,6 +2,7 @@
 #include "GeneratorEnum.hpp"
 #include "GeneratorFlyweight.hpp"
 #include "GeneratorTutorial.hpp"
+#include "GeneratorPuzzle2.hpp"
 
 const Array<GeneratorFlyweight, GENERATOR_COUNT>& GeneratorFlyweight::getFlyweights() {
     static auto flyweights = [](){

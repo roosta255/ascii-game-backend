@@ -1,18 +1,23 @@
 #include "Player.hpp"
-#include <drogon/drogon.h>
+#include "Match.hpp"
+#include "Character.hpp"
+#include "Builder.hpp"
 #include <json/json.h>
 
-void Player::toJson(Json::Value& out) const {
-    out["account"] = account;
+void Player::startTurn(Match& match)
+{
 }
 
-bool Player::fromJson(const Json::Value& in) {
-    if (!in.isMember("account")) {
-        LOG_ERROR << "Player json is missing account field";
-        return false;
-    }
+void Player::endTurn(Match& match)
+{
+}
 
-    account = in["account"].asString();
+bool Player::isEmpty() const
+{
+    return this->account.empty();
+}
 
-    return true;
+bool Player::isHuman() const
+{
+    return this->account.substr(0, 3) != "NPC";
 }

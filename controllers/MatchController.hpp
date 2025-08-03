@@ -1,18 +1,23 @@
 #pragma once
 
-#include "iMatchStore.hpp"
+#include "CodeEnum.hpp"
+#include "iStore.hpp"
 #include "Match.hpp"
-#include "Array.hpp"
+#include <functional>
 #include <string>
 
 class MatchController {
 public:
-    MatchController(iMatchStore& store);
+    MatchController(iStore& store);
 
-    bool saveMatch(const Match& output);
+    bool init(const Match& match, CodeEnum& error);
 
-    bool loadMatch(const std::string& matchId, Match& output);
+    bool save(const Match& match, CodeEnum& error);
+
+    bool load(const std::string& matchId, CodeEnum& error, Match& output);
+
+    bool list(int& limit, int& offset, int& total, CodeEnum& error, std::function<void(const std::string&)> consumer);
 
 private:
-    iMatchStore& store_;
+    iStore& store_;
 };

@@ -12,5 +12,11 @@
   },
   "app": {
     "threads": 1
-  }
+  },
+  "filters": {
+    "CORSFilter": {
+      "class": "CORSFilter"
+    }
+  },
+  "defaultFilters": ["CORSFilter"]
 }

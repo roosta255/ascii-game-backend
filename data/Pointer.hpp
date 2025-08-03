@@ -18,7 +18,7 @@ constexpr static Pointer empty(){
 	return Pointer();
 }
 
-constexpr bool isEmpty(){
+constexpr bool isEmpty()const{
 	return nullptr == _ptr;
 }
 
@@ -28,6 +28,15 @@ constexpr bool isPresent() const {
 
 template<typename F>
 bool access(F f){
+	if (isPresent()) {
+		f(*_ptr);
+		return true;
+	}
+	return false;
+}
+
+template<typename F>
+bool access(F f) const {
 	if (isPresent()) {
 		f(*_ptr);
 		return true;

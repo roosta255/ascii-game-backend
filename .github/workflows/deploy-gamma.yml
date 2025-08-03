@@ -1,0 +1,18 @@
+name: Deploy to Gamma Environment
+
+on:
+  push:
+    branches: [gamma]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build Docker image
+        run: docker build -t game-backend .
+
+      - name: Run simulation tests
+        run: docker run --rm game-backend ./test_simulation

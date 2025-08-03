@@ -1,17 +1,35 @@
 #include "Dungeon.hpp"
 #include "iLayout.hpp"
 #include "int4_to_json.hpp"
+#include "JsonParameters.hpp"
 #include "LayoutFlyweight.hpp"
-#include <drogon/drogon.h>
+#include "DoorEnum.hpp"
+#include "RoleEnum.hpp"
+#include "CodeEnum.hpp"
 #include <json/json.h>
 
-bool Dungeon::accessLayout(std::function<void(const iLayout&)> consumer) {
+bool Dungeon::accessLayoutFlyweight(CodeEnum& error, std::function<void(const LayoutFlyweight&)> consumer) const
+{
+    const bool isAccessed = LayoutFlyweight::getFlyweights().accessConst(layout, [&](const LayoutFlyweight& flyweight){
+        consumer(flyweight);
+    });
+    if (!isAccessed) {
+        error = CODE_INACCESSIBLE_LAYOUT;
+    }
+    return isAccessed;
+}
+
+bool Dungeon::accessLayout(CodeEnum& error, std::function<void(const iLayout&)> consumer) const
+{
     bool isAccessed = false;
-    LayoutFlyweight::getFlyweights().accessConst(layout, [&](const LayoutFlyweight& flyweight){
-        flyweight.layout.accessConst([&](const iLayout& layoutIntf){
+    accessLayoutFlyweight(error, [&](const LayoutFlyweight& flyweight){
+        const bool isLayoutAccessed = flyweight.layout.accessConst([&](const iLayout& layoutIntf){
             isAccessed = true;
             consumer(layoutIntf);
         });
+        if (!isLayoutAccessed) {
+            error = CODE_INACCESSIBLE_LAYOUT;
+        }
     });
     return isAccessed;
 }
@@ -20,8 +38,10 @@ bool Dungeon::findCharacter(
     Room& room,
     int searched,
     std::function<void(Cell&, const Cardinal, Room&, Cell&)> wallConsumer,
-    std::function<void(int, int, Cell&)> floorConsumer)
+    std::function<void(int, int, Cell&)> floorConsumer
+)
 {
+    CodeEnum error;
     bool isFound = false;
     // Search floor cells
     for (int y = 0; y < DUNGEON_ROOM_HEIGHT; ++y) {
@@ -42,7 +62,7 @@ bool Dungeon::findCharacter(
 
         if (wall.cell.offset == searched) {
             isFound = true;
-            this->accessLayout([&](const iLayout& layoutIntf){
+            this->accessLayout(error, [&](const iLayout& layoutIntf){
                 layoutIntf.getWallNeighbor(rooms, room, dir).access([&](Room& neighbor) {
                     Cell& otherCell = neighbor.getWall(dir.getFlip()).cell;
                     if (otherCell.offset == searched) {
@@ -56,54 +76,117 @@ bool Dungeon::findCharacter(
     return isFound;
 }
 
-
-void Dungeon::toJson(Json::Value& out) const {
-    // rooms
-    Json::Value roomsJson(Json::arrayValue);
-    for (const auto& room: rooms) {
-        Json::Value b;
-        room.toJson(b);
-        b["offset"] = room.getOffset(rooms);
-        roomsJson.append(b);
+void Dungeon::toggleDoors() {
+    isBlueOpen = !isBlueOpen;
+    
+    // Iterate through all rooms and their walls
+    for (Room& room : rooms) {
+        for (Cardinal dir : Cardinal::getAllCardinals()) {
+            Wall& wall = room.getWall(dir);
+            
+            // Update door types based on isBlueOpen
+            if (wall.door == DOOR_TOGGLER_BLUE_OPEN || wall.door == DOOR_TOGGLER_BLUE_CLOSED) {
+                wall.door = isBlueOpen ? DOOR_TOGGLER_BLUE_OPEN : DOOR_TOGGLER_BLUE_CLOSED;
+            }
+            else if (wall.door == DOOR_TOGGLER_ORANGE_OPEN || wall.door == DOOR_TOGGLER_ORANGE_CLOSED) {
+                wall.door = isBlueOpen ? DOOR_TOGGLER_ORANGE_CLOSED : DOOR_TOGGLER_ORANGE_OPEN;
+            }
+        }
     }
-    out["rooms"] = roomsJson;
-
-    // layout
-    LayoutFlyweight::getFlyweights().accessConst(layout, [&](const LayoutFlyweight& flyweight){
-        out["layout"] = flyweight.name;
-    });
 }
 
-bool Dungeon::fromJson(const Json::Value& in) {
-    // rooms
-    const auto& roomsJson = in["rooms"];
-    if (!roomsJson.isArray()) {
-        LOG_ERROR << "Dungeon json couldnt parse rooms field due to it not being an array";
-        return false;
+bool Dungeon::containsRoom(const Room& room, int& roomId) const {
+    // Get base address of rooms array
+    auto base = reinterpret_cast<const char*>(&rooms.head());
+    
+    // Get address of the source room
+    auto ptr = reinterpret_cast<const char*>(&room);
+    
+    // Verify that the room lies within the rooms array
+    auto end = base + (sizeof(rooms));
+    if (ptr >= base && ptr < end) {
+        // Calculate room index
+        roomId = static_cast<int>((ptr - base) / sizeof(Room));
+        return true;
     }
-    if (roomsJson.size() != rooms.size()) {
-        LOG_ERROR << "Dungeon json couldnt parse rooms field due to it not having " << rooms.size() << " elements";
-        return false;
+    return false;
+}
+
+Pointer<Room> Dungeon::getRoom(int roomId, CodeEnum& error) {
+    if (roomId < 0 || roomId >= DUNGEON_ROOM_COUNT) {
+        error = CODE_ROOM_ID_OUT_OF_BOUNDS;
+        return Pointer<Room>::empty();
     }
-    int i = 0;
-    for (auto& room: rooms) {
-        if (!room.fromJson(roomsJson[i])) {
-            LOG_ERROR << "Dungeon json couldnt parse rooms["<< i <<"] field";
-            return false;
+    return rooms.getPointer(roomId);
+}
+
+Pointer<const Room> Dungeon::getRoom(int roomId, CodeEnum& error) const {
+    if (roomId < 0 || roomId >= DUNGEON_ROOM_COUNT) {
+        error = CODE_ROOM_ID_OUT_OF_BOUNDS;
+        return Pointer<const Room>::empty();
+    }
+    return rooms.getPointer(roomId);
+}
+
+bool Dungeon::accessWall(
+    Room& source,
+    Cardinal dir,
+    std::function<void(Cell&, Cell&, Room&)> neighborCallback,
+    std::function<void(Cell&)> noNeighborCallback
+) {
+    CodeEnum error;
+    // Get the source wall cell
+    Cell& sourceCell = source.getWall(dir).cell;
+
+    // Try to get the neighboring room
+    bool success = false;
+    accessLayout(error, [&](const iLayout& layout) {
+        auto neighborRoom = layout.getWallNeighbor(rooms, source, dir);
+        if (neighborRoom.isPresent()) {
+            // If we have a neighbor, get its corresponding wall cell
+            neighborRoom.access([&](Room& room) {
+                Cell& neighborCell = room.getWall(dir.getFlip()).cell;
+                neighborCallback(sourceCell, neighborCell, room);
+                success = true;
+            });
+        } else {
+            // If no neighbor, just handle the source cell
+            noNeighborCallback(sourceCell);
+            success = true;
         }
-        i++;
-    }
+    });
 
-    // layout
-    if (!in.isMember("layout")) {
-        LOG_ERROR << "Dungeon json is missing layout field";
-        return false;
-    }
-    auto layoutName = in["layout"].asString();
-    if (!LayoutFlyweight::indexByString(layoutName, layout)) {
-        LOG_ERROR << "Dungeon json couldnt parse layout " << layoutName;
-        return false;
-    }
+    return success;
+}
 
-    return true;
+bool Dungeon::accessWall(
+    const Room& source,
+    Cardinal dir,
+    std::function<void(const Cell&, const Cell&, const Room&)> neighborCallback,
+    std::function<void(const Cell&)> noNeighborCallback
+) const
+{
+    CodeEnum error;
+    // Get the source wall cell
+    const Cell& sourceCell = source.getWall(dir).cell;
+
+    // Try to get the neighboring room
+    bool success = false;
+    accessLayout(error, [&](const iLayout& layout) {
+        auto neighborRoom = layout.getWallNeighbor(rooms, source, dir);
+        if (neighborRoom.isPresent()) {
+            // If we have a neighbor, get its corresponding wall cell
+            neighborRoom.access([&](const Room& room) {
+                const Cell& neighborCell = room.getWall(dir.getFlip()).cell;
+                neighborCallback(sourceCell, neighborCell, room);
+                success = true;
+            });
+        } else {
+            // If no neighbor, just handle the source cell
+            noNeighborCallback(sourceCell);
+            success = true;
+        }
+    });
+
+    return success;
 }

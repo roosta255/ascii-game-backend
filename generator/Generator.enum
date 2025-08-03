@@ -1,1 +1,2 @@
 GENERATOR_DECL(TUTORIAL, GeneratorTutorial)
+GENERATOR_DECL(PUZZLE_2, GeneratorPuzzle2)

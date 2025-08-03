@@ -5,14 +5,12 @@
 #include "Character.hpp"
 #include "Player.hpp"
 
-namespace Json {
-    class Value;
-}
+class Match;
 
 struct Builder {
     Player player;
     Character character;
 
-    void toJson(Json::Value& out) const;
-    bool fromJson(const Json::Value& in);
+    void startTurn(Match& match);  // Start builder's turn
+    void endTurn(Match& match);    // End builder's turn
 };

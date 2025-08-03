@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "*.macro": "cpp",
+        "*.enum": "cpp"
+    }
+}

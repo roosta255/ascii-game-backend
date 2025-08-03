@@ -1,11 +1,22 @@
 #include "Array.hpp"
 #include "DoorEnum.hpp"
 #include "DoorFlyweight.hpp"
+#include "iActivator.hpp"
+#include "ActivatorKeeper.hpp"
+#include "ActivatorInactiveDoor.hpp"
+#include "ActivatorShifter.hpp"
 
 const Array<DoorFlyweight, DOOR_COUNT>& DoorFlyweight::getFlyweights() {
     static auto flyweights = [](){
         Array<DoorFlyweight, DOOR_COUNT> flyweights;
-        #define DOOR_DECL( name_text, blockingness ) flyweights.getPointer( DOOR_##name_text ).access([](DoorFlyweight& flyweight){ flyweight.blocking = blockingness; flyweight.name = #name_text; });
+        #define DOOR_DECL( name_text, blockingness, activator_, doorway_ ) \
+            static activator_ GLOBAL_##name_text##activator_; \
+            flyweights.getPointer( DOOR_##name_text ).access([](DoorFlyweight& flyweight){ \
+                flyweight.blocking = blockingness; \
+                flyweight.name = #name_text; \
+                flyweight.isDoorway = doorway_; \
+                flyweight.activator = GLOBAL_##name_text##activator_; \
+            });
         #include "Door.enum"
         #undef DOOR_DECL
 

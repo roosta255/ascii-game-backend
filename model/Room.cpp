@@ -1,5 +1,6 @@
 #include "Room.hpp"
-#include <drogon/drogon.h>
+#include "Match.hpp"
+#include "JsonParameters.hpp"
 #include <json/json.h>
 
 Wall& Room::getWall (Cardinal dir) {
@@ -12,69 +13,106 @@ Wall& Room::getWall (Cardinal dir) {
     return *result;
 }
 
+const Wall& Room::getWall (Cardinal dir) const {
+    // shouldn't be possible
+    static Wall nil;
+    const Wall* result = &nil;
+    walls.accessConst(dir.getIndex(), [&](const Wall& accessed){
+        result = &accessed;
+    });
+    return *result;
+}
+
 int Room::getOffset(const Array<Room, DUNGEON_ROOM_COUNT>& rooms)const {
     return this - &rooms.head();
 }
 
-void Room::toJson(Json::Value& out) const {
-    // door cells
-    Json::Value wallsJson(Json::arrayValue);
-    for (const auto& t: walls) {
-        Json::Value j;
-        t.toJson(j);
-        wallsJson.append(j);
+Pointer<Cell> Room::getCell(int offset, CodeEnum& error) {
+    Pointer<Cell> result = floorCells.getPointer(offset);
+    if (result.isEmpty()) {
+        error = CODE_INACCESSIBLE_ROOM_FLOOR_CELL_ID;
     }
-    out["walls"] = wallsJson;
+    return result;
+}
 
+void Room::forEachCharacter(Match& match, std::function<void(Character&)> consumer) {
+    // Iterate over floor cells
+    for (Cell& cell : floorCells) {
+        CodeEnum error;
+        match.getCharacter(cell.offset, error).access([&](Character& character){
+            consumer(character);
+        });
+    }
+
+    // Iterate over wall cells
+    for (Wall& wall : walls) {
+        CodeEnum error;
+        match.getCharacter(wall.cell.offset, error).access([&](Character& character){
+            consumer(character);
+        });
+    }
+}
+
+bool Room::containsCharacter(int offset) const {
+    for (const auto& cell: floorCells) {
+        if (cell.offset == offset) {
+            return true;
+        }
+    }
+    for (const auto& wall: walls) {
+        if (wall.cell.offset == offset) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Room::containsFloorCell(const Cell& cell, CodeEnum& error, int& index) const {
+    if (floorCells.containsAddress(cell, index)) {
+        return true;
+    }
+    error = CODE_INACCESSIBLE_ROOM_FLOOR_CELL_ID;
+    return false;
+}
+
+
+/*
+void Room::toJson(JsonParameters& params, Json::Value& out) const {
     // floor cells
     Json::Value floorCellsJson(Json::arrayValue);
-    for (const auto& cell: floorCells) {
+    int i = 0;
+    constexpr auto ROOM_CELL_WIDTH = 4;
+    for (auto& cell: floorCells) {
         Json::Value j;
-        cell.toJson(j);
+        cell.toJson(params, j);
+        if (params.isCoordinating()) {
+            j["x"] = i % ROOM_CELL_WIDTH;
+            j["y"] = i / ROOM_CELL_WIDTH;
+        }
         floorCellsJson.append(j);
+        i++;
     }
     out["floorCells"] = floorCellsJson;
 
-}
-
-bool Room::fromJson(const Json::Value& in) {
     // walls
-    const auto& wallsJson = in["walls"];
-    if (!wallsJson.isArray()) {
-        LOG_ERROR << "Dungeon json couldnt parse walls field due to it not being an array";
-        return false;
-    }
-    if (wallsJson.size() != walls.size()) {
-        LOG_ERROR << "Dungeon json couldnt parse walls field due to it not having " << walls.size() << " elements";
-        return false;
-    }
-    int i = 0;
-    for (auto& t: walls) {
-        if (!t.fromJson(wallsJson[i])) {
-            LOG_ERROR << "Dungeon json couldnt walls["<< i <<"] field";
-            return false;
+    Json::Value wallsJson(Json::arrayValue);
+    int dir = 0;
+    for (const auto& wall: walls) {
+        Json::Value wallJson;
+        wall.toJson(params, wallJson);
+        if (params.isClient()) {
+            params.match.dungeon.accessWall(*this, dir, 
+                [&](const Cell&, const Cell&, const Room& adj){
+                    int roomIndex = -1;
+                    if (params.match.dungeon.containsRoom(adj, roomIndex)) {
+                        wallJson["adjacent"] = roomIndex;
+                    }
+                },
+                [](const Cell&){});
         }
-        i++;
+        wallsJson.append(wallJson);
+        dir++;
     }
-
-    // floorCells
-    const auto& floorCellsJson = in["floorCells"];
-    if (!floorCellsJson.isArray()) {
-        LOG_ERROR << "Dungeon json couldnt parse floorCells field due to it not being an array";
-        return false;
-    }
-    if (floorCellsJson.size() != floorCells.size()) {
-        LOG_ERROR << "Dungeon json couldnt parse floorCells field due to it not having " << floorCells.size() << " elements";
-        return false;
-    }
-    int j = 0;
-    for (auto& cell: floorCells) {
-        if (!cell.fromJson(floorCellsJson[j])) {
-            LOG_ERROR << "Dungeon json couldnt floorCells["<< j <<"] field";
-            return false;
-        }
-        j++;
-    }
-
-    return true;
+    out["walls"] = wallsJson;
 }
+*/

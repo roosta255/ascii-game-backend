@@ -1,6 +1,6 @@
 #pragma once
 
-#define DOOR_DECL( name, blocks ) DOOR_##name,
+#define DOOR_DECL( name, blocks, activator, doorway_ ) DOOR_##name,
 enum DoorEnum
 {
 #include "Door.enum"

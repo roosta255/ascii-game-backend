@@ -1,0 +1,4 @@
+PLAY_DECL(PC_TITAN, ActivatePlayerCharacter)
+PLAY_DECL(PC_BUILDER, ActivatePlayerCharacter)
+PLAY_DECL(NPC_NULL_TITAN, ActivateNonPlayerCharacterNullTitan)
+PLAY_DECL(NPC_NULL_BUILDER, ActivateNonPlayerCharacterNullBuilder) 

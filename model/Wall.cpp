@@ -1,47 +1,35 @@
 #include "Wall.hpp"
 #include "DoorFlyweight.hpp"
-
-#include <drogon/drogon.h>
+#include "iActivator.hpp"
+#include "JsonParameters.hpp"
 #include <json/json.h>
 
-bool Wall::accessDoor
-(
-    std::function<void(const DoorFlyweight&)> consumer
-) const {
-    return DoorFlyweight::getFlyweights().accessConst(door, [&](const DoorFlyweight& flyweight){
+bool Wall::isWalkable(CodeEnum& error) const {
+    bool result = false;
+    accessDoor(error, [&](const DoorFlyweight& flyweight){
+        if (flyweight.blocking) error = CODE_BLOCKING_DOOR_TYPE;
+        else result = true;
+    });
+    return result;
+}
+
+bool Wall::accessDoor(CodeEnum& error, std::function<void(const DoorFlyweight&)> consumer) const {
+    const bool isDoorFlyweightAccessible = DoorFlyweight::getFlyweights().accessConst(door, [&](const DoorFlyweight& flyweight){
         consumer(flyweight);
     });
+    if (!isDoorFlyweightAccessible) error = CODE_INACCESSIBLE_DOOR_FLYWEIGHT;
+    return isDoorFlyweightAccessible;
 }
 
-void Wall::toJson(Json::Value& out) const {
-    // cell
-    Json::Value cellJson;
-    cell.toJson(cellJson);
-    out["cell"] = cellJson;
-
-    // door
-    DoorFlyweight::getFlyweights().accessConst(door, [&](const DoorFlyweight& flyweight){
-        out["door"] = flyweight.name;
+CodeEnum Wall::activate(Player& player, Character& character, Room& room, const Cardinal& direction, Match& match) {
+    CodeEnum result = CODE_PREACTIVATE_IN_WALL;
+    accessDoor(result, [&](const DoorFlyweight& door) {
+        if (!door.activator.accessConst([&](const iActivator& activatorIntf) {
+            Activation activation(player, character, room, Pointer<Character>::empty(), direction, match);
+            result = activatorIntf.activate(activation);
+        })) {
+            result = CODE_DOOR_MISSING_ACTIVATOR;
+        }
     });
-}
-
-bool Wall::fromJson(const Json::Value& in) {
-    // cell
-    if (!cell.fromJson(in["cell"])) {
-        LOG_ERROR << "Wall json couldnt parse cell field";
-        return false;
-    }
-
-    // door
-    if (!in.isMember("door")) {
-        LOG_ERROR << "Wall json is missing door field";
-        return false;
-    }
-    auto doorname = in["door"].asString();
-    if (!DoorFlyweight::indexByString(doorname, door)) {
-        LOG_ERROR << "Wall json couldnt parse door " << doorname;
-        return false;
-    }
-
-    return true;
+    return result;
 }

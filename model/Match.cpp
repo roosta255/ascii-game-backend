@@ -1,193 +1,214 @@
 #include "DoorFlyweight.hpp"
 #include "GeneratorFlyweight.hpp"
+#include "iActivator.hpp"
 #include "iGenerator.hpp"
 #include "iLayout.hpp"
+#include "JsonParameters.hpp"
+#include "make_filename.hpp"
 #include "Match.hpp"
-#include <drogon/drogon.h>
+#include "RoleFlyweight.hpp"
 #include <json/json.h>
+#include <nlohmann/json.hpp>
 
 constexpr size_t KILOBYTE = 1024;
 static_assert(sizeof(Match) > KILOBYTE, "size milestone passed");
 static_assert(sizeof(Match) < KILOBYTE * KILOBYTE, "size milestone passed");
 
-bool Match::create(const std::string& creator) {
-    static int idCounter = 0;
-
-    std::ostringstream oss;
-    oss << "match_" << ++idCounter;
-    match = oss.str();
-    version = 0;
-
-    host = creator;
-    titan.player.account = creator;
-
-    return true;
+void Match::setFilename() {
+    filename = make_filename("match-" + host + "-" + username);
 }
 
-bool Match::generate (int seed, Match& output) {
-    const Match* me = this;
+bool Match::generate
+(int seed, CodeEnum& error) {
     bool success = false;
     GeneratorFlyweight::getFlyweights().accessConst(generator, [&](const GeneratorFlyweight& flyweight){
         flyweight.generator.accessConst([&](const iGenerator& generator){
-            success = generator.generate(*me, seed, output);
+            success = generator.generate(seed, *this);
         });
     });
     return success;
 }
 
-bool Match::join
-(
-    const std::string& joiner
-) {
-    bool joined = false;
+bool Match::accessPlayer
+(const std::string& player, CodeEnum& error, std::function<void(Titan&)> titanConsumer, std::function<void(Builder&)> builderConsumer) {
+    if (titan.player.account == player) {
+        titanConsumer(titan);
+        return true;
+    }
+    for (auto& builder: builders) {
+        if (builder.player.account == player) {
+            builderConsumer(builder);
+            return true;
+        }
+    }
+    error = CODE_INACCESSIBLE_PLAYER;
+    return false;
+}
+
+bool Match::accessPlayers
+( CodeEnum& error, std::function<void(Titan&, Player&)> consumeTitan, std::function<void(Builder&, Player&, const int)> consumeBuilder)
+{
+    if (!titan.player.isEmpty())
+        consumeTitan(titan, titan.player);
+    int i = 0;
+    for (auto& builder: builders) {
+        if (!builder.player.isEmpty())
+            consumeBuilder(builder, builder.player, i++);
+    }
+    return true;
+}
+
+bool Match::setupSingleBuilder(CodeEnum& error) {
+    // assuming TITAN_ONLY, addBuilder, removeTitan
+    // migrate host to builder[0]
+    turner.addBuilder();
+    turner.removeTitan();
+    accessPlayers(error,
+        [](Titan&, Player& player){ player.account = ""; },
+        [](Builder&, Player& player, const int){
+            player.account = "";
+        });
+    builders.access(0, [&](Builder& builder){ builder.player.account = this->host; });
+    return true;
+}
+
+bool Match::setupSingleTitan(CodeEnum& error) {
+    // assuming TITAN_ONLY, noop
+    // migrate host to titan
+    return accessPlayers(error,
+        [&](Titan&, Player& player){ player.account = this->host; },
+        [](Builder&, Player& player, const int){ player.account = ""; });
+}
+
+bool Match::join(const std::string& joiner) {
+
+    if (this->titan.player.account.empty()) {
+        this->titan.player.account = joiner;
+        turner.addTitan();
+        return true;
+    }
+
     for (auto& builder: builders) {
         if (builder.player.account.empty()) {
             builder.player.account = joiner;
-            joined = true;
-            break;
+            turner.addBuilder();
+            return true;
         }
     }
 
-    return joined;
+    return false;
 }
 
 bool Match::start() {
-    if (started) {
-        LOG_ERROR << "Match already started.";
+    CodeEnum error;
+    if (isStarted(error)) {
         return false;
     }
 
-    bool success = false;
-
-    bool isDungeonAccessed = dungeon.accessLayout([&](const iLayout& layout){
-        Room& entrance = layout.getEntrance(dungeon.rooms);
-        entrance.floorCells.access(0, [&](Cell& cell){
-            builders.access(0, [&](Builder& builder){
-                if (!containsCharacter(builder.character, cell.offset)) {
-                    LOG_ERROR << "Match started, but first builder not in match. Please investigate.";
-                    return;
-                }
-                LOG_DEBUG << "Started character " << cell.offset;
-                success = true;
-            });
-        });
-    });
-
-    if (!success) {
-        LOG_ERROR << "Match::start(), but failed to move builder.";
-    }
-
-    return started = success;
+    return turner.startGame() == CODE_SUCCESS;
 }
 
-MovementEnum Match::moveCharacterToWall
-(
-    int roomId,
-    int characterId,
-    Cardinal direction
-) {
-    // TODO: error swallowing is hard to follow
-    LOG_DEBUG << "Match::moveCharacterToWall() starting...";
-    if (!started) {
-        LOG_DEBUG << "Match::moveCharacterToWall() failed due to unstarted match " << match;
-        return MOVEMENT_UNSTARTED_MATCH;
-    }
+CodeEnum Match::moveCharacterToWall(int roomId, int characterId, Cardinal direction) {
+    CodeEnum result = CODE_PREACTIVATE_IN_LOOKUPS;
 
-    MovementEnum result = MOVEMENT_SUCCESS;
-
-    const bool isCharacterIdValid = getCharacter(characterId).access([&](Character& character){
-        if (!character.isMovable()) {
-            LOG_DEBUG << "Match::moveCharacterToWall() failed due to immovable character " << characterId;
-            result = MOVEMENT_IMMOVABLE_CHARACTER;
-            return;
-        }
-
-        const bool isRoomIdValid = dungeon.rooms.access(roomId, [&](Room& room) {
-            // check next room
-            Wall& next = room.getWall(direction);
-
-            // occupied target check
-            if (containsOffset(next.cell.offset)) {
-                LOG_DEBUG << "Match::moveCharacterToWall() failed due to occupied target cell";
-                result = MOVEMENT_OCCUPIED_TARGET_CELL;
-                return;
-            }
-
-            bool isBlocked = true;
-            room.getWall(direction).accessDoor([&](const DoorFlyweight& flyweight){
-                isBlocked = flyweight.blocking;
-            });
-            if (isBlocked) {
-                LOG_DEBUG << "Match::moveCharacterToWall() failed due to blocked door type";
-                result = MOVEMENT_BLOCKING_DOOR_TYPE;
-                return;
-            }
-
-            // cleanup previous
-            bool isCleanedUp = false;
-            dungeon.findCharacter(
-                room,
-                characterId,
-                [&](Cell& local, Cardinal, Room&, Cell& other) {
-                    local.offset = 0;
-                    other.offset = 0;
-                    LOG_DEBUG << "Match::moveCharacterToWall() cleaning up character from wall";
-                    isCleanedUp = true;
-                },
-                [&](int, int, Cell& cell) {
-                    cell.offset = 0;
-                    LOG_DEBUG << "Match::moveCharacterToWall() cleaning up character from floor";
-                    isCleanedUp = true;
-                }
-            );
-
-            if (!isCleanedUp) {
-                result = MOVEMENT_MISSING_CHARACTER_CLEANUP;
-                return;
-            }
-
-            // set next
-            next.cell.offset = characterId;
-            LOG_DEBUG << "Match::moveCharacterToWall() setting cheracter in this room";
-            const bool isLayoutValid = dungeon.accessLayout([&](const iLayout& layout){
-                const bool isWallNeighborValid = layout.getWallNeighbor(dungeon.rooms, room, direction).access([&](Room& room2){
-                    room2.getWall(direction.getFlip()).cell.offset = characterId;
-                    LOG_DEBUG << "Match::moveCharacterToWall() setting cheracter in other room";
-                });
-                if (!isWallNeighborValid) {
-                    LOG_DEBUG << "Match::moveCharacterToWall() failed due to innacessible neighboring wall";
-                    result = MOVEMENT_INACCESSIBLE_NEIGHBORING_WALL;
-                    return;
-                }
-            });
-            if (!isLayoutValid) {
-                LOG_DEBUG << "Match::moveCharacterToWall() failed due to innacessible layout";
-                result = MOVEMENT_INACCESSIBLE_LAYOUT;
-                return;
-            }
+    getCharacter(characterId, result).access([&](Character& character){
+        dungeon.getRoom(roomId, result).access([&](Room& room) {
+            result = moveCharacterToWall(room, character, direction);
         });
-        if (!isRoomIdValid) {
-            LOG_DEBUG << "Match::moveCharacterToWall() failed due to innacessible roomId " << roomId;
-            result = MOVEMENT_INACCESSIBLE_ROOM_ID;
-        }
     });
-    if (result != MOVEMENT_SUCCESS) {
-        // swallowed error check
-        return result;
-    }
-
-    if (!isCharacterIdValid) {
-        LOG_DEBUG << "Match::moveCharacterToWall() failed due to innacessible characterId" << characterId;
-        return MOVEMENT_INACCESSIBLE_CHARACTER_ID;
-    }
 
     return result;
 }
 
+bool Match::cleanupMovement(Character& character, Room& room, int& characterId, CodeEnum& error) {
+    if (!isStarted(error)) return false;
+
+    // Check for movability
+    if (!character.isMovable(error, true)) return false;
+
+    // Check if character is in room
+    if (!isCharacterInRoom(error, room, character)) return false;
+
+    if (!containsCharacter(character, characterId)) {
+        error = CODE_INACCESSIBLE_CHARACTER_ID;
+        return false;
+    }
+
+    // Cleanup previous
+    bool isCleanedUp = false;
+    dungeon.findCharacter(
+        room,
+        characterId,
+        [&](Cell& local, Cardinal, Room&, Cell& other) {
+            local.offset = 0;
+            other.offset = 0;
+            isCleanedUp = true;
+        },
+        [&](int, int, Cell& cell) {
+            cell.offset = 0;
+            isCleanedUp = true;
+        }
+    );
+
+    if (!isCleanedUp) error = CODE_MISSING_CHARACTER_CLEANUP;
+    return isCleanedUp;
+}
+
+CodeEnum Match::moveCharacterToWall(Room& room, Character& character, Cardinal direction) {
+    // Check if match has started
+    CodeEnum result = CODE_PREACTIVATE_IN_CHECKS;
+
+    // Check for occupied target cell
+    Wall& next = room.getWall(direction);
+    if (containsOffset(next.cell.offset)) return CODE_OCCUPIED_TARGET_WALL_CELL;
+
+    if (!next.isWalkable(result)) return result;
+
+    int characterId;
+    if (!cleanupMovement(character, room, characterId, result)) return result;
+
+    // set next
+    result = CODE_PREACTIVATE_IN_PROCESS;
+    next.cell.offset = characterId;
+    dungeon.accessLayout(result, [&](const iLayout& layout){
+        const bool isWallNeighborValid = layout.getWallNeighbor(dungeon.rooms, room, direction).access([&](Room& room2){
+            room2.getWall(direction.getFlip()).cell.offset = characterId;
+            if (character.takeMove(result)) {
+                result = CODE_SUCCESS;
+                return;
+            }
+        });
+        if (!isWallNeighborValid) {
+            result = CODE_INACCESSIBLE_NEIGHBORING_WALL;
+            return;
+        }
+    });
+
+    return result;
+}
+
+bool Match::isCharacterInRoom(CodeEnum& error, Room& source, Character& offset) {
+    int characterId;
+    if (!containsCharacter(offset, characterId)) {
+        error = CODE_INACCESSIBLE_CHARACTER_ID;
+        return false;
+    }
+
+    if (dungeon.findCharacter(
+        source,
+        characterId,
+        [&](Cell& local, Cardinal, Room&, Cell& other) {},
+        [&](int, int, Cell& cell) {}
+    )) {
+        return true;
+    }
+
+    error = CODE_CHARACTER_NOT_IN_ROOM;
+    return false;
+}
+
 bool Match::containsCharacter
-(
-    const Character& source,
-    int& offset
+( const Character& source, int& offset
 ) const {
     // Get base address of this match object as a byte pointer
     auto base = reinterpret_cast<const char*>(this);
@@ -206,13 +227,18 @@ bool Match::containsCharacter
 }
 
 bool Match::containsOffset
-(
-    int offset
+( int offset
 ) const {
     return offset > 0 && offset < sizeof(Match);
 }
 
-Pointer<Character> Match::getCharacter (int offset) {
+bool Match::containsCellCharacter
+( const Cell& cell
+) const {
+    return containsOffset(cell.offset);
+}
+
+Pointer<Character> Match::getCharacter (int offset, CodeEnum& error) {
     // Compute absolute address from offset
     auto base = reinterpret_cast<char*>(this);
     auto ptr = base + offset;
@@ -220,97 +246,249 @@ Pointer<Character> Match::getCharacter (int offset) {
     if (containsOffset(offset))
         // Cast back to Character pointer
         return Pointer<Character>(*reinterpret_cast<Character*>(ptr));
-    else
-        return Pointer<Character>::empty();
+    error = CODE_INACCESSIBLE_CHARACTER_ID;
+    return Pointer<Character>::empty();
 }
 
-void Match::toJson(Json::Value& out) const {
-    out["match"] = match;
-    out["host"] = host;
-    out["version"] = version;
-    out["turn"] = turn;
-    out["started"] = started;
-
-    Json::Value dungonJson;
-    dungeon.toJson(dungonJson);
-    out["dungeon"] = dungonJson;
-
-    Json::Value titanJson;
-    titan.toJson(titanJson);
-    out["titan"] = titanJson;
-
-    Json::Value buildersJson(Json::arrayValue);
-    for (const auto& builder: builders) {
-        Json::Value b;
-        builder.toJson(b);
-        buildersJson.append(b);
+Pointer<Player> Match::getPlayer(const std::string& player, CodeEnum& error) {
+    for (auto& builder: builders) {
+        if (builder.player.account == player) {
+            return builder.player;
+        }
     }
-    out["builders"] = buildersJson;
+    if (titan.player.account == player) {
+        return titan.player;
+    }
+    error = CODE_INACCESSIBLE_PLAYER;
+    return Pointer<Player>::empty();
+}
 
-    // generator
-    GeneratorFlyweight::getFlyweights().accessConst(generator, [&](const GeneratorFlyweight& flyweight){
-        out["generator"] = flyweight.name;
+CodeEnum Match::activateCharacter(const std::string& playerId, int characterId, int roomId, int targetId) {
+    CodeEnum result = CODE_PREACTIVATE_IN_LOOKUPS;
+
+    getPlayer(playerId, result).access([&](Player& player) {
+        getCharacter(characterId, result).access([&](Character& character) {
+            dungeon.getRoom(roomId, result).access([&](Room& room) {
+                auto target = getCharacter(targetId, result);
+                result = activateCharacter(player, character, room, target);
+            });
+        });
+    });
+
+    return result;
+}
+
+CodeEnum Match::activateCharacter(Player& player, Character& subject, Room& room, Pointer<Character> target) {
+    CodeEnum result = CODE_PREACTIVATE_IN_MATCH;
+
+    // Check if match has started
+    if (!isStarted(result)) return result;
+
+    // Check if character can take an action
+    if (!subject.isActionable(result)) return result;
+
+    int subjectOffset;
+    if(!containsCharacter(subject, subjectOffset)) {
+        return CODE_INACCESSIBLE_SUBJECT_CHARACTER_ID;
+    }
+    if (!room.containsCharacter(subjectOffset)) {
+        return CODE_SUBJECT_CHARACTER_NOT_IN_ROOM;
+    }
+
+    bool isTargetValid = false;
+    target.access([&](Character& target) {
+        int targetOffset;
+        if(!containsCharacter(target, targetOffset)) {
+            result = CODE_INACCESSIBLE_TARGET_CHARACTER_ID;
+            return;
+        }
+        if (!room.containsCharacter(targetOffset)) {
+            result = CODE_TARGET_CHARACTER_NOT_IN_ROOM;
+            return;
+        }
+        isTargetValid = true;
+    });
+
+    if (!isTargetValid) {
+        return result;
+    }
+
+    subject.accessRole(result, [&](const RoleFlyweight& flyweight) {
+        if (flyweight.activator.isEmpty()) {
+            result = CODE_MISSING_ACTIVATOR;
+            return;
+        } else {
+            flyweight.activator.accessConst([&](const iActivator& activatorIntf){
+                Activation activation(player, subject, room, target, Cardinal::north(), *this);
+                result = activatorIntf.activate(activation);
+            });
+        }
+    });
+
+    return result;
+}
+
+bool Match::isStarted(CodeEnum& error) const {
+    if (!turner.isStarted()) {
+        error = CODE_UNSTARTED_MATCH;
+        return false;
+    }
+    return true;
+}
+
+bool Match::isCompleted(CodeEnum& error) const {
+    if (!turner.isCompleted()) {
+        error = CODE_UNCOMPLETED_MATCH;
+        return false;
+    }
+    return true;
+}
+
+bool Match::isFull(CodeEnum& error) const {
+    if (this->titan.player.account.empty()) {
+        return false;
+    }
+    for (const auto& builder: this->builders) {
+        if (builder.player.account.empty()) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool Match::isEmpty(CodeEnum& error) const {
+    if (!this->titan.player.account.empty()) {
+        return false;
+    }
+    for (const auto& builder: this->builders) {
+        if (!builder.player.account.empty()) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool Match::addCharacterToFloor(const Character& source, int roomId) {
+    CodeEnum result;
+    // Validate room ID and get room
+    auto room = dungeon.getRoom(roomId, result);
+    if (room.isEmpty()) return false;
+
+    // Find an empty character slot
+    int characterOffset;
+    for (Character& character: dungeon.characters) {
+        if (character.role == ROLE_EMPTY) {
+            // Calculate the offset for the new character, guaranteed contained
+            containsCharacter(character, characterOffset);
+            character = source;
+            break;
+        }
+    }
+
+    // Find an empty floor cell
+    bool success = false;
+    room.access([&](Room& room) {
+        for (Cell& cell: room.floorCells) {
+            if (!containsOffset(cell.offset)) {
+                // Set the character offset in the cell
+                cell.offset = characterOffset;
+                success = true;
+                if (success) break;
+            }
+        }
+    });
+
+    // If we couldn't find an empty cell, reset the character slot
+    if (!success) {
+        getCharacter(characterOffset, result).access([&](Character& character) {
+            character.role = ROLE_EMPTY;
+        });
+    }
+
+    return success;
+}
+
+CodeEnum Match::activateLock(Player& player, Character& character, Room& room, Cardinal direction) {
+    CodeEnum result = CODE_PREACTIVATE_IN_MATCH;
+
+    // Check if match has started
+    if (!isStarted(result)) return result;
+
+    // Check if character is an actor
+    if (!character.isActor(result)) {
+        return result;
+    }
+
+    // Get and validate the door
+    Wall& wall = room.getWall(direction);
+    result = wall.activate(player, character, room, direction, *this);
+
+    return result;
+}
+
+CodeEnum Match::activateLock(const std::string& playerId, int characterId, int roomId, int direction) {
+    // Get the player
+    CodeEnum result = CODE_PREACTIVATE_IN_LOOKUPS;
+    getPlayer(playerId, result).access([&](Player& player) {
+        // Get the character
+        getCharacter(characterId, result).access([&](Character& character) {
+            // Get the room
+            dungeon.getRoom(roomId, result).access([&](Room& room) {
+                result = activateLock(player, character, room, Cardinal(direction));
+            });
+        });
+    });
+
+    return result;
+}
+
+bool Match::leave(const std::string& playerId, CodeEnum& error) {
+    return accessPlayer(playerId, error, [&](Titan& titan) {
+        titan.player.account = "";
+        turner.removeTitan();
+    }, [&](Builder& builder) {
+        builder.player.account = "";
+        turner.removeBuilder(playerId, *this);
     });
 }
 
-bool Match::fromJson(const Json::Value& in) {
-    // match
-    if (!in.isMember("match")) {
-        LOG_ERROR << "Match json is missing match field";
-        return false;
-    }
-    match = in["match"].asString();
+bool Match::endTurn(const std::string& playerId, CodeEnum& error)
+{
+    return accessPlayer(playerId, error, [&](Titan& titan) {
+        turner.endTitanTurn(*this);
+    }, [&](Builder& builder) {
+        turner.endBuilderTurn(*this);
+    });
+}
 
-    if (!in.isMember("version")) {
-        LOG_ERROR << "Match " << match << " json is missing version field";
-        return false;
-    }
+bool Match::moveCharacterToFloor(int roomId, int characterId, int floorId, CodeEnum& error) {
+    bool result = false;
+    getCharacter(characterId, error).access([&](Character& character){
+        dungeon.getRoom(roomId, error).access([&](Room& room) {
+            room.getCell(floorId, error).access([&](Cell& floor) {
+                result = moveCharacterToFloor(room, character, floor, error);
+            });
+        });
+    });
+    return result;
+}
 
-    host = in["host"].asString();
-    version = in["version"].asUInt();
-    turn = in["turn"].asUInt();
-    started = in["started"].asBool();
+bool Match::moveCharacterToFloor(Room& room, Character& character, Cell& floor, CodeEnum& error) {
 
-    if (!titan.fromJson(in["titan"])) {
-        LOG_ERROR << "Match " << match << " json couldnt parse titan field";
-        return false;
-    }
-
-    if (!dungeon.fromJson(in["dungeon"])) {
-        LOG_ERROR << "Match " << match << " json couldnt parse dungeon field";
-        return false;
-    }
-
-    const auto& builderJson = in["builders"];
-    if (!builderJson.isArray()) {
-        LOG_ERROR << "Match " << match << " json couldnt parse builders field due to it not being an array";
+    // Check for occupied target cell
+    if (containsOffset(floor.offset)) {
+        error = CODE_OCCUPIED_TARGET_FLOOR_CELL;
         return false;
     }
 
-    if (builderJson.size() != MATCH_BUILDER_COUNT) {
-        LOG_ERROR << "Match " << match << " json couldnt parse builders field due to it not having " << MATCH_BUILDER_COUNT << " elements";
-        return false;
-    }
+    // Cleanup previous
+    int characterId;
+    if (!cleanupMovement(character, room, characterId, error)) return false;
 
-    int i = 0;
-    for (auto& builder: builders) {
-        if (!builder.fromJson(builderJson[i])) {
-            LOG_ERROR << "Match " << match << " json couldnt builders["<< i <<"] field";
-            return false;
-        }
-        i++;
-    }
+    if (!character.takeMove(error)) return false;
 
-    // generator
-    if (!in.isMember("generator")) {
-        LOG_ERROR << "Dungeon json is missing generator field";
-        return false;
-    }
-    auto generatorName = in["generator"].asString();
-    if (!GeneratorFlyweight::indexByString(generatorName, generator)) {
-        LOG_ERROR << "Dungeon json couldnt parse generator " << generatorName;
-        return false;
-    }
+    // Set the character offset in the cell
+    floor.offset = characterId;
 
     return true;
 }

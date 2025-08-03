@@ -8,9 +8,12 @@ namespace Json {
     class Value;
 }
 
+class JsonParameters;
+class Match;
+
 struct Titan {
     Player player;
 
-    void toJson(Json::Value& out) const;
-    bool fromJson(const Json::Value& in);
+    void startTurn(Match& match);  // Start titan's turn
+    void endTurn(Match& match);    // End titan's turn
 };
