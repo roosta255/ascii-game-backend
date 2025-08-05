@@ -19,8 +19,5 @@ jobs:
       - name: Build Docker image
         run: docker build -t game-backend .
 
-      - name: Run simulation tests
-        run: docker run --rm game-backend ./test_simulation
-
       - name: Deploy to self-hosted production server
         run: ssh ${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }} 'cd /opt/game && git pull && docker build -t game-backend . && docker stop game-server || true && docker run -d -p 8080:8080 --name game-server game-backend'

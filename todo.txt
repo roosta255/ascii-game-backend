@@ -1,0 +1,4 @@
+feats:
+* github workflow curl integration tests. the app needs to start the server and validate that it's able to run. basic things are GET matches/generators/accounts. More than basic things are simulating account/match creation.
+* add x,y,room coordinates to characters. this would need redesign of a lot of algorithms, collision detection, room querying needs to be reworked. Moving characters would then update both systems. The memory layout can retain the cells, but the loading the datastore would enrich the cells via character data, instead of loading cell data. Saving the datastore would save the character.x/y/room and ignore cells. Saving to API should ignore cell data.
+* add door-lock rendering and activation
