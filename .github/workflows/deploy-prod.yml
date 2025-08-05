@@ -11,13 +11,5 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Checkout repo with submodules
-        uses: actions/checkout@v3
-        with:
-          submodules: recursive
-
       - name: Build Docker image
         run: docker build -t game-backend .
-
-      - name: Deploy to self-hosted production server
-        run: ssh ${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }} 'cd /opt/game && git pull && docker build -t game-backend . && docker stop game-server || true && docker run -d -p 8080:8080 --name game-server game-backend'
