@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 #include "Match.hpp"
 #include "GeneratorEnum.hpp"
@@ -44,6 +45,61 @@ CodeEnum getTogglerOffset(Match& match, int roomId, int& offset) {
     return error;
 }
 
+
+TEST_CASE("Test Character Animation", "[walking]") {
+    CodeEnum error = CODE_UNKNOWN_ERROR;
+
+    // Setup
+    Match match;
+    CodeEnum result = CODE_SUCCESS;
+    const std::string builderId = "builder_1";
+    const std::string hostId = builderId;
+
+    match.host = hostId;
+    match.filename = "match_002";
+    match.generator = GENERATOR_TUTORIAL;
+
+    // Generate tutorial layout
+    GeneratorTutorial generator;
+    REQUIRE(generator.generate(0, match));
+
+    // Start the match
+    REQUIRE(match.start());
+
+    // Get the actual character offset of the first builder
+    int builderOffset;
+    REQUIRE(match.builders.access(0, [&](Builder& builder) {
+        REQUIRE(builder.character.keyframes.access(0, [&](const Keyframe& keyframe){
+            REQUIRE(keyframe.animation == ANIMATION_NIL);
+            REQUIRE(keyframe.t0 == Timestamp::nil());
+            REQUIRE(keyframe.t1 == Timestamp::nil());
+            REQUIRE(keyframe.isAvailable());
+        }));
+
+        for (const auto& keyframe: builder.character.keyframes) {
+            REQUIRE(keyframe.animation == ANIMATION_NIL);
+            REQUIRE(keyframe.t0 == Timestamp::nil());
+            REQUIRE(keyframe.t1 == Timestamp::nil());
+            REQUIRE(keyframe.isAvailable() == true);
+        }
+
+        REQUIRE(match.containsCharacter(builder.character, builderOffset));
+        const auto t0 = Timestamp::buildTimestamp(2200);
+        const auto t1 = t0 + Match::MOVE_ANIMATION_DURATION;
+
+        // walk the character to wall
+        result = match.moveCharacterToWall(0, builderOffset, Cardinal::east(), t0);
+        REQUIRE(result == CODE_SUCCESS);
+
+        const auto it = std::find_if(builder.character.keyframes.begin(), builder.character.keyframes.end(),
+            [](const Keyframe& keyframe){return keyframe.animation == ANIMATION_WALKING_FROM_FLOOR_TO_WALL;});
+
+        REQUIRE(it != builder.character.keyframes.end());
+        REQUIRE(it->t0 == t0);
+        REQUIRE(it->t1 == t1);
+    }));
+}
+
 TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     CodeEnum error = CODE_UNKNOWN_ERROR;
 
@@ -82,7 +138,7 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
 
     // Execute the tutorial sequence
 
-    result = match.moveCharacterToWall(0, builderOffset, Cardinal::east());
+    result = match.moveCharacterToWall(0, builderOffset, Cardinal::east(), Timestamp::nil());
     REQUIRE(result == CODE_SUCCESS);
 
     result = match.activateCharacter(builderId, toggler1Offset, 1, builderOffset);
@@ -90,7 +146,7 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     match.endTurn(builderId, result);
     REQUIRE(result == CODE_SUCCESS);
 
-    result = match.moveCharacterToWall(1, builderOffset, Cardinal::north());
+    result = match.moveCharacterToWall(1, builderOffset, Cardinal::north(), Timestamp::nil());
     REQUIRE(result == CODE_SUCCESS);
 
     result = match.activateCharacter(builderId, toggler9Offset, 9, builderOffset);
@@ -98,17 +154,17 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     match.endTurn(builderId, result);
     REQUIRE(result == CODE_SUCCESS);
 
-    result = match.moveCharacterToWall(9, builderOffset, Cardinal::east());
+    result = match.moveCharacterToWall(9, builderOffset, Cardinal::east(), Timestamp::nil());
     REQUIRE(result == CODE_SUCCESS);
     match.endTurn(builderId, result);
     REQUIRE(result == CODE_SUCCESS);
 
-    result = match.moveCharacterToWall(10, builderOffset, Cardinal::south());
+    result = match.moveCharacterToWall(10, builderOffset, Cardinal::south(), Timestamp::nil());
     REQUIRE(result == CODE_SUCCESS);
     match.endTurn(builderId, result);
     REQUIRE(result == CODE_SUCCESS);
 
-    result = match.moveCharacterToWall(2, builderOffset, Cardinal::east());
+    result = match.moveCharacterToWall(2, builderOffset, Cardinal::east(), Timestamp::nil());
     REQUIRE(result == CODE_SUCCESS);
 
     result = match.activateCharacter(builderId, toggler3Offset, 3, builderOffset);
@@ -116,7 +172,7 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     match.endTurn(builderId, result);
     REQUIRE(result == CODE_SUCCESS);
 
-    result = match.moveCharacterToWall(2, builderOffset, Cardinal::north());
+    result = match.moveCharacterToWall(2, builderOffset, Cardinal::north(), Timestamp::nil());
     REQUIRE(result == CODE_SUCCESS);
 
     // Take keeper's key between rooms 2 and 3
@@ -126,7 +182,7 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     REQUIRE(result == CODE_SUCCESS);
 
     // Move to room10's east wall (between room10 & room11)
-    result = match.moveCharacterToWall(10, builderOffset, Cardinal::east());
+    result = match.moveCharacterToWall(10, builderOffset, Cardinal::east(), Timestamp::nil());
     REQUIRE(result == CODE_SUCCESS);
 
     // Take key from room10's south keeper
@@ -138,7 +194,7 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     REQUIRE(result == CODE_SUCCESS);
 
     // Move to room11's north wall (between room11 & room19)
-    result = match.moveCharacterToWall(11, builderOffset, Cardinal::north());
+    result = match.moveCharacterToWall(11, builderOffset, Cardinal::north(), Timestamp::nil());
     REQUIRE(result == CODE_SUCCESS);
     match.endTurn(builderId, result);
     REQUIRE(result == CODE_SUCCESS);
@@ -148,7 +204,7 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     REQUIRE(result == CODE_SUCCESS);
 
     // Move west to room 18
-    result = match.moveCharacterToWall(19, builderOffset, Cardinal::west());
+    result = match.moveCharacterToWall(19, builderOffset, Cardinal::west(), Timestamp::nil());
     REQUIRE(result == CODE_SUCCESS);
     match.endTurn(builderId, result);
     REQUIRE(result == CODE_SUCCESS);
@@ -166,13 +222,13 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     REQUIRE(result == CODE_SUCCESS);
 
     // Move south to room 10
-    result = match.moveCharacterToWall(18, builderOffset, Cardinal::south());
+    result = match.moveCharacterToWall(18, builderOffset, Cardinal::south(), Timestamp::nil());
     REQUIRE(result == CODE_SUCCESS);
     match.endTurn(builderId, result);
     REQUIRE(result == CODE_SUCCESS);
 
     // Move east to room 11
-    result = match.moveCharacterToWall(10, builderOffset, Cardinal::east());
+    result = match.moveCharacterToWall(10, builderOffset, Cardinal::east(), Timestamp::nil());
     REQUIRE(result == CODE_SUCCESS);
     match.endTurn(builderId, result);
     REQUIRE(result == CODE_SUCCESS);
@@ -187,13 +243,13 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     REQUIRE(result == CODE_SUCCESS);
 
     // Move north to room 18
-    result = match.moveCharacterToWall(10, builderOffset, Cardinal::north());
+    result = match.moveCharacterToWall(10, builderOffset, Cardinal::north(), Timestamp::nil());
     REQUIRE(result == CODE_SUCCESS);
     match.endTurn(builderId, result);
     REQUIRE(result == CODE_SUCCESS);
 
     // Move character to room to allow closing of south keeper
-    match.moveCharacterToFloor(18, builderOffset, 1, result);
+    match.moveCharacterToFloor(18, builderOffset, 1, Timestamp::nil(), result);
     REQUIRE(result == CODE_SUCCESS);
 
     // TODO: Need new API to move character to floor position in room 18
@@ -208,7 +264,7 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     REQUIRE(result == CODE_SUCCESS);
 
     // Move west to room 17
-    result = match.moveCharacterToWall(18, builderOffset, Cardinal::west());
+    result = match.moveCharacterToWall(18, builderOffset, Cardinal::west(), Timestamp::nil());
     REQUIRE(result == CODE_SUCCESS);
     match.endTurn(builderId, result);
     REQUIRE(result == CODE_SUCCESS);
@@ -218,13 +274,13 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     REQUIRE(result == CODE_SUCCESS);
 
     // Move west to room 16
-    result = match.moveCharacterToWall(17, builderOffset, Cardinal::west());
+    result = match.moveCharacterToWall(17, builderOffset, Cardinal::west(), Timestamp::nil());
     REQUIRE(result == CODE_SUCCESS);
     match.endTurn(builderId, result);
     REQUIRE(result == CODE_SUCCESS);
 
     // Move north to room 24
-    result = match.moveCharacterToWall(16, builderOffset, Cardinal::north());
+    result = match.moveCharacterToWall(16, builderOffset, Cardinal::north(), Timestamp::nil());
     REQUIRE(result == CODE_SUCCESS);
 }
 

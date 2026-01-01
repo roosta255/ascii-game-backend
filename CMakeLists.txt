@@ -10,58 +10,65 @@ find_package(Drogon REQUIRED)
 # ------------ Shared include directories -------------
 set(PROJECT_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/algorithm
-    ${CMAKE_CURRENT_SOURCE_DIR}/controllers
-    ${CMAKE_CURRENT_SOURCE_DIR}/door
-    ${CMAKE_CURRENT_SOURCE_DIR}/enum
-    ${CMAKE_CURRENT_SOURCE_DIR}/generator
-    ${CMAKE_CURRENT_SOURCE_DIR}/layout
-    ${CMAKE_CURRENT_SOURCE_DIR}/math
-    ${CMAKE_CURRENT_SOURCE_DIR}/model
-    ${CMAKE_CURRENT_SOURCE_DIR}/role
-    ${CMAKE_CURRENT_SOURCE_DIR}/store
-    ${CMAKE_CURRENT_SOURCE_DIR}/struct
-    ${CMAKE_CURRENT_SOURCE_DIR}/data
-    ${CMAKE_CURRENT_SOURCE_DIR}/server
-    ${CMAKE_CURRENT_SOURCE_DIR}/vector
-    ${CMAKE_CURRENT_SOURCE_DIR}/view
-    ${CMAKE_CURRENT_SOURCE_DIR}/view/api
-    ${CMAKE_CURRENT_SOURCE_DIR}/view/store
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/algorithm
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/animation
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/controllers
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/data
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/door
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/enum
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/generator
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/layout
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/math
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/model
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/role
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/store
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/struct
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/time
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/server
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/vector
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/view
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/view/api
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/view/store
     /usr/include/jsoncpp
 )
 
 # ------------ Shared Library -------------
 add_library(core_backend STATIC
-    door/ActivatorInactiveDoor.cpp
-    door/ActivatorKeeper.cpp
-    door/ActivatorShifter.cpp
-    door/DoorFlyweight.cpp
-    generator/GeneratorFlyweight.cpp
-    generator/GeneratorPuzzle2.cpp
-    generator/GeneratorTutorial.cpp
-    generator/GeneratorUtility.cpp
-    generator/iGenerator.cpp
-    enum/CodeEnum.cpp
-    enum/TurnEnum.cpp
-    layout/build_room_map.cpp
-    layout/iLayout.cpp
-    layout/LayoutFlyweight.cpp
-    layout/LayoutGrid.cpp
-    model/Account.cpp
-    model/Builder.cpp
-    model/Cell.cpp
-    model/Character.cpp
-    model/Dungeon.cpp
-    model/Match.cpp 
-    model/Player.cpp
-    model/Room.cpp
-    model/Titan.cpp
-    model/Turner.cpp
-    model/Wall.cpp
-    role/ActivatorToggler.cpp
-    role/RoleFlyweight.cpp
-    store/FileStore.cpp
-    vector/int4_to_json.cpp
+    src/animation/AnimationEnum.cpp
+    src/animation/Keyframe.cpp
+    src/animation/KeyframeFlyweight.cpp
+    src/door/ActivatorInactiveDoor.cpp
+    src/door/ActivatorInactiveDoor.cpp
+    src/door/ActivatorKeeper.cpp
+    src/door/ActivatorShifter.cpp
+    src/door/DoorFlyweight.cpp
+    src/generator/GeneratorFlyweight.cpp
+    src/generator/GeneratorPuzzle2.cpp
+    src/generator/GeneratorTutorial.cpp
+    src/generator/GeneratorUtility.cpp
+    src/generator/iGenerator.cpp
+    src/enum/CodeEnum.cpp
+    src/enum/TurnEnum.cpp
+    src/layout/build_room_map.cpp
+    src/layout/iLayout.cpp
+    src/layout/LayoutFlyweight.cpp
+    src/layout/LayoutGrid.cpp
+    src/model/Account.cpp
+    src/model/Builder.cpp
+    src/model/Cell.cpp
+    src/model/Character.cpp
+    src/model/Dungeon.cpp
+    src/model/Match.cpp 
+    src/model/Player.cpp
+    src/model/Room.cpp
+    src/model/Titan.cpp
+    src/model/Turner.cpp
+    src/model/Wall.cpp
+    src/role/ActivatorToggler.cpp
+    src/role/RoleFlyweight.cpp
+    src/store/FileStore.cpp
+    src/time/Timestamp.cpp
+    src/vector/int4_to_json.cpp
 )
 
 # 👇 CRITICAL: Apply include dirs to the library
@@ -72,9 +79,9 @@ target_link_libraries(core_backend PUBLIC jsoncpp)
 # ------------ Main Executable ------------
 add_executable(match_backend
     main.cpp
-    controllers/ApiController.cpp
-    controllers/MatchController.cpp
-    controllers/AccountController.cpp
+    src/controllers/ApiController.cpp
+    src/controllers/MatchController.cpp
+    src/controllers/AccountController.cpp
 )
 
 target_include_directories(match_backend PRIVATE ${PROJECT_INCLUDE_DIRS})

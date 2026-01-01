@@ -3,7 +3,7 @@
 #include <array>
 #include <functional>
 
-#include "data/Pointer.hpp"
+#include "Pointer.hpp"
 
 template<typename T, unsigned N>
 class Array

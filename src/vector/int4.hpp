@@ -17,7 +17,7 @@
 #include <cstdint>
 #include <functional>
 
-#include "vector/array.operator.hpp"
+#include "array.operator.hpp"
 
 
 // this boyo is an int and another int

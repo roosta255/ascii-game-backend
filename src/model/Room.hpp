@@ -4,19 +4,21 @@
 #include "Cell.hpp"
 #include "CodeEnum.hpp"
 #include "Cardinal.hpp"
+#include "int2.hpp"
 #include "Pointer.hpp"
 #include "DUNGEON_ROOM_COUNT.hpp"
 #include "Wall.hpp"
 #include <functional>
 
-constexpr int DUNGEON_ROOM_WIDTH = 4;
-constexpr int DUNGEON_ROOM_HEIGHT = 5;
 
 class Match;
 
 struct Room {
+    constexpr static int DUNGEON_ROOM_WIDTH = 4;
+    constexpr static int DUNGEON_ROOM_HEIGHT = 5;
+    constexpr static int DUNGEON_ROOM_CELL_COUNT = DUNGEON_ROOM_WIDTH * DUNGEON_ROOM_HEIGHT;
     int visibility = ~0x0;
-    Array<Cell, DUNGEON_ROOM_WIDTH * DUNGEON_ROOM_HEIGHT> floorCells;
+    Array<Cell, DUNGEON_ROOM_CELL_COUNT> floorCells;
     Array<Wall, 4> walls;
 
     Wall& getWall(Cardinal);
@@ -26,7 +28,7 @@ struct Room {
     // Iterate over all characters in the room (both floor and wall cells)
     void forEachCharacter(Match& match, std::function<void(Character&)> consumer);
     bool containsCharacter(int offset) const;
-    bool containsFloorCell(const Cell& cell, CodeEnum& error, int& index) const;
+    bool containsFloorCell(const Cell& cell, CodeEnum& error, int& index, int2& coords) const;
     Pointer<Cell> getCell(int offset, CodeEnum& error);
 };
 

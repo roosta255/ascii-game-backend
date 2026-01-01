@@ -7,7 +7,7 @@ class Match;
 struct MatchApiParameters {
 public:
     int mask = ~0x0;
-    const Match& match; 
+    const Match& match;
 
     constexpr inline bool isHidden(const int target) const
     {

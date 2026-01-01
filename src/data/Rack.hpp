@@ -29,6 +29,17 @@ constexpr Rack
 {
 }
 
+constexpr Rack
+( T* start
+, T* occupied
+, T* finish
+)
+: start(start)
+, occupied(occupied)
+, finish(finish)
+{
+}
+
 public:
 
 constexpr Rack() = default;
@@ -50,13 +61,20 @@ constexpr Rack
 {
 }
 
-template<size_t N>
+template<unsigned N>
 constexpr Rack
 (const Array<T, N>& arr) noexcept
 : start(arr.begin())
 , finish(arr.end())
 , occupied(arr.end())
 {
+}
+
+template<long unsigned N>
+constexpr static Rack<T> buildFromArray
+(Array<T, N>& arr) noexcept
+{
+    return Rack<T>(arr.begin(), arr.end(), arr.end());
 }
 
 Rack(const std::vector<T>& arr)

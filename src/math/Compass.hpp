@@ -5,7 +5,7 @@
 #include <functional>
 
 #include "Cardinal.hpp"
-#include "vector/int2.hpp"
+#include "int2.hpp"
 
 template<typename T>
 class Compass

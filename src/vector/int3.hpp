@@ -8,7 +8,7 @@
 
 #include <array>
 
-#include "vector/array.operator.hpp"
+#include "array.operator.hpp"
 
 // this boyo is an int and another int
 // and another one

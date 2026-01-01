@@ -1,6 +1,6 @@
 #pragma once
 
-#include "data/Maybe.hpp"
+#include "Maybe.hpp"
 
 template<typename T>
 class Pointer

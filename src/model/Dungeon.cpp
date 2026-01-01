@@ -44,9 +44,9 @@ bool Dungeon::findCharacter(
     CodeEnum error;
     bool isFound = false;
     // Search floor cells
-    for (int y = 0; y < DUNGEON_ROOM_HEIGHT; ++y) {
-        for (int x = 0; x < DUNGEON_ROOM_WIDTH; ++x) {
-            int i = y * DUNGEON_ROOM_WIDTH + x;
+    for (int y = 0; y < Room::DUNGEON_ROOM_HEIGHT; ++y) {
+        for (int x = 0; x < Room::DUNGEON_ROOM_WIDTH; ++x) {
+            int i = y * Room::DUNGEON_ROOM_WIDTH + x;
             room.floorCells.access(i, [&](Cell& cell) {
                 if (cell.offset == searched) {
                     isFound = true;

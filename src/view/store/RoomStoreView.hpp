@@ -14,7 +14,7 @@
 struct RoomStoreView
 {
     int visibility = 0;
-    Array<CellStoreView, DUNGEON_ROOM_WIDTH * DUNGEON_ROOM_HEIGHT> floorCells;
+    Array<CellStoreView, Room::DUNGEON_ROOM_CELL_COUNT> floorCells;
     Array<WallStoreView, 4> walls;
 
     inline RoomStoreView() = default;

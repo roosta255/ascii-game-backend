@@ -1,0 +1,50 @@
+#pragma once
+
+#include "AnimationEnum.hpp"
+#include "Array.hpp"
+#include "Cardinal.hpp"
+#include "Rack.hpp"
+#include "Timestamp.hpp"
+#include "int2.hpp"
+
+struct Keyframe
+{
+    static constexpr int DATA_ARRAY_SIZE = 4;
+    int animation = ANIMATION_NIL;
+    Timestamp t0 = Timestamp::nil();
+    Timestamp t1 = Timestamp::nil();
+    Array<int, DATA_ARRAY_SIZE> data;
+    // (walking, hurtling, smacking), (casting, sleeping), (hurting, dying)
+
+    // WALKING_FROM_WALL_TO_WALL: [w0, .., w1, ..]
+    // WALKING_FROM_WALL_TO_FLOOR: [w0, .., x1, y1]
+    // WALKING_FROM_FLOOR_TO_WALL: [x0, y0, w1, ..]
+    // WALKING_FROM_FLOOR_TO_FLOOR: [x0, y0, x1, y1]
+    // hurtling: [x0, y0, x1, y1]
+    // smacking: [x0, y0, x1, y1]
+    // casting: []
+    // sleeping: []
+    // hurting: []
+    // dying: []
+
+    bool isAvailable()const;
+
+    static Keyframe buildWalking(const Timestamp& start, long duration, const Cardinal wall, const Cardinal wall2);
+    static Keyframe buildWalking(const Timestamp& start, long duration, const Cardinal wall, const int2 xy2);
+    static Keyframe buildWalking(const Timestamp& start, long duration, const int2 xy, const Cardinal wall2);
+    static Keyframe buildWalking(const Timestamp& start, long duration, const int2 xy, const int2 xy2);
+
+    static Keyframe buildHurtling(const Timestamp& start, long duration, const int2 xy, const int2 xy2);
+
+    static Keyframe buildSmacking(const Timestamp& start, long duration, const int2 xy, const int2 xy2);
+
+    static Keyframe buildCasting(const Timestamp& start, long duration);
+
+    static Keyframe buildSleeping(const Timestamp& start, long duration);
+
+    static Keyframe buildHurting(const Timestamp& start, long duration);
+
+    static Keyframe buildDying(const Timestamp& start, long duration);
+
+    static bool insertKeyframe(Rack<Keyframe> rack, const Keyframe& insertion);
+};

@@ -1,13 +1,14 @@
+#include "ApiController.hpp"
+#include "AccountController.hpp"
+#include "CodeEnum.hpp"
+#include "FileStore.hpp"
 #include "GeneratorFlyweight.hpp"
 #include "iLayout.hpp"
 #include "JsonParameters.hpp"
-#include "ApiController.hpp"
-#include "AccountController.hpp"
 #include "MatchController.hpp"
 #include "MatchApiParameters.hpp"
 #include "MatchApiView.hpp"
-#include "FileStore.hpp"
-#include "CodeEnum.hpp"
+#include "Timestamp.hpp"
 #include <json/json.h>
 
 static FileStore matchStore("var/state/matches");
@@ -278,14 +279,16 @@ void ApiController::moveCharacterToDoor
     if (!matchController.load(matchId, error, match))
         return invokeResponse404(code_to_message(error, "Failed to load match due to: "), std::move(callback));
 
+    Timestamp now;
+
     if (json->isMember("direction")) {
         Cardinal direction((*json)["direction"].asInt());
-        const auto result = match.moveCharacterToWall(roomId, characterId, direction);
+        const auto result = match.moveCharacterToWall(roomId, characterId, direction, now);
         if (CODE_SUCCESS != result)
             return invokeResponse409(std::string("Movement to wall rejected due to ") + code_to_text(result), std::move(callback));
     } else if (json->isMember("floor")) {
         int floorId = (*json)["floor"].asInt();
-        if (!match.moveCharacterToFloor(roomId, characterId, floorId, error))
+        if (!match.moveCharacterToFloor(roomId, characterId, floorId, now, error))
             return invokeResponse409(std::string("Movement to floor rejected due to ") + code_to_text(error), std::move(callback));
     }
 

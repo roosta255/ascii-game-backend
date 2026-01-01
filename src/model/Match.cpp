@@ -3,7 +3,9 @@
 #include "iActivator.hpp"
 #include "iGenerator.hpp"
 #include "iLayout.hpp"
+#include "int2.hpp"
 #include "JsonParameters.hpp"
+#include "Keyframe.hpp"
 #include "make_filename.hpp"
 #include "Match.hpp"
 #include "RoleFlyweight.hpp"
@@ -108,19 +110,7 @@ bool Match::start() {
     return turner.startGame() == CODE_SUCCESS;
 }
 
-CodeEnum Match::moveCharacterToWall(int roomId, int characterId, Cardinal direction) {
-    CodeEnum result = CODE_PREACTIVATE_IN_LOOKUPS;
-
-    getCharacter(characterId, result).access([&](Character& character){
-        dungeon.getRoom(roomId, result).access([&](Room& room) {
-            result = moveCharacterToWall(room, character, direction);
-        });
-    });
-
-    return result;
-}
-
-bool Match::cleanupMovement(Character& character, Room& room, int& characterId, CodeEnum& error) {
+bool Match::cleanupMovement(Character& character, Room& room, int& characterId, bool& wasFloored, int2& prevFloor, bool& wasWalled, Cardinal& prevWall, CodeEnum& error) {
     if (!isStarted(error)) return false;
 
     // Check for movability
@@ -136,17 +126,23 @@ bool Match::cleanupMovement(Character& character, Room& room, int& characterId, 
 
     // Cleanup previous
     bool isCleanedUp = false;
+    wasWalled = false;
+    wasFloored = false;
     dungeon.findCharacter(
         room,
         characterId,
-        [&](Cell& local, Cardinal, Room&, Cell& other) {
+        [&](Cell& local, Cardinal wall, Room&, Cell& other) {
             local.offset = 0;
             other.offset = 0;
             isCleanedUp = true;
+            wasWalled = true;
+            prevWall = wall;
         },
-        [&](int, int, Cell& cell) {
+        [&](int x, int y, Cell& cell) {
             cell.offset = 0;
             isCleanedUp = true;
+            wasFloored = true;
+            prevFloor = int2{x, y};
         }
     );
 
@@ -154,7 +150,19 @@ bool Match::cleanupMovement(Character& character, Room& room, int& characterId, 
     return isCleanedUp;
 }
 
-CodeEnum Match::moveCharacterToWall(Room& room, Character& character, Cardinal direction) {
+CodeEnum Match::moveCharacterToWall(int roomId, int characterId, Cardinal direction, Timestamp time) {
+    CodeEnum result = CODE_PREACTIVATE_IN_LOOKUPS;
+
+    getCharacter(characterId, result).access([&](Character& character){
+        dungeon.getRoom(roomId, result).access([&](Room& room) {
+            result = moveCharacterToWall(room, character, direction, time);
+        });
+    });
+
+    return result;
+}
+
+CodeEnum Match::moveCharacterToWall(Room& room, Character& character, Cardinal direction, Timestamp time) {
     // Check if match has started
     CodeEnum result = CODE_PREACTIVATE_IN_CHECKS;
 
@@ -165,16 +173,26 @@ CodeEnum Match::moveCharacterToWall(Room& room, Character& character, Cardinal d
     if (!next.isWalkable(result)) return result;
 
     int characterId;
-    if (!cleanupMovement(character, room, characterId, result)) return result;
+    bool wasWalled, wasFloored;
+    int2 prevFloor;
+    Cardinal prevWall = Cardinal::north();
+    if (!cleanupMovement(character, room, characterId, wasFloored, prevFloor, wasWalled, prevWall, result)) return result;
 
     // set next
     result = CODE_PREACTIVATE_IN_PROCESS;
     next.cell.offset = characterId;
     dungeon.accessLayout(result, [&](const iLayout& layout){
         const bool isWallNeighborValid = layout.getWallNeighbor(dungeon.rooms, room, direction).access([&](Room& room2){
+            // this is where the actual move happens
             room2.getWall(direction.getFlip()).cell.offset = characterId;
             if (character.takeMove(result)) {
                 result = CODE_SUCCESS;
+                // animate
+                const Keyframe keyframe = wasFloored ? Keyframe::buildWalking(time, MOVE_ANIMATION_DURATION, prevFloor, direction) : Keyframe::buildWalking(time, MOVE_ANIMATION_DURATION, prevWall, direction);
+                if(!Keyframe::insertKeyframe(Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(character.keyframes), keyframe)) {
+                    // TODO: animation overflow
+                }
+                // this is the end of the movement!!!
                 return;
             }
         });
@@ -461,19 +479,19 @@ bool Match::endTurn(const std::string& playerId, CodeEnum& error)
     });
 }
 
-bool Match::moveCharacterToFloor(int roomId, int characterId, int floorId, CodeEnum& error) {
+bool Match::moveCharacterToFloor(int roomId, int characterId, int floorId, Timestamp time, CodeEnum& error) {
     bool result = false;
     getCharacter(characterId, error).access([&](Character& character){
         dungeon.getRoom(roomId, error).access([&](Room& room) {
             room.getCell(floorId, error).access([&](Cell& floor) {
-                result = moveCharacterToFloor(room, character, floor, error);
+                result = moveCharacterToFloor(room, character, floor, time, error);
             });
         });
     });
     return result;
 }
 
-bool Match::moveCharacterToFloor(Room& room, Character& character, Cell& floor, CodeEnum& error) {
+bool Match::moveCharacterToFloor(Room& room, Character& character, Cell& floor, Timestamp time, CodeEnum& error) {
 
     // Check for occupied target cell
     if (containsOffset(floor.offset)) {
@@ -483,12 +501,26 @@ bool Match::moveCharacterToFloor(Room& room, Character& character, Cell& floor, 
 
     // Cleanup previous
     int characterId;
-    if (!cleanupMovement(character, room, characterId, error)) return false;
+    bool wasWalled, wasFloored;
+    int2 prevFloor;
+    Cardinal prevWall = Cardinal::north();
+    if (!cleanupMovement(character, room, characterId, wasFloored, prevFloor, wasWalled, prevWall, error)) return false;
 
     if (!character.takeMove(error)) return false;
 
     // Set the character offset in the cell
     floor.offset = characterId;
+
+    int2 destination{0,0};
+    int index;
+    CodeEnum error2;
+    room.containsFloorCell(floor, error2, index, destination);
+
+    // animate
+    const Keyframe keyframe = wasFloored ? Keyframe::buildWalking(time, MOVE_ANIMATION_DURATION, prevFloor, destination) : Keyframe::buildWalking(time, MOVE_ANIMATION_DURATION, prevWall, destination);
+    if(!Keyframe::insertKeyframe(Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(character.keyframes), keyframe)) {
+        // TODO: animation overflow
+    }
 
     return true;
 }

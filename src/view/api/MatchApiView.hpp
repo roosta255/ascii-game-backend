@@ -6,6 +6,7 @@
 #include "GeneratorFlyweight.hpp"
 #include "Match.hpp"
 #include "MatchApiParameters.hpp"
+#include "Timestamp.hpp"
 #include "TitanApiView.hpp"
 #include "TurnerApiView.hpp"
 #include <string>
@@ -21,6 +22,7 @@ struct MatchApiView
     uint32_t version = 0;
     bool isStarted = false, isCompleted = false, isEmpty = false, isFull = false;
     std::vector<std::string> turners;
+    long serverTime;
 
     Array<BuilderApiView, Match::MATCH_BUILDER_COUNT> builders;
     DungeonApiView dungeon;
@@ -35,6 +37,7 @@ struct MatchApiView
     , builders(params.match.builders.transform([&](const Builder& builder){return BuilderApiView(builder, params);}))
     , dungeon(params.match.dungeon, params)
     , turner(params.match.turner, params)
+    , serverTime((long)Timestamp())
     {
         // lobby flags
         CodeEnum error;
@@ -59,4 +62,4 @@ struct MatchApiView
     }
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(MatchApiView, filename, host, username, generator, version, titan, builders, dungeon, turner, turners, isStarted, isCompleted, isFull, isEmpty)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(MatchApiView, filename, host, username, generator, version, titan, builders, dungeon, turner, turners, isStarted, isCompleted, isFull, isEmpty, serverTime)

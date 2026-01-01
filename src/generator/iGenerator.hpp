@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Match.hpp"
+class Match;
 
 class iGenerator {
 public:

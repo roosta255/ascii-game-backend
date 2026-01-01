@@ -2,6 +2,9 @@
 
 #include "adl_serializer.hpp"
 #include "Character.hpp"
+#include "Keyframe.hpp"
+#include "KeyframeView.hpp"
+#include "KeyframeFlyweight.hpp"
 #include "RoleFlyweight.hpp"
 #include <string>
 #include <nlohmann/json.hpp>
@@ -17,6 +20,7 @@ struct CharacterApiView
     bool isHidden = true;
     bool isObject = false;
     int offset = -1;
+    Array<KeyframeView, Character::MAX_KEYFRAMES> keyframes;
 
     inline CharacterApiView() = default;
 
@@ -31,6 +35,8 @@ struct CharacterApiView
         this->actions = model.actions;
         this->moves = model.moves;
         this->keys = model.keys;
+
+        this->keyframes = model.keyframes.transform([&](const Keyframe& keyframe){return KeyframeView(keyframe);});
 
         // offset
         params.match.containsCharacter(model, this->offset);
@@ -63,6 +69,7 @@ inline void to_json(nlohmann::json& j, const CharacterApiView& view) {
         {"actions", view.actions},
         {"moves", view.moves},
         {"isObject", view.isObject},
+        {"keyframes", view.keyframes},
         {"keys", view.keys}
     };
 }

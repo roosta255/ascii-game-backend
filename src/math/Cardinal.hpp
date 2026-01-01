@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vector/int2.hpp"
+#include "int2.hpp"
 
 class Cardinal
 {
@@ -9,7 +9,7 @@ public:
 constexpr Cardinal(int init)
 : _val(init % 4) {}
 
-explicit constexpr operator int(){
+explicit constexpr operator int()const{
 	return _val;
 }
 

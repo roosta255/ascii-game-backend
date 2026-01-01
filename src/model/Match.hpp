@@ -19,6 +19,7 @@ namespace Json {
 
 struct Match {
     constexpr static int MATCH_BUILDER_COUNT = 3;
+    constexpr static long MOVE_ANIMATION_DURATION = 2000;
 
     std::string filename = "ERROR_UNSET_FILENAME";
     std::string username;
@@ -39,10 +40,10 @@ struct Match {
     bool generate(int seed, CodeEnum& output);
     bool setupSingleBuilder(CodeEnum& output);
     bool setupSingleTitan(CodeEnum& output);
-    CodeEnum moveCharacterToWall(int roomId, int characterId, Cardinal);
-    CodeEnum moveCharacterToWall(Room& room, Character& character, Cardinal);
-    bool moveCharacterToFloor(int roomId, int characterId, int floorId, CodeEnum& error);
-    bool moveCharacterToFloor(Room& room, Character& character, Cell& floor, CodeEnum& error);
+    CodeEnum moveCharacterToWall(int roomId, int characterId, Cardinal, Timestamp time);
+    CodeEnum moveCharacterToWall(Room& room, Character& character, Cardinal, Timestamp time);
+    bool moveCharacterToFloor(int roomId, int characterId, int floorId, Timestamp time, CodeEnum& error);
+    bool moveCharacterToFloor(Room& room, Character& character, Cell& floor, Timestamp time, CodeEnum& error);
 
     CodeEnum activateCharacter(Player& player, Character& character, Room& room, Pointer<Character> target);
     CodeEnum activateCharacter(const std::string& playerId, int characterId, int roomId, int targetId);
@@ -52,7 +53,7 @@ struct Match {
 
     bool endTurn(const std::string& playerId, CodeEnum& error);
 
-    bool cleanupMovement(Character& character, Room& room, int& characterId, CodeEnum& error);
+    bool cleanupMovement(Character& character, Room& room, int& characterId, bool& wasFloored, int2& prevFloor, bool& wasWalled, Cardinal& prevWall, CodeEnum& error);
     bool isStarted(CodeEnum& result) const;
     bool isCompleted(CodeEnum& result) const;
     bool isFull(CodeEnum& result) const;

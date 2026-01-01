@@ -1,3 +1,4 @@
+#include "int2.hpp"
 #include "Room.hpp"
 #include "Match.hpp"
 #include "JsonParameters.hpp"
@@ -67,8 +68,9 @@ bool Room::containsCharacter(int offset) const {
     return false;
 }
 
-bool Room::containsFloorCell(const Cell& cell, CodeEnum& error, int& index) const {
+bool Room::containsFloorCell(const Cell& cell, CodeEnum& error, int& index, int2& coords) const {
     if (floorCells.containsAddress(cell, index)) {
+        coords = int2{index % Room::DUNGEON_ROOM_WIDTH,  index / Room::DUNGEON_ROOM_WIDTH};
         return true;
     }
     error = CODE_INACCESSIBLE_ROOM_FLOOR_CELL_ID;

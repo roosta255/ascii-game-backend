@@ -11,7 +11,7 @@ bool Character::isMovable(CodeEnum& error, const bool isCheckingCount) const
     accessRole(error, [&](const RoleFlyweight& flyweight){
         if (!flyweight.isMovable)
             error = CODE_CHARACTER_NOT_MOVABLE;
-        else if (isCheckingCount &&flyweight.moves - movesTaken <= 0) 
+        else if (isCheckingCount && flyweight.moves - movesTaken <= 0) 
             error = CODE_CHARACTER_OUT_OF_MOVES;
         else result = true;
     });

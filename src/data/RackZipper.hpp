@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <functional>
 
-#include "data/Rack.hpp"
+#include "Rack.hpp"
 
 template<typename T1, typename T2>
 class RackZipper

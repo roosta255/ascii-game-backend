@@ -13,7 +13,7 @@
 
 struct RoomApiView
 {
-    Array<CellApiView, DUNGEON_ROOM_WIDTH * DUNGEON_ROOM_HEIGHT> floorCells;
+    Array<CellApiView, Room::DUNGEON_ROOM_CELL_COUNT> floorCells;
     Array<WallApiView, 4> walls;
     bool isHidden = true;
 
@@ -26,9 +26,11 @@ struct RoomApiView
 
         constexpr auto ROOM_CELL_WIDTH = 4;
         this->floorCells = model.floorCells.transform([&](const int i, const Cell& cell){
-            const int x = i % ROOM_CELL_WIDTH;
-            const int y = i / ROOM_CELL_WIDTH;
-            return CellApiView(cell, params, x, y);
+            int2 xy;
+            int index;
+            CodeEnum error; // shouldnt ever error because iterating through room's cells
+            model.containsFloorCell(cell, error, index, xy);
+            return CellApiView(cell, params, xy[0], xy[1]);
         });
         this->walls = model.walls.transform(
             [&](const int i, const Wall& wall){
