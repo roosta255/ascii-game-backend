@@ -13,6 +13,7 @@ struct KeyframeView
     std::string animation = "UNPARSED_ANIMATION";
     long t0 = 0;
     long t1 = 0;
+    int room0 = 0;
     std::vector<int> data;
 
     inline KeyframeView() = default;
@@ -22,6 +23,7 @@ struct KeyframeView
         this->animation = animation_to_text(model.animation);
         this->t0 = (long)model.t0;
         this->t1 = (long)model.t1;
+        this->room0 = model.room0;
 
         data.reserve(Keyframe::DATA_ARRAY_SIZE);
         for (const auto& d: model.data) {
@@ -38,7 +40,8 @@ struct KeyframeView
     {
         Keyframe model{
             .t0 = Timestamp::buildTimestamp(this->t0),
-            .t1 = Timestamp::buildTimestamp(this->t1)
+            .t1 = Timestamp::buildTimestamp(this->t1),
+            .room0 = this->room0
         };
 
         int i = 0;
@@ -55,4 +58,4 @@ struct KeyframeView
 };
 
 // Reflection-based JSON serialization
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(KeyframeView, animation, t0, t1, data)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(KeyframeView, animation, t0, t1, room0, data)

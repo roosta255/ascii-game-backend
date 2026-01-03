@@ -46,7 +46,7 @@ struct Character
 
     // one correct route, is for all animations to be keyframed.
     // so a character being hurt, dying, walking, jumping, these are all rendered in time.
-    
+
     int visibility = ~0x0;
     Array<Keyframe, MAX_KEYFRAMES> keyframes;
 

@@ -13,6 +13,7 @@ struct Keyframe
     int animation = ANIMATION_NIL;
     Timestamp t0 = Timestamp::nil();
     Timestamp t1 = Timestamp::nil();
+    int room0 = 0;
     Array<int, DATA_ARRAY_SIZE> data;
     // (walking, hurtling, smacking), (casting, sleeping), (hurting, dying)
 
@@ -29,22 +30,27 @@ struct Keyframe
 
     bool isAvailable()const;
 
-    static Keyframe buildWalking(const Timestamp& start, long duration, const Cardinal wall, const Cardinal wall2);
-    static Keyframe buildWalking(const Timestamp& start, long duration, const Cardinal wall, const int2 xy2);
-    static Keyframe buildWalking(const Timestamp& start, long duration, const int2 xy, const Cardinal wall2);
-    static Keyframe buildWalking(const Timestamp& start, long duration, const int2 xy, const int2 xy2);
+    // coincidentally, the api guarantees movement only ever happens the room in the parameters.
+    // wall -> wall, character passed 3 rooms, only room0 renders movement.
+    static Keyframe buildWalking(const Timestamp& start, long duration, const int room0, const Cardinal wall0, const Cardinal wall1);
+    // wall -> floor, character passes 2 rooms, only room0 renders movement.
+    static Keyframe buildWalking(const Timestamp& start, long duration, const int room0, const Cardinal wall0, const int2 xy1);
+    // floor -> wall, character passes 2 rooms, only room0 renders movement.
+    static Keyframe buildWalking(const Timestamp& start, long duration, const int room0, const int2 xy0, const Cardinal wall1);
+    // floor -> floor, character passes 1 room, only room0 renders movement.
+    static Keyframe buildWalking(const Timestamp& start, long duration, const int room0, const int2 xy0, const int2 xy1);
 
-    static Keyframe buildHurtling(const Timestamp& start, long duration, const int2 xy, const int2 xy2);
+    static Keyframe buildHurtling(const Timestamp& start, long duration, const int room0, const int2 xy0, const int2 xy1);
 
-    static Keyframe buildSmacking(const Timestamp& start, long duration, const int2 xy, const int2 xy2);
+    static Keyframe buildSmacking(const Timestamp& start, long duration, const int room0, const int2 xy0, const int2 xy1);
 
-    static Keyframe buildCasting(const Timestamp& start, long duration);
+    static Keyframe buildCasting(const Timestamp& start, long duration, const int room0);
 
-    static Keyframe buildSleeping(const Timestamp& start, long duration);
+    static Keyframe buildSleeping(const Timestamp& start, long duration, const int room0);
 
-    static Keyframe buildHurting(const Timestamp& start, long duration);
+    static Keyframe buildHurting(const Timestamp& start, long duration, const int room0);
 
-    static Keyframe buildDying(const Timestamp& start, long duration);
+    static Keyframe buildDying(const Timestamp& start, long duration, const int room0);
 
     static bool insertKeyframe(Rack<Keyframe> rack, const Keyframe& insertion);
 };

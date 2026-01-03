@@ -163,8 +163,13 @@ CodeEnum Match::moveCharacterToWall(int roomId, int characterId, Cardinal direct
 }
 
 CodeEnum Match::moveCharacterToWall(Room& room, Character& character, Cardinal direction, Timestamp time) {
-    // Check if match has started
+    // TODO: Check if match has started
     CodeEnum result = CODE_PREACTIVATE_IN_CHECKS;
+
+    int room0;
+    if (!dungeon.containsRoom(room, room0)) {
+        return CODE_ROOM_NOT_WITHIN_DUNGEON;
+    }
 
     // Check for occupied target cell
     Wall& next = room.getWall(direction);
@@ -187,8 +192,13 @@ CodeEnum Match::moveCharacterToWall(Room& room, Character& character, Cardinal d
             room2.getWall(direction.getFlip()).cell.offset = characterId;
             if (character.takeMove(result)) {
                 result = CODE_SUCCESS;
+
                 // animate
-                const Keyframe keyframe = wasFloored ? Keyframe::buildWalking(time, MOVE_ANIMATION_DURATION, prevFloor, direction) : Keyframe::buildWalking(time, MOVE_ANIMATION_DURATION, prevWall, direction);
+                const Keyframe keyframe = wasFloored
+                    // floor -> wall
+                    ? Keyframe::buildWalking(time, MOVE_ANIMATION_DURATION, room0, prevFloor, direction)
+                    // wall -> wall
+                    : Keyframe::buildWalking(time, MOVE_ANIMATION_DURATION, room0, prevWall, direction);
                 if(!Keyframe::insertKeyframe(Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(character.keyframes), keyframe)) {
                     // TODO: animation overflow
                 }
@@ -493,6 +503,11 @@ bool Match::moveCharacterToFloor(int roomId, int characterId, int floorId, Times
 
 bool Match::moveCharacterToFloor(Room& room, Character& character, Cell& floor, Timestamp time, CodeEnum& error) {
 
+    int room0;
+    if (!dungeon.containsRoom(room, room0)) {
+        return CODE_ROOM_NOT_WITHIN_DUNGEON;
+    }
+
     // Check for occupied target cell
     if (containsOffset(floor.offset)) {
         error = CODE_OCCUPIED_TARGET_FLOOR_CELL;
@@ -517,7 +532,11 @@ bool Match::moveCharacterToFloor(Room& room, Character& character, Cell& floor, 
     room.containsFloorCell(floor, error2, index, destination);
 
     // animate
-    const Keyframe keyframe = wasFloored ? Keyframe::buildWalking(time, MOVE_ANIMATION_DURATION, prevFloor, destination) : Keyframe::buildWalking(time, MOVE_ANIMATION_DURATION, prevWall, destination);
+    const Keyframe keyframe = wasFloored
+        // floor -> floor
+        ? Keyframe::buildWalking(time, MOVE_ANIMATION_DURATION, room0, prevFloor, destination)
+        // wall -> floor
+        : Keyframe::buildWalking(time, MOVE_ANIMATION_DURATION, room0, prevWall, destination);
     if(!Keyframe::insertKeyframe(Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(character.keyframes), keyframe)) {
         // TODO: animation overflow
     }
