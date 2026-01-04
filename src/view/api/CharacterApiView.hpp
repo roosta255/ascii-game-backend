@@ -15,7 +15,9 @@ struct CharacterApiView
     std::string role = "UNPARSED_ROLE";
     int feats = 0;
     int actions = 0;
+    int actionsRemaining = 0;
     int moves = 0;
+    int movesRemaining = 0;
     int keys = 0;  // Number of keys held by the character
     bool isHidden = true;
     bool isObject = false;
@@ -45,6 +47,8 @@ struct CharacterApiView
         RoleFlyweight::getFlyweights().accessConst(model.role, [&](const RoleFlyweight& flyweight) {
             this->role = flyweight.name;
             this->isObject = flyweight.isObject;
+            this->actionsRemaining = flyweight.actions - model.actions;
+            this->movesRemaining = flyweight.moves - model.moves;
         });
     }
 
@@ -67,7 +71,9 @@ inline void to_json(nlohmann::json& j, const CharacterApiView& view) {
         {"role", view.role},
         {"feats", view.feats},
         {"actions", view.actions},
+        {"actionsRemaining", view.actionsRemaining},
         {"moves", view.moves},
+        {"movesRemaining", view.movesRemaining},
         {"isObject", view.isObject},
         {"keyframes", view.keyframes},
         {"keys", view.keys}

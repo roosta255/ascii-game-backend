@@ -19,7 +19,7 @@ namespace Json {
 
 struct Match {
     constexpr static int MATCH_BUILDER_COUNT = 3;
-    constexpr static long MOVE_ANIMATION_DURATION = 2000;
+    constexpr static long MOVE_ANIMATION_DURATION = 900;
 
     std::string filename = "ERROR_UNSET_FILENAME";
     std::string username;
