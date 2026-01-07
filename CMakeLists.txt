@@ -17,6 +17,7 @@ set(PROJECT_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/door
     ${CMAKE_CURRENT_SOURCE_DIR}/src/enum
     ${CMAKE_CURRENT_SOURCE_DIR}/src/generator
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/inventory
     ${CMAKE_CURRENT_SOURCE_DIR}/src/layout
     ${CMAKE_CURRENT_SOURCE_DIR}/src/math
     ${CMAKE_CURRENT_SOURCE_DIR}/src/model
@@ -49,6 +50,11 @@ add_library(core_backend STATIC
     src/generator/iGenerator.cpp
     src/enum/CodeEnum.cpp
     src/enum/TurnEnum.cpp
+    src/inventory/ActivatorInactiveItem.cpp
+    src/inventory/Inventory.cpp
+    src/inventory/Item.cpp
+    src/inventory/ItemEnum.cpp
+    src/inventory/ItemFlyweight.cpp
     src/layout/build_room_map.cpp
     src/layout/iLayout.cpp
     src/layout/LayoutFlyweight.cpp
