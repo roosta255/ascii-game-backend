@@ -44,14 +44,12 @@ bool Character::isActionable(CodeEnum& error, const bool isCheckingCount) const
     return result;
 }
 
-bool Character::isKeyer(CodeEnum& error, const bool isCheckingCount) const
+bool Character::isKeyer(CodeEnum& error) const
 {
     bool result = false;
     accessRole(error, [&](const RoleFlyweight& flyweight){
         if (!flyweight.isKeyer)
             error = CODE_CHARACTER_NOT_KEYER;
-        else if (isCheckingCount && keys <= 0)
-            error = CODE_CHARACTER_OUT_OF_KEYS;
         else result = true;
     });
     return result;
@@ -111,25 +109,6 @@ bool Character::accessRole
     }
     error = CODE_INACCESSIBLE_CHARACTER_ROLE;
     return false;
-}
-
-bool Character::takeKey(CodeEnum& error)
-{
-    if (keys > 0) {
-        keys--;
-        return true;
-    }
-    error = CODE_CHARACTER_OUT_OF_KEYS;
-    return false;
-}
-
-bool Character::giveKey(CodeEnum& error)
-{
-    if (!isKeyer(error)) {
-        return false;
-    }
-    keys++;
-    return true;
 }
 
 void Character::startTurn(Match& match)

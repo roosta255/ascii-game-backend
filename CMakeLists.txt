@@ -41,6 +41,7 @@ add_library(core_backend STATIC
     src/door/ActivatorInactiveDoor.cpp
     src/door/ActivatorInactiveDoor.cpp
     src/door/ActivatorKeeper.cpp
+    src/door/ActivatorJailer.cpp
     src/door/ActivatorShifter.cpp
     src/door/DoorFlyweight.cpp
     src/generator/GeneratorFlyweight.cpp

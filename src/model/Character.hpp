@@ -24,7 +24,6 @@ struct Character
     int feats = 0;
     int actions = 0;
     int moves = 0;
-    int keys = 0; // Number of keys held by the character
 
     // there are two problems to solve:
     // 1) should the backend store animation data?
@@ -54,13 +53,11 @@ struct Character
     bool isMovable(CodeEnum &error, const bool isCheckingCount = false) const;
     bool isActor(CodeEnum &error, const bool isCheckingCount = false) const;
     bool isActionable(CodeEnum &error, const bool isCheckingCount = false) const;
-    bool isKeyer(CodeEnum &error, const bool isCheckingCount = false) const;
+    bool isKeyer(CodeEnum &error) const;
 
     bool takeAction(CodeEnum &error); // Returns false if character is out of actions
     bool takeMove(CodeEnum &error);   // Returns false if character is out of moves
     bool takeFeat(CodeEnum &error);   // Returns false if character is out of feats
-    bool takeKey(CodeEnum &error);    // Returns false if character has no keys
-    bool giveKey(CodeEnum &error);    // Returns false if character can't receive keys
 
     void startTurn(Match &match); // Reset moves/actions to their initial values based on role
     void endTurn(Match &match);   // Clean up any end-of-turn effects

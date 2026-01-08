@@ -2,6 +2,7 @@
 #include "DoorEnum.hpp"
 #include "DoorFlyweight.hpp"
 #include "iActivator.hpp"
+#include "ActivatorJailer.hpp"
 #include "ActivatorKeeper.hpp"
 #include "ActivatorInactiveDoor.hpp"
 #include "ActivatorShifter.hpp"

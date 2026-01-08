@@ -44,30 +44,100 @@ bool Inventory::accessItem(ItemEnum target, std::function<void(const Item&)> con
     return false;
 }
 
-bool Inventory::pushItem(Item& src)
+bool Inventory::giveItem(ItemEnum type, CodeEnum& result, const bool isDryRun)
 {
-    if (src.stacks == 0) {
-        return true;
+    if (type == ITEM_NIL) {
+        result = CODE_PUSHED_ITEM_WITH_NIL_TYPE;
+        return false;
+    }
+    int capacity = 0;
+    if (!ItemFlyweight::getFlyweights().accessConst(type, [&](const ItemFlyweight& flyweight){ capacity = flyweight.stacks; })) {
+        result = CODE_PUSHED_ITEM_WITH_INVALID_TYPE;
+        return false;
     }
 
-    int capacity = 0;
-    if (!src.accessFlyweight([&](const ItemFlyweight& flyweight){ capacity = flyweight.stacks; })) {
+    if (capacity == 0) {
+        result = CODE_PUSHED_ITEM_WITH_0_CAPACITY_TYPE;
         return false;
     }
 
     for(auto& item : this->items)
     {
-        if (src.type == item.type) {
-            const int opening = capacity - item.stacks;
-            const int available = src.stacks;
-            const int moving = min(opening, available);
-            item.stacks += moving;
-            src.stacks -= moving;
-        }
-        if (src.stacks == 0) {
+        if (type == item.type && item.stacks < capacity) {
+            if (!isDryRun) {
+                item.stacks += 1;
+            }
             return true;
         }
     }
-    
+
+    for(auto& item : this->items)
+    {
+        if (item.type == ITEM_NIL) {
+            if (!isDryRun) {
+                item.type = type;
+                item.stacks += 1;
+            }
+            return true;
+        }
+    }
+
+    switch (type) {
+        case ITEM_KEY:
+            result = CODE_INVENTORY_FAILED_TO_ACCEPT_KEY;
+            break;
+        default:
+            result = CODE_INVENTORY_FAILED_TO_ACCEPT_ITEM;
+            break;
+    }
     return false;
+}
+
+bool Inventory::takeItem(ItemEnum type, CodeEnum& result, const bool isDryRun)
+{
+    if (type == ITEM_NIL) {
+        result = CODE_TAKEN_ITEM_WITH_NIL_TYPE;
+        return false;
+    }
+    int capacity = 0;
+    if (!ItemFlyweight::getFlyweights().accessConst(type, [&](const ItemFlyweight& flyweight){ capacity = flyweight.stacks; })) {
+        result = CODE_TAKEN_ITEM_WITH_INVALID_TYPE;
+        return false;
+    }
+
+    if (capacity == 0) {
+        result = CODE_TAKEN_ITEM_WITH_0_CAPACITY_TYPE;
+        return false;
+    }
+
+    for(auto& item : this->items)
+    {
+        if (type == item.type) {
+            if (!isDryRun) {
+                item.stacks -= 1;
+                if (item.stacks == 0) {
+                    item = Item();
+                }
+            }
+            return true;
+        }
+    }
+
+    switch (type) {
+        case ITEM_KEY:
+            result = CODE_INVENTORY_FAILED_TO_HAVE_KEY;
+            break;
+        default:
+            result = CODE_INVENTORY_FAILED_TO_HAVE_ITEM;
+            break;
+    }
+    return false;
+}
+
+bool Inventory::processDelta(ItemEnum type, const bool delta, CodeEnum& result, const bool isDryRun) {
+    if (delta) {
+        return giveItem(type, result, isDryRun);
+    } else {
+        return takeItem(type, result, isDryRun);
+    }
 }

@@ -3,7 +3,6 @@
 #include "adl_serializer.hpp"
 #include "Builder.hpp"
 #include "CharacterStoreView.hpp"
-#include "InventoryView.hpp"
 #include "PlayerStoreView.hpp"
 #include <string>
 #include <nlohmann/json.hpp>
@@ -12,21 +11,19 @@ struct BuilderStoreView
 {
     CharacterStoreView character;
     PlayerStoreView player;
-    InventoryView inventory;
  
     inline BuilderStoreView() = default;
  
     inline BuilderStoreView(const Builder& model)
-    : player(model.player), character(model.character), inventory(model.inventory) {}
+    : player(model.player), character(model.character) {}
  
     inline operator Builder() const {
         return Builder{
             .player = this->player,
-            .character = this->character,
-            .inventory = this->inventory
+            .character = this->character
         };
     }
 };
 
 // Reflection-based JSON serialization
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(BuilderStoreView, character, player, inventory)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(BuilderStoreView, character, player)

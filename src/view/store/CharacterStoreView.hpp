@@ -16,13 +16,12 @@ struct CharacterStoreView
     int feats = 0;
     int actions = 0;
     int moves = 0;
-    int keys = 0;  // Number of keys held by the character
     int visibility = 0;
     Array<KeyframeView, Character::MAX_KEYFRAMES> keyframes;
 
     inline CharacterStoreView() = default;
     inline CharacterStoreView(const Character& model)
-    : damage(model.damage), feats(model.feats), actions(model.actions), moves(model.moves), keys(model.keys), visibility(model.visibility), keyframes(model.keyframes.transform([&](const Keyframe& keyframe){return KeyframeView(keyframe);}))
+    : damage(model.damage), feats(model.feats), actions(model.actions), moves(model.moves), visibility(model.visibility), keyframes(model.keyframes.transform([&](const Keyframe& keyframe){return KeyframeView(keyframe);}))
     {
         RoleFlyweight::getFlyweights().accessConst(model.role, [&](const RoleFlyweight& flyweight) {
             this->role = flyweight.name;
@@ -34,7 +33,6 @@ struct CharacterStoreView
             .feats = this->feats,
             .actions = this->actions,
             .moves = this->moves,
-            .keys = this->keys,
             .visibility = this->visibility,
             .keyframes = this->keyframes.convert<Keyframe>()
         };
@@ -44,4 +42,4 @@ struct CharacterStoreView
 };
 
 // Reflection-based JSON serialization
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(CharacterStoreView, damage, role, feats, actions, moves, keys, keyframes)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(CharacterStoreView, damage, role, feats, actions, moves, keyframes)

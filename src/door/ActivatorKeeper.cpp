@@ -2,6 +2,7 @@
 #include "Match.hpp"
 #include "Room.hpp"
 #include "Character.hpp"
+#include "Inventory.hpp"
 #include "Player.hpp"
 #include "DoorEnum.hpp"
 
@@ -18,8 +19,12 @@ CodeEnum ActivatorKeeper::activate(Activation& activation) const {
             Wall& sourceWall = activation.room.getWall(activation.direction);
             Wall& neighborWall = neighborRoom.getWall(activation.direction.getFlip());
 
-            const bool isKeying = sourceWall.door == DOOR_KEEPER_INGRESS_KEYLESS;
-            if (!activation.character.isKeyer(result, isKeying)) {
+            if (!activation.character.isKeyer(result)) {
+                return;
+            }
+
+            const bool isKeying = sourceWall.door == DOOR_KEEPER_INGRESS_KEYED;
+            if (!activation.player.inventory.processDelta(ITEM_KEY, isKeying, result, true)) {
                 return;
             }
 
@@ -29,14 +34,14 @@ CodeEnum ActivatorKeeper::activate(Activation& activation) const {
                         result = CODE_DOORWAY_OCCUPIED_BY_CHARACTER;
                         return;
                     }
-                    if (activation.character.giveKey(result) && activation.character.takeAction(result)) {
+                    if (activation.player.inventory.giveItem(ITEM_KEY, result) && activation.character.takeAction(result)) {
                         sourceWall.door = DOOR_KEEPER_INGRESS_KEYLESS;
                         neighborWall.door = DOOR_KEEPER_EGRESS_KEYLESS;
                         result = CODE_SUCCESS;
                     }
                     return;
                 case DOOR_KEEPER_INGRESS_KEYLESS:
-                    if (activation.character.takeKey(result) && activation.character.takeAction(result)) {
+                    if (activation.player.inventory.takeItem(ITEM_KEY, result) && activation.character.takeAction(result)) {
                         sourceWall.door = DOOR_KEEPER_INGRESS_KEYED;
                         neighborWall.door = DOOR_KEEPER_EGRESS_KEYED;
                         result = CODE_SUCCESS;

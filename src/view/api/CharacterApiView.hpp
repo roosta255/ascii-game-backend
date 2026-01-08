@@ -18,7 +18,6 @@ struct CharacterApiView
     int actionsRemaining = 0;
     int moves = 0;
     int movesRemaining = 0;
-    int keys = 0;  // Number of keys held by the character
     bool isHidden = true;
     bool isObject = false;
     int offset = -1;
@@ -36,7 +35,6 @@ struct CharacterApiView
         this->feats = model.feats;
         this->actions = model.actions;
         this->moves = model.moves;
-        this->keys = model.keys;
 
         this->keyframes = model.keyframes.transform([&](const Keyframe& keyframe){return KeyframeView(keyframe);});
 
@@ -75,8 +73,7 @@ inline void to_json(nlohmann::json& j, const CharacterApiView& view) {
         {"moves", view.moves},
         {"movesRemaining", view.movesRemaining},
         {"isObject", view.isObject},
-        {"keyframes", view.keyframes},
-        {"keys", view.keys}
+        {"keyframes", view.keyframes}
     };
 }
 
