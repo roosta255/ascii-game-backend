@@ -19,6 +19,7 @@ struct Inventory {
     bool takeItem(ItemEnum type, CodeEnum& result, const bool isDryRun = false);
 
     bool processDelta(ItemEnum type, const bool delta, CodeEnum& result, const bool isDryRun = false);
+    bool accessItem(int index, CodeEnum& result, std::function<void(Item&)>);
 
     InventoryDigest makeDigest() const;
 };

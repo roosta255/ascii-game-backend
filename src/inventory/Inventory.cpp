@@ -114,8 +114,9 @@ bool Inventory::takeItem(ItemEnum type, CodeEnum& result, const bool isDryRun)
     {
         if (type == item.type) {
             if (!isDryRun) {
-                item.stacks -= 1;
-                if (item.stacks == 0) {
+                if (item.stacks > 1) {
+                    item.stacks -= 1;
+                } else {
                     item = Item();
                 }
             }
@@ -140,4 +141,12 @@ bool Inventory::processDelta(ItemEnum type, const bool delta, CodeEnum& result, 
     } else {
         return takeItem(type, result, isDryRun);
     }
+}
+
+bool Inventory::accessItem(int index, CodeEnum& result, std::function<void(Item&)> consumer) {
+    if (this->items.access(index, consumer)) {
+        return true;
+    }
+    result = CODE_INVENTORY_ITEM_INDEX_IS_INNACCESSIBLE;
+    return false;
 }

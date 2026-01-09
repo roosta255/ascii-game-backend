@@ -543,3 +543,52 @@ bool Match::moveCharacterToFloor(Room& room, Character& character, Cell& floor, 
 
     return true;
 }
+
+
+CodeEnum Match::activateInventoryItem(const std::string& playerId, int characterId, int roomId, int itemId) {
+    CodeEnum result = CODE_PREACTIVATE_IN_LOOKUPS;
+
+    getPlayer(playerId, result).access([&](Player& player) {
+        getCharacter(characterId, result).access([&](Character& character) {
+            dungeon.getRoom(roomId, result).access([&](Room& room) {
+                player.inventory.accessItem(itemId, result, [&](Item& item){
+                    result = activateInventoryItem(player, character, room, item);
+                });
+            });
+        });
+    });
+
+    return result;
+}
+
+CodeEnum Match::activateInventoryItem(Player& player, Character& subject, Room& room, Item& item) {
+    CodeEnum result = CODE_PREACTIVATE_IN_MATCH;
+
+    // Check if match has started
+    if (!isStarted(result)) return result;
+
+    // Check if character can take an action
+    if (!subject.isActor(result)) return result;
+
+    int subjectOffset;
+    if(!containsCharacter(subject, subjectOffset)) {
+        return CODE_INACCESSIBLE_SUBJECT_CHARACTER_ID;
+    }
+    if (!room.containsCharacter(subjectOffset)) {
+        return CODE_SUBJECT_CHARACTER_NOT_IN_ROOM;
+    }
+
+    subject.accessRole(result, [&](const RoleFlyweight& flyweight) {
+        if (flyweight.activator.isEmpty()) {
+            result = CODE_MISSING_ACTIVATOR;
+            return;
+        } else {
+            flyweight.activator.accessConst([&](const iActivator& activatorIntf){
+                Activation activation(player, subject, room, item, Cardinal::north(), *this);
+                result = activatorIntf.activate(activation);
+            });
+        }
+    });
+
+    return result;
+}

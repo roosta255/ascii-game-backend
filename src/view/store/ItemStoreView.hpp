@@ -7,14 +7,14 @@
 #include <string>
 #include <vector>
 
-struct ItemView
+struct ItemStoreView
 {
     std::string type = "UNPARSED_ITEM";
     int stacks = 0;
 
-    inline ItemView() = default;
+    inline ItemStoreView() = default;
 
-    inline ItemView(const Item& model): type(item_to_text(model.type)), stacks()
+    inline ItemStoreView(const Item& model): type(item_to_text(model.type)), stacks()
     {
     }
 
@@ -30,4 +30,4 @@ struct ItemView
 };
 
 // Reflection-based JSON serialization
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ItemView, type, stacks)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ItemStoreView, type, stacks)

@@ -4,19 +4,19 @@
 #include "Array.hpp"
 #include "Inventory.hpp"
 #include "Item.hpp"
-#include "ItemView.hpp"
+#include "ItemStoreView.hpp"
 #include <string>
 #include <nlohmann/json.hpp>
 
-struct InventoryView
+struct InventoryStoreView
 {
-    Array<ItemView, Inventory::STANDARD_ITEM_SLOTS> items;
+    Array<ItemStoreView, Inventory::STANDARD_ITEM_SLOTS> items;
     InventoryDigest digest;
 
-    inline InventoryView() = default;
+    inline InventoryStoreView() = default;
 
-    inline InventoryView(const Inventory& model):
-        items(model.items.convert<ItemView>()),
+    inline InventoryStoreView(const Inventory& model):
+        items(model.items.convert<ItemStoreView>()),
         digest(model.makeDigest())
     {
     }
@@ -31,4 +31,4 @@ struct InventoryView
 };
 
 // Reflection-based JSON serialization
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(InventoryView, items)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(InventoryStoreView, items)

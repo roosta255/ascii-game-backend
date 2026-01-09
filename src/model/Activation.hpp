@@ -2,6 +2,7 @@
 
 #include "Cardinal.hpp"
 #include "CodeEnum.hpp"
+#include "Item.hpp"
 #include "Pointer.hpp"
 
 class Player;
@@ -14,6 +15,7 @@ struct Activation {
     Character& character;
     Room& room;
     Pointer<Character> target;
+    Pointer<Item> item;
     Cardinal direction;
     Match& match;
 
@@ -28,6 +30,21 @@ struct Activation {
         character(character),
         room(room),
         target(target),
+        direction(direction),
+        match(match)
+    {}
+
+    Activation(
+        Player& player,
+        Character& character,
+        Room& room,
+        Item& item,
+        Cardinal direction,
+        Match& match
+    ) : player(player),
+        character(character),
+        room(room),
+        item(item),
         direction(direction),
         match(match)
     {}

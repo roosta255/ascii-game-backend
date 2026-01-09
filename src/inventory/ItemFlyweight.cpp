@@ -16,6 +16,7 @@ const Array<ItemFlyweight, ITEM_COUNT>& ItemFlyweight::getFlyweights()
                 flyweight.isDroppable = droppable_; \
                 flyweight.isDroppedOnDeath = deathdrops_; \
                 flyweight.name = #name_; \
+                flyweight.isActionable = !std::is_same_v<activator_, iActivator>; \
             });
         #include "Item.enum"
         #undef ITEM_DECL

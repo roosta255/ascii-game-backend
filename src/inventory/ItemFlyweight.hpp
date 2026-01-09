@@ -13,6 +13,7 @@ struct ItemFlyweight {
     int stacks = 1;
     bool isDroppable = true;
     bool isDroppedOnDeath = true;
+    bool isActionable = false;
 
     Pointer<const iActivator> activator;
 

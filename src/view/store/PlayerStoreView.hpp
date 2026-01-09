@@ -1,7 +1,7 @@
 #pragma once
 
 #include "adl_serializer.hpp"
-#include "InventoryView.hpp"
+#include "InventoryStoreView.hpp"
 #include "Player.hpp"
 #include <string>
 #include <nlohmann/json.hpp>
@@ -9,7 +9,7 @@
 struct PlayerStoreView
 {
     std::string account;
-    InventoryView inventory;
+    InventoryStoreView inventory;
 
     inline PlayerStoreView() = default;
     inline PlayerStoreView(const Player& model)

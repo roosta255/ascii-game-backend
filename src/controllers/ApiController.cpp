@@ -337,13 +337,61 @@ void ApiController::activateCharacter
     result = match.activateCharacter(accountId, characterId, roomId, targetId);
     
     if (CODE_SUCCESS != result)
-        return invokeResponse409(std::string("Activation rejected due to ") + code_to_text(result), std::move(callback));
+        return invokeResponse409(std::string("Character activation rejected due to ") + code_to_text(result), std::move(callback));
 
     // Save the updated match state
     if (!matchController.save(match, error))
         return invokeResponse409(code_to_message(error, "Failed to save match due to: "), std::move(callback));
 
     return invokeResponse200("Character activated", std::move(callback));
+}
+
+void ApiController::activateInventoryItem
+( const drogon::HttpRequestPtr& req, std::function<void (const drogon::HttpResponsePtr &)> &&callback, std::string matchId
+)
+{
+    auto json = req->getJsonObject();
+
+    if (!json)
+        return invokeResponse400("Missing json", std::move(callback));
+
+    if (!json->isMember("account"))
+        return invokeResponse400("Missing account field", std::move(callback));
+
+    if (!json->isMember("character"))
+        return invokeResponse400("Missing character field", std::move(callback));
+
+    if (!json->isMember("room"))
+        return invokeResponse400("Missing room field", std::move(callback));
+
+    if (!json->isMember("item"))
+        return invokeResponse400("Missing target field", std::move(callback));
+
+    std::string accountId = (*json)["account"].asString();
+    int roomId = (*json)["room"].asInt();
+    int characterId = (*json)["character"].asInt();
+    int itemId = (*json)["item"].asInt();
+
+    CodeEnum error = CODE_UNKNOWN_ERROR;
+    Match match;
+    if (!matchController.load(matchId, error, match))
+        return invokeResponse404(code_to_message(error, "Failed to load match due to: "), std::move(callback));
+
+    CodeEnum result = CODE_PREACTIVATE;
+
+    // TODO: Validate that account can issue character orders
+
+    // Attempt to activate the character
+    result = match.activateInventoryItem(accountId, characterId, roomId, itemId);
+    
+    if (CODE_SUCCESS != result)
+        return invokeResponse409(std::string("Item activation rejected due to ") + code_to_text(result), std::move(callback));
+
+    // Save the updated match state
+    if (!matchController.save(match, error))
+        return invokeResponse409(code_to_message(error, "Failed to save match due to: "), std::move(callback));
+
+    return invokeResponse200("Item activated", std::move(callback));
 }
 
 void ApiController::activateLock

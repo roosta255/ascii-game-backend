@@ -47,6 +47,8 @@ struct Match {
 
     CodeEnum activateCharacter(Player& player, Character& character, Room& room, Pointer<Character> target);
     CodeEnum activateCharacter(const std::string& playerId, int characterId, int roomId, int targetId);
+    CodeEnum activateInventoryItem(Player& player, Character& character, Room& room, Item& item);
+    CodeEnum activateInventoryItem(const std::string& playerId, int characterId, int roomId, int targetId);
     CodeEnum activateLock(Player& player, Character& character, Room& room, Cardinal direction);
     CodeEnum activateLock(const std::string& player, int characterId, int roomId, int direction);
     bool addCharacterToFloor(const Character& character, int roomId);
