@@ -10,13 +10,17 @@
 const Array<DoorFlyweight, DOOR_COUNT>& DoorFlyweight::getFlyweights() {
     static auto flyweights = [](){
         Array<DoorFlyweight, DOOR_COUNT> flyweights;
-        #define DOOR_DECL( name_text, blockingness, activator_, doorway_ ) \
-            static activator_ GLOBAL_##name_text##activator_; \
+        #define DOOR_DECL( name_text, blockingness, doorActivator_, lockActivator_, doorway_ ) \
+            static doorActivator_ GLOBAL_DOOR_##name_text##doorActivator_; \
+            static lockActivator_ GLOBAL_LOCK_##name_text##lockActivator_; \
             flyweights.getPointer( DOOR_##name_text ).access([](DoorFlyweight& flyweight){ \
                 flyweight.blocking = blockingness; \
                 flyweight.name = #name_text; \
                 flyweight.isDoorway = doorway_; \
-                flyweight.activator = GLOBAL_##name_text##activator_; \
+                flyweight.isDoorActionable = !std::is_same_v<doorActivator_, iActivator>; \
+                flyweight.isLockActionable = !std::is_same_v<lockActivator_, iActivator>; \
+                flyweight.doorActivator = GLOBAL_DOOR_##name_text##doorActivator_; \
+                flyweight.lockActivator  = GLOBAL_LOCK_##name_text##lockActivator_; \
             });
         #include "Door.enum"
         #undef DOOR_DECL

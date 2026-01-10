@@ -1,25 +1,25 @@
-DOOR_DECL(WALL,                   true,  ActivatorInactiveDoor, false)
-DOOR_DECL(DOORWAY,               false, ActivatorInactiveDoor, true)
+DOOR_DECL(WALL,                   true,  iActivator, iActivator, false)
+DOOR_DECL(DOORWAY,               false,  iActivator, iActivator, true)
 
-DOOR_DECL(KEEPER_EGRESS_KEYED,   false, ActivatorInactiveDoor, true)
-DOOR_DECL(KEEPER_EGRESS_KEYLESS,  true, ActivatorInactiveDoor, true)
-DOOR_DECL(KEEPER_INGRESS_KEYED,  false, ActivatorKeeper, true)
-DOOR_DECL(KEEPER_INGRESS_KEYLESS, true, ActivatorKeeper, true)
+DOOR_DECL(KEEPER_EGRESS_KEYED,   false,  iActivator, iActivator, true)
+DOOR_DECL(KEEPER_EGRESS_KEYLESS,  true,  iActivator, iActivator, true)
+DOOR_DECL(KEEPER_INGRESS_KEYED,  false,  iActivator, ActivatorKeeper, true)
+DOOR_DECL(KEEPER_INGRESS_KEYLESS, true,  iActivator, ActivatorKeeper, true)
 
 // jailer
-DOOR_DECL(JAILER_EGRESS_KEYED,   false, ActivatorInactiveDoor, true)
-DOOR_DECL(JAILER_EGRESS_KEYLESS,  true, ActivatorInactiveDoor, true)
-DOOR_DECL(JAILER_INGRESS_KEYED,  false, ActivatorJailer, true)
-DOOR_DECL(JAILER_INGRESS_KEYLESS, true, ActivatorInactiveDoor, true)
+DOOR_DECL(JAILER_EGRESS_KEYED,   false,  iActivator, iActivator, true)
+DOOR_DECL(JAILER_EGRESS_KEYLESS,  true,  iActivator, iActivator, true)
+DOOR_DECL(JAILER_INGRESS_KEYED,  false,  iActivator, ActivatorJailer, true)
+DOOR_DECL(JAILER_INGRESS_KEYLESS, true,  iActivator, iActivator, true)
 
 // shifter
-DOOR_DECL(SHIFTER_EGRESS_KEYED,  false, ActivatorShifter, true)
-DOOR_DECL(SHIFTER_EGRESS_KEYLESS, true, ActivatorInactiveDoor, true)
-DOOR_DECL(SHIFTER_INGRESS_KEYED,  false, ActivatorInactiveDoor, true)
-DOOR_DECL(SHIFTER_INGRESS_KEYLESS, true, ActivatorShifter, true)
+DOOR_DECL(SHIFTER_EGRESS_KEYED,  false,  iActivator, ActivatorShifter, true)
+DOOR_DECL(SHIFTER_EGRESS_KEYLESS, true,  iActivator, iActivator, true)
+DOOR_DECL(SHIFTER_INGRESS_KEYED,  false, iActivator, iActivator, true)
+DOOR_DECL(SHIFTER_INGRESS_KEYLESS, true, iActivator, ActivatorShifter, true)
 
 // dungeons start orange: open, blue: closed
-DOOR_DECL(TOGGLER_ORANGE_CLOSED, true, ActivatorInactiveDoor, true)
-DOOR_DECL(TOGGLER_ORANGE_OPEN,  false, ActivatorInactiveDoor, true)
-DOOR_DECL(TOGGLER_BLUE_CLOSED,   true, ActivatorInactiveDoor, true)
-DOOR_DECL(TOGGLER_BLUE_OPEN,    false, ActivatorInactiveDoor, true)
+DOOR_DECL(TOGGLER_ORANGE_CLOSED,   true, iActivator, iActivator, true)
+DOOR_DECL(TOGGLER_ORANGE_OPEN,    false, iActivator, iActivator, true)
+DOOR_DECL(TOGGLER_BLUE_CLOSED,     true, iActivator, iActivator, true)
+DOOR_DECL(TOGGLER_BLUE_OPEN,      false, iActivator, iActivator, true)

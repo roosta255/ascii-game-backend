@@ -14,6 +14,9 @@ struct WallApiView
     std::string door = "UNPARSED_DOOR";
     CellApiView cell;
     bool isDoorway = false;
+    bool isBlocking = false;
+    bool isDoorActionable = false;
+    bool isLockActionable = false;
     int adjacent = -1;
 
     inline WallApiView() = default;
@@ -26,6 +29,9 @@ struct WallApiView
         DoorFlyweight::getFlyweights().accessConst(model.door, [&](const DoorFlyweight& flyweight) {
             this->door = flyweight.name;
             this->isDoorway = flyweight.isDoorway;
+            this->isBlocking = flyweight.blocking;
+            this->isDoorActionable = flyweight.isDoorActionable;
+            this->isLockActionable = flyweight.isLockActionable;
         });
         params.match.dungeon.accessWall(room, dir, 
             [&](const Cell&, const Cell&, const Room& adj){
@@ -36,4 +42,4 @@ struct WallApiView
 };
 
 // Reflection-based JSON serialization
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(WallApiView, door, cell, isDoorway, adjacent)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(WallApiView, door, cell, isDoorway, adjacent, isBlocking, isDoorActionable, isLockActionable)

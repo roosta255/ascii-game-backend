@@ -20,6 +20,7 @@ struct CharacterApiView
     int movesRemaining = 0;
     bool isHidden = true;
     bool isObject = false;
+    bool isActionable = false;
     int offset = -1;
     Array<KeyframeView, Character::MAX_KEYFRAMES> keyframes;
 
@@ -45,6 +46,7 @@ struct CharacterApiView
         RoleFlyweight::getFlyweights().accessConst(model.role, [&](const RoleFlyweight& flyweight) {
             this->role = flyweight.name;
             this->isObject = flyweight.isObject;
+            this->isActionable = flyweight.isActionable;
             this->actionsRemaining = flyweight.actions - model.actions;
             this->movesRemaining = flyweight.moves - model.moves;
         });
@@ -73,6 +75,7 @@ inline void to_json(nlohmann::json& j, const CharacterApiView& view) {
         {"moves", view.moves},
         {"movesRemaining", view.movesRemaining},
         {"isObject", view.isObject},
+        {"isActionable", view.isActionable},
         {"keyframes", view.keyframes}
     };
 }

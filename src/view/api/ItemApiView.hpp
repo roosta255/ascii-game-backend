@@ -16,7 +16,7 @@ struct ItemApiView
 
     inline ItemApiView() = default;
 
-    inline ItemApiView(const Item& model): type(item_to_text(model.type)), stacks()
+    inline ItemApiView(const Item& model): type(item_to_text(model.type)), stacks(model.stacks)
     {
         model.accessFlyweight([&](const ItemFlyweight& flyweight){
             this->isActionable = flyweight.isActionable;
@@ -25,4 +25,4 @@ struct ItemApiView
 };
 
 // Reflection-based JSON serialization
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ItemApiView, type, stacks)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ItemApiView, type, stacks, index, isActionable)

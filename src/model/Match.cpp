@@ -4,6 +4,7 @@
 #include "iGenerator.hpp"
 #include "iLayout.hpp"
 #include "int2.hpp"
+#include "ItemFlyweight.hpp"
 #include "JsonParameters.hpp"
 #include "Keyframe.hpp"
 #include "make_filename.hpp"
@@ -291,69 +292,72 @@ Pointer<Player> Match::getPlayer(const std::string& player, CodeEnum& error) {
     return Pointer<Player>::empty();
 }
 
-CodeEnum Match::activateCharacter(const std::string& playerId, int characterId, int roomId, int targetId) {
-    CodeEnum result = CODE_PREACTIVATE_IN_LOOKUPS;
+bool Match::activateCharacter(const std::string& playerId, int characterId, int roomId, int targetId, CodeEnum& error) {
+    bool isSuccess = false;
 
-    getPlayer(playerId, result).access([&](Player& player) {
-        getCharacter(characterId, result).access([&](Character& character) {
-            dungeon.getRoom(roomId, result).access([&](Room& room) {
-                auto target = getCharacter(targetId, result);
-                result = activateCharacter(player, character, room, target);
+    getPlayer(playerId, error).access([&](Player& player) {
+        getCharacter(characterId, error).access([&](Character& character) {
+            dungeon.getRoom(roomId, error).access([&](Room& room) {
+                auto target = getCharacter(targetId, error);
+                isSuccess = activateCharacter(player, character, room, target, error);
             });
         });
     });
 
-    return result;
+    return isSuccess;
 }
 
-CodeEnum Match::activateCharacter(Player& player, Character& subject, Room& room, Pointer<Character> target) {
-    CodeEnum result = CODE_PREACTIVATE_IN_MATCH;
+bool Match::activateCharacter(Player& player, Character& subject, Room& room, Pointer<Character> target, CodeEnum& error) {
 
     // Check if match has started
-    if (!isStarted(result)) return result;
+    if (!isStarted(error)) return false;
 
     // Check if character can take an action
-    if (!subject.isActionable(result)) return result;
+    if (!subject.isActionable(error)) return false;
 
     int subjectOffset;
     if(!containsCharacter(subject, subjectOffset)) {
-        return CODE_INACCESSIBLE_SUBJECT_CHARACTER_ID;
+        error = CODE_INACCESSIBLE_SUBJECT_CHARACTER_ID;
+        return false;
     }
     if (!room.containsCharacter(subjectOffset)) {
-        return CODE_SUBJECT_CHARACTER_NOT_IN_ROOM;
+        error = CODE_SUBJECT_CHARACTER_NOT_IN_ROOM;
+        return false;
     }
 
     bool isTargetValid = false;
     target.access([&](Character& target) {
         int targetOffset;
         if(!containsCharacter(target, targetOffset)) {
-            result = CODE_INACCESSIBLE_TARGET_CHARACTER_ID;
+            error = CODE_INACCESSIBLE_TARGET_CHARACTER_ID;
             return;
         }
         if (!room.containsCharacter(targetOffset)) {
-            result = CODE_TARGET_CHARACTER_NOT_IN_ROOM;
+            error = CODE_TARGET_CHARACTER_NOT_IN_ROOM;
             return;
         }
         isTargetValid = true;
     });
 
     if (!isTargetValid) {
-        return result;
+        return false;
     }
 
-    subject.accessRole(result, [&](const RoleFlyweight& flyweight) {
+    bool isSuccess = false;
+    subject.accessRole(error, [&](const RoleFlyweight& flyweight) {
         if (flyweight.activator.isEmpty()) {
-            result = CODE_MISSING_ACTIVATOR;
+            error = CODE_MISSING_ACTIVATOR;
             return;
         } else {
             flyweight.activator.accessConst([&](const iActivator& activatorIntf){
                 Activation activation(player, subject, room, target, Cardinal::north(), *this);
-                result = activatorIntf.activate(activation);
+                error = activatorIntf.activate(activation);
+                isSuccess = error == CODE_SUCCESS;
             });
         }
     });
 
-    return result;
+    return isSuccess;
 }
 
 bool Match::isStarted(CodeEnum& error) const {
@@ -436,38 +440,34 @@ bool Match::addCharacterToFloor(const Character& source, int roomId) {
     return success;
 }
 
-CodeEnum Match::activateLock(Player& player, Character& character, Room& room, Cardinal direction) {
-    CodeEnum result = CODE_PREACTIVATE_IN_MATCH;
-
+bool Match::activateLock(Player& player, Character& character, Room& room, Cardinal direction, CodeEnum& error) {
     // Check if match has started
-    if (!isStarted(result)) return result;
+    if (!isStarted(error)) return false;
 
     // Check if character is an actor
-    if (!character.isActor(result)) {
-        return result;
+    if (!character.isActor(error)) {
+        return false;
     }
 
     // Get and validate the door
     Wall& wall = room.getWall(direction);
-    result = wall.activate(player, character, room, direction, *this);
-
-    return result;
+    return wall.activateLock(player, character, room, direction, *this, error);
 }
 
-CodeEnum Match::activateLock(const std::string& playerId, int characterId, int roomId, int direction) {
+bool Match::activateLock(const std::string& playerId, int characterId, int roomId, int direction, CodeEnum& error) {
+    bool isSuccess = false;
     // Get the player
-    CodeEnum result = CODE_PREACTIVATE_IN_LOOKUPS;
-    getPlayer(playerId, result).access([&](Player& player) {
+    getPlayer(playerId, error).access([&](Player& player) {
         // Get the character
-        getCharacter(characterId, result).access([&](Character& character) {
+        getCharacter(characterId, error).access([&](Character& character) {
             // Get the room
-            dungeon.getRoom(roomId, result).access([&](Room& room) {
-                result = activateLock(player, character, room, Cardinal(direction));
+            dungeon.getRoom(roomId, error).access([&](Room& room) {
+                isSuccess = activateLock(player, character, room, Cardinal(direction), error);
             });
         });
     });
 
-    return result;
+    return isSuccess;
 }
 
 bool Match::leave(const std::string& playerId, CodeEnum& error) {
@@ -545,50 +545,48 @@ bool Match::moveCharacterToFloor(Room& room, Character& character, Cell& floor, 
 }
 
 
-CodeEnum Match::activateInventoryItem(const std::string& playerId, int characterId, int roomId, int itemId) {
-    CodeEnum result = CODE_PREACTIVATE_IN_LOOKUPS;
+bool Match::activateInventoryItem(const std::string& playerId, int characterId, int roomId, int itemId, CodeEnum& error) {
+    bool isSuccess = false;
 
-    getPlayer(playerId, result).access([&](Player& player) {
-        getCharacter(characterId, result).access([&](Character& character) {
-            dungeon.getRoom(roomId, result).access([&](Room& room) {
-                player.inventory.accessItem(itemId, result, [&](Item& item){
-                    result = activateInventoryItem(player, character, room, item);
+    getPlayer(playerId, error).access([&](Player& player) {
+        getCharacter(characterId, error).access([&](Character& character) {
+            dungeon.getRoom(roomId, error).access([&](Room& room) {
+                player.inventory.accessItem(itemId, error, [&](Item& item){
+                    isSuccess = activateInventoryItem(player, character, room, item, error);
                 });
             });
         });
     });
 
-    return result;
+    return isSuccess;
 }
 
-CodeEnum Match::activateInventoryItem(Player& player, Character& subject, Room& room, Item& item) {
-    CodeEnum result = CODE_PREACTIVATE_IN_MATCH;
+bool Match::activateInventoryItem(Player& player, Character& subject, Room& room, Item& item, CodeEnum& error) {
 
     // Check if match has started
-    if (!isStarted(result)) return result;
+    if (!isStarted(error)) return false;
 
     // Check if character can take an action
-    if (!subject.isActor(result)) return result;
+    if (!subject.isActor(error)) return false;
 
     int subjectOffset;
     if(!containsCharacter(subject, subjectOffset)) {
-        return CODE_INACCESSIBLE_SUBJECT_CHARACTER_ID;
+        error = CODE_INACCESSIBLE_SUBJECT_CHARACTER_ID;
+        return false;
     }
     if (!room.containsCharacter(subjectOffset)) {
-        return CODE_SUBJECT_CHARACTER_NOT_IN_ROOM;
+        error = CODE_SUBJECT_CHARACTER_NOT_IN_ROOM;
+        return false;
     }
 
-    subject.accessRole(result, [&](const RoleFlyweight& flyweight) {
-        if (flyweight.activator.isEmpty()) {
-            result = CODE_MISSING_ACTIVATOR;
-            return;
-        } else {
-            flyweight.activator.accessConst([&](const iActivator& activatorIntf){
-                Activation activation(player, subject, room, item, Cardinal::north(), *this);
-                result = activatorIntf.activate(activation);
-            });
-        }
+    bool isSuccess = false;
+    item.accessFlyweight([&](const ItemFlyweight& flyweight){
+        flyweight.useActivator.accessConst([&](const iActivator& activatorIntf){
+            Activation activation(player, subject, room, item, Cardinal::north(), *this);
+            error = activatorIntf.activate(activation);
+            isSuccess = error == CODE_SUCCESS;
+        });
     });
 
-    return result;
+    return isSuccess;
 }

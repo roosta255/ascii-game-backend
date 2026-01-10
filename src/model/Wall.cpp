@@ -21,15 +21,38 @@ bool Wall::accessDoor(CodeEnum& error, std::function<void(const DoorFlyweight&)>
     return isDoorFlyweightAccessible;
 }
 
-CodeEnum Wall::activate(Player& player, Character& character, Room& room, const Cardinal& direction, Match& match) {
-    CodeEnum result = CODE_PREACTIVATE_IN_WALL;
-    accessDoor(result, [&](const DoorFlyweight& door) {
-        if (!door.activator.accessConst([&](const iActivator& activatorIntf) {
-            Activation activation(player, character, room, Pointer<Character>::empty(), direction, match);
-            result = activatorIntf.activate(activation);
-        })) {
-            result = CODE_DOOR_MISSING_ACTIVATOR;
+bool Wall::activateLock(Player& player, Character& character, Room& room, const Cardinal& direction, Match& match, CodeEnum& error) {
+    bool isSuccess = false;
+    accessDoor(error, [&](const DoorFlyweight& door) {
+        if (door.isLockActionable) {
+            if (!door.lockActivator.accessConst([&](const iActivator& activatorIntf) {
+                Activation activation(player, character, room, Pointer<Character>::empty(), direction, match);
+                error = activatorIntf.activate(activation);
+                isSuccess = error == CODE_SUCCESS;
+            })) {
+                error = CODE_DOOR_MISSING_ACTIVATOR;
+            }
+        } else {
+            error = CODE_LOCK_ACTIVATOR_NOT_CONFIGURED;
         }
     });
-    return result;
+    return isSuccess;
+}
+
+bool Wall::activateDoor(Player& player, Character& character, Room& room, const Cardinal& direction, Match& match, CodeEnum& error) {
+    bool isSuccess = false;
+    accessDoor(error, [&](const DoorFlyweight& door) {
+        if (door.isDoorActionable) {
+            if (!door.doorActivator.accessConst([&](const iActivator& activatorIntf) {
+                Activation activation(player, character, room, Pointer<Character>::empty(), direction, match);
+                error = activatorIntf.activate(activation);
+                isSuccess = error == CODE_SUCCESS;
+            })) {
+                error = CODE_DOOR_MISSING_ACTIVATOR;
+            }
+        } else {
+            error = CODE_DOOR_ACTIVATOR_NOT_CONFIGURED;
+        }
+    });
+    return isSuccess;
 }

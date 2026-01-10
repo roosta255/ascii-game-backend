@@ -329,14 +329,12 @@ void ApiController::activateCharacter
     if (!matchController.load(matchId, error, match))
         return invokeResponse404(code_to_message(error, "Failed to load match due to: "), std::move(callback));
 
-    CodeEnum result = CODE_PREACTIVATE;
 
     // TODO: Validate that account can issue character orders
 
     // Attempt to activate the character
-    result = match.activateCharacter(accountId, characterId, roomId, targetId);
-    
-    if (CODE_SUCCESS != result)
+    CodeEnum result = CODE_PREACTIVATE;
+    if (!match.activateCharacter(accountId, characterId, roomId, targetId, result))
         return invokeResponse409(std::string("Character activation rejected due to ") + code_to_text(result), std::move(callback));
 
     // Save the updated match state
@@ -382,9 +380,8 @@ void ApiController::activateInventoryItem
     // TODO: Validate that account can issue character orders
 
     // Attempt to activate the character
-    result = match.activateInventoryItem(accountId, characterId, roomId, itemId);
-    
-    if (CODE_SUCCESS != result)
+    result = CODE_PREACTIVATE;
+    if (!match.activateInventoryItem(accountId, characterId, roomId, itemId, result))
         return invokeResponse409(std::string("Item activation rejected due to ") + code_to_text(result), std::move(callback));
 
     // Save the updated match state
@@ -426,9 +423,9 @@ void ApiController::activateLock
         return invokeResponse404(code_to_message(error, "Failed to load match due to: "), std::move(callback));
 
     // Attempt to activate the lock
-    const auto result = match.activateLock(accountId, characterId, roomId, direction);
-    if (CODE_SUCCESS != result)
-        return invokeResponse409(std::string("Lock activation rejected due to ") + code_to_text(result), std::move(callback));
+    error = CODE_PREACTIVATE;
+    if (!match.activateLock(accountId, characterId, roomId, direction, error))
+        return invokeResponse409(std::string("Lock activation rejected due to ") + code_to_text(error), std::move(callback));
 
     // Save the updated match state
     if (!matchController.save(match, error))

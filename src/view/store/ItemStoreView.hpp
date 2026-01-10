@@ -14,7 +14,7 @@ struct ItemStoreView
 
     inline ItemStoreView() = default;
 
-    inline ItemStoreView(const Item& model): type(item_to_text(model.type)), stacks()
+    inline ItemStoreView(const Item& model): type(item_to_text(model.type)), stacks(model.stacks)
     {
     }
 

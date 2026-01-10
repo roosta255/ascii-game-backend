@@ -15,7 +15,7 @@ struct ItemFlyweight {
     bool isDroppedOnDeath = true;
     bool isActionable = false;
 
-    Pointer<const iActivator> activator;
+    Pointer<const iActivator> useActivator;
 
     static const Array<ItemFlyweight, ITEM_COUNT>& getFlyweights();
     static bool indexByString(const std::string& name, ItemEnum& output);

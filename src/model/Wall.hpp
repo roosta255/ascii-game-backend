@@ -17,7 +17,8 @@ struct Wall {
     Cell cell;
 
     bool isWalkable(CodeEnum& error) const;
-    CodeEnum activate(Player& player, Character& character, Room& room, const Cardinal& direction, Match& match);
+    bool activateDoor(Player& player, Character& character, Room& room, const Cardinal& direction, Match& match, CodeEnum& error);
+    bool activateLock(Player& player, Character& character, Room& room, const Cardinal& direction, Match& match, CodeEnum& error);
 
 private:
     // the last thing i want to do is to have a function that takes a function as a parameter

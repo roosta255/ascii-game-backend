@@ -106,6 +106,7 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     // Setup
     Match match;
     CodeEnum result = CODE_SUCCESS;
+    bool isSuccess = false;
     const std::string builderId = "builder_1";
     const std::string hostId = builderId;
 
@@ -146,16 +147,18 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     result = match.moveCharacterToWall(0, builderOffset, Cardinal::east(), Timestamp::nil());
     REQUIRE(result == CODE_SUCCESS);
 
-    result = match.activateCharacter(builderId, toggler1Offset, 1, builderOffset);
+    isSuccess = match.activateCharacter(builderId, toggler1Offset, 1, builderOffset, result);
     REQUIRE(result == CODE_SUCCESS);
+    REQUIRE(isSuccess == true);
     match.endTurn(builderId, result);
     REQUIRE(result == CODE_SUCCESS);
 
     result = match.moveCharacterToWall(1, builderOffset, Cardinal::north(), Timestamp::nil());
     REQUIRE(result == CODE_SUCCESS);
 
-    result = match.activateCharacter(builderId, toggler9Offset, 9, builderOffset);
+    isSuccess = match.activateCharacter(builderId, toggler9Offset, 9, builderOffset, result);
     REQUIRE(result == CODE_SUCCESS);
+    REQUIRE(isSuccess == true);
     match.endTurn(builderId, result);
     REQUIRE(result == CODE_SUCCESS);
 
@@ -172,8 +175,9 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     result = match.moveCharacterToWall(2, builderOffset, Cardinal::east(), Timestamp::nil());
     REQUIRE(result == CODE_SUCCESS);
 
-    result = match.activateCharacter(builderId, toggler3Offset, 3, builderOffset);
+    isSuccess = match.activateCharacter(builderId, toggler3Offset, 3, builderOffset, result);
     REQUIRE(result == CODE_SUCCESS);
+    REQUIRE(isSuccess == true);
     match.endTurn(builderId, result);
     REQUIRE(result == CODE_SUCCESS);
 
@@ -181,8 +185,9 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     REQUIRE(result == CODE_SUCCESS);
 
     // Take keeper's key between rooms 2 and 3
-    result = match.activateLock(builderId, builderOffset, 2, Cardinal::east().getIndex());
+    isSuccess = match.activateLock(builderId, builderOffset, 2, Cardinal::east().getIndex(), result);
     REQUIRE(result == CODE_SUCCESS);
+    REQUIRE(isSuccess == true);
     REQUIRE(inventory->makeDigest().isEmpty == false);
     REQUIRE(inventory->makeDigest().keys == 1);
     match.endTurn(builderId, result);
@@ -193,14 +198,16 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     REQUIRE(result == CODE_SUCCESS);
 
     // Take key from room10's south keeper
-    result = match.activateLock(builderId, builderOffset, 10, Cardinal::south().getIndex());
+    isSuccess = match.activateLock(builderId, builderOffset, 10, Cardinal::south().getIndex(), result);
     REQUIRE(result == CODE_SUCCESS);
+    REQUIRE(isSuccess == true);
     REQUIRE(inventory->makeDigest().isEmpty == false);
     REQUIRE(inventory->makeDigest().keys == 2);
 
     // Give key to room11's north shifter to open it
-    result = match.activateLock(builderId, builderOffset, 11, Cardinal::north().getIndex());
+    isSuccess = match.activateLock(builderId, builderOffset, 11, Cardinal::north().getIndex(), result);
     REQUIRE(result == CODE_SUCCESS);
+    REQUIRE(isSuccess == true);
     REQUIRE(inventory->makeDigest().isEmpty == false);
     REQUIRE(inventory->makeDigest().keys == 1);
 
@@ -211,7 +218,8 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     REQUIRE(result == CODE_SUCCESS);
 
     // Give key to room19's west shifter to open it
-    result = match.activateLock(builderId, builderOffset, 19, Cardinal::west().getIndex());
+    isSuccess = match.activateLock(builderId, builderOffset, 19, Cardinal::west().getIndex(), result);
+    REQUIRE(isSuccess == true);
     REQUIRE(result == CODE_SUCCESS);
     REQUIRE(inventory->makeDigest().isEmpty == true);
     REQUIRE(inventory->makeDigest().keys == 0);
@@ -225,7 +233,8 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     // TODO: Need new API to move character to floor position in room 18
     // For now this will fail as character is blocking the shifter door
     // Take key from room18's east shifter (egress side)
-    result = match.activateLock(builderId, builderOffset, 18, Cardinal::east().getIndex());
+    isSuccess = match.activateLock(builderId, builderOffset, 18, Cardinal::east().getIndex(), result);
+    REQUIRE(isSuccess == true);
     REQUIRE(result == CODE_SUCCESS);
     REQUIRE(inventory->makeDigest().isEmpty == false);
     REQUIRE(inventory->makeDigest().keys == 1);
@@ -233,7 +242,8 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     REQUIRE(result == CODE_SUCCESS);
 
     // Give key to room18's south keeper to open it
-    result = match.activateLock(builderId, builderOffset, 18, Cardinal::south().getIndex());
+    isSuccess = match.activateLock(builderId, builderOffset, 18, Cardinal::south().getIndex(), result);
+    REQUIRE(isSuccess == true);
     REQUIRE(result == CODE_SUCCESS);
     REQUIRE(true == inventory->makeDigest().isEmpty);
     REQUIRE(0 == inventory->makeDigest().keys);
@@ -253,7 +263,8 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     // TODO: Need new API to move character to floor position in room 11
     // For now this will fail as character is blocking the keeper door
     // Take key from room11's north keeper
-    result = match.activateLock(builderId, builderOffset, 11, Cardinal::north().getIndex());
+    isSuccess = match.activateLock(builderId, builderOffset, 11, Cardinal::north().getIndex(), result);
+    REQUIRE(isSuccess == true);
     REQUIRE(result == CODE_SUCCESS);
     REQUIRE(inventory->makeDigest().isEmpty == false);
     REQUIRE(inventory->makeDigest().keys == 1);
@@ -273,7 +284,8 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
 
     // TODO: Need new API to move character to floor position in room 18
     // Take the second key from room18's south keeper
-    result = match.activateLock(builderId, builderOffset, 18, Cardinal::south().getIndex());
+    isSuccess = match.activateLock(builderId, builderOffset, 18, Cardinal::south().getIndex(), result);
+    REQUIRE(isSuccess == true);
     REQUIRE(result == CODE_SUCCESS);
     REQUIRE(inventory->makeDigest().isEmpty == false);
     REQUIRE(inventory->makeDigest().keys == 2);
@@ -281,7 +293,8 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     REQUIRE(result == CODE_SUCCESS);
 
     // Now with 2 keys, give key to room18's west keyless keeper
-    result = match.activateLock(builderId, builderOffset, 18, Cardinal::west().getIndex());
+    isSuccess = match.activateLock(builderId, builderOffset, 18, Cardinal::west().getIndex(), result);
+    REQUIRE(isSuccess == true);
     REQUIRE(result == CODE_SUCCESS);
     REQUIRE(inventory->makeDigest().isEmpty == false);
     REQUIRE(inventory->makeDigest().keys == 1);
@@ -293,7 +306,8 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     REQUIRE(result == CODE_SUCCESS);
 
     // Give key to room17's west keyless keeper
-    result = match.activateLock(builderId, builderOffset, 17, Cardinal::west().getIndex());
+    isSuccess = match.activateLock(builderId, builderOffset, 17, Cardinal::west().getIndex(), result);
+    REQUIRE(isSuccess == true);
     REQUIRE(result == CODE_SUCCESS);
     REQUIRE(inventory->makeDigest().isEmpty == true);
     REQUIRE(inventory->makeDigest().keys == 0);
