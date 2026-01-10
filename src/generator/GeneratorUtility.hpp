@@ -28,6 +28,7 @@ public:
     bool setupTogglerBlue(const int4&, const Cardinal);
     bool setupDoorway(const int4&, const Cardinal);
     bool setupKeeper(const int4&, const Cardinal, const bool);
+    bool setupJailer(const int4&, const Cardinal, const bool);
     bool setupShifter(const int4&, const Cardinal, const bool);
     bool setupHorizontalWalls (std::initializer_list<int> row, int y, int z);
     bool setupVerticalWalls (std::initializer_list<int> row, int y, int z);

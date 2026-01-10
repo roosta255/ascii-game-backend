@@ -11,8 +11,6 @@
 bool GeneratorTutorial::generate (int seed, Match& dst) const {
     constexpr auto LAYOUT = LAYOUT_2D_8x8;
     dst.dungeon.layout = LAYOUT;
-    constexpr int w = DOOR_WALL;
-    constexpr int o = DOOR_DOORWAY;
     bool success = true;
 
     CodeEnum error = CODE_UNKNOWN_ERROR;

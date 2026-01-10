@@ -17,6 +17,13 @@ Pointer<Room> GeneratorUtility::getRoom(const int4& coord) {
     return found->second;
 }
 
+bool GeneratorUtility::setupJailer (const int4& coord, const Cardinal dir, const bool isKeyed) {
+    return accessRoomWall(coord, dir, [&](Room&, Wall& wall1, Wall& wall2, Room&){
+        wall1.door = isKeyed ? DOOR_JAILER_INGRESS_KEYED : DOOR_JAILER_INGRESS_KEYLESS;
+        wall2.door = isKeyed ? DOOR_JAILER_EGRESS_KEYED : DOOR_JAILER_EGRESS_KEYLESS;
+    });
+}
+
 bool GeneratorUtility::setupKeeper (const int4& coord, const Cardinal dir, const bool isKeyed) {
     return accessRoomWall(coord, dir, [&](Room&, Wall& wall1, Wall& wall2, Room&){
         wall1.door = isKeyed ? DOOR_KEEPER_INGRESS_KEYED : DOOR_KEEPER_INGRESS_KEYLESS;

@@ -33,8 +33,8 @@ CodeEnum ActivatorJailer::activate(Activation& activation) const {
                 return;
             }
             if (activation.player.inventory.takeItem(ITEM_KEY, result) && activation.character.takeAction(result)) {
-                sourceWall.door = DOOR_SHIFTER_INGRESS_KEYED;
-                neighborWall.door = DOOR_SHIFTER_EGRESS_KEYED;
+                sourceWall.door = DOOR_JAILER_INGRESS_KEYED;
+                neighborWall.door = DOOR_JAILER_EGRESS_KEYED;
                 result = CODE_SUCCESS;
             }
         },

@@ -9,8 +9,8 @@ DOOR_DECL(KEEPER_INGRESS_KEYLESS, true,  iActivator, ActivatorKeeper, true)
 // jailer
 DOOR_DECL(JAILER_EGRESS_KEYED,   false,  iActivator, iActivator, true)
 DOOR_DECL(JAILER_EGRESS_KEYLESS,  true,  iActivator, iActivator, true)
-DOOR_DECL(JAILER_INGRESS_KEYED,  false,  iActivator, ActivatorJailer, true)
-DOOR_DECL(JAILER_INGRESS_KEYLESS, true,  iActivator, iActivator, true)
+DOOR_DECL(JAILER_INGRESS_KEYED,  false,  iActivator, iActivator, true)
+DOOR_DECL(JAILER_INGRESS_KEYLESS, true,  iActivator, ActivatorJailer, true)
 
 // shifter
 DOOR_DECL(SHIFTER_EGRESS_KEYED,  false,  iActivator, ActivatorShifter, true)

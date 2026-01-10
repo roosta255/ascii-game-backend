@@ -1,6 +1,7 @@
 #include "Array.hpp"
 #include "GeneratorEnum.hpp"
 #include "GeneratorFlyweight.hpp"
+#include "GeneratorTest.hpp"
 #include "GeneratorTutorial.hpp"
 #include "GeneratorPuzzle2.hpp"
 
@@ -18,7 +19,7 @@ const Array<GeneratorFlyweight, GENERATOR_COUNT>& GeneratorFlyweight::getFlyweig
 
 bool GeneratorFlyweight::indexByString (const std::string& name, int& output) {
     output = 0;
-    const auto& flyweights = getFlyweights(); 
+    const auto& flyweights = getFlyweights();
     for(const GeneratorFlyweight& flyweight: flyweights) {
         if(name == flyweight.name) {
             return true;

@@ -46,6 +46,7 @@ add_library(core_backend STATIC
     src/door/DoorFlyweight.cpp
     src/generator/GeneratorFlyweight.cpp
     src/generator/GeneratorPuzzle2.cpp
+    src/generator/GeneratorTest.cpp
     src/generator/GeneratorTutorial.cpp
     src/generator/GeneratorUtility.cpp
     src/generator/iGenerator.cpp
