@@ -323,4 +323,89 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     REQUIRE(result == CODE_SUCCESS);
 }
 
+TEST_CASE("Test jailer", "[match][test]") {
+    CodeEnum error = CODE_UNKNOWN_ERROR;
+
+    // Setup
+    Match match;
+    CodeEnum result = CODE_SUCCESS;
+    bool isSuccess = false;
+    const std::string builderId = "builder_1";
+    const std::string hostId = builderId;
+
+    match.host = hostId;
+    match.filename = "match_001";
+    match.generator = GENERATOR_TEST;
+
+    // Generate tutorial layout
+    GeneratorTutorial generator;
+    REQUIRE(generator.generate(0, match));
+
+    // Start the match
+    REQUIRE(match.start());
+
+    // Get the actual character offset of the first builder
+    int builderOffset;
+    Inventory* inventory;
+    REQUIRE(match.builders.access(0, [&](Builder& builder) {
+        REQUIRE(match.containsCharacter(builder.character, builderOffset));
+        inventory = &builder.player.inventory;
+    }));
+
+    REQUIRE(inventory->makeDigest().isEmpty == true);
+    REQUIRE(inventory->makeDigest().keys == 0);
+
+    result = match.moveCharacterToWall(0, builderOffset, Cardinal::east(), Timestamp::nil());
+    REQUIRE(result == CODE_SUCCESS);
+    match.endTurn(builderId, result);
+    REQUIRE(result == CODE_SUCCESS);
+
+    match.moveCharacterToFloor(1, builderOffset, 1, Timestamp::nil(), result);
+    REQUIRE(result == CODE_SUCCESS);
+/*
+    result = match.moveCharacterToWall(1, builderOffset, Cardinal::north(), Timestamp::nil());
+    REQUIRE(result == CODE_SUCCESS);
+    match.endTurn(builderId, result);
+    REQUIRE(result == CODE_SUCCESS);
+
+    result = match.moveCharacterToWall(9, builderOffset, Cardinal::west(), Timestamp::nil());
+    REQUIRE(result == CODE_BLOCKING_DOOR_TYPE);
+    match.endTurn(builderId, result);
+    REQUIRE(result == CODE_SUCCESS);
+
+    // Take keeper's key between rooms 9 and 8
+    isSuccess = match.activateLock(builderId, builderOffset, 9, Cardinal::west().getIndex(), result);
+    REQUIRE(result == CODE_SUCCESS);
+    REQUIRE(isSuccess == true);
+    REQUIRE(inventory->makeDigest().isEmpty == false);
+    REQUIRE(inventory->makeDigest().keys == 1);
+    match.endTurn(builderId, result);
+    REQUIRE(result == CODE_SUCCESS);
+
+    result = match.moveCharacterToWall(9, builderOffset, Cardinal::north(), Timestamp::nil());
+    REQUIRE(result == CODE_SUCCESS);
+    match.endTurn(builderId, result);
+    REQUIRE(result == CODE_SUCCESS);
+
+    result = match.moveCharacterToWall(17, builderOffset, Cardinal::west(), Timestamp::nil());
+    REQUIRE(result == CODE_BLOCKING_DOOR_TYPE);
+    match.endTurn(builderId, result);
+    REQUIRE(result == CODE_SUCCESS);
+
+    // Fill jailer between rooms 17 and 16
+    isSuccess = match.activateLock(builderId, builderOffset, 17, Cardinal::west().getIndex(), result);
+    REQUIRE(result == CODE_SUCCESS);
+    REQUIRE(isSuccess == true);
+    REQUIRE(inventory->makeDigest().isEmpty == false);
+    REQUIRE(inventory->makeDigest().keys == 1);
+    match.endTurn(builderId, result);
+    REQUIRE(result == CODE_SUCCESS);
+
+    result = match.moveCharacterToWall(17, builderOffset, Cardinal::west(), Timestamp::nil());
+    REQUIRE(result == CODE_SUCCESS);
+    match.endTurn(builderId, result);
+    REQUIRE(result == CODE_SUCCESS);
+*/
+}
+
 // how does a DOI work?
