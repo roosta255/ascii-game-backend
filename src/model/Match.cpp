@@ -420,7 +420,7 @@ bool Match::addCharacterToFloor(const Character& source, int roomId) {
     // Find an empty floor cell
     bool success = false;
     room.access([&](Room& room) {
-        for (Cell& cell: room.floorCells) {
+        for (Cell& cell: room.getUsedFloorCells()) {
             if (!containsOffset(cell.offset)) {
                 // Set the character offset in the cell
                 cell.offset = characterOffset;

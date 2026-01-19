@@ -32,4 +32,10 @@ public:
     bool setupShifter(const int4&, const Cardinal, const bool);
     bool setupHorizontalWalls (std::initializer_list<int> row, int y, int z);
     bool setupVerticalWalls (std::initializer_list<int> row, int y, int z);
+    bool setup4x1Room(const int4&);
+    bool setup2x5Room(const int4&);
+    bool setup3x3Room(const int4&);
+    bool setupLightningRodRoom(const int4&);
+    bool setupPowerGeneratorRoom(const int4&);
+
 };

@@ -6,10 +6,12 @@
 #include <vector>
 
 #include "is_equal.hpp"
+#include "Address.hpp"
 #include "Array.hpp"
 // #include "data/Bake.hpp"
 // #include "data/Cake.hpp"
 #include "Iterator.hpp"
+#include "Pointer.hpp"
 
 template<typename T>
 class Rack
@@ -17,17 +19,6 @@ class Rack
 T* start;
 T* occupied;
 T* finish;
-
-constexpr Rack
-( const T* start
-, const T* occupied
-, const T* finish
-)
-: start(start)
-, occupied(occupied)
-, finish(finish)
-{
-}
 
 constexpr Rack
 ( T* start
@@ -55,18 +46,18 @@ constexpr Rack(const T& element) noexcept
 template<size_t N>
 constexpr Rack
 (const std::array<T, N>& arr) noexcept
-: start(arr.data())
-, finish(arr.data() + N)
-, occupied(arr.data() + N)
+: start(Address(arr.data()).raw)
+, finish(Address(arr.data()).raw + N)
+, occupied(Address(arr.data()).raw + N)
 {
 }
 
 template<unsigned N>
 constexpr Rack
 (const Array<T, N>& arr) noexcept
-: start(arr.begin())
-, finish(arr.end())
-, occupied(arr.end())
+: start(Address(arr.begin()).raw)
+, finish(Address(arr.end()).raw)
+, occupied(Address(arr.end()).raw)
 {
 }
 
@@ -77,10 +68,28 @@ constexpr static Rack<T> buildFromArray
     return Rack<T>(arr.begin(), arr.end(), arr.end());
 }
 
+Pointer<T> getPointer
+( const int index
+)
+{
+    return contains(index)
+    ? Pointer<T>(this->start[index])
+    : Pointer<T>();
+}
+
+Pointer<const T> getPointer
+( const int index
+) const
+{
+    return contains(index)
+    ? Pointer<const T>(this->start[index])
+    : Pointer<const T>();
+}
+
 Rack(const std::vector<T>& arr)
-: start(arr.data())
-, finish(arr.data() + arr.size())
-, occupied(arr.data() + arr.size())
+: start(Address(arr.data()).raw)
+, finish(Address(arr.data()).raw + arr.size())
+, occupied(Address(arr.data()).raw + arr.size())
 {
 }
 
@@ -166,6 +175,7 @@ bool getIndex(const T& item, int& output)const
 Rack constexpr resize(const unsigned count)const
 {
     return Rack(start,
+                start + (count < size() ? count : size()),
                 start + (count < size() ? count : size()));
 }
 
@@ -192,6 +202,16 @@ constexpr T* begin()
 }
 
 constexpr T* end()
+{
+    return occupied;
+}
+
+constexpr const T* begin() const
+{
+    return start;
+}
+
+constexpr const T* end() const
 {
     return occupied;
 }
@@ -233,6 +253,31 @@ T& getOrDefault(int index, T& defaulted)
 const T& getOrDefault(int index, const T& defaulted) const
 {
 	return contains(index) ? start[index] : defaulted;
+}
+
+// Transform without index
+template<typename Func>
+auto transform(Func func) const -> std::vector<decltype(func(std::declval<T>()))> {
+    using ResultType = decltype(func(std::declval<T>()));
+    std::vector<ResultType> result;
+    result.reserve(size()); // avoid reallocations
+    for (auto it = start; it != occupied; ++it) {
+        result.push_back(func(*it));
+    }
+    return result;
+}
+
+// Transform with index
+template<typename Func>
+auto transform(Func func) const -> std::vector<decltype(func(int{}, std::declval<T>()))> {
+    using ResultType = decltype(func(int{}, std::declval<T>()));
+    std::vector<ResultType> result;
+    result.reserve(size());
+    int i = 0;
+    for (auto it = start; it != occupied; ++it, ++i) {
+        result.push_back(func(i, *it));
+    }
+    return result;
 }
 
 };

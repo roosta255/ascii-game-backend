@@ -1,5 +1,6 @@
 #include "Dungeon.hpp"
 #include "iLayout.hpp"
+#include "int2.hpp"
 #include "int4_to_json.hpp"
 #include "JsonParameters.hpp"
 #include "LayoutFlyweight.hpp"
@@ -43,16 +44,25 @@ bool Dungeon::findCharacter(
 {
     CodeEnum error;
     bool isFound = false;
+
     // Search floor cells
+    for (Cell& cell: room.getUsedFloorCells()) {
+        int index;
+        int2 coords;
+        if (cell.offset == searched) {
+            if (room.containsFloorCell(cell, error, index, coords))
+            {
+                isFound = true;
+                floorConsumer(coords[0], coords[1], cell);
+            } else {
+                error = CODE_DUNGEON_FIND_CHARACTER_LOOPS_OVER_UNCONTAINED_FLOOR_CELL;
+            }
+        }
+    };
+
     for (int y = 0; y < Room::DUNGEON_ROOM_HEIGHT; ++y) {
         for (int x = 0; x < Room::DUNGEON_ROOM_WIDTH; ++x) {
             int i = y * Room::DUNGEON_ROOM_WIDTH + x;
-            room.floorCells.access(i, [&](Cell& cell) {
-                if (cell.offset == searched) {
-                    isFound = true;
-                    floorConsumer(x, y, cell);
-                }
-            });
         }
     }
 

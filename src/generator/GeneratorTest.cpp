@@ -24,6 +24,10 @@ bool GeneratorTest::generate (int seed, Match& dst) const {
     LayoutFlyweight::getFlyweights().accessConst(LAYOUT, [&](const LayoutFlyweight& flyweight){
         flyweight.layout.accessConst([&](const iLayout& layoutIntf){
             GeneratorUtility util(dst.dungeon.rooms, layoutIntf);
+
+            success &= util.setup2x5Room(int4{1,1,0,0});
+            success &= util.setup2x5Room(int4{1,2,0,0});
+
             success &= util.setupDoorway(int4{0,0,0,0}, Cardinal::east());
             success &= util.setupDoorway(int4{0,1,0,0}, Cardinal::east());
             success &= util.setupDoorway(int4{0,2,0,0}, Cardinal::east());
@@ -62,7 +66,7 @@ bool GeneratorTest::generate (int seed, Match& dst) const {
             success &= util.setupJailer(int4{1,2,0,0}, Cardinal::west(), false);
 
             Room& entrance = layoutIntf.getEntrance(dst.dungeon.rooms);
-            entrance.floorCells.access(0, [&](Cell& cell){
+            entrance.getUsedFloorCells().access(0, [&](Cell& cell){
                 dst.builders.access(0, [&](Builder& builder){
                     if (!dst.containsCharacter(builder.character, cell.offset)) {
                         return;

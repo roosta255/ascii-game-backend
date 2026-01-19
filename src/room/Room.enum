@@ -1,0 +1,6 @@
+ROOM_DECL(RECT_4_x_5,      4, 5, Bitcard::NONE,  Bitcard::NONE)
+ROOM_DECL(RECT_4_x_1,      4, 1, Bitcard::NONE,  Bitcard::EAST | Bitcard::WEST)
+ROOM_DECL(RECT_2_x_5,      2, 5, Bitcard::NONE,  Bitcard::NORTH | Bitcard::SOUTH)
+ROOM_DECL(RECT_3_x_3,      3, 3, Bitcard::NONE,  Bitcard::ALL)
+ROOM_DECL(LIGHTNING_ROD,   4, 1, Bitcard::NORTH, Bitcard::NORTH | Bitcard::EAST | Bitcard::WEST)
+ROOM_DECL(POWER_GENERATOR, 4, 5, Bitcard::NONE,  Bitcard::NONE)

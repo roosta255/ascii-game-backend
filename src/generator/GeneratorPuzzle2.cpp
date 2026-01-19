@@ -30,7 +30,7 @@ bool GeneratorPuzzle2::generate (int seed, Match& dst) const {
             success &= util.setupTogglerOrange(int4{0,0,0,0}, Cardinal::east());
 
             Room& entrance = layoutIntf.getEntrance(dst.dungeon.rooms);
-            entrance.floorCells.access(0, [&](Cell& cell){
+            entrance.getUsedFloorCells().access(0, [&](Cell& cell){
                 dst.builders.access(0, [&](Builder& builder){
                     if (!dst.containsCharacter(builder.character, cell.offset)) {
                         return;

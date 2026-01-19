@@ -22,6 +22,7 @@ set(PROJECT_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/math
     ${CMAKE_CURRENT_SOURCE_DIR}/src/model
     ${CMAKE_CURRENT_SOURCE_DIR}/src/role
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/room
     ${CMAKE_CURRENT_SOURCE_DIR}/src/store
     ${CMAKE_CURRENT_SOURCE_DIR}/src/struct
     ${CMAKE_CURRENT_SOURCE_DIR}/src/time
@@ -63,17 +64,18 @@ add_library(core_backend STATIC
     src/layout/LayoutGrid.cpp
     src/model/Account.cpp
     src/model/Builder.cpp
-    src/model/Cell.cpp
     src/model/Character.cpp
     src/model/Dungeon.cpp
     src/model/Match.cpp 
     src/model/Player.cpp
-    src/model/Room.cpp
     src/model/Titan.cpp
     src/model/Turner.cpp
-    src/model/Wall.cpp
     src/role/ActivatorToggler.cpp
     src/role/RoleFlyweight.cpp
+    src/room/Cell.cpp
+    src/room/Room.cpp
+    src/room/RoomFlyweight.cpp
+    src/room/Wall.cpp
     src/store/FileStore.cpp
     src/time/Timestamp.cpp
     src/vector/int4_to_json.cpp

@@ -6,6 +6,7 @@
 #include "CellStoreView.hpp"
 #include "Dungeon.hpp"
 #include "Room.hpp"
+#include "RoomFlyweight.hpp"
 #include "Wall.hpp"
 #include "WallStoreView.hpp"
 #include <string>
@@ -16,23 +17,30 @@ struct RoomStoreView
     int visibility = 0;
     Array<CellStoreView, Room::DUNGEON_ROOM_CELL_COUNT> floorCells;
     Array<WallStoreView, 4> walls;
+    std::string type = "UNPARSED_ROOM";
 
     inline RoomStoreView() = default;
 
     inline RoomStoreView(const Room& model)
-    : floorCells(model.floorCells.convert<CellStoreView>())
+    : floorCells(model.reserveFloorCells.convert<CellStoreView>())
     , walls(model.walls.convert<WallStoreView>())
     , visibility(model.visibility)
-    {}
+    {
+        RoomFlyweight::getFlyweights().accessConst(model.type, [&](const RoomFlyweight& flyweight) {
+            this->type = flyweight.name;
+        });
+    }
 
     inline operator Room() const {
-        return Room{
+        Room model{
             .visibility = this->visibility,
-            .floorCells = this->floorCells.convert<Cell>(),
+            .reserveFloorCells = this->floorCells.convert<Cell>(),
             .walls = this->walls.convert<Wall>()
         };
+        RoomFlyweight::indexByString(this->type, model.type);
+        return model;
     }
 };
 
 // Reflection-based JSON serialization
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RoomStoreView, floorCells, walls)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RoomStoreView, floorCells, walls, type)

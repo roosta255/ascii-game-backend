@@ -1,6 +1,8 @@
 #include "build_room_map.hpp"
 #include "DoorEnum.hpp"
 #include "GeneratorUtility.hpp"
+#include "Room.hpp"
+#include "RoomEnum.hpp"
 #include "iLayout.hpp"
 
 GeneratorUtility::GeneratorUtility (Array<Room, DUNGEON_ROOM_COUNT>& roomsIn, const iLayout& layoutIn):
@@ -127,4 +129,49 @@ bool GeneratorUtility::setupVerticalWalls(std::initializer_list<int> row, int y,
     }
 
     return true;
+}
+
+bool GeneratorUtility::setup4x1Room(const int4& coord) {
+    bool success = false;
+    getRoom(coord).access([&](Room& room){
+        room.setType(ROOM_RECT_4_x_1);
+        success = true;
+    });
+    return success;
+}
+
+bool GeneratorUtility::setup2x5Room(const int4& coord) {
+    bool success = false;
+    getRoom(coord).access([&](Room& room){
+        room.setType(ROOM_RECT_2_x_5);
+        success = true;
+    });
+    return success;
+}
+
+bool GeneratorUtility::setup3x3Room(const int4& coord) {
+    bool success = false;
+    getRoom(coord).access([&](Room& room){
+        room.setType(ROOM_RECT_3_x_3);
+        success = true;
+    });
+    return success;
+}
+
+bool GeneratorUtility::setupLightningRodRoom(const int4& coord) {
+    bool success = false;
+    getRoom(coord).access([&](Room& room){
+        room.setType(ROOM_LIGHTNING_ROD);
+        success = true;
+    });
+    return success;
+}
+
+bool GeneratorUtility::setupPowerGeneratorRoom(const int4& coord) {
+    bool success = false;
+    getRoom(coord).access([&](Room& room){
+        room.setType(ROOM_POWER_GENERATOR);
+        success = true;
+    });
+    return success;
 }

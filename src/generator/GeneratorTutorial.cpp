@@ -41,7 +41,7 @@ bool GeneratorTutorial::generate (int seed, Match& dst) const {
             success &= util.setupShifter(int4{3,2,0,0}, Cardinal::west(), false);
 
             Room& entrance = layoutIntf.getEntrance(dst.dungeon.rooms);
-            entrance.floorCells.access(0, [&](Cell& cell){
+            entrance.getUsedFloorCells().access(0, [&](Cell& cell){
                 dst.builders.access(0, [&](Builder& builder){
                     if (!dst.containsCharacter(builder.character, cell.offset)) {
                         return;

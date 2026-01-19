@@ -1,5 +1,6 @@
 #include "int2.hpp"
 #include "Room.hpp"
+#include "RoomFlyweight.hpp"
 #include "Match.hpp"
 #include "JsonParameters.hpp"
 #include <json/json.h>
@@ -28,8 +29,16 @@ int Room::getOffset(const Array<Room, DUNGEON_ROOM_COUNT>& rooms)const {
     return this - &rooms.head();
 }
 
+Rack<Cell> Room::getUsedFloorCells() const {
+    Rack<Cell> usedFloorCells(this->reserveFloorCells);
+    RoomFlyweight::getFlyweights().accessConst(this->type, [&](const RoomFlyweight& flyweight) {
+        usedFloorCells.resize(flyweight.width * flyweight.height);
+    });
+    return usedFloorCells;
+}
+
 Pointer<Cell> Room::getCell(int offset, CodeEnum& error) {
-    Pointer<Cell> result = floorCells.getPointer(offset);
+    Pointer<Cell> result = this->getUsedFloorCells().getPointer(offset);
     if (result.isEmpty()) {
         error = CODE_INACCESSIBLE_ROOM_FLOOR_CELL_ID;
     }
@@ -38,7 +47,7 @@ Pointer<Cell> Room::getCell(int offset, CodeEnum& error) {
 
 void Room::forEachCharacter(Match& match, std::function<void(Character&)> consumer) {
     // Iterate over floor cells
-    for (Cell& cell : floorCells) {
+    for (Cell& cell : this->getUsedFloorCells()) {
         CodeEnum error;
         match.getCharacter(cell.offset, error).access([&](Character& character){
             consumer(character);
@@ -55,7 +64,7 @@ void Room::forEachCharacter(Match& match, std::function<void(Character&)> consum
 }
 
 bool Room::containsCharacter(int offset) const {
-    for (const auto& cell: floorCells) {
+    for (const auto& cell: this->getUsedFloorCells()) {
         if (cell.offset == offset) {
             return true;
         }
@@ -69,52 +78,29 @@ bool Room::containsCharacter(int offset) const {
 }
 
 bool Room::containsFloorCell(const Cell& cell, CodeEnum& error, int& index, int2& coords) const {
-    if (floorCells.containsAddress(cell, index)) {
-        coords = int2{index % Room::DUNGEON_ROOM_WIDTH,  index / Room::DUNGEON_ROOM_WIDTH};
+    bool isContains = false;
+    if (this->reserveFloorCells.containsAddress(cell, index)) {
+        RoomFlyweight::getFlyweights().accessConst(this->type, [&](const RoomFlyweight& flyweight) {
+            const int x = index % flyweight.width;
+            const int y = index / flyweight.width;
+            if (y < flyweight.height) {
+                coords = int2{ x,  y};
+                isContains = true;
+            } else {
+                error = CODE_UNUSED_CELL_ID;
+            }
+        });
+    }
+
+    if (isContains) {
         return true;
     }
+
     error = CODE_INACCESSIBLE_ROOM_FLOOR_CELL_ID;
     return false;
 }
 
-
-/*
-void Room::toJson(JsonParameters& params, Json::Value& out) const {
-    // floor cells
-    Json::Value floorCellsJson(Json::arrayValue);
-    int i = 0;
-    constexpr auto ROOM_CELL_WIDTH = 4;
-    for (auto& cell: floorCells) {
-        Json::Value j;
-        cell.toJson(params, j);
-        if (params.isCoordinating()) {
-            j["x"] = i % ROOM_CELL_WIDTH;
-            j["y"] = i / ROOM_CELL_WIDTH;
-        }
-        floorCellsJson.append(j);
-        i++;
-    }
-    out["floorCells"] = floorCellsJson;
-
-    // walls
-    Json::Value wallsJson(Json::arrayValue);
-    int dir = 0;
-    for (const auto& wall: walls) {
-        Json::Value wallJson;
-        wall.toJson(params, wallJson);
-        if (params.isClient()) {
-            params.match.dungeon.accessWall(*this, dir, 
-                [&](const Cell&, const Cell&, const Room& adj){
-                    int roomIndex = -1;
-                    if (params.match.dungeon.containsRoom(adj, roomIndex)) {
-                        wallJson["adjacent"] = roomIndex;
-                    }
-                },
-                [](const Cell&){});
-        }
-        wallsJson.append(wallJson);
-        dir++;
-    }
-    out["walls"] = wallsJson;
+// REMOVE: may no longer be needed
+void Room::setType(const RoomEnum& input) {
+    this->type = input;
 }
-*/

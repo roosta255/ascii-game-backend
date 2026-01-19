@@ -7,6 +7,8 @@
 #include "int2.hpp"
 #include "Pointer.hpp"
 #include "DUNGEON_ROOM_COUNT.hpp"
+#include "Rack.hpp"
+#include "RoomEnum.hpp"
 #include "Wall.hpp"
 #include <functional>
 
@@ -18,12 +20,16 @@ struct Room {
     constexpr static int DUNGEON_ROOM_HEIGHT = 5;
     constexpr static int DUNGEON_ROOM_CELL_COUNT = DUNGEON_ROOM_WIDTH * DUNGEON_ROOM_HEIGHT;
     int visibility = ~0x0;
-    Array<Cell, DUNGEON_ROOM_CELL_COUNT> floorCells;
+    RoomEnum type = ROOM_RECT_4_x_5;
+    Array<Cell, DUNGEON_ROOM_CELL_COUNT> reserveFloorCells;
     Array<Wall, 4> walls;
+
+    void setType(const RoomEnum&);
 
     Wall& getWall(Cardinal);
     const Wall& getWall(Cardinal) const;
     int getOffset(const Array<Room, DUNGEON_ROOM_COUNT>& rooms)const;
+    Rack<Cell> getUsedFloorCells() const;
 
     // Iterate over all characters in the room (both floor and wall cells)
     void forEachCharacter(Match& match, std::function<void(Character&)> consumer);
