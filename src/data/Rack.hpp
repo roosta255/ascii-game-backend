@@ -186,6 +186,15 @@ static constexpr int max(const int a, const int b){
 	return a > b ? a : b;
 }
 
+bool push_back(const T& input) {
+    if (isFull()) return false;
+
+    *occupied = input;
+    occupied++;
+
+    return true;
+}
+
 Rack constexpr pop_range(const int inclusive,
                const int exclusive)const
 {
