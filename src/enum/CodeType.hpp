@@ -1,0 +1,6 @@
+#pragma once
+
+enum class CodeType
+{
+    DATA, INFO, ERROR, DEBUG, PROGRAM, CODE_INDEX_NEGATIVE, CODE_INDEX_OUT_OF_BOUNDS
+};
