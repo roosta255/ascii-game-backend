@@ -1,6 +1,7 @@
 #include "ApiController.hpp"
 #include "AccountController.hpp"
 #include "CodeEnum.hpp"
+#include "Codeset.hpp"
 #include "FileStore.hpp"
 #include "GeneratorFlyweight.hpp"
 #include "iLayout.hpp"
@@ -79,6 +80,7 @@ void ApiController::createMatch
 {
     CodeEnum error = CODE_UNKNOWN_ERROR;
     Match created;
+    Codeset codeset;
     auto json = req->getJsonObject();
     if (!json || !json->isMember("host"))
         return invokeResponse400("Missing host field", std::move(callback));
@@ -97,8 +99,8 @@ void ApiController::createMatch
     }
 
     created.setFilename();
-    if (!created.generate(5, error))
-        return invokeResponse500(code_to_message(error, "Failed to create match due to: "), std::move(callback));
+    if (!created.generate(19950111, codeset))
+        return invokeResponse500(codeset.describe("Failed to create match due to: "), std::move(callback));
 
     if (!matchController.init(created, error))
         return invokeResponse409(code_to_message(error, "Failed to save match due to: "), std::move(callback));

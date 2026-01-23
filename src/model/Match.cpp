@@ -1,3 +1,4 @@
+#include "Codeset.hpp"
 #include "DoorFlyweight.hpp"
 #include "GeneratorFlyweight.hpp"
 #include "iActivator.hpp"
@@ -22,14 +23,14 @@ void Match::setFilename() {
 }
 
 bool Match::generate
-(int seed, CodeEnum& error) {
+(int seed, Codeset& codeset) {
     bool success = false;
     GeneratorFlyweight::getFlyweights().accessConst(generator, [&](const GeneratorFlyweight& flyweight){
         flyweight.generator.accessConst([&](const iGenerator& generator){
-            success = generator.generate(seed, *this);
+            success = generator.generate(seed, *this, codeset);
         });
     });
-    return success;
+    return success && codeset.isAnySuccessfulWithoutFailures();
 }
 
 bool Match::accessPlayer
@@ -207,6 +208,7 @@ CodeEnum Match::moveCharacterToWall(Room& room, Character& character, Cardinal d
                 return;
             }
         });
+
         if (!isWallNeighborValid) {
             result = CODE_INACCESSIBLE_NEIGHBORING_WALL;
             return;

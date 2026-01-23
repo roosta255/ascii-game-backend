@@ -4,6 +4,7 @@
 #include "CodeEnum.hpp"
 #include "Item.hpp"
 #include "Pointer.hpp"
+#include "Timestamp.hpp"
 
 class Player;
 class Character;

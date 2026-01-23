@@ -51,6 +51,7 @@ add_library(core_backend STATIC
     src/generator/GeneratorTutorial.cpp
     src/generator/GeneratorUtility.cpp
     src/generator/iGenerator.cpp
+    src/enum/Codeset.cpp
     src/enum/CodeEnum.cpp
     src/enum/TurnEnum.cpp
     src/inventory/ActivatorInactiveItem.cpp
