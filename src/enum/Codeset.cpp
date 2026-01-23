@@ -79,7 +79,7 @@ CodeEnum Codeset::findErrorInTable()const {
     auto i = 0;
     for (const auto& value: table) {
         if (value > 0 && code_to_type(i) == CodeType::ERROR) {
-            return (CodeEnum)value;
+            return (CodeEnum)i;
         }
         i++;
     }

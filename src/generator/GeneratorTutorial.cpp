@@ -1,3 +1,4 @@
+#include "Codeset.hpp"
 #include "GeneratorUtility.hpp"
 #include "DoorEnum.hpp"
 #include "Dungeon.hpp"
@@ -8,7 +9,7 @@
 #include "Match.hpp"
 #include "RoleEnum.hpp"
 
-bool GeneratorTutorial::generate (int seed, Match& dst) const {
+bool GeneratorTutorial::generate (int seed, Match& dst, Codeset& codeset) const {
     constexpr auto LAYOUT = LAYOUT_2D_8x8;
     dst.dungeon.layout = LAYOUT;
     bool success = true;
@@ -23,8 +24,8 @@ bool GeneratorTutorial::generate (int seed, Match& dst) const {
 
     LayoutFlyweight::getFlyweights().accessConst(LAYOUT, [&](const LayoutFlyweight& flyweight){
         flyweight.layout.accessConst([&](const iLayout& layoutIntf){
-            GeneratorUtility util(dst.dungeon.rooms, layoutIntf);
-            success &= util.setupDoorway(int4{0,0,0,0}, Cardinal::east());
+            GeneratorUtility util(dst.dungeon.rooms, layoutIntf, codeset);
+            codeset.addSuccess(util.setupDoorway(int4{0,0,0,0}, Cardinal::east()));
             success &= util.setupDoorway(int4{0,2,0,0}, Cardinal::north());
             success &= util.setupTogglerBlue(int4{1,0,0,0}, Cardinal::north());
             success &= util.setupTogglerOrange(int4{1,1,0,0}, Cardinal::east());

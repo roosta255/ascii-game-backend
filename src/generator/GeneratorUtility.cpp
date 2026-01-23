@@ -1,12 +1,13 @@
 #include "build_room_map.hpp"
+#include "Codeset.hpp"
 #include "DoorEnum.hpp"
 #include "GeneratorUtility.hpp"
 #include "Room.hpp"
 #include "RoomEnum.hpp"
 #include "iLayout.hpp"
 
-GeneratorUtility::GeneratorUtility (Array<Room, DUNGEON_ROOM_COUNT>& roomsIn, const iLayout& layoutIn):
-    rooms(roomsIn), layout(&layoutIn)
+GeneratorUtility::GeneratorUtility (Array<Room, DUNGEON_ROOM_COUNT>& roomsIn, const iLayout& layoutIn, Codeset& codeset):
+    rooms(roomsIn), layout(&layoutIn), codeset(codeset)
 {
     size = build_room_map(roomsIn, *layout, mapping);
 }
@@ -20,45 +21,45 @@ Pointer<Room> GeneratorUtility::getRoom(const int4& coord) {
 }
 
 bool GeneratorUtility::setupJailer (const int4& coord, const Cardinal dir, const bool isKeyed) {
-    return accessRoomWall(coord, dir, [&](Room&, Wall& wall1, Wall& wall2, Room&){
+    return codeset.addSuccessElseFailure(accessRoomWall(coord, dir, [&](Room&, Wall& wall1, Wall& wall2, Room&){
         wall1.door = isKeyed ? DOOR_JAILER_INGRESS_KEYED : DOOR_JAILER_INGRESS_KEYLESS;
         wall2.door = isKeyed ? DOOR_JAILER_EGRESS_KEYED : DOOR_JAILER_EGRESS_KEYLESS;
-    });
+    }), CODE_GENERATOR_UTILITY_FAILED_TO_SETUP_JAILER);
 }
 
 bool GeneratorUtility::setupKeeper (const int4& coord, const Cardinal dir, const bool isKeyed) {
-    return accessRoomWall(coord, dir, [&](Room&, Wall& wall1, Wall& wall2, Room&){
+    return codeset.addSuccessElseFailure(accessRoomWall(coord, dir, [&](Room&, Wall& wall1, Wall& wall2, Room&){
         wall1.door = isKeyed ? DOOR_KEEPER_INGRESS_KEYED : DOOR_KEEPER_INGRESS_KEYLESS;
         wall2.door = isKeyed ? DOOR_KEEPER_EGRESS_KEYED : DOOR_KEEPER_EGRESS_KEYLESS;
-    });
+    }), CODE_GENERATOR_UTILITY_FAILED_TO_SETUP_KEEPER);
 }
 
 bool GeneratorUtility::setupShifter (const int4& coord, const Cardinal dir, const bool isKeyed) {
-    return accessRoomWall(coord, dir, [&](Room&, Wall& wall1, Wall& wall2, Room&){
+    return codeset.addSuccessElseFailure(accessRoomWall(coord, dir, [&](Room&, Wall& wall1, Wall& wall2, Room&){
         wall1.door = isKeyed ? DOOR_SHIFTER_INGRESS_KEYED : DOOR_SHIFTER_INGRESS_KEYLESS;
         wall2.door = isKeyed ? DOOR_SHIFTER_EGRESS_KEYED : DOOR_SHIFTER_EGRESS_KEYLESS;
-    });
+    }), CODE_GENERATOR_UTILITY_FAILED_TO_SETUP_SHIFTER);
 }
 
 bool GeneratorUtility::setupTogglerOrange (const int4& coord, const Cardinal dir) {
-    return accessRoomWall(coord, dir, [&](Room&, Wall& wall1, Wall& wall2, Room&){
+    return codeset.addSuccessElseFailure(accessRoomWall(coord, dir, [&](Room&, Wall& wall1, Wall& wall2, Room&){
         wall1.door = DOOR_TOGGLER_ORANGE_OPEN;
         wall2.door = DOOR_TOGGLER_ORANGE_OPEN;
-    });
+    }), CODE_GENERATOR_UTILITY_FAILED_TO_SETUP_TOGGLER_ORANGE);
 }
 
 bool GeneratorUtility::setupTogglerBlue (const int4& coord, const Cardinal dir) {
-    return accessRoomWall(coord, dir, [&](Room&, Wall& wall1, Wall& wall2, Room&){
+    return codeset.addSuccessElseFailure(accessRoomWall(coord, dir, [&](Room&, Wall& wall1, Wall& wall2, Room&){
         wall1.door = DOOR_TOGGLER_BLUE_CLOSED;
         wall2.door = DOOR_TOGGLER_BLUE_CLOSED;
-    });
+    }), CODE_GENERATOR_UTILITY_FAILED_TO_SETUP_TOGGLER_BLUE);
 }
 
 bool GeneratorUtility::setupDoorway (const int4& coord, const Cardinal dir) {
-    return accessRoomWall(coord, dir, [&](Room&, Wall& wall1, Wall& wall2, Room&){
+    return codeset.addSuccessElseFailure(accessRoomWall(coord, dir, [&](Room&, Wall& wall1, Wall& wall2, Room&){
         wall1.door = DOOR_DOORWAY;
         wall2.door = DOOR_DOORWAY;
-    });
+    }), CODE_GENERATOR_UTILITY_FAILED_TO_SETUP_DOORWAY);
 }
 
 bool GeneratorUtility::accessRoomWall (const int4& coord, const Cardinal dir, std::function<void(Room&, Wall&, Wall&, Room&)> consumer) {

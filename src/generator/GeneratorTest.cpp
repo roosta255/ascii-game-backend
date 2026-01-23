@@ -8,7 +8,7 @@
 #include "Match.hpp"
 #include "RoleEnum.hpp"
 
-bool GeneratorTest::generate (int seed, Match& dst) const {
+bool GeneratorTest::generate (int seed, Match& dst, Codeset& codeset) const {
     constexpr auto LAYOUT = LAYOUT_2D_8x8;
     dst.dungeon.layout = LAYOUT;
     bool success = true;
@@ -23,7 +23,7 @@ bool GeneratorTest::generate (int seed, Match& dst) const {
 
     LayoutFlyweight::getFlyweights().accessConst(LAYOUT, [&](const LayoutFlyweight& flyweight){
         flyweight.layout.accessConst([&](const iLayout& layoutIntf){
-            GeneratorUtility util(dst.dungeon.rooms, layoutIntf);
+            GeneratorUtility util(dst.dungeon.rooms, layoutIntf, codeset);
 
             success &= util.setup2x5Room(int4{1,1,0,0});
             success &= util.setup2x5Room(int4{1,2,0,0});
@@ -34,11 +34,11 @@ bool GeneratorTest::generate (int seed, Match& dst) const {
             success &= util.setupDoorway(int4{0,3,0,0}, Cardinal::east());
             success &= util.setupDoorway(int4{0,4,0,0}, Cardinal::east());
             success &= util.setupDoorway(int4{0,5,0,0}, Cardinal::east());
-            success &= util.setupDoorway(int4{0,1,0,0}, Cardinal::west());
+            /*success &= util.setupDoorway(int4{0,1,0,0}, Cardinal::west());
             success &= util.setupDoorway(int4{0,2,0,0}, Cardinal::west());
             success &= util.setupDoorway(int4{0,3,0,0}, Cardinal::west());
             success &= util.setupDoorway(int4{0,4,0,0}, Cardinal::west());
-            success &= util.setupDoorway(int4{0,5,0,0}, Cardinal::west());
+            success &= util.setupDoorway(int4{0,5,0,0}, Cardinal::west());*/
             success &= util.setupDoorway(int4{1,1,0,0}, Cardinal::south());
             success &= util.setupDoorway(int4{1,2,0,0}, Cardinal::south());
             success &= util.setupDoorway(int4{1,3,0,0}, Cardinal::south());

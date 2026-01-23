@@ -27,7 +27,9 @@ TEST_CASE("Match generation", "[match]") {
     match.generator = GENERATOR_TUTORIAL;
 
     Codeset codeset;
-    REQUIRE(match.generate(0, codeset));
+    bool isSuccess = match.generate(0, codeset);
+    REQUIRE(codeset.findErrorInTable() == CODE_UNSET);
+    REQUIRE(isSuccess);
 
     REQUIRE(match.titan.player.account == "");
     REQUIRE(match.builders.access(0, [&](Builder& builder) {
@@ -63,7 +65,9 @@ TEST_CASE("Test Character Animation", "[walking]") {
 
     // Generate tutorial layout
     Codeset codeset;
-    REQUIRE(match.generate(0, codeset));
+    bool isSuccess = match.generate(0, codeset);
+    REQUIRE(codeset.findErrorInTable() == CODE_UNSET);
+    REQUIRE(isSuccess);
 
     // Start the match
     REQUIRE(match.start());
@@ -118,7 +122,9 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
 
     // Generate tutorial layout
     Codeset codeset;
-    REQUIRE(match.generate(0, codeset));
+    isSuccess = match.generate(0, codeset);
+    REQUIRE(codeset.findErrorInTable() == CODE_UNSET);
+    REQUIRE(isSuccess);
 
     // Start the match
     REQUIRE(match.start());
@@ -342,7 +348,9 @@ TEST_CASE("Test jailer", "[match][test]") {
 
     // Generate test layout
     Codeset codeset;
-    REQUIRE(match.generate(0, codeset));
+    isSuccess = match.generate(0, codeset);
+    REQUIRE(codeset.findErrorInTable() == CODE_UNSET);
+    REQUIRE(isSuccess);
 
     // Start the match
     REQUIRE(match.start());
