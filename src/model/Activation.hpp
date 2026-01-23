@@ -10,6 +10,7 @@ class Player;
 class Character;
 class Room;
 class Match;
+class Codeset;
 
 struct Activation {
     Player& player;
@@ -19,6 +20,8 @@ struct Activation {
     Pointer<Item> item;
     Cardinal direction;
     Match& match;
+    Codeset& codeset;
+    Timestamp time;
 
     Activation(
         Player& player,
@@ -26,14 +29,10 @@ struct Activation {
         Room& room,
         Pointer<Character> target,
         Cardinal direction,
-        Match& match
-    ) : player(player),
-        character(character),
-        room(room),
-        target(target),
-        direction(direction),
-        match(match)
-    {}
+        Match& match,
+        Codeset& codeset,
+        Timestamp time = Timestamp()
+    );
 
     Activation(
         Player& player,
@@ -41,12 +40,8 @@ struct Activation {
         Room& room,
         Item& item,
         Cardinal direction,
-        Match& match
-    ) : player(player),
-        character(character),
-        room(room),
-        item(item),
-        direction(direction),
-        match(match)
-    {}
+        Match& match,
+        Codeset& codeset,
+        Timestamp time = Timestamp()
+    );
 }; 

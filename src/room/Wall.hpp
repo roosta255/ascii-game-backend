@@ -3,7 +3,9 @@
 #include "Cell.hpp"
 #include "CodeEnum.hpp"
 #include <functional>
+#include "Timestamp.hpp"
 
+class Codeset;
 class DoorFlyweight;
 class Player;
 class Character;
@@ -17,8 +19,8 @@ struct Wall {
     Cell cell;
 
     bool isWalkable(CodeEnum& error) const;
-    bool activateDoor(Player& player, Character& character, Room& room, const Cardinal& direction, Match& match, CodeEnum& error);
-    bool activateLock(Player& player, Character& character, Room& room, const Cardinal& direction, Match& match, CodeEnum& error);
+    bool activateDoor(Player& player, Character& character, Room& room, const Cardinal& direction, Match& match, Codeset& error, Timestamp time = Timestamp());
+    bool activateLock(Player& player, Character& character, Room& room, const Cardinal& direction, Match& match, Codeset& error, Timestamp time = Timestamp());
 
 private:
     // the last thing i want to do is to have a function that takes a function as a parameter

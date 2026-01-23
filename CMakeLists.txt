@@ -64,6 +64,7 @@ add_library(core_backend STATIC
     src/layout/LayoutFlyweight.cpp
     src/layout/LayoutGrid.cpp
     src/model/Account.cpp
+    src/model/Activation.cpp
     src/model/Builder.cpp
     src/model/Character.cpp
     src/model/Dungeon.cpp

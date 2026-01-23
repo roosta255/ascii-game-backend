@@ -99,7 +99,7 @@ void ApiController::createMatch
     }
 
     created.setFilename();
-    if (!created.generate(19950111, codeset))
+    if (codeset.addFailure(!created.generate(19950111, codeset)))
         return invokeResponse500(codeset.describe("Failed to create match due to: "), std::move(callback));
 
     if (!matchController.init(created, error))
@@ -304,6 +304,7 @@ void ApiController::activateCharacter
 ( const drogon::HttpRequestPtr& req, std::function<void (const drogon::HttpResponsePtr &)> &&callback, std::string matchId
 )
 {
+    Codeset codeset;
     auto json = req->getJsonObject();
 
     if (!json)
@@ -326,22 +327,19 @@ void ApiController::activateCharacter
     int characterId = (*json)["character"].asInt();
     int targetId = (*json)["target"].asInt();
 
-    CodeEnum error = CODE_UNKNOWN_ERROR;
     Match match;
-    if (!matchController.load(matchId, error, match))
-        return invokeResponse404(code_to_message(error, "Failed to load match due to: "), std::move(callback));
-
+    if (codeset.addFailure(!matchController.load(matchId, codeset.error, match)))
+        return invokeResponse404(codeset.describe("Failed to load match due to: "), std::move(callback));
 
     // TODO: Validate that account can issue character orders
 
     // Attempt to activate the character
-    CodeEnum result = CODE_PREACTIVATE;
-    if (!match.activateCharacter(accountId, characterId, roomId, targetId, result))
-        return invokeResponse409(std::string("Character activation rejected due to ") + code_to_text(result), std::move(callback));
+    if (codeset.addFailure(!match.activateCharacter(accountId, characterId, roomId, targetId, codeset)))
+        return invokeResponse409(codeset.describe("Character activation rejected due to: "), std::move(callback));
 
     // Save the updated match state
-    if (!matchController.save(match, error))
-        return invokeResponse409(code_to_message(error, "Failed to save match due to: "), std::move(callback));
+    if (codeset.addFailure(!matchController.save(match, codeset.error)))
+        return invokeResponse409(codeset.describe("Failed to save match due to: "), std::move(callback));
 
     return invokeResponse200("Character activated", std::move(callback));
 }
@@ -350,6 +348,7 @@ void ApiController::activateInventoryItem
 ( const drogon::HttpRequestPtr& req, std::function<void (const drogon::HttpResponsePtr &)> &&callback, std::string matchId
 )
 {
+    Codeset codeset;
     auto json = req->getJsonObject();
 
     if (!json)
@@ -372,31 +371,28 @@ void ApiController::activateInventoryItem
     int characterId = (*json)["character"].asInt();
     int itemId = (*json)["item"].asInt();
 
-    CodeEnum error = CODE_UNKNOWN_ERROR;
     Match match;
-    if (!matchController.load(matchId, error, match))
-        return invokeResponse404(code_to_message(error, "Failed to load match due to: "), std::move(callback));
-
-    CodeEnum result = CODE_PREACTIVATE;
+    if (codeset.addFailure(!matchController.load(matchId, codeset.error, match)))
+        return invokeResponse404(codeset.describe("Failed to load match due to: "), std::move(callback));
 
     // TODO: Validate that account can issue character orders
 
     // Attempt to activate the character
-    result = CODE_PREACTIVATE;
-    if (!match.activateInventoryItem(accountId, characterId, roomId, itemId, result))
-        return invokeResponse409(std::string("Item activation rejected due to ") + code_to_text(result), std::move(callback));
+    if (codeset.addFailure(!match.activateInventoryItem(accountId, characterId, roomId, itemId, codeset)))
+        return invokeResponse409(codeset.describe("Item activation rejected due to: "), std::move(callback));
 
     // Save the updated match state
-    if (!matchController.save(match, error))
-        return invokeResponse409(code_to_message(error, "Failed to save match due to: "), std::move(callback));
+    if (codeset.addFailure(!matchController.save(match, codeset.error)))
+        return invokeResponse409(codeset.describe("Failed to save match due to: "), std::move(callback));
 
     return invokeResponse200("Item activated", std::move(callback));
 }
 
-void ApiController::activateLock
+void ApiController::activateDoor
 ( const drogon::HttpRequestPtr& req, std::function<void (const drogon::HttpResponsePtr &)> &&callback, std::string matchId
 )
 {
+    Codeset codeset;
     auto json = req->getJsonObject();
 
     if (!json)
@@ -419,19 +415,59 @@ void ApiController::activateLock
     int characterId = (*json)["character"].asInt();
     int direction = (*json)["direction"].asInt();
 
-    CodeEnum error = CODE_UNKNOWN_ERROR;
     Match match;
-    if (!matchController.load(matchId, error, match))
-        return invokeResponse404(code_to_message(error, "Failed to load match due to: "), std::move(callback));
+    if (codeset.addFailure(!matchController.load(matchId, codeset.error, match)))
+        return invokeResponse404(codeset.describe("Failed to load match due to: "), std::move(callback));
 
     // Attempt to activate the lock
-    error = CODE_PREACTIVATE;
-    if (!match.activateLock(accountId, characterId, roomId, direction, error))
-        return invokeResponse409(std::string("Lock activation rejected due to ") + code_to_text(error), std::move(callback));
+    if (codeset.addFailure(!match.activateDoor(accountId, characterId, roomId, direction, codeset)))
+        return invokeResponse409(codeset.describe("Door activation rejected due to: "), std::move(callback));
 
     // Save the updated match state
-    if (!matchController.save(match, error))
-        return invokeResponse409(code_to_message(error, "Failed to save match due to: "), std::move(callback));
+    if (codeset.addFailure(!matchController.save(match, codeset.error)))
+        return invokeResponse409(codeset.describe("Failed to save match due to: "), std::move(callback));
+
+    return invokeResponse200("Door activated", std::move(callback));
+}
+
+void ApiController::activateLock
+( const drogon::HttpRequestPtr& req, std::function<void (const drogon::HttpResponsePtr &)> &&callback, std::string matchId
+)
+{
+    Codeset codeset;
+    auto json = req->getJsonObject();
+
+    if (!json)
+        return invokeResponse400("Missing json", std::move(callback));
+
+    if (!json->isMember("account"))
+        return invokeResponse400("Missing account field", std::move(callback));
+
+    if (!json->isMember("character"))
+        return invokeResponse400("Missing character field", std::move(callback));
+
+    if (!json->isMember("room"))
+        return invokeResponse400("Missing room field", std::move(callback));
+
+    if (!json->isMember("direction"))
+        return invokeResponse400("Missing direction field", std::move(callback));
+
+    std::string accountId = (*json)["account"].asString();
+    int roomId = (*json)["room"].asInt();
+    int characterId = (*json)["character"].asInt();
+    int direction = (*json)["direction"].asInt();
+
+    Match match;
+    if (codeset.addFailure(!matchController.load(matchId, codeset.error, match)))
+        return invokeResponse404(codeset.describe("Failed to load match due to: "), std::move(callback));
+
+    // Attempt to activate the lock
+    if (codeset.addFailure(!match.activateLock(accountId, characterId, roomId, direction, codeset)))
+        return invokeResponse409(codeset.describe("Lock activation rejected due to: "), std::move(callback));
+
+    // Save the updated match state
+    if (codeset.addFailure(!matchController.save(match, codeset.error)))
+        return invokeResponse409(codeset.describe("Failed to save match due to: "), std::move(callback));
 
     return invokeResponse200("Lock activated", std::move(callback));
 }

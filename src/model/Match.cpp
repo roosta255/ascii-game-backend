@@ -294,48 +294,46 @@ Pointer<Player> Match::getPlayer(const std::string& player, CodeEnum& error) {
     return Pointer<Player>::empty();
 }
 
-bool Match::activateCharacter(const std::string& playerId, int characterId, int roomId, int targetId, CodeEnum& error) {
+bool Match::activateCharacter(const std::string& playerId, int characterId, int roomId, int targetId, Codeset& codeset, Timestamp time) {
     bool isSuccess = false;
 
-    getPlayer(playerId, error).access([&](Player& player) {
-        getCharacter(characterId, error).access([&](Character& character) {
-            dungeon.getRoom(roomId, error).access([&](Room& room) {
-                auto target = getCharacter(targetId, error);
-                isSuccess = activateCharacter(player, character, room, target, error);
-            });
-        });
-    });
+    codeset.addFailure(!getPlayer(playerId, codeset.error).access([&](Player& player) {
+        codeset.addFailure(!getCharacter(characterId, codeset.error).access([&](Character& character) {
+            codeset.addFailure(!dungeon.getRoom(roomId, codeset.error).access([&](Room& room) {
+                // NOTE: this error code isn't captured as a failure/success
+                // this lets the iActivator needs to decide whether thats a problem
+                auto target = getCharacter(targetId, codeset.error);
+                isSuccess = codeset.addSuccessElseFailure(activateCharacter(player, character, room, target, codeset, time));
+            }));
+        }));
+    }));
 
     return isSuccess;
 }
 
-bool Match::activateCharacter(Player& player, Character& subject, Room& room, Pointer<Character> target, CodeEnum& error) {
+bool Match::activateCharacter(Player& player, Character& subject, Room& room, Pointer<Character> target, Codeset& codeset, Timestamp time) {
 
     // Check if match has started
-    if (!isStarted(error)) return false;
+    if (codeset.addFailure(!isStarted(codeset.error))) return false;
 
     // Check if character can take an action
-    if (!subject.isActionable(error)) return false;
+    if (codeset.addFailure(!subject.isActionable(codeset.error))) return false;
 
     int subjectOffset;
-    if(!containsCharacter(subject, subjectOffset)) {
-        error = CODE_INACCESSIBLE_SUBJECT_CHARACTER_ID;
+    if(codeset.addFailure(!containsCharacter(subject, subjectOffset), CODE_INACCESSIBLE_SUBJECT_CHARACTER_ID)) {
         return false;
     }
-    if (!room.containsCharacter(subjectOffset)) {
-        error = CODE_SUBJECT_CHARACTER_NOT_IN_ROOM;
+    if (codeset.addFailure(!room.containsCharacter(subjectOffset), CODE_SUBJECT_CHARACTER_NOT_IN_ROOM)) {
         return false;
     }
 
     bool isTargetValid = false;
     target.access([&](Character& target) {
         int targetOffset;
-        if(!containsCharacter(target, targetOffset)) {
-            error = CODE_INACCESSIBLE_TARGET_CHARACTER_ID;
+        if(codeset.addFailure(!containsCharacter(target, targetOffset), CODE_INACCESSIBLE_TARGET_CHARACTER_ID)) {
             return;
         }
-        if (!room.containsCharacter(targetOffset)) {
-            error = CODE_TARGET_CHARACTER_NOT_IN_ROOM;
+        if (codeset.addFailure(!room.containsCharacter(targetOffset), CODE_TARGET_CHARACTER_NOT_IN_ROOM)) {
             return;
         }
         isTargetValid = true;
@@ -346,18 +344,16 @@ bool Match::activateCharacter(Player& player, Character& subject, Room& room, Po
     }
 
     bool isSuccess = false;
-    subject.accessRole(error, [&](const RoleFlyweight& flyweight) {
-        if (flyweight.activator.isEmpty()) {
-            error = CODE_MISSING_ACTIVATOR;
+    codeset.addFailure(!subject.accessRole(codeset.error, [&](const RoleFlyweight& flyweight) {
+        if (codeset.addFailure(flyweight.activator.isEmpty(), CODE_MISSING_ACTIVATOR)) {
             return;
         } else {
             flyweight.activator.accessConst([&](const iActivator& activatorIntf){
-                Activation activation(player, subject, room, target, Cardinal::north(), *this);
-                error = activatorIntf.activate(activation);
-                isSuccess = error == CODE_SUCCESS;
+                Activation activation(player, subject, room, target, Cardinal::north(), *this, codeset, time);
+                isSuccess = codeset.addSuccessElseFailureIfCodedSuccess(activatorIntf.activate(activation));
             });
         }
-    });
+    }), CODE_INACCESSIBLE_ROLE_FLYWEIGHT);
 
     return isSuccess;
 }
@@ -442,32 +438,62 @@ bool Match::addCharacterToFloor(const Character& source, int roomId) {
     return success;
 }
 
-bool Match::activateLock(Player& player, Character& character, Room& room, Cardinal direction, CodeEnum& error) {
+bool Match::activateDoor(Player& player, Character& character, Room& room, Cardinal direction, Codeset& codeset, Timestamp time) {
     // Check if match has started
-    if (!isStarted(error)) return false;
+    if (codeset.addFailure(!isStarted(codeset.error))) return false;
 
     // Check if character is an actor
-    if (!character.isActor(error)) {
+    if (codeset.addFailure(!character.isActor(codeset.error))) {
         return false;
     }
 
     // Get and validate the door
     Wall& wall = room.getWall(direction);
-    return wall.activateLock(player, character, room, direction, *this, error);
+    return codeset.addSuccessElseFailure(wall.activateDoor(player, character, room, direction, *this, codeset, time));
 }
 
-bool Match::activateLock(const std::string& playerId, int characterId, int roomId, int direction, CodeEnum& error) {
+bool Match::activateDoor(const std::string& playerId, int characterId, int roomId, int direction, Codeset& codeset, Timestamp time) {
     bool isSuccess = false;
     // Get the player
-    getPlayer(playerId, error).access([&](Player& player) {
+    codeset.addFailure(!getPlayer(playerId, codeset.error).access([&](Player& player) {
         // Get the character
-        getCharacter(characterId, error).access([&](Character& character) {
+        codeset.addFailure(!getCharacter(characterId, codeset.error).access([&](Character& character) {
             // Get the room
-            dungeon.getRoom(roomId, error).access([&](Room& room) {
-                isSuccess = activateLock(player, character, room, Cardinal(direction), error);
-            });
-        });
-    });
+            codeset.addFailure(!dungeon.getRoom(roomId, codeset.error).access([&](Room& room) {
+                isSuccess = codeset.addSuccessElseFailure(activateDoor(player, character, room, Cardinal(direction), codeset, time));
+            }));
+        }));
+    }));
+
+    return isSuccess;
+}
+
+bool Match::activateLock(Player& player, Character& character, Room& room, Cardinal direction, Codeset& codeset, Timestamp time) {
+    // Check if match has started
+    if (codeset.addFailure(!isStarted(codeset.error))) return false;
+
+    // Check if character is an actor
+    if (codeset.addFailure(!character.isActor(codeset.error))) {
+        return false;
+    }
+
+    // Get and validate the door
+    Wall& wall = room.getWall(direction);
+    return codeset.addSuccessElseFailure(wall.activateLock(player, character, room, direction, *this, codeset, time));
+}
+
+bool Match::activateLock(const std::string& playerId, int characterId, int roomId, int direction, Codeset& codeset, Timestamp time) {
+    bool isSuccess = false;
+    // Get the player
+    codeset.addFailure(!getPlayer(playerId, codeset.error).access([&](Player& player) {
+        // Get the character
+        codeset.addFailure(!getCharacter(characterId, codeset.error).access([&](Character& character) {
+            // Get the room
+            codeset.addFailure(!dungeon.getRoom(roomId, codeset.error).access([&](Room& room) {
+                isSuccess = codeset.addSuccessElseFailure(activateLock(player, character, room, Cardinal(direction), codeset, time));
+            }));
+        }));
+    }));
 
     return isSuccess;
 }
@@ -547,48 +573,45 @@ bool Match::moveCharacterToFloor(Room& room, Character& character, Cell& floor, 
 }
 
 
-bool Match::activateInventoryItem(const std::string& playerId, int characterId, int roomId, int itemId, CodeEnum& error) {
+bool Match::activateInventoryItem(const std::string& playerId, int characterId, int roomId, int itemId, Codeset& codeset, Timestamp time) {
     bool isSuccess = false;
 
-    getPlayer(playerId, error).access([&](Player& player) {
-        getCharacter(characterId, error).access([&](Character& character) {
-            dungeon.getRoom(roomId, error).access([&](Room& room) {
-                player.inventory.accessItem(itemId, error, [&](Item& item){
-                    isSuccess = activateInventoryItem(player, character, room, item, error);
-                });
-            });
-        });
-    });
+    codeset.addFailure(!getPlayer(playerId, codeset.error).access([&](Player& player) {
+        codeset.addFailure(!getCharacter(characterId, codeset.error).access([&](Character& character) {
+            codeset.addFailure(!dungeon.getRoom(roomId, codeset.error).access([&](Room& room) {
+                codeset.addFailure(!player.inventory.accessItem(itemId, codeset.error, [&](Item& item){
+                    isSuccess = codeset.addSuccessElseFailure(activateInventoryItem(player, character, room, item, codeset, time));
+                }));
+            }));
+        }));
+    }));
 
     return isSuccess;
 }
 
-bool Match::activateInventoryItem(Player& player, Character& subject, Room& room, Item& item, CodeEnum& error) {
+bool Match::activateInventoryItem(Player& player, Character& subject, Room& room, Item& item, Codeset& codeset, Timestamp time) {
 
     // Check if match has started
-    if (!isStarted(error)) return false;
+    if (codeset.addFailure(!isStarted(codeset.error))) return false;
 
     // Check if character can take an action
-    if (!subject.isActor(error)) return false;
+    if (codeset.addFailure(!subject.isActor(codeset.error))) return false;
 
     int subjectOffset;
-    if(!containsCharacter(subject, subjectOffset)) {
-        error = CODE_INACCESSIBLE_SUBJECT_CHARACTER_ID;
+    if (codeset.addFailure(!containsCharacter(subject, subjectOffset), CODE_INACCESSIBLE_SUBJECT_CHARACTER_ID)) {
         return false;
     }
-    if (!room.containsCharacter(subjectOffset)) {
-        error = CODE_SUBJECT_CHARACTER_NOT_IN_ROOM;
+    if (codeset.addFailure(!room.containsCharacter(subjectOffset), CODE_SUBJECT_CHARACTER_NOT_IN_ROOM)) {
         return false;
     }
 
     bool isSuccess = false;
-    item.accessFlyweight([&](const ItemFlyweight& flyweight){
+    codeset.addFailure(!item.accessFlyweight([&](const ItemFlyweight& flyweight){
         flyweight.useActivator.accessConst([&](const iActivator& activatorIntf){
-            Activation activation(player, subject, room, item, Cardinal::north(), *this);
-            error = activatorIntf.activate(activation);
-            isSuccess = error == CODE_SUCCESS;
+            Activation activation(player, subject, room, item, Cardinal::north(), *this, codeset, time);
+            isSuccess = codeset.addSuccessElseFailureIfCodedSuccess(activatorIntf.activate(activation));
         });
-    });
+    }), CODE_INACCESSIBLE_INVENTORY_FLYWEIGHT);
 
     return isSuccess;
 }

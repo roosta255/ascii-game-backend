@@ -14,6 +14,7 @@ public:
     ADD_METHOD_TO(ApiController::moveCharacterToDoor, "/api/match/{1}/move_character", drogon::Post, drogon::Options);
     ADD_METHOD_TO(ApiController::activateCharacter, "/api/match/{1}/activate_character", drogon::Post, drogon::Options);
     ADD_METHOD_TO(ApiController::activateInventoryItem, "/api/match/{1}/activate_inventory_item", drogon::Post, drogon::Options);
+    ADD_METHOD_TO(ApiController::activateDoor, "/api/match/{1}/activate_door", drogon::Post, drogon::Options);
     ADD_METHOD_TO(ApiController::activateLock, "/api/match/{1}/activate_lock", drogon::Post, drogon::Options);
     ADD_METHOD_TO(ApiController::endTurn, "/api/match/{1}/end_turn", drogon::Post, drogon::Options);
     METHOD_LIST_END
@@ -54,6 +55,10 @@ public:
     void activateInventoryItem(const drogon::HttpRequestPtr& req,
                                std::function<void (const drogon::HttpResponsePtr &)> &&callback,
                                std::string matchId);
+
+    void activateDoor(const drogon::HttpRequestPtr &req,
+                     std::function<void(const drogon::HttpResponsePtr &)> &&callback,
+                     std::string matchId);
 
     void activateLock(const drogon::HttpRequestPtr &req,
                      std::function<void(const drogon::HttpResponsePtr &)> &&callback,
