@@ -11,12 +11,19 @@
 
 class LayoutGrid : public iLayout {
 public:
+    LayoutGrid() = default;
+    constexpr LayoutGrid(const int4& data): width(data[0]), height(data[1]), depth(data[2]), times(data[3]) {}
+
     int width = 1;
     int height = 1;
     int depth = 1;
     int times = 1;
     Room& getEntrance(Array<Room, DUNGEON_ROOM_COUNT>& rooms) const override;
     bool getWallNeighbor(const Array<Room, DUNGEON_ROOM_COUNT>& rooms, const Room& src, const Cardinal dir, int& offset) const override;
+    bool getTimeDelta(const Array<Room, DUNGEON_ROOM_COUNT>& rooms, const Room& src, int delta, int& output) const override;
+    bool getDepthDelta(const Array<Room, DUNGEON_ROOM_COUNT>& rooms, const Room& src, int delta, int& output) const override;
+
+    bool getDelta(const Array<Room, DUNGEON_ROOM_COUNT>& rooms, const Room& src, const int4& delta, int& offset) const;
 
     void setDimensions(int,int,int,int);
 
@@ -40,3 +47,7 @@ public:
             && 0 <= coords[3] && coords[3] < times;
     }
 };
+
+static_assert(LayoutGrid(int4{3,3,2,2}).getIndex(int4{1,1,0,1}) == 22, "");
+static_assert(LayoutGrid(int4{3,3,2,2}).getCoordinates(22) == int4{1,1,0,1}, "");
+static_assert(LayoutGrid(int4{3,3,2,2}).contains(int4{1,1,0,1}), "");

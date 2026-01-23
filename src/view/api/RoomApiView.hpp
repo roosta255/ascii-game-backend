@@ -20,11 +20,14 @@ struct RoomApiView
     bool isHidden = true;
     std::string type = "UNPARSED_ROOM";
     int width = 0, height = 0;
+    int anterior = -1, posterior = -1, above = -1, below = -1;
 
     inline RoomApiView() = default;
 
     inline RoomApiView(const Room& model, const MatchApiParameters& params)
     : isHidden(params.isHidden(model.visibility))
+    , anterior(model.anterior), posterior(model.posterior)
+    , above(model.above), below(model.below)
     {
         if (isHidden) return;
 
@@ -58,7 +61,11 @@ inline void to_json(nlohmann::json& j, const RoomApiView& view) {
         {"walls", view.walls},
         {"width", view.width},
         {"height", view.height},
-        {"type", view.type}
+        {"type", view.type},
+        {"anterior", view.anterior},
+        {"posterior", view.posterior},
+        {"above", view.above},
+        {"below", view.below}
     };
 }
 

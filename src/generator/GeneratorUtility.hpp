@@ -41,5 +41,8 @@ public:
     bool setup3x3Room(const int4&);
     bool setupLightningRodRoom(const int4&);
     bool setupPowerGeneratorRoom(const int4&);
+    bool setupAdjacencyPointers();
 
+    bool setRoom(const int4&, const RoomEnum&);
+    bool setDoor(const int4&, const Cardinal, const DoorEnum&);
 };

@@ -44,4 +44,6 @@ struct Activation {
         Codeset& codeset,
         Timestamp time = Timestamp()
     );
+
+    int getRoomId()const;
 }; 

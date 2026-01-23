@@ -25,6 +25,8 @@ bool GeneratorTutorial::generate (int seed, Match& dst, Codeset& codeset) const 
     LayoutFlyweight::getFlyweights().accessConst(LAYOUT, [&](const LayoutFlyweight& flyweight){
         flyweight.layout.accessConst([&](const iLayout& layoutIntf){
             GeneratorUtility util(dst.dungeon.rooms, layoutIntf, codeset);
+            util.setupAdjacencyPointers();
+
             codeset.addSuccess(util.setupDoorway(int4{0,0,0,0}, Cardinal::east()));
             success &= util.setupDoorway(int4{0,2,0,0}, Cardinal::north());
             success &= util.setupTogglerBlue(int4{1,0,0,0}, Cardinal::north());

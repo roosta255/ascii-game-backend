@@ -24,6 +24,7 @@ bool GeneratorTest::generate (int seed, Match& dst, Codeset& codeset) const {
     LayoutFlyweight::getFlyweights().accessConst(LAYOUT, [&](const LayoutFlyweight& flyweight){
         flyweight.layout.accessConst([&](const iLayout& layoutIntf){
             GeneratorUtility util(dst.dungeon.rooms, layoutIntf, codeset);
+            util.setupAdjacencyPointers();
 
             success &= util.setup2x5Room(int4{1,1,0,0});
             success &= util.setup2x5Room(int4{1,2,0,0});

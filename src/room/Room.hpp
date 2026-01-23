@@ -23,6 +23,7 @@ struct Room {
     RoomEnum type = ROOM_RECT_4_x_5;
     Array<Cell, DUNGEON_ROOM_CELL_COUNT> reserveFloorCells;
     Array<Wall, 4> walls;
+    int anterior = -1, posterior = -1, above = -1, below = -1;
 
     void setType(const RoomEnum&);
 
@@ -36,6 +37,7 @@ struct Room {
     bool containsCharacter(int offset) const;
     bool containsFloorCell(const Cell& cell, CodeEnum& error, int& index, int2& coords) const;
     Pointer<Cell> getCell(int offset, CodeEnum& error);
+    int getDeltaTime(const int)const;
 };
 
 // every grid a cell

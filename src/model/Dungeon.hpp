@@ -49,6 +49,12 @@ struct Dungeon {
     bool accessWall(
         Room& source,
         Cardinal dir,
+        std::function<void(Cell&)> callback
+    );
+
+    bool accessWall(
+        Room& source,
+        Cardinal dir,
         std::function<void(Cell&, Cell&, Room&)> neighborCallback,
         std::function<void(Cell&)> noNeighborCallback
     );

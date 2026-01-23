@@ -176,3 +176,17 @@ bool GeneratorUtility::setupPowerGeneratorRoom(const int4& coord) {
     });
     return success;
 }
+
+bool GeneratorUtility::setupAdjacencyPointers() {
+    bool isSuccess = false;
+    for (auto& room: rooms) {
+        for (const auto& dir: Cardinal::getAllCardinals()) {
+            codeset.addSuccess(layout->getWallNeighbor(rooms, room, dir, room.getWall(dir).adjacent));
+        }
+        codeset.addSuccess(layout->getDepthDelta(rooms, room, -1, room.below));
+        codeset.addSuccess(layout->getDepthDelta(rooms, room, 1, room.above));
+        codeset.addSuccess(layout->getTimeDelta(rooms, room, -1, room.anterior));
+        codeset.addSuccess(layout->getTimeDelta(rooms, room, 1, room.posterior));
+    }
+    return isSuccess;
+}

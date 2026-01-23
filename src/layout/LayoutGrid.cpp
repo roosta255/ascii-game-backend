@@ -8,22 +8,34 @@ Room& LayoutGrid::getEntrance (Array<Room, DUNGEON_ROOM_COUNT>& rooms) const {
     return rooms.getOrDefault(0, fake);
 }
 
-bool LayoutGrid::getWallNeighbor(const Array<Room, DUNGEON_ROOM_COUNT>& rooms, const Room& src, const Cardinal dir, int& index) const
+bool LayoutGrid::getDelta(const Array<Room, DUNGEON_ROOM_COUNT>& rooms, const Room& src, const int4& delta, int& output) const
 {
-    // LOG_DEBUG << "LayoutGrid{<" << width << "," << height << "," << depth << "," << times << ">}::getWallNeighbor(rooms[" << &rooms.head() << "], (" << (&src - &rooms.head()) << "), src[" << &src << "]) called";
-    if(!rooms.containsAddress(src, index)) {
-        // LOG_DEBUG << "LayoutGrid{<" << width << "," << height << "," << depth << "," << times << ">}::getWallNeighbor(rooms[" << &rooms.head() << "], (" << (&src - &rooms.head()) << "), src[" << &src << "]) doesnt contain addr";
+    int sourceId = -1;
+    if(!rooms.containsAddress(src, sourceId)) {
         return false;
     }
-    const auto coords = getCoordinates(index);
-    const auto neighbor = to_int4(dir.getRectOffset()) + coords;
+    const auto coords = getCoordinates(sourceId);
+    const auto neighbor = delta + coords;
     if(!contains(neighbor)) {
-        // LOG_DEBUG << "LayoutGrid{<" << width << "," << height << "," << depth << "," << times << ">}::getWallNeighbor(rooms[" << &rooms.head() << "], (" << (&src - &rooms.head()) << "), src[" << &src << "], offset: " << offset << ", coords<" << coords[0] << "," << coords[1] << "," << coords[2] << "," << coords[3] << ">, neighbor <" << neighbor[0] << "," << neighbor[1] << "," << neighbor[2] << "," << neighbor[3] << ">) isnt in the grid";
         return false;
     }
-    // LOG_DEBUG << "LayoutGrid{<" << width << "," << height << "," << depth << "," << times << ">}::getWallNeighbor(rooms[" << &rooms.head() << "], (" << (&src - &rooms.head()) << "), src[" << &src << "], offset: " << offset << ", coords<" << coords[0] << "," << coords[1] << "," << coords[2] << "," << coords[3] << ">, neighbor <" << neighbor[0] << "," << neighbor[1] << "," << neighbor[2] << "," << neighbor[3] << ">) is in the grid";
-    index = getIndex(neighbor);
+    output = getIndex(neighbor);
     return true;
+}
+
+bool LayoutGrid::getWallNeighbor(const Array<Room, DUNGEON_ROOM_COUNT>& rooms, const Room& src, const Cardinal dir, int& output) const
+{
+    return getDelta(rooms, src, to_int4(dir.getRectOffset()), output);
+}
+
+bool LayoutGrid::getTimeDelta(const Array<Room, DUNGEON_ROOM_COUNT>& rooms, const Room& src, int delta, int& output) const
+{
+    return getDelta(rooms, src, int4{0,0,0,delta}, output);
+}
+
+bool LayoutGrid::getDepthDelta(const Array<Room, DUNGEON_ROOM_COUNT>& rooms, const Room& src, int delta, int& output) const
+{
+    return getDelta(rooms, src, int4{0,0,delta,0}, output);
 }
 
 void LayoutGrid::setDimensions (int x, int y, int z, int t) {
