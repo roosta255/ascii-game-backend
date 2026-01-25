@@ -6,7 +6,10 @@ InventoryDigest Inventory::makeDigest() const
 {
     InventoryDigest digest {
         .keys = 0,
-        .isEmpty = true
+        .isEmpty = true,
+        .isCubeAwakened = false,
+        .isCubeDormant = false,
+        .cubes = 0
     };
     for(const auto& item : this->items)
     {
@@ -15,6 +18,14 @@ InventoryDigest Inventory::makeDigest() const
         }
         if (item.type == ITEM_KEY) {
             digest.keys += item.stacks;
+        }
+        if (item.type == ITEM_CUBE_AWAKENED) {
+            digest.cubes += 1;
+            digest.isCubeAwakened = true;
+        }
+        if (item.type == ITEM_CUBE_DORMANT) {
+            digest.cubes += 1;
+            digest.isCubeDormant = true;
         }
     }
     return digest;
@@ -83,6 +94,10 @@ bool Inventory::giveItem(ItemEnum type, CodeEnum& result, const bool isDryRun)
     }
 
     switch (type) {
+        case ITEM_CUBE_AWAKENED:
+        case ITEM_CUBE_DORMANT:
+            result = CODE_INVENTORY_FAILED_TO_ACCEPT_CUBE;
+            break;
         case ITEM_KEY:
             result = CODE_INVENTORY_FAILED_TO_ACCEPT_KEY;
             break;
@@ -125,6 +140,10 @@ bool Inventory::takeItem(ItemEnum type, CodeEnum& result, const bool isDryRun)
     }
 
     switch (type) {
+        case ITEM_CUBE_AWAKENED:
+        case ITEM_CUBE_DORMANT:
+            result = CODE_INVENTORY_FAILED_TO_HAVE_CUBE;
+            break;
         case ITEM_KEY:
             result = CODE_INVENTORY_FAILED_TO_HAVE_KEY;
             break;

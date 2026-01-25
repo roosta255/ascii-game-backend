@@ -39,15 +39,20 @@ add_library(core_backend STATIC
     src/animation/AnimationEnum.cpp
     src/animation/Keyframe.cpp
     src/animation/KeyframeFlyweight.cpp
+    src/controllers/MatchController.cpp
     src/door/ActivatorInactiveDoor.cpp
     src/door/ActivatorInactiveDoor.cpp
     src/door/ActivatorKeeper.cpp
     src/door/ActivatorJailer.cpp
+    src/door/ActivatorLightningRod.cpp
     src/door/ActivatorShifter.cpp
+    src/door/ActivatorTimeGate.cpp
+    src/door/ActivatorTimeGateCube.cpp
     src/door/DoorFlyweight.cpp
     src/generator/GeneratorFlyweight.cpp
     src/generator/GeneratorPuzzle2.cpp
     src/generator/GeneratorTest.cpp
+    src/generator/GeneratorTest4D.cpp
     src/generator/GeneratorTutorial.cpp
     src/generator/GeneratorUtility.cpp
     src/generator/iGenerator.cpp
@@ -92,8 +97,8 @@ target_link_libraries(core_backend PUBLIC jsoncpp)
 add_executable(match_backend
     main.cpp
     src/controllers/ApiController.cpp
-    src/controllers/MatchController.cpp
-    src/controllers/AccountController.cpp
+    src/controllers/MatchRepository.cpp
+    src/controllers/AccountRepository.cpp
 )
 
 target_include_directories(match_backend PRIVATE ${PROJECT_INCLUDE_DIRS})
@@ -108,7 +113,9 @@ add_subdirectory(extern/Catch2)
 
 add_executable(test_target
     test/main.cpp
+    test/MatchTest4D.cpp
     test/MatchTests.cpp
+    test/TestController.cpp
 )
 
 target_include_directories(test_target PRIVATE ${PROJECT_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/test)

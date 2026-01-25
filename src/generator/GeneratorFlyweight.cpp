@@ -2,6 +2,7 @@
 #include "GeneratorEnum.hpp"
 #include "GeneratorFlyweight.hpp"
 #include "GeneratorTest.hpp"
+#include "GeneratorTest4D.hpp"
 #include "GeneratorTutorial.hpp"
 #include "GeneratorPuzzle2.hpp"
 

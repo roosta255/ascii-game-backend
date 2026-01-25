@@ -1,5 +1,5 @@
 #include "ApiController.hpp"
-#include "AccountController.hpp"
+#include "AccountRepository.hpp"
 #include "CodeEnum.hpp"
 #include "Codeset.hpp"
 #include "FileStore.hpp"
@@ -7,6 +7,7 @@
 #include "iLayout.hpp"
 #include "JsonParameters.hpp"
 #include "MatchController.hpp"
+#include "MatchRepository.hpp"
 #include "MatchApiParameters.hpp"
 #include "MatchApiView.hpp"
 #include "Timestamp.hpp"
@@ -14,8 +15,8 @@
 
 static FileStore matchStore("var/state/matches");
 static FileStore accountStore("var/state/accounts");
-static MatchController matchController(matchStore);
-static AccountController accountController(accountStore);
+static MatchRepository matchRepository(matchStore);
+static AccountRepository accountRepository(accountStore);
 
 // docker build -t drogon-server .
 
@@ -81,6 +82,7 @@ void ApiController::createMatch
     CodeEnum error = CODE_UNKNOWN_ERROR;
     Match created;
     Codeset codeset;
+    MatchController controller(created, codeset);
     auto json = req->getJsonObject();
     if (!json || !json->isMember("host"))
         return invokeResponse400("Missing host field", std::move(callback));
@@ -99,10 +101,10 @@ void ApiController::createMatch
     }
 
     created.setFilename();
-    if (codeset.addFailure(!created.generate(19950111, codeset)))
+    if (codeset.addFailure(!controller.generate(19950111)))
         return invokeResponse500(codeset.describe("Failed to create match due to: "), std::move(callback));
 
-    if (!matchController.init(created, error))
+    if (!matchRepository.init(created, error))
         return invokeResponse409(code_to_message(error, "Failed to save match due to: "), std::move(callback));
 
     Json::Value out;
@@ -116,11 +118,11 @@ void ApiController::getMatch
 {
     CodeEnum error = CODE_UNKNOWN_ERROR;
     Match match;
-    if (!matchController.load(matchId, error, match))
+    if (!matchRepository.load(matchId, error, match))
         return invokeResponse404(code_to_message(error, "Failed to load match due to: "), std::move(callback));
 
     // try {
-    //     if (!matchController.load(matchId, error, match))
+    //     if (!matchRepository.load(matchId, error, match))
     //         return invokeResponse404(code_to_message(error, "Failed to load match due to: "), std::move(callback));
     //     return invokeResponse200("Here", std::move(callback));
     // } catch (const std::exception& e) {
@@ -153,7 +155,7 @@ void ApiController::getMatchList
     offset = std::max(0, offset);
 
     Json::Value matches(Json::arrayValue);
-    const bool success = matchController.list(limit, offset, total, error, [&](const std::string& matchId){
+    const bool success = matchRepository.list(limit, offset, total, error, [&](const std::string& matchId){
         matches.append(matchId);
     });
 
@@ -195,13 +197,13 @@ void ApiController::joinMatch
     std::string builder = (*json)["account"].asString();
     CodeEnum error = CODE_UNKNOWN_ERROR;
     Match match;
-    if (!matchController.load(matchId, error, match))
+    if (!matchRepository.load(matchId, error, match))
         return invokeResponse404(code_to_message(error, "Failed to load match due to: "), std::move(callback));
 
     if (!match.join(builder))
         return invokeResponse500("Failed to join", std::move(callback));
 
-    if (!matchController.save(match, error))
+    if (!matchRepository.save(match, error))
         return invokeResponse409(code_to_message(error, "Failed to save match due to: "), std::move(callback));
 
     return invokeResponse200("Joined match", std::move(callback));
@@ -217,13 +219,13 @@ void ApiController::leaveMatch
     std::string builder = (*json)["account"].asString();
     CodeEnum error = CODE_UNKNOWN_ERROR;
     Match match;
-    if (!matchController.load(matchId, error, match))
+    if (!matchRepository.load(matchId, error, match))
         return invokeResponse404(code_to_message(error, "Failed to load match due to: "), std::move(callback));
 
     if (!match.leave(builder, error))
         return invokeResponse500("Failed to leave", std::move(callback));
 
-    if (!matchController.save(match, error))
+    if (!matchRepository.save(match, error))
         return invokeResponse409(code_to_message(error, "Failed to save match due to: "), std::move(callback));
 
     return invokeResponse200("Left match", std::move(callback));
@@ -235,13 +237,13 @@ void ApiController::startMatch
 {
     CodeEnum error = CODE_UNKNOWN_ERROR;
     Match match;
-    if (!matchController.load(matchId, error, match))
+    if (!matchRepository.load(matchId, error, match))
         return invokeResponse404(code_to_message(error, "Failed to load match due to: "), std::move(callback));
 
     if (!match.start())
         return invokeResponse500("Failed to start", std::move(callback));
 
-    if (!matchController.save(match, error))
+    if (!matchRepository.save(match, error))
         return invokeResponse409(code_to_message(error, "Failed to save match due to: "), std::move(callback));
 
     return invokeResponse200("Match started", std::move(callback));
@@ -251,6 +253,7 @@ void ApiController::moveCharacterToDoor
 ( const drogon::HttpRequestPtr& req, std::function<void (const drogon::HttpResponsePtr &)> &&callback, std::string matchId
 )
 {
+    Codeset codeset;
     auto json = req->getJsonObject();
 
     if (!json)
@@ -276,26 +279,24 @@ void ApiController::moveCharacterToDoor
     int roomId = (*json)["room"].asInt();
     int characterId = (*json)["character"].asInt();
 
-    CodeEnum error = CODE_UNKNOWN_ERROR;
     Match match;
-    if (!matchController.load(matchId, error, match))
-        return invokeResponse404(code_to_message(error, "Failed to load match due to: "), std::move(callback));
-
-    Timestamp now;
+    MatchController controller(match, codeset);
+    if (codeset.addFailure(!matchRepository.load(matchId, codeset.error, match)))
+        return invokeResponse404(codeset.describe("Failed to load match due to: "), std::move(callback));
 
     if (json->isMember("direction")) {
         Cardinal direction((*json)["direction"].asInt());
-        const auto result = match.moveCharacterToWall(roomId, characterId, direction, now);
-        if (CODE_SUCCESS != result)
-            return invokeResponse409(std::string("Movement to wall rejected due to ") + code_to_text(result), std::move(callback));
+        if (codeset.addFailure(!controller.moveCharacterToWall(roomId, characterId, direction)))
+            return invokeResponse409(codeset.describe("Movement to wall rejected due to "), std::move(callback));
     } else if (json->isMember("floor")) {
         int floorId = (*json)["floor"].asInt();
-        if (!match.moveCharacterToFloor(roomId, characterId, floorId, now, error))
-            return invokeResponse409(std::string("Movement to floor rejected due to ") + code_to_text(error), std::move(callback));
+        if (codeset.addFailure(!controller.moveCharacterToFloor(roomId, characterId, floorId)))
+            return invokeResponse409(codeset.describe("Movement to floor rejected due to "), std::move(callback));
     }
 
-    if (!matchController.save(match, error))
-        return invokeResponse409(code_to_message(error, "Failed to save match due to: "), std::move(callback));
+    // Save the updated match state
+    if (codeset.addFailure(!matchRepository.save(match, codeset.error)))
+        return invokeResponse409(codeset.describe("Failed to save match due to: "), std::move(callback));
 
     return invokeResponse200("Character moved", std::move(callback));
 }
@@ -328,17 +329,18 @@ void ApiController::activateCharacter
     int targetId = (*json)["target"].asInt();
 
     Match match;
-    if (codeset.addFailure(!matchController.load(matchId, codeset.error, match)))
+    MatchController controller(match, codeset);
+    if (codeset.addFailure(!matchRepository.load(matchId, codeset.error, match)))
         return invokeResponse404(codeset.describe("Failed to load match due to: "), std::move(callback));
 
     // TODO: Validate that account can issue character orders
 
     // Attempt to activate the character
-    if (codeset.addFailure(!match.activateCharacter(accountId, characterId, roomId, targetId, codeset)))
+    if (codeset.addFailure(!controller.activateCharacter(accountId, characterId, roomId, targetId)))
         return invokeResponse409(codeset.describe("Character activation rejected due to: "), std::move(callback));
 
     // Save the updated match state
-    if (codeset.addFailure(!matchController.save(match, codeset.error)))
+    if (codeset.addFailure(!matchRepository.save(match, codeset.error)))
         return invokeResponse409(codeset.describe("Failed to save match due to: "), std::move(callback));
 
     return invokeResponse200("Character activated", std::move(callback));
@@ -372,17 +374,18 @@ void ApiController::activateInventoryItem
     int itemId = (*json)["item"].asInt();
 
     Match match;
-    if (codeset.addFailure(!matchController.load(matchId, codeset.error, match)))
+    MatchController controller(match, codeset);
+    if (codeset.addFailure(!matchRepository.load(matchId, codeset.error, match)))
         return invokeResponse404(codeset.describe("Failed to load match due to: "), std::move(callback));
 
     // TODO: Validate that account can issue character orders
 
     // Attempt to activate the character
-    if (codeset.addFailure(!match.activateInventoryItem(accountId, characterId, roomId, itemId, codeset)))
+    if (codeset.addFailure(!controller.activateInventoryItem(accountId, characterId, roomId, itemId)))
         return invokeResponse409(codeset.describe("Item activation rejected due to: "), std::move(callback));
 
     // Save the updated match state
-    if (codeset.addFailure(!matchController.save(match, codeset.error)))
+    if (codeset.addFailure(!matchRepository.save(match, codeset.error)))
         return invokeResponse409(codeset.describe("Failed to save match due to: "), std::move(callback));
 
     return invokeResponse200("Item activated", std::move(callback));
@@ -416,15 +419,16 @@ void ApiController::activateDoor
     int direction = (*json)["direction"].asInt();
 
     Match match;
-    if (codeset.addFailure(!matchController.load(matchId, codeset.error, match)))
+    MatchController controller(match, codeset);
+    if (codeset.addFailure(!matchRepository.load(matchId, codeset.error, match)))
         return invokeResponse404(codeset.describe("Failed to load match due to: "), std::move(callback));
 
     // Attempt to activate the lock
-    if (codeset.addFailure(!match.activateDoor(accountId, characterId, roomId, direction, codeset)))
+    if (codeset.addFailure(!controller.activateDoor(accountId, characterId, roomId, direction)))
         return invokeResponse409(codeset.describe("Door activation rejected due to: "), std::move(callback));
 
     // Save the updated match state
-    if (codeset.addFailure(!matchController.save(match, codeset.error)))
+    if (codeset.addFailure(!matchRepository.save(match, codeset.error)))
         return invokeResponse409(codeset.describe("Failed to save match due to: "), std::move(callback));
 
     return invokeResponse200("Door activated", std::move(callback));
@@ -458,15 +462,16 @@ void ApiController::activateLock
     int direction = (*json)["direction"].asInt();
 
     Match match;
-    if (codeset.addFailure(!matchController.load(matchId, codeset.error, match)))
+    MatchController controller(match, codeset);
+    if (codeset.addFailure(!matchRepository.load(matchId, codeset.error, match)))
         return invokeResponse404(codeset.describe("Failed to load match due to: "), std::move(callback));
 
     // Attempt to activate the lock
-    if (codeset.addFailure(!match.activateLock(accountId, characterId, roomId, direction, codeset)))
+    if (codeset.addFailure(!controller.activateLock(accountId, characterId, roomId, direction)))
         return invokeResponse409(codeset.describe("Lock activation rejected due to: "), std::move(callback));
 
     // Save the updated match state
-    if (codeset.addFailure(!matchController.save(match, codeset.error)))
+    if (codeset.addFailure(!matchRepository.save(match, codeset.error)))
         return invokeResponse409(codeset.describe("Failed to save match due to: "), std::move(callback));
 
     return invokeResponse200("Lock activated", std::move(callback));
@@ -488,7 +493,7 @@ void ApiController::endTurn
 
     CodeEnum error = CODE_UNKNOWN_ERROR;
     Match match;
-    if (!matchController.load(matchId, error, match))
+    if (!matchRepository.load(matchId, error, match))
         return invokeResponse404(code_to_message(error, "Failed to load match due to: "), std::move(callback));
 
     // End current player's turn
@@ -498,7 +503,7 @@ void ApiController::endTurn
         return invokeResponse409(std::string("Turn end rejected due to ") + code_to_text(result), std::move(callback));
 
     // Save the updated match state
-    if (!matchController.save(match, result))
+    if (!matchRepository.save(match, result))
         return invokeResponse409(code_to_message(result, "Failed to save match due to: "), std::move(callback));
 
     return invokeResponse200("Turn ended", std::move(callback));

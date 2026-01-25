@@ -2,17 +2,19 @@
 
 #include "CodeEnum.hpp"
 #include "iStore.hpp"
-#include "Account.hpp"
+#include "Match.hpp"
 #include <functional>
 #include <string>
 
-class AccountController {
+class MatchRepository {
 public:
-    AccountController(iStore& store);
+    MatchRepository(iStore& store);
 
-    bool save(const bool isInitial, CodeEnum& error, const Account& output);
+    bool init(const Match& match, CodeEnum& error);
 
-    bool load(const std::string& matchId, CodeEnum& error, Account& output);
+    bool save(const Match& match, CodeEnum& error);
+
+    bool load(const std::string& matchId, CodeEnum& error, Match& output);
 
     bool list(int& limit, int& offset, int& total, CodeEnum& error, std::function<void(const std::string&)> consumer);
 

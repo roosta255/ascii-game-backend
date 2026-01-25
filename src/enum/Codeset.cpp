@@ -112,7 +112,7 @@ std::string Codeset::describe(const std::string& prefix) const {
         }
         i++;
     }
-    output << "]\n\ttable {";
+    output << " ]\n\ttable {";
     i = 0;
     for (const auto& value: table) {
         if (value != 0) {
@@ -120,11 +120,52 @@ std::string Codeset::describe(const std::string& prefix) const {
         }
         i++;
     }
-    output << "}\n\tlogs {";
+    output << " }\n\tlogs {";
     for (const auto& entry: rackLogs) {
         output << " " << code_to_text(entry.first) << (code_to_type(i) == CodeType::ERROR ? "(ERROR: " : "(") << entry.second << ")";
     }
-    output << "}";
+    output << " }";
 
     return output.str();
+}
+
+bool operator==(const Array<int, CODE_COUNT>& left, const Array<int, CODE_COUNT>& right) {
+    auto i = 0;
+    for (const auto& value: left) {
+        if (value != right.getOrDefault(i, 0)) {
+            return false;
+        }
+        i++;
+    }
+    return true;
+}
+
+Array<int, CODE_COUNT> Codeset::getErrorTable()const {
+    Array<int, CODE_COUNT> result;
+    auto i = 0;
+    for (const auto& value: table) {
+        if (value != 0 && code_to_type(i) == CodeType::ERROR) {
+            result.assignValue(i, value);
+        }
+        i++;
+    }
+    return result;
+}
+
+const Array<int, CODE_COUNT>& Codeset::getEmptyTable() {
+    static Array<int, CODE_COUNT> table;
+    return table;
+}
+
+std::ostream& operator<<(std::ostream& os, const Array<int, CODE_COUNT>& table) {
+    auto i = 0;
+    os << "[";
+    for (const auto& value: table) {
+        if (value != 0) {
+            os << " " << code_to_text(i) << "(" << value << ")";
+        }
+        i++;
+    }
+    os << " ]";
+    return os;
 }

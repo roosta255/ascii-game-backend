@@ -60,12 +60,6 @@ bool Dungeon::findCharacter(
         }
     };
 
-    for (int y = 0; y < Room::DUNGEON_ROOM_HEIGHT; ++y) {
-        for (int x = 0; x < Room::DUNGEON_ROOM_WIDTH; ++x) {
-            int i = y * Room::DUNGEON_ROOM_WIDTH + x;
-        }
-    }
-
     // Search wall cells
     for (Cardinal dir: Cardinal::getAllCardinals()) {
         Wall& wall = room.getWall(dir);
