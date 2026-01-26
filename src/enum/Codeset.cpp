@@ -50,6 +50,10 @@ bool Codeset::addSuccessElseFailure(const bool input, const CodeEnum code) {
     return false;
 }
 
+bool Codeset::addSuccessElseFailureIfCodedSuccess(const CodeEnum code) {
+    return addSuccessElseFailure(code == CODE_SUCCESS);
+}
+
 bool Codeset::addFailure(const bool input, const CodeEnum code) {
     if (input) {
         isAnyFailure = true;
@@ -61,6 +65,14 @@ bool Codeset::addFailure(const bool input, const CodeEnum code) {
     }
 
     return false;
+}
+
+void Codeset::addError(const CodeEnum& input, int value) {
+    isAnyFailure = true;
+    addLogAndTableIfError(error);
+    if (error != input) {
+        addLogAndTableIfError(input);
+    }
 }
 
 void Codeset::addTable(const CodeEnum& input, int value) {

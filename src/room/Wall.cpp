@@ -1,3 +1,4 @@
+#include "Codeset.hpp"
 #include "Wall.hpp"
 #include "DoorFlyweight.hpp"
 #include "iActivator.hpp"
@@ -21,38 +22,36 @@ bool Wall::accessDoor(CodeEnum& error, std::function<void(const DoorFlyweight&)>
     return isDoorFlyweightAccessible;
 }
 
-bool Wall::activateLock(Player& player, Character& character, Room& room, const Cardinal& direction, Match& match, CodeEnum& error) {
+bool Wall::activateLock(Player& player, Character& character, Room& room, const Cardinal& direction, Match& match, Codeset& codeset, Timestamp time) {
     bool isSuccess = false;
-    accessDoor(error, [&](const DoorFlyweight& door) {
+    codeset.addFailure(!accessDoor(codeset.error, [&](const DoorFlyweight& door) {
         if (door.isLockActionable) {
             if (!door.lockActivator.accessConst([&](const iActivator& activatorIntf) {
-                Activation activation(player, character, room, Pointer<Character>::empty(), direction, match);
-                error = activatorIntf.activate(activation);
-                isSuccess = error == CODE_SUCCESS;
+                Activation activation(player, character, room, Pointer<Character>::empty(), direction, match, codeset, time);
+                isSuccess = codeset.addSuccessElseFailureIfCodedSuccess(activatorIntf.activate(activation));
             })) {
-                error = CODE_DOOR_MISSING_ACTIVATOR;
+                codeset.addError(CODE_DOOR_MISSING_ACTIVATOR);
             }
         } else {
-            error = CODE_LOCK_ACTIVATOR_NOT_CONFIGURED;
+            codeset.addError(CODE_LOCK_ACTIVATOR_NOT_CONFIGURED);
         }
-    });
+    }));
     return isSuccess;
 }
 
-bool Wall::activateDoor(Player& player, Character& character, Room& room, const Cardinal& direction, Match& match, CodeEnum& error) {
+bool Wall::activateDoor(Player& player, Character& character, Room& room, const Cardinal& direction, Match& match, Codeset& codeset, Timestamp time) {
     bool isSuccess = false;
-    accessDoor(error, [&](const DoorFlyweight& door) {
+    codeset.addFailure(!accessDoor(codeset.error, [&](const DoorFlyweight& door) {
         if (door.isDoorActionable) {
             if (!door.doorActivator.accessConst([&](const iActivator& activatorIntf) {
-                Activation activation(player, character, room, Pointer<Character>::empty(), direction, match);
-                error = activatorIntf.activate(activation);
-                isSuccess = error == CODE_SUCCESS;
+                Activation activation(player, character, room, Pointer<Character>::empty(), direction, match, codeset, time);
+                isSuccess = codeset.addSuccessElseFailureIfCodedSuccess(activatorIntf.activate(activation));
             })) {
-                error = CODE_DOOR_MISSING_ACTIVATOR;
+                codeset.addError(CODE_DOOR_MISSING_ACTIVATOR);
             }
         } else {
-            error = CODE_DOOR_ACTIVATOR_NOT_CONFIGURED;
+            codeset.addError(CODE_DOOR_ACTIVATOR_NOT_CONFIGURED);
         }
-    });
+    }));
     return isSuccess;
 }

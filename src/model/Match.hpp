@@ -46,12 +46,14 @@ struct Match {
     bool moveCharacterToFloor(int roomId, int characterId, int floorId, Timestamp time, CodeEnum& error);
     bool moveCharacterToFloor(Room& room, Character& character, Cell& floor, Timestamp time, CodeEnum& error);
 
-    bool activateCharacter(Player& player, Character& character, Room& room, Pointer<Character> target, CodeEnum& error);
-    bool activateCharacter(const std::string& playerId, int characterId, int roomId, int targetId, CodeEnum& error);
-    bool activateInventoryItem(Player& player, Character& character, Room& room, Item& item, CodeEnum& error);
-    bool activateInventoryItem(const std::string& playerId, int characterId, int roomId, int targetId, CodeEnum& error);
-    bool activateLock(Player& player, Character& character, Room& room, Cardinal direction, CodeEnum& error);
-    bool activateLock(const std::string& player, int characterId, int roomId, int direction, CodeEnum& error);
+    bool activateCharacter(Player& player, Character& character, Room& room, Pointer<Character> target, Codeset& codeset, Timestamp time = Timestamp());
+    bool activateCharacter(const std::string& playerId, int characterId, int roomId, int targetId, Codeset& codeset, Timestamp time = Timestamp());
+    bool activateInventoryItem(Player& player, Character& character, Room& room, Item& item, Codeset& codeset, Timestamp time = Timestamp());
+    bool activateInventoryItem(const std::string& playerId, int characterId, int roomId, int targetId, Codeset& codeset, Timestamp time = Timestamp());
+    bool activateDoor(Player& player, Character& character, Room& room, Cardinal direction, Codeset& codeset, Timestamp time = Timestamp());
+    bool activateDoor(const std::string& player, int characterId, int roomId, int direction, Codeset& codeset, Timestamp time = Timestamp());
+    bool activateLock(Player& player, Character& character, Room& room, Cardinal direction, Codeset& codeset, Timestamp time = Timestamp());
+    bool activateLock(const std::string& player, int characterId, int roomId, int direction, Codeset& codeset, Timestamp time = Timestamp());
     bool addCharacterToFloor(const Character& character, int roomId);
 
     bool endTurn(const std::string& playerId, CodeEnum& error);
