@@ -24,7 +24,7 @@ struct WallApiView
     static constexpr auto XY_COORDS = Compass<int2>(int2{1,1}, int2{2,2}, int2{3,3}, int2{4,4});
  
     inline WallApiView(const Wall& model, const MatchApiParameters& params, const Room& room, const Cardinal& dir)
-    : cell(model.cell, params, XY_COORDS[dir][0], XY_COORDS[dir][1])
+    : cell(model.cell, params, XY_COORDS[dir][0], XY_COORDS[dir][1]), adjacent(model.adjacent)
     {
         DoorFlyweight::getFlyweights().accessConst(model.door, [&](const DoorFlyweight& flyweight) {
             this->door = flyweight.name;
@@ -33,11 +33,6 @@ struct WallApiView
             this->isDoorActionable = flyweight.isDoorActionable;
             this->isLockActionable = flyweight.isLockActionable;
         });
-        params.match.dungeon.accessWall(room, dir, 
-            [&](const Cell&, const Cell&, const Room& adj){
-                params.match.dungeon.containsRoom(adj, this->adjacent = -2);
-            },
-            [](const Cell&){});
     }
 };
 

@@ -26,6 +26,8 @@ bool GeneratorPuzzle2::generate (int seed, Match& dst, Codeset& codeset) const {
     LayoutFlyweight::getFlyweights().accessConst(LAYOUT, [&](const LayoutFlyweight& flyweight){
         flyweight.layout.accessConst([&](const iLayout& layoutIntf){
             GeneratorUtility util(dst.dungeon.rooms, layoutIntf, codeset);
+            util.setupAdjacencyPointers();
+
             success &= util.setupTogglerBlue(int4{0,0,0,0}, Cardinal::north());
             success &= util.setupTogglerOrange(int4{0,0,0,0}, Cardinal::east());
 

@@ -17,6 +17,7 @@ class Cardinal;
 struct Wall {
     int door = 0;
     Cell cell;
+    int adjacent = -1;
 
     bool isWalkable(CodeEnum& error) const;
     bool activateDoor(Player& player, Character& character, Room& room, const Cardinal& direction, Match& match, Codeset& error, Timestamp time = Timestamp());

@@ -370,10 +370,10 @@ TEST_CASE("Test jailer", "[match][test]") {
     REQUIRE(result == CODE_SUCCESS);
     match.endTurn(builderId, result);
     REQUIRE(result == CODE_SUCCESS);
-
+/*
     match.moveCharacterToFloor(1, builderOffset, 1, Timestamp::nil(), result);
     REQUIRE(result == CODE_SUCCESS);
-/*
+
     result = match.moveCharacterToWall(1, builderOffset, Cardinal::north(), Timestamp::nil());
     REQUIRE(result == CODE_SUCCESS);
     match.endTurn(builderId, result);

@@ -104,3 +104,11 @@ bool Room::containsFloorCell(const Cell& cell, CodeEnum& error, int& index, int2
 void Room::setType(const RoomEnum& input) {
     this->type = input;
 }
+
+int Room::getDeltaTime(const int delta)const {
+    switch (delta) {
+        case 1: return this->posterior;
+        case -1: return this->anterior;
+    }
+    return -1;
+}

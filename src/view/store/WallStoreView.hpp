@@ -15,11 +15,12 @@ struct WallStoreView
     // }
     std::string door = "UNPARSED_DOOR";
     CellStoreView cell;
+    int adjacent = -1;
  
     inline WallStoreView() = default;
  
     inline WallStoreView(const Wall& model)
-    : cell(model.cell)
+    : cell(model.cell), adjacent(model.adjacent)
     {
         DoorFlyweight::getFlyweights().accessConst(model.door, [&](const DoorFlyweight& flyweight) {
             this->door = flyweight.name;
@@ -29,7 +30,8 @@ struct WallStoreView
     inline operator Wall() const 
     {
         Wall model{
-            .cell = this->cell
+            .cell = this->cell,
+            .adjacent = this->adjacent
         };
         DoorFlyweight::indexByString(this->door, model.door);
         return model;
@@ -37,4 +39,4 @@ struct WallStoreView
 };
 
 // Reflection-based JSON serialization
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(WallStoreView, door, cell)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(WallStoreView, door, cell, adjacent)

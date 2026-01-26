@@ -72,13 +72,11 @@ bool Dungeon::findCharacter(
 
         if (wall.cell.offset == searched) {
             isFound = true;
-            this->accessLayout(error, [&](const iLayout& layoutIntf){
-                layoutIntf.getWallNeighbor(rooms, room, dir).access([&](Room& neighbor) {
-                    Cell& otherCell = neighbor.getWall(dir.getFlip()).cell;
-                    if (otherCell.offset == searched) {
-                        wallConsumer(wall.cell, dir, neighbor, otherCell);
-                    }
-                });
+            this->rooms.access(room.getWall(dir).adjacent, [&](Room& neighbor) {
+                Cell& otherCell = neighbor.getWall(dir.getFlip()).cell;
+                if (otherCell.offset == searched) {
+                    wallConsumer(wall.cell, dir, neighbor, otherCell);
+                }
             });
         }
     }
@@ -150,23 +148,28 @@ bool Dungeon::accessWall(
 
     // Try to get the neighboring room
     bool success = false;
-    accessLayout(error, [&](const iLayout& layout) {
-        auto neighborRoom = layout.getWallNeighbor(rooms, source, dir);
-        if (neighborRoom.isPresent()) {
-            // If we have a neighbor, get its corresponding wall cell
-            neighborRoom.access([&](Room& room) {
-                Cell& neighborCell = room.getWall(dir.getFlip()).cell;
-                neighborCallback(sourceCell, neighborCell, room);
-                success = true;
-            });
-        } else {
-            // If no neighbor, just handle the source cell
-            noNeighborCallback(sourceCell);
-            success = true;
-        }
+    const bool isAccessed = this->rooms.access(source.getWall(dir).adjacent, [&](Room& neighbor) {
+        // If we have a neighbor, get its corresponding wall cell
+        Cell& neighborCell = neighbor.getWall(dir.getFlip()).cell;
+        neighborCallback(sourceCell, neighborCell, neighbor);
+        success = true;
     });
 
+    if (!isAccessed) {
+        // If no neighbor, just handle the source cell
+        noNeighborCallback(sourceCell);
+        success = true;
+    }
+
     return success;
+}
+
+bool Dungeon::accessWall(
+    Room& source,
+    Cardinal dir,
+    std::function<void(Cell&)> callback
+) {
+    return this->accessWall(source, dir, [&](Cell& sourceCell, Cell&, Room&){callback(sourceCell);}, callback);
 }
 
 bool Dungeon::accessWall(
@@ -182,21 +185,17 @@ bool Dungeon::accessWall(
 
     // Try to get the neighboring room
     bool success = false;
-    accessLayout(error, [&](const iLayout& layout) {
-        auto neighborRoom = layout.getWallNeighbor(rooms, source, dir);
-        if (neighborRoom.isPresent()) {
-            // If we have a neighbor, get its corresponding wall cell
-            neighborRoom.access([&](const Room& room) {
-                const Cell& neighborCell = room.getWall(dir.getFlip()).cell;
-                neighborCallback(sourceCell, neighborCell, room);
-                success = true;
-            });
-        } else {
-            // If no neighbor, just handle the source cell
-            noNeighborCallback(sourceCell);
-            success = true;
-        }
+    const bool isAccessed = this->rooms.accessConst(source.getWall(dir).adjacent, [&](const Room& neighbor) {
+        const Cell& neighborCell = neighbor.getWall(dir.getFlip()).cell;
+        neighborCallback(sourceCell, neighborCell, neighbor);
+        success = true;
     });
+
+    if (!isAccessed) {
+        // If no neighbor, just handle the source cell
+        noNeighborCallback(sourceCell);
+        success = true;
+    }
 
     return success;
 }
