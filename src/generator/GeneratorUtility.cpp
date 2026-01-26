@@ -1,3 +1,5 @@
+#include "ActivatorLightningRod.hpp"
+#include "ActivatorTimeGate.hpp"
 #include "build_room_map.hpp"
 #include "Codeset.hpp"
 #include "DoorEnum.hpp"
@@ -133,60 +135,63 @@ bool GeneratorUtility::setupVerticalWalls(std::initializer_list<int> row, int y,
 }
 
 bool GeneratorUtility::setup4x1Room(const int4& coord) {
-    bool success = false;
-    getRoom(coord).access([&](Room& room){
-        room.setType(ROOM_RECT_4_x_1);
-        success = true;
-    });
-    return success;
+    return setRoom(coord, ROOM_RECT_4_x_1);
 }
 
 bool GeneratorUtility::setup2x5Room(const int4& coord) {
-    bool success = false;
-    getRoom(coord).access([&](Room& room){
-        room.setType(ROOM_RECT_2_x_5);
-        success = true;
-    });
-    return success;
+    return setRoom(coord, ROOM_RECT_2_x_5);
 }
 
 bool GeneratorUtility::setup3x3Room(const int4& coord) {
+    return setRoom(coord, ROOM_RECT_3_x_3);
+}
+
+bool GeneratorUtility::setRoom(const int4& coord, const RoomEnum& type) {
     bool success = false;
-    getRoom(coord).access([&](Room& room){
-        room.setType(ROOM_RECT_3_x_3);
+    codeset.addFailure(!getRoom(coord).access([&](Room& room){
+        room.setType(type);
+        codeset.addSuccess(true);
         success = true;
-    });
+    }), CODE_GENERATOR_UTILITY_SET_ROOM_FAILED_TO_ACCESS_ROOM);
     return success;
 }
 
-bool GeneratorUtility::setupLightningRodRoom(const int4& coord) {
+bool GeneratorUtility::setDoor(const int4& coord, const Cardinal dir, const DoorEnum& type) {
     bool success = false;
-    getRoom(coord).access([&](Room& room){
-        room.setType(ROOM_LIGHTNING_ROD);
+    codeset.addFailure(!getRoom(coord).access([&](Room& room){
+        room.getWall(dir).door = type;
         success = true;
-    });
+    }), CODE_GENERATOR_UTILITY_SET_DOOR_FAILED_TO_ACCESS_ROOM);
     return success;
+}
+
+bool GeneratorUtility::setupLightningRodRoom(const int4& coord, const bool isCubed, const bool isAwakened) {
+    return setRoom(coord, ROOM_LIGHTNING_ROD)
+        && setDoor(coord, ActivatorLightningRod::LIGHTNING_ROD_WALL, !isCubed ? DOOR_LIGHTNING_ROD_EMPTY : isAwakened ? DOOR_LIGHTNING_ROD_AWAKENED : DOOR_LIGHTNING_ROD_DORMANT);
+}
+
+bool GeneratorUtility::setupTimeGateRoomToFuture(const int4& coord, const bool isCubed, const bool isAwakened) {
+    const auto future = coord + int4{0,0,0,1};
+    return setRoom(coord, ROOM_TIME_GATE_TO_FUTURE)
+        && setRoom(future, ROOM_TIME_GATE_TO_PAST)
+        && setDoor(coord, ActivatorTimeGate::TIME_GATE_DIRECTION, !isCubed ? DOOR_TIME_GATE_EMPTY : isAwakened ? DOOR_TIME_GATE_AWAKENED : DOOR_TIME_GATE_DORMANT)
+        && setDoor(future, ActivatorTimeGate::TIME_GATE_DIRECTION, DOOR_TIME_GATE_EMPTY);
 }
 
 bool GeneratorUtility::setupPowerGeneratorRoom(const int4& coord) {
-    bool success = false;
-    getRoom(coord).access([&](Room& room){
-        room.setType(ROOM_POWER_GENERATOR);
-        success = true;
-    });
-    return success;
+    return setRoom(coord, ROOM_POWER_GENERATOR);
 }
 
 bool GeneratorUtility::setupAdjacencyPointers() {
     bool isSuccess = false;
     for (auto& room: rooms) {
         for (const auto& dir: Cardinal::getAllCardinals()) {
-            codeset.addSuccess(layout->getWallNeighbor(rooms, room, dir, room.getWall(dir).adjacent));
+            isSuccess |= codeset.addSuccess(layout->getWallNeighbor(rooms, room, dir, room.getWall(dir).adjacent));
         }
-        codeset.addSuccess(layout->getDepthDelta(rooms, room, -1, room.below));
-        codeset.addSuccess(layout->getDepthDelta(rooms, room, 1, room.above));
-        codeset.addSuccess(layout->getTimeDelta(rooms, room, -1, room.anterior));
-        codeset.addSuccess(layout->getTimeDelta(rooms, room, 1, room.posterior));
+        isSuccess |= codeset.addSuccess(layout->getDepthDelta(rooms, room, -1, room.below));
+        isSuccess |= codeset.addSuccess(layout->getDepthDelta(rooms, room, 1, room.above));
+        isSuccess |= codeset.addSuccess(layout->getTimeDelta(rooms, room, -1, room.anterior));
+        isSuccess |= codeset.addSuccess(layout->getTimeDelta(rooms, room, 1, room.posterior));
     }
     return isSuccess;
 }

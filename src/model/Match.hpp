@@ -12,15 +12,9 @@
 #include <string>
 
 class Codeset;
-class GenerationParameters;
-class JsonParameters;
-namespace Json {
-    class Value;
-}
 
 struct Match {
     constexpr static int MATCH_BUILDER_COUNT = 3;
-    constexpr static long MOVE_ANIMATION_DURATION = 900;
 
     std::string filename = "ERROR_UNSET_FILENAME";
     std::string username;
@@ -38,27 +32,12 @@ struct Match {
     bool join(const std::string& joiner);
     bool leave(const std::string& leaver, CodeEnum& error);
     bool start();
-    bool generate(int seed, Codeset& codeset);
     bool setupSingleBuilder(CodeEnum& output);
     bool setupSingleTitan(CodeEnum& output);
-    CodeEnum moveCharacterToWall(int roomId, int characterId, Cardinal, Timestamp time);
-    CodeEnum moveCharacterToWall(Room& room, Character& character, Cardinal, Timestamp time);
-    bool moveCharacterToFloor(int roomId, int characterId, int floorId, Timestamp time, CodeEnum& error);
-    bool moveCharacterToFloor(Room& room, Character& character, Cell& floor, Timestamp time, CodeEnum& error);
-
-    bool activateCharacter(Player& player, Character& character, Room& room, Pointer<Character> target, Codeset& codeset, Timestamp time = Timestamp());
-    bool activateCharacter(const std::string& playerId, int characterId, int roomId, int targetId, Codeset& codeset, Timestamp time = Timestamp());
-    bool activateInventoryItem(Player& player, Character& character, Room& room, Item& item, Codeset& codeset, Timestamp time = Timestamp());
-    bool activateInventoryItem(const std::string& playerId, int characterId, int roomId, int targetId, Codeset& codeset, Timestamp time = Timestamp());
-    bool activateDoor(Player& player, Character& character, Room& room, Cardinal direction, Codeset& codeset, Timestamp time = Timestamp());
-    bool activateDoor(const std::string& player, int characterId, int roomId, int direction, Codeset& codeset, Timestamp time = Timestamp());
-    bool activateLock(Player& player, Character& character, Room& room, Cardinal direction, Codeset& codeset, Timestamp time = Timestamp());
-    bool activateLock(const std::string& player, int characterId, int roomId, int direction, Codeset& codeset, Timestamp time = Timestamp());
     bool addCharacterToFloor(const Character& character, int roomId);
 
     bool endTurn(const std::string& playerId, CodeEnum& error);
 
-    bool cleanupMovement(Character& character, Room& room, int& characterId, bool& wasFloored, int2& prevFloor, bool& wasWalled, Cardinal& prevWall, CodeEnum& error);
     bool isStarted(CodeEnum& result) const;
     bool isCompleted(CodeEnum& result) const;
     bool isFull(CodeEnum& result) const;

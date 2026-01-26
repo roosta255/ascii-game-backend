@@ -30,18 +30,13 @@ bool GeneratorTest4D::generate (int seed, Match& dst, Codeset& codeset) const {
             util.setupTimeGateRoomToFuture(int4{1,1,0,0}, true, false);
 
             const auto testTimeGateRoomSetup = [&](){
-                const bool isFutureRoomAccessible = util.getRoom(int4{1,1,0,1}).access([&](Room& room){
+                codeset.addFailure(!util.getRoom(int4{1,1,0,1}).access([&](Room& room){
                     success &= room.type == ROOM_TIME_GATE_TO_PAST;
                     if (room.type != ROOM_TIME_GATE_TO_PAST) {
                         success &= false;
                         error = CODE_GENERATOR_TEST_4D_HAS_FUTURE_ROOM_WITH_WRONG_TYPE;
                     }
-                });
-
-                if (!isFutureRoomAccessible) {
-                    success &= false;
-                    error = CODE_GENERATOR_TEST_4D_HAS_INNACCESSIBLE_FUTURE_ROOM;
-                }
+                }), CODE_GENERATOR_TEST_4D_HAS_INNACCESSIBLE_FUTURE_ROOM);
                 return true;
             };
 
@@ -49,8 +44,7 @@ bool GeneratorTest4D::generate (int seed, Match& dst, Codeset& codeset) const {
                 return;
             }
 
-            error = codeset.findErrorInTable();
-/*
+
             // this dungeon has 2 timezones
             for (int t = 0; t < 2; t++) {
                 success &= util.setup2x5Room(int4{0,1,0,t});
@@ -91,7 +85,7 @@ bool GeneratorTest4D::generate (int seed, Match& dst, Codeset& codeset) const {
             if (!testTimeGateRoomSetup()) {
                 return;
             }
-*/
+
         });
     });
 

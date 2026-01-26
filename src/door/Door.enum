@@ -1,25 +1,35 @@
-DOOR_DECL(WALL,                   true,  iActivator, iActivator, false)
-DOOR_DECL(DOORWAY,               false,  iActivator, iActivator, true)
+// name,                    isBlocking,        door,             lock, isDoorway
+DOOR_DECL(WALL,                   true,        iActivator,             iActivator, false)
+DOOR_DECL(WALL_ALLOCATED,         true,        iActivator,             iActivator, false)
+DOOR_DECL(DOORWAY,               false,        iActivator,             iActivator, true)
 
-DOOR_DECL(KEEPER_EGRESS_KEYED,   false,  iActivator, iActivator, true)
-DOOR_DECL(KEEPER_EGRESS_KEYLESS,  true,  iActivator, iActivator, true)
-DOOR_DECL(KEEPER_INGRESS_KEYED,  false,  iActivator, ActivatorKeeper, true)
-DOOR_DECL(KEEPER_INGRESS_KEYLESS, true,  iActivator, ActivatorKeeper, true)
+DOOR_DECL(KEEPER_EGRESS_KEYED,   false,        iActivator,             iActivator, true)
+DOOR_DECL(KEEPER_EGRESS_KEYLESS,  true,        iActivator,             iActivator, true)
+DOOR_DECL(KEEPER_INGRESS_KEYED,  false,        iActivator,        ActivatorKeeper, true)
+DOOR_DECL(KEEPER_INGRESS_KEYLESS, true,        iActivator,        ActivatorKeeper, true)
 
 // jailer
-DOOR_DECL(JAILER_EGRESS_KEYED,   false,  iActivator, iActivator, true)
-DOOR_DECL(JAILER_EGRESS_KEYLESS,  true,  iActivator, iActivator, true)
-DOOR_DECL(JAILER_INGRESS_KEYED,  false,  iActivator, iActivator, true)
-DOOR_DECL(JAILER_INGRESS_KEYLESS, true,  iActivator, ActivatorJailer, true)
+DOOR_DECL(JAILER_EGRESS_KEYED,   false,        iActivator,             iActivator, true)
+DOOR_DECL(JAILER_EGRESS_KEYLESS,  true,        iActivator,             iActivator, true)
+DOOR_DECL(JAILER_INGRESS_KEYED,  false,        iActivator,             iActivator, true)
+DOOR_DECL(JAILER_INGRESS_KEYLESS, true,        iActivator,        ActivatorJailer, true)
 
 // shifter
-DOOR_DECL(SHIFTER_EGRESS_KEYED,  false,  iActivator, ActivatorShifter, true)
-DOOR_DECL(SHIFTER_EGRESS_KEYLESS, true,  iActivator, iActivator, true)
-DOOR_DECL(SHIFTER_INGRESS_KEYED,  false, iActivator, iActivator, true)
-DOOR_DECL(SHIFTER_INGRESS_KEYLESS, true, iActivator, ActivatorShifter, true)
+DOOR_DECL(SHIFTER_EGRESS_KEYED,   false,        iActivator,      ActivatorShifter, true)
+DOOR_DECL(SHIFTER_EGRESS_KEYLESS,  true,        iActivator,            iActivator, true)
+DOOR_DECL(SHIFTER_INGRESS_KEYED,  false,        iActivator,            iActivator, true)
+DOOR_DECL(SHIFTER_INGRESS_KEYLESS, true,        iActivator,      ActivatorShifter, true)
 
 // dungeons start orange: open, blue: closed
-DOOR_DECL(TOGGLER_ORANGE_CLOSED,   true, iActivator, iActivator, true)
-DOOR_DECL(TOGGLER_ORANGE_OPEN,    false, iActivator, iActivator, true)
-DOOR_DECL(TOGGLER_BLUE_CLOSED,     true, iActivator, iActivator, true)
-DOOR_DECL(TOGGLER_BLUE_OPEN,      false, iActivator, iActivator, true)
+DOOR_DECL(TOGGLER_ORANGE_CLOSED,   true,        iActivator,            iActivator, true)
+DOOR_DECL(TOGGLER_ORANGE_OPEN,    false,        iActivator,            iActivator, true)
+DOOR_DECL(TOGGLER_BLUE_CLOSED,     true,        iActivator,            iActivator, true)
+DOOR_DECL(TOGGLER_BLUE_OPEN,      false,        iActivator,            iActivator, true)
+
+DOOR_DECL(LIGHTNING_ROD_AWAKENED, false,        iActivator, ActivatorLightningRod, false)
+DOOR_DECL(LIGHTNING_ROD_DORMANT,  false,        iActivator, ActivatorLightningRod, false)
+DOOR_DECL(LIGHTNING_ROD_EMPTY,    false,        iActivator, ActivatorLightningRod, false)
+
+DOOR_DECL(TIME_GATE_AWAKENED,     false, ActivatorTimeGate, ActivatorTimeGateCube, false)
+DOOR_DECL(TIME_GATE_DORMANT,      false,        iActivator, ActivatorTimeGateCube, false)
+DOOR_DECL(TIME_GATE_EMPTY,        false,        iActivator, ActivatorTimeGateCube, false)

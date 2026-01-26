@@ -5,7 +5,10 @@
 #include "ActivatorJailer.hpp"
 #include "ActivatorKeeper.hpp"
 #include "ActivatorInactiveDoor.hpp"
-#include "ActivatorShifter.hpp"
+#include "ActivatorLightningRod.cpp"
+#include "ActivatorShifter.cpp"
+#include "ActivatorTimeGate.cpp"
+#include "ActivatorTimeGateCube.cpp"
 
 const Array<DoorFlyweight, DOOR_COUNT>& DoorFlyweight::getFlyweights() {
     static auto flyweights = [](){

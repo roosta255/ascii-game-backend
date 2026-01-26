@@ -14,6 +14,7 @@ private:
     Array<int, CODE_COUNT> table;
 
 public:
+    static const Array<int, CODE_COUNT>& getEmptyTable();
     Codeset();
     CodeEnum error = CODE_UNSET;
     bool isAnySuccess = false, isAnyOverflow = false, isAnyFailure = false;
@@ -33,5 +34,8 @@ public:
     CodeEnum findErrorInTable()const;
     bool isAnySuccessfulWithoutFailures()const;
     std::string describe(const std::string& prefix)const;
-
+    Array<int, CODE_COUNT> getErrorTable()const;
 };
+
+std::ostream& operator<<(std::ostream& os, const Array<int, CODE_COUNT>& table);
+bool operator==(const Array<int, CODE_COUNT>& table, const Array<int, CODE_COUNT>& table2);

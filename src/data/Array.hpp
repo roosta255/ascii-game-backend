@@ -58,6 +58,16 @@ class Array
 		: defauld;
 	}
 
+	inline const T& getOrDefault
+	( const int index
+	, const T& defauld
+	) const
+	{
+		return containsIndex(index)
+		? _elems[index]
+		: defauld;
+	}
+
 	Pointer<T> getPointer
 	( const int index
 	)

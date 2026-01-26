@@ -1,5 +1,7 @@
 #include "ActivatorTimeGate.hpp"
+#include "Codeset.hpp"
 #include "Match.hpp"
+#include "MatchController.hpp"
 #include "Room.hpp"
 #include "Character.hpp"
 #include "iLayout.hpp"
@@ -10,6 +12,7 @@
 CodeEnum ActivatorTimeGate::activate(Activation& activation) const {
     // Check if character can use keys
     CodeEnum result = CODE_PREACTIVATE_IN_ACTIVATOR;
+    MatchController controller(activation.match, activation.codeset);
 
     if (!activation.character.isMovable(result, true)) {
         return result;
@@ -47,13 +50,13 @@ CodeEnum ActivatorTimeGate::activate(Activation& activation) const {
                                 result = CODE_OCCUPIED_TARGET_TIME_GATE_CELL;
                                 return;
                             }
-                            
+
                             // cleanup character
                             int characterId;
                             bool wasWalled, wasFloored;
                             int2 prevFloor;
                             Cardinal prevWall = TIME_GATE_DIRECTION;
-                            if (!activation.match.cleanupMovement(activation.character, activation.room, characterId, wasFloored, prevFloor, wasWalled, prevWall, result)) return;
+                            if (activation.codeset.addFailure(!controller.cleanupMovement(activation.character, activation.room, characterId, wasFloored, prevFloor, wasWalled, prevWall), CODE_TIME_GATE_FAILED_CLEANUP)) return;
 
                             // update the time gates
                             activation.room.getWall(TIME_GATE_DIRECTION).door = DOOR_TIME_GATE_DORMANT;
@@ -68,9 +71,9 @@ CodeEnum ActivatorTimeGate::activate(Activation& activation) const {
                                 // animate
                                 const Keyframe keyframe = wasFloored
                                     // floor -> wall
-                                    ? Keyframe::buildWalking(activation.time, Match::MOVE_ANIMATION_DURATION, activation.getRoomId(), prevFloor, TIME_GATE_DIRECTION)
+                                    ? Keyframe::buildWalking(activation.time, MatchController::MOVE_ANIMATION_DURATION, activation.getRoomId(), prevFloor, TIME_GATE_DIRECTION)
                                     // wall -> wall
-                                    : Keyframe::buildWalking(activation.time, Match::MOVE_ANIMATION_DURATION, activation.getRoomId(), prevWall, TIME_GATE_DIRECTION);
+                                    : Keyframe::buildWalking(activation.time, MatchController::MOVE_ANIMATION_DURATION, activation.getRoomId(), prevWall, TIME_GATE_DIRECTION);
                                 if(!Keyframe::insertKeyframe(Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(activation.character.keyframes), keyframe)) {
                                     // TODO: animation overflow
                                 }
