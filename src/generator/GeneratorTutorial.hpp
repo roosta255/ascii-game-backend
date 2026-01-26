@@ -10,5 +10,5 @@
 
 class GeneratorTutorial : public iGenerator {
 public:
-    bool generate(int seed, Match&) const override;
+    bool generate(int seed, Match&, Codeset& codeset) const override;
 };

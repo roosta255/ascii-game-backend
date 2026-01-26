@@ -11,6 +11,7 @@
 #include "Turner.hpp"
 #include <string>
 
+class Codeset;
 class GenerationParameters;
 class JsonParameters;
 namespace Json {
@@ -37,7 +38,7 @@ struct Match {
     bool join(const std::string& joiner);
     bool leave(const std::string& leaver, CodeEnum& error);
     bool start();
-    bool generate(int seed, CodeEnum& output);
+    bool generate(int seed, Codeset& codeset);
     bool setupSingleBuilder(CodeEnum& output);
     bool setupSingleTitan(CodeEnum& output);
     CodeEnum moveCharacterToWall(int roomId, int characterId, Cardinal, Timestamp time);

@@ -2,6 +2,7 @@
 
 #include "Array.hpp"
 #include "Cardinal.hpp"
+#include "DoorEnum.hpp"
 #include "DUNGEON_ROOM_COUNT.hpp"
 #include <functional>
 #include "int4.hpp"
@@ -9,7 +10,9 @@
 #include "Pointer.hpp"
 #include "Rack.hpp"
 #include "Room.hpp"
+#include "RoomEnum.hpp"
 
+class Codeset;
 class iLayout;
 
 class GeneratorUtility {
@@ -18,9 +21,10 @@ private:
     const iLayout* layout;
     std::unordered_map<int4, Pointer<Room>> mapping;
     Array<Room, DUNGEON_ROOM_COUNT>& rooms;
+    Codeset& codeset;
 
 public:
-    GeneratorUtility(Array<Room, DUNGEON_ROOM_COUNT>& rooms, const iLayout& layout);
+    GeneratorUtility(Array<Room, DUNGEON_ROOM_COUNT>& rooms, const iLayout& layout, Codeset& codeset);
 
     Pointer<Room> getRoom(const int4&);
     bool accessRoomWall(const int4&, const Cardinal, std::function<void(Room&, Wall&, Wall&, Room&)> consumer);

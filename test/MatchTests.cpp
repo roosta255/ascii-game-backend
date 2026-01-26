@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <catch2/catch_test_macros.hpp>
+#include "Codeset.hpp"
 #include "Match.hpp"
 #include "GeneratorEnum.hpp"
 #include "GeneratorTutorial.hpp"
@@ -25,7 +26,10 @@ TEST_CASE("Match generation", "[match]") {
     match.username = "match_001";
     match.generator = GENERATOR_TUTORIAL;
 
-    REQUIRE(match.generate(0, error));
+    Codeset codeset;
+    bool isSuccess = match.generate(0, codeset);
+    REQUIRE(codeset.findErrorInTable() == CODE_UNSET);
+    REQUIRE(isSuccess);
 
     REQUIRE(match.titan.player.account == "");
     REQUIRE(match.builders.access(0, [&](Builder& builder) {
@@ -60,8 +64,10 @@ TEST_CASE("Test Character Animation", "[walking]") {
     match.generator = GENERATOR_TUTORIAL;
 
     // Generate tutorial layout
-    GeneratorTutorial generator;
-    REQUIRE(generator.generate(0, match));
+    Codeset codeset;
+    bool isSuccess = match.generate(0, codeset);
+    REQUIRE(codeset.findErrorInTable() == CODE_UNSET);
+    REQUIRE(isSuccess);
 
     // Start the match
     REQUIRE(match.start());
@@ -115,11 +121,14 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     match.generator = GENERATOR_TUTORIAL;
 
     // Generate tutorial layout
-    GeneratorTutorial generator;
-    REQUIRE(generator.generate(0, match));
+    Codeset codeset;
+    isSuccess = match.generate(0, codeset);
+    REQUIRE(codeset.findErrorInTable() == CODE_UNSET);
+    REQUIRE(isSuccess);
 
     // Start the match
     REQUIRE(match.start());
+    Timestamp now;
 
     // Get the actual character offset of the first builder
     int builderOffset;
@@ -337,9 +346,11 @@ TEST_CASE("Test jailer", "[match][test]") {
     match.filename = "match_001";
     match.generator = GENERATOR_TEST;
 
-    // Generate tutorial layout
-    GeneratorTutorial generator;
-    REQUIRE(generator.generate(0, match));
+    // Generate test layout
+    Codeset codeset;
+    isSuccess = match.generate(0, codeset);
+    REQUIRE(codeset.findErrorInTable() == CODE_UNSET);
+    REQUIRE(isSuccess);
 
     // Start the match
     REQUIRE(match.start());

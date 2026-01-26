@@ -1,3 +1,4 @@
+#include "int4.hpp"
 #include "LayoutGrid.hpp"
 #include "to_int4.hpp"
 // #include <drogon/drogon.h>

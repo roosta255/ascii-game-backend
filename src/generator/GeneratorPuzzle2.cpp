@@ -8,7 +8,7 @@
 #include "Match.hpp"
 #include "RoleEnum.hpp"
 
-bool GeneratorPuzzle2::generate (int seed, Match& dst) const {
+bool GeneratorPuzzle2::generate (int seed, Match& dst, Codeset& codeset) const {
     constexpr auto LAYOUT = LAYOUT_2D_8x8;
     dst.dungeon.layout = LAYOUT;
     constexpr int w = DOOR_WALL;
@@ -25,7 +25,7 @@ bool GeneratorPuzzle2::generate (int seed, Match& dst) const {
 
     LayoutFlyweight::getFlyweights().accessConst(LAYOUT, [&](const LayoutFlyweight& flyweight){
         flyweight.layout.accessConst([&](const iLayout& layoutIntf){
-            GeneratorUtility util(dst.dungeon.rooms, layoutIntf);
+            GeneratorUtility util(dst.dungeon.rooms, layoutIntf, codeset);
             success &= util.setupTogglerBlue(int4{0,0,0,0}, Cardinal::north());
             success &= util.setupTogglerOrange(int4{0,0,0,0}, Cardinal::east());
 
