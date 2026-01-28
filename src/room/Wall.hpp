@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Cell.hpp"
 #include "CodeEnum.hpp"
 #include <functional>
 #include "Timestamp.hpp"
@@ -12,16 +11,16 @@ class Character;
 class JsonParameters;
 class Room;
 class Match;
+class MatchController;
 class Cardinal;
 
 struct Wall {
     int door = 0;
-    Cell cell;
     int adjacent = -1;
 
     bool isWalkable(CodeEnum& error) const;
-    bool activateDoor(Player& player, Character& character, Room& room, const Cardinal& direction, Match& match, Codeset& error, Timestamp time = Timestamp());
-    bool activateLock(Player& player, Character& character, Room& room, const Cardinal& direction, Match& match, Codeset& error, Timestamp time = Timestamp());
+    bool activateDoor(Player& player, Character& character, Room& room, const Cardinal& direction, Match& match, Codeset& error, MatchController& controller, Timestamp time = Timestamp());
+    bool activateLock(Player& player, Character& character, Room& room, const Cardinal& direction, Match& match, Codeset& error, MatchController& controller, Timestamp time = Timestamp());
 
 private:
     // the last thing i want to do is to have a function that takes a function as a parameter

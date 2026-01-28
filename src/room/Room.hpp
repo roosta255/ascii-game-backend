@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Array.hpp"
-#include "Cell.hpp"
 #include "CodeEnum.hpp"
 #include "Cardinal.hpp"
 #include "int2.hpp"
@@ -12,7 +11,6 @@
 #include "Wall.hpp"
 #include <functional>
 
-
 class Match;
 
 struct Room {
@@ -21,22 +19,23 @@ struct Room {
     constexpr static int DUNGEON_ROOM_CELL_COUNT = DUNGEON_ROOM_WIDTH * DUNGEON_ROOM_HEIGHT;
     int visibility = ~0x0;
     RoomEnum type = ROOM_RECT_4_x_5;
-    Array<Cell, DUNGEON_ROOM_CELL_COUNT> reserveFloorCells;
     Array<Wall, 4> walls;
     int anterior = -1, posterior = -1, above = -1, below = -1;
+    int roomId = -1;
 
     void setType(const RoomEnum&);
 
     Wall& getWall(Cardinal);
     const Wall& getWall(Cardinal) const;
     int getOffset(const Array<Room, DUNGEON_ROOM_COUNT>& rooms)const;
-    Rack<Cell> getUsedFloorCells() const;
+    int2 getFloorSize() const;
+    void iterateFloor(std::function<void(const int, const int2)> consumer)const;
 
     // Iterate over all characters in the room (both floor and wall cells)
-    void forEachCharacter(Match& match, std::function<void(Character&)> consumer);
-    bool containsCharacter(int offset) const;
-    bool containsFloorCell(const Cell& cell, CodeEnum& error, int& index, int2& coords) const;
-    Pointer<Cell> getCell(int offset, CodeEnum& error);
+    // void forEachCharacter(Match& match, std::function<void(Character&)> consumer);
+    // bool containsCharacter(int offset) const;
+    // bool containsFloorCell(const Cell& cell, CodeEnum& error, int& index, int2& coords) const;
+    // Pointer<Cell> getCell(int offset, CodeEnum& error);
     int getDeltaTime(const int)const;
 };
 

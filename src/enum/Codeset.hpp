@@ -8,7 +8,7 @@
 class Codeset
 {
 private:
-    static constexpr auto MAX_STORED_LOGS = 32;
+    static constexpr auto MAX_STORED_LOGS = 64;
     Array<std::pair<CodeEnum, int>, MAX_STORED_LOGS> arrayLogs;
     Rack<std::pair<CodeEnum, int>> rackLogs = arrayLogs;
     Array<int, CODE_COUNT> table;
@@ -33,6 +33,7 @@ public:
 
     CodeEnum findErrorInTable()const;
     bool isAnySuccessfulWithoutFailures()const;
+    std::string describe()const;
     std::string describe(const std::string& prefix)const;
     Array<int, CODE_COUNT> getErrorTable()const;
 };

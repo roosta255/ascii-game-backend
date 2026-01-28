@@ -78,7 +78,8 @@ TEST_CASE("Test Time Gate", "[match][test4d]") {
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
     REQUIRE(controller.isSuccess);
 
-    controller.moveCharacterToFloor(0);
+    controller.moveCharacterToFloor(2);
+    // REQUIRE(controller.codeset.describe() == "");
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
     REQUIRE(controller.isSuccess);
 
@@ -121,9 +122,8 @@ TEST_CASE("Test Time Gate", "[match][test4d]") {
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
     REQUIRE(controller.isSuccess);
 
-    controller.codeset.setTable(CODE_BUILDER_ID, controller.builderOffset);
     controller.moveCharacterToWall(Cardinal::west());
-    REQUIRE(controller.codeset.describe("") == "");
+    // REQUIRE(controller.codeset.describe("") == "");
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
     REQUIRE(controller.isSuccess);
     

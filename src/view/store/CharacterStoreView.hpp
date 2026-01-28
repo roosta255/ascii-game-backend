@@ -5,6 +5,7 @@
 #include "Keyframe.hpp"
 #include "KeyframeView.hpp"
 #include "KeyframeFlyweight.hpp"
+#include "LocationView.hpp"
 #include "RoleFlyweight.hpp"
 #include <string>
 #include <nlohmann/json.hpp>
@@ -18,10 +19,13 @@ struct CharacterStoreView
     int moves = 0;
     int visibility = 0;
     Array<KeyframeView, Character::MAX_KEYFRAMES> keyframes;
+    LocationView location;
+    int characterId = -1;
 
     inline CharacterStoreView() = default;
     inline CharacterStoreView(const Character& model)
     : damage(model.damage), feats(model.feats), actions(model.actions), moves(model.moves), visibility(model.visibility), keyframes(model.keyframes.transform([&](const Keyframe& keyframe){return KeyframeView(keyframe);}))
+    , location(model.location), characterId(model.characterId)
     {
         RoleFlyweight::getFlyweights().accessConst(model.role, [&](const RoleFlyweight& flyweight) {
             this->role = flyweight.name;
@@ -34,7 +38,9 @@ struct CharacterStoreView
             .actions = this->actions,
             .moves = this->moves,
             .visibility = this->visibility,
-            .keyframes = this->keyframes.convert<Keyframe>()
+            .keyframes = this->keyframes.convert<Keyframe>(),
+            .location = this->location,
+            .characterId = this->characterId
         };
         RoleFlyweight::indexByString(this->role, model.role);
         return model;
@@ -42,4 +48,4 @@ struct CharacterStoreView
 };
 
 // Reflection-based JSON serialization
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(CharacterStoreView, damage, role, feats, actions, moves, keyframes)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(CharacterStoreView, damage, role, feats, actions, moves, keyframes, location, characterId)

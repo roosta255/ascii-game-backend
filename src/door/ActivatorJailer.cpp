@@ -3,6 +3,7 @@
 #include "Room.hpp"
 #include "Character.hpp"
 #include "Inventory.hpp"
+#include "MatchController.hpp"
 #include "Player.hpp"
 #include "DoorEnum.hpp"
 
@@ -18,17 +19,21 @@ CodeEnum ActivatorJailer::activate(Activation& activation) const {
         return result;
     }
 
-    activation.match.dungeon.accessWall(activation.room, activation.direction,
-        [&](Cell& sourceCell, Cell& neighborCell, Room& neighborRoom) {
-            Wall& sourceWall = activation.room.getWall(activation.direction);
-            Wall& neighborWall = neighborRoom.getWall(activation.direction.getFlip());
+    if (!activation.character.isKeyer(result)) {
+        return result;
+    }
 
-            if (!activation.character.isKeyer(result)) {
+    Wall& sourceWall = activation.room.getWall(activation.direction);
+
+    const bool isNeighborAccessed = activation.match.dungeon.accessWallNeighbor(activation.room, activation.direction,
+        [&](Wall& neighborWall, Room& neighbor, int neighborId) {
+            int outCharacterId;
+            // Only at ingress keyless can we give a key
+            if (activation.controller.isDoorOccupied(activation.getRoomId(), CHANNEL_CORPOREAL, activation.direction, outCharacterId)) {
+                result = CODE_DOORWAY_OCCUPIED_BY_CHARACTER;
                 return;
             }
-
-            // Only at ingress keyless can we give a key
-            if (activation.match.containsCellCharacter(sourceCell) || activation.match.containsCellCharacter(neighborCell)) {
+            if (activation.controller.isDoorOccupied(neighborId, CHANNEL_CORPOREAL, activation.direction.getFlip(), outCharacterId)) {
                 result = CODE_DOORWAY_OCCUPIED_BY_CHARACTER;
                 return;
             }
@@ -37,11 +42,12 @@ CodeEnum ActivatorJailer::activate(Activation& activation) const {
                 neighborWall.door = DOOR_JAILER_EGRESS_KEYED;
                 result = CODE_SUCCESS;
             }
-        },
-        [&](Cell& sourceCell) {
-            result = CODE_INACCESSIBLE_NEIGHBORING_WALL;
         }
     );
+
+    if (!isNeighborAccessed) {
+        return CODE_INACCESSIBLE_NEIGHBORING_WALL;
+    }
 
     return result;
 } 

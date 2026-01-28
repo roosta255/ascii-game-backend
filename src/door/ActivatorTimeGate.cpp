@@ -5,6 +5,7 @@
 #include "Room.hpp"
 #include "Character.hpp"
 #include "iLayout.hpp"
+#include "Location.hpp"
 #include "Inventory.hpp"
 #include "Player.hpp"
 #include "DoorEnum.hpp"
@@ -12,89 +13,74 @@
 CodeEnum ActivatorTimeGate::activate(Activation& activation) const {
     // Check if character can use keys
     CodeEnum result = CODE_PREACTIVATE_IN_ACTIVATOR;
+    const auto roomId = activation.getRoomId();
+    Codeset& codeset = activation.codeset;
+    auto& character = activation.character;
     MatchController controller(activation.match, activation.codeset);
 
-    if (!activation.character.isMovable(result, true)) {
+    if (!character.isMovable(result, true)) {
         return result;
     }
 
-    activation.match.dungeon.accessWall(activation.room, activation.direction,
-        [&](Cell& sourceCell) {
-            Wall& sourceWall = activation.room.getWall(activation.direction);
+    Wall& sourceWall = activation.room.getWall(activation.direction);
 
-            // Check for occupied target cell
-            if (activation.match.containsOffset(activation.room.getWall(TIME_GATE_DIRECTION).cell.offset)) {
-                result = CODE_OCCUPIED_TARGET_TIME_GATE_CELL;
-                return;
-            }
+    // Check for occupied target cell
+    int outCharacterId;
+    if (activation.controller.isDoorOccupied(activation.getRoomId(), CHANNEL_CORPOREAL, TIME_GATE_DIRECTION, outCharacterId)) {
+        return CODE_OCCUPIED_TARGET_TIME_GATE_CELL;
+    }
 
-            auto& inventory = activation.player.inventory;
-            int delta = 0;
-            switch (activation.room.type) {
-                case ROOM_TIME_GATE_TO_FUTURE:
-                    delta = 1;
-                    break;
-                case ROOM_TIME_GATE_TO_PAST:
-                    delta = -1;
-                    break;
-                default:
-                    result = CODE_TIME_GATE_ACTIVATED_BUT_ROOM_ISNT_TIME_GATE;
-                    return;
-            }
+    auto& inventory = activation.player.inventory;
+    int delta = 0;
+    switch (activation.room.type) {
+        case ROOM_TIME_GATE_TO_FUTURE:
+            delta = 1;
+            break;
+        case ROOM_TIME_GATE_TO_PAST:
+            delta = -1;
+            break;
+        default:
+            return CODE_TIME_GATE_ACTIVATED_BUT_ROOM_ISNT_TIME_GATE;
+    }
 
-            switch (sourceWall.door) {
-                case DOOR_TIME_GATE_AWAKENED:
-                    {
-                        const bool isDeltaValid = activation.match.dungeon.rooms.access(activation.room.getDeltaTime(delta), [&](Room& room2) {
-                            if (activation.match.containsOffset(activation.room.getWall(TIME_GATE_DIRECTION).cell.offset)) {
-                                result = CODE_OCCUPIED_TARGET_TIME_GATE_CELL;
-                                return;
-                            }
+    switch (sourceWall.door) {
+        case DOOR_TIME_GATE_AWAKENED:
+            {
+                const bool isDeltaValid = activation.match.dungeon.rooms.access(activation.room.getDeltaTime(delta), [&](Room& room2) {                    
+                    // first mutation, no going back
+                    // update the time gates
+                    sourceWall.door = DOOR_TIME_GATE_DORMANT;
+                    auto& wall2 = room2.getWall(TIME_GATE_DIRECTION);
+                    wall2.door = DOOR_TIME_GATE_DORMANT;
+                    
+                    // clean and update locations
+                    const auto newLocation = Location::makeDoor(roomId, character.location.channel, TIME_GATE_DIRECTION);
+                    Location oldLocation;
+                    activation.controller.updateCharacterLocation(character, newLocation, oldLocation);
 
-                            // cleanup character
-                            int characterId;
-                            bool wasWalled, wasFloored;
-                            int2 prevFloor;
-                            Cardinal prevWall = TIME_GATE_DIRECTION;
-                            if (activation.codeset.addFailure(!controller.cleanupMovement(activation.character, activation.room, characterId, wasFloored, prevFloor, wasWalled, prevWall), CODE_TIME_GATE_FAILED_CLEANUP)) return;
+                    // take character move
+                    if (character.takeMove(result)) {
 
-                            // update the time gates
-                            activation.room.getWall(TIME_GATE_DIRECTION).door = DOOR_TIME_GATE_DORMANT;
-                            Wall& wall2 = room2.getWall(TIME_GATE_DIRECTION);
-                            wall2.door = DOOR_TIME_GATE_DORMANT;
-                            wall2.cell.offset = characterId;
-
-                            // take character move
-                            if (activation.character.takeMove(result)) {
-                                result = CODE_SUCCESS;
-
-                                // animate
-                                const Keyframe keyframe = wasFloored
-                                    // floor -> wall
-                                    ? Keyframe::buildWalking(activation.time, MatchController::MOVE_ANIMATION_DURATION, activation.getRoomId(), prevFloor, TIME_GATE_DIRECTION)
-                                    // wall -> wall
-                                    : Keyframe::buildWalking(activation.time, MatchController::MOVE_ANIMATION_DURATION, activation.getRoomId(), prevWall, TIME_GATE_DIRECTION);
-                                if(!Keyframe::insertKeyframe(Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(activation.character.keyframes), keyframe)) {
-                                    // TODO: animation overflow
-                                }
-                                // this is the end of the movement!!!
-                                return;
-                            }
-                        });
-
-                        if (!isDeltaValid) {
-                            result = CODE_TIME_GATE_ACTIVATED_BUT_NEIGHBOR_DNE;
-                            return;
+                        // animate
+                        const Keyframe keyframe = Keyframe::buildWalking(activation.time, MatchController::MOVE_ANIMATION_DURATION, oldLocation, newLocation, codeset);
+                        if(!Keyframe::insertKeyframe(Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(character.keyframes), keyframe)) {
+                            codeset.addLog(CODE_ANIMATION_OVERFLOW_IN_ACTIVATE_TIME_GATE);
                         }
+                        // this is the end of the movement!!!
+                        result = CODE_SUCCESS;
+                        return;
                     }
+                });
 
-                    return;
-                default:
-                    result = CODE_TIME_GATE_ACTIVATED_BUT_WALL_MISSING_AWAKENED_CUBE;
-                    return;
+                if (!isDeltaValid) {
+                    return CODE_TIME_GATE_ACTIVATED_BUT_NEIGHBOR_DNE;
+                }
             }
-        }
-    );
+            return result;
+        default:
+            return CODE_TIME_GATE_ACTIVATED_BUT_WALL_MISSING_AWAKENED_CUBE;
+    }
+
 
     return result;
-} 
+}

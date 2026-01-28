@@ -1,10 +1,12 @@
 #include "ActivatorKeeper.hpp"
-#include "Match.hpp"
-#include "Room.hpp"
 #include "Character.hpp"
-#include "Inventory.hpp"
-#include "Player.hpp"
+#include "Codeset.hpp"
 #include "DoorEnum.hpp"
+#include "Inventory.hpp"
+#include "Match.hpp"
+#include "MatchController.hpp"
+#include "Player.hpp"
+#include "Room.hpp"
 
 CodeEnum ActivatorKeeper::activate(Activation& activation) const {
     // Check if character can use keys
@@ -14,23 +16,27 @@ CodeEnum ActivatorKeeper::activate(Activation& activation) const {
         return result;
     }
 
-    activation.match.dungeon.accessWall(activation.room, activation.direction,
-        [&](Cell& sourceCell, Cell& neighborCell, Room& neighborRoom) {
-            Wall& sourceWall = activation.room.getWall(activation.direction);
-            Wall& neighborWall = neighborRoom.getWall(activation.direction.getFlip());
+    if (!activation.character.isKeyer(result)) {
+        return result;
+    }
 
-            if (!activation.character.isKeyer(result)) {
-                return;
-            }
+    Wall& sourceWall = activation.room.getWall(activation.direction);
 
-            const bool isKeying = sourceWall.door == DOOR_KEEPER_INGRESS_KEYED;
-            if (!activation.player.inventory.processDelta(ITEM_KEY, isKeying, result, true)) {
-                return;
-            }
+    const bool isKeying = sourceWall.door == DOOR_KEEPER_INGRESS_KEYED;
+    if (!activation.player.inventory.processDelta(ITEM_KEY, isKeying, result, true)) {
+        return result;
+    }
 
+    const bool isNeighborAccessed = activation.match.dungeon.accessWallNeighbor(activation.room, activation.direction,
+        [&](Wall& neighborWall, Room& neighbor, int neighborId) {
+            int outCharacterId;
             switch (sourceWall.door) {
                 case DOOR_KEEPER_INGRESS_KEYED:
-                    if (activation.match.containsCellCharacter(sourceCell) || activation.match.containsCellCharacter(neighborCell)) {
+                    if (activation.controller.isDoorOccupied(activation.getRoomId(), CHANNEL_CORPOREAL, activation.direction, outCharacterId)) {
+                        result = CODE_DOORWAY_OCCUPIED_BY_CHARACTER;
+                        return;
+                    }
+                    if (activation.controller.isDoorOccupied(neighborId, CHANNEL_CORPOREAL, activation.direction.getFlip(), outCharacterId)) {
                         result = CODE_DOORWAY_OCCUPIED_BY_CHARACTER;
                         return;
                     }
@@ -51,11 +57,12 @@ CodeEnum ActivatorKeeper::activate(Activation& activation) const {
                     result = CODE_KEEPER_ACTIVATION_ON_NON_INGRESS_KEEPER;
                     return;
             }
-        },
-        [&](Cell& sourceCell) {
-            result = CODE_INACCESSIBLE_NEIGHBORING_WALL;
         }
     );
+
+    if (!isNeighborAccessed) {
+        return CODE_INACCESSIBLE_NEIGHBORING_WALL;
+    }
 
     return result;
 } 

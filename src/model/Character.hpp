@@ -4,6 +4,7 @@
 #include "Array.hpp"
 #include "CodeEnum.hpp"
 #include "Keyframe.hpp"
+#include "Location.hpp"
 #include "Pointer.hpp"
 
 namespace Json
@@ -18,7 +19,7 @@ class Room;
 
 struct Character
 {
-    static constexpr int MAX_KEYFRAMES = 3;
+    static constexpr int MAX_KEYFRAMES = 6;
     int damage = 0;
     int role = 0;
     int feats = 0;
@@ -48,6 +49,8 @@ struct Character
 
     int visibility = ~0x0;
     Array<Keyframe, MAX_KEYFRAMES> keyframes;
+    Location location;
+    int characterId = -1;
 
     bool accessRole(CodeEnum &error, std::function<void(const RoleFlyweight &)>) const;
     bool isMovable(CodeEnum &error, const bool isCheckingCount = false) const;

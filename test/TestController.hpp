@@ -21,6 +21,7 @@ public:
     Codeset codeset;
     MatchController controller;
     Inventory* inventoryPtr = nullptr;
+    Character* builderCharacterPtr = nullptr;
     InventoryDigest inventory;
 
     bool isSuccess = false;
@@ -32,16 +33,17 @@ public:
     TestController(const GeneratorEnum& generator);
 
     // functions
-    void updateInventory();
-
-    void moveCharacterToWall(const Cardinal& dir);
-
-    void moveCharacterToFloor(int floorId);
-
+    void activateCharacter(int characterId);
     void activateLock(Cardinal dir);
-
     void activateDoor(Cardinal dir);
 
     void endTurn();
+
+    void moveCharacterToFloor(int floorId);
+    void moveCharacterToWall(const Cardinal& dir);
+
+    void updateEverything();
+    void updateInventory();
+    void updateTable();
 
 };

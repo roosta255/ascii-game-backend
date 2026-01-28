@@ -73,13 +73,15 @@ add_library(core_backend STATIC
     src/model/Builder.cpp
     src/model/Character.cpp
     src/model/Dungeon.cpp
-    src/model/Match.cpp 
+    src/model/Match.cpp
     src/model/Player.cpp
     src/model/Titan.cpp
     src/model/Turner.cpp
     src/role/ActivatorToggler.cpp
     src/role/RoleFlyweight.cpp
-    src/room/Cell.cpp
+    src/room/ChannelEnum.cpp
+    src/room/Location.cpp
+    src/room/LocationEnum.cpp
     src/room/Room.cpp
     src/room/RoomFlyweight.cpp
     src/room/Wall.cpp
@@ -113,9 +115,11 @@ add_subdirectory(extern/Catch2)
 
 add_executable(test_target
     test/main.cpp
-    test/MatchTest4D.cpp
     test/MatchTests.cpp
     test/TestController.cpp
+    test/maps/GeneratorTest.cpp
+    test/maps/GeneratorTest4D.cpp
+    test/maps/GeneratorTutorial.cpp
 )
 
 target_include_directories(test_target PRIVATE ${PROJECT_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/test)

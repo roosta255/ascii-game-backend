@@ -1,6 +1,5 @@
 #include "Activation.hpp"
 #include "Match.hpp"
-#include "MatchController.hpp"
 
 int Activation::getRoomId()const{
     int roomId = -1;
@@ -16,6 +15,7 @@ Activation::Activation(
     Cardinal direction,
     Match& match,
     Codeset& codeset,
+    MatchController& controller,
     Timestamp time
 ) : player(player),
     character(character),
@@ -24,6 +24,7 @@ Activation::Activation(
     direction(direction),
     match(match),
     codeset(codeset),
+    controller(controller),
     time(time)
 {}
 
@@ -35,6 +36,7 @@ Activation::Activation(
     Cardinal direction,
     Match& match,
     Codeset& codeset,
+    MatchController& controller,
     Timestamp time
 ) : player(player),
     character(character),
@@ -43,5 +45,6 @@ Activation::Activation(
     direction(direction),
     match(match),
     codeset(codeset),
+    controller(controller),
     time(time)
 {}
