@@ -7,9 +7,11 @@
 #include "LayoutEnum.hpp"
 #include "LayoutFlyweight.hpp"
 #include "Match.hpp"
+#include "MatchController.hpp"
 #include "RoleEnum.hpp"
 
 bool GeneratorTest4D::generate (int seed, Match& dst, Codeset& codeset) const {
+    MatchController controller(dst, codeset);
     CodeEnum& error = codeset.error;
     constexpr auto LAYOUT = LAYOUT_4D_3x3x2;
     dst.dungeon.layout = LAYOUT;
@@ -18,9 +20,17 @@ bool GeneratorTest4D::generate (int seed, Match& dst, Codeset& codeset) const {
     if (!dst.setupSingleBuilder(error))
         return false;
 
-    for(auto& builder: dst.builders) {
+    // TODO: starting locations
+    int floorId = 0, builderId, roomId = 0;
+    dst.builders.access(0, [&](Builder& builder){
         builder.character.role = ROLE_BUILDER;
-    }
+        if (dst.containsCharacter(builder.character, builderId)) {
+            bool isBuilderFloorFree = controller.findFreeFloor(roomId, CHANNEL_CORPOREAL, floorId);
+            if (isBuilderFloorFree) {
+                controller.assignCharacterToFloor(builderId, roomId, CHANNEL_CORPOREAL, floorId);
+            }
+        }
+    });
 
     LayoutFlyweight::getFlyweights().accessConst(LAYOUT, [&](const LayoutFlyweight& flyweight){
         flyweight.layout.accessConst([&](const iLayout& layoutIntf){
@@ -70,17 +80,6 @@ bool GeneratorTest4D::generate (int seed, Match& dst, Codeset& codeset) const {
             if (!testTimeGateRoomSetup()) {
                 return;
             }
-
-            // checks whether builder[0] has their character within entrance
-            Room& entrance = layoutIntf.getEntrance(dst.dungeon.rooms);
-            entrance.getUsedFloorCells().access(0, [&](Cell& cell){
-                dst.builders.access(0, [&](Builder& builder){
-                    if (!dst.containsCharacter(builder.character, cell.offset)) {
-                        return;
-                    }
-                    success &= true;
-                });
-            });
 
             if (!testTimeGateRoomSetup()) {
                 return;

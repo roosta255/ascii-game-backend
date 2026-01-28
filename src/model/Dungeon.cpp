@@ -35,47 +35,18 @@ bool Dungeon::accessLayout(CodeEnum& error, std::function<void(const iLayout&)> 
     return isAccessed;
 }
 
-bool Dungeon::findCharacter(
-    Room& room,
-    int searched,
-    std::function<void(Cell&, const Cardinal, Room&, Cell&)> wallConsumer,
-    std::function<void(int, int, Cell&)> floorConsumer
-)
-{
-    CodeEnum error;
-    bool isFound = false;
+bool Dungeon::accessWallNeighbor(Room& source, Cardinal dir, std::function<void(Wall&, Room&, int)> consumer) {
+    const auto neighborId = source.getWall(dir).adjacent;
+    return this->rooms.access(neighborId, [&](Room& neighbor) {
+        consumer(neighbor.getWall(dir.getFlip()), neighbor, neighborId);
+    });
+}
 
-    // Search floor cells
-    for (Cell& cell: room.getUsedFloorCells()) {
-        int index;
-        int2 coords;
-        if (cell.offset == searched) {
-            if (room.containsFloorCell(cell, error, index, coords))
-            {
-                isFound = true;
-                floorConsumer(coords[0], coords[1], cell);
-            } else {
-                error = CODE_DUNGEON_FIND_CHARACTER_LOOPS_OVER_UNCONTAINED_FLOOR_CELL;
-            }
-        }
-    };
-
-    // Search wall cells
-    for (Cardinal dir: Cardinal::getAllCardinals()) {
-        Wall& wall = room.getWall(dir);
-
-        if (wall.cell.offset == searched) {
-            isFound = true;
-            this->rooms.access(room.getWall(dir).adjacent, [&](Room& neighbor) {
-                Cell& otherCell = neighbor.getWall(dir.getFlip()).cell;
-                if (otherCell.offset == searched) {
-                    wallConsumer(wall.cell, dir, neighbor, otherCell);
-                }
-            });
-        }
-    }
-
-    return isFound;
+bool Dungeon::accessWallNeighbor(const Room& source, Cardinal dir, std::function<void(const Wall&, const Room&, int)> consumer) const {
+    const auto neighborId = source.getWall(dir).adjacent;
+    return this->rooms.accessConst(neighborId, [&](const Room& neighbor) {
+        consumer(neighbor.getWall(dir.getFlip()), neighbor, neighborId);
+    });
 }
 
 void Dungeon::toggleDoors() {
@@ -128,68 +99,4 @@ Pointer<const Room> Dungeon::getRoom(int roomId, CodeEnum& error) const {
         return Pointer<const Room>::empty();
     }
     return rooms.getPointer(roomId);
-}
-
-bool Dungeon::accessWall(
-    Room& source,
-    Cardinal dir,
-    std::function<void(Cell&, Cell&, Room&)> neighborCallback,
-    std::function<void(Cell&)> noNeighborCallback
-) {
-    CodeEnum error;
-    // Get the source wall cell
-    Cell& sourceCell = source.getWall(dir).cell;
-
-    // Try to get the neighboring room
-    bool success = false;
-    const bool isAccessed = this->rooms.access(source.getWall(dir).adjacent, [&](Room& neighbor) {
-        // If we have a neighbor, get its corresponding wall cell
-        Cell& neighborCell = neighbor.getWall(dir.getFlip()).cell;
-        neighborCallback(sourceCell, neighborCell, neighbor);
-        success = true;
-    });
-
-    if (!isAccessed) {
-        // If no neighbor, just handle the source cell
-        noNeighborCallback(sourceCell);
-        success = true;
-    }
-
-    return success;
-}
-
-bool Dungeon::accessWall(
-    Room& source,
-    Cardinal dir,
-    std::function<void(Cell&)> callback
-) {
-    return this->accessWall(source, dir, [&](Cell& sourceCell, Cell&, Room&){callback(sourceCell);}, callback);
-}
-
-bool Dungeon::accessWall(
-    const Room& source,
-    Cardinal dir,
-    std::function<void(const Cell&, const Cell&, const Room&)> neighborCallback,
-    std::function<void(const Cell&)> noNeighborCallback
-) const
-{
-    CodeEnum error;
-    // Get the source wall cell
-    const Cell& sourceCell = source.getWall(dir).cell;
-
-    // Try to get the neighboring room
-    bool success = false;
-    const bool isAccessed = this->rooms.accessConst(source.getWall(dir).adjacent, [&](const Room& neighbor) {
-        const Cell& neighborCell = neighbor.getWall(dir.getFlip()).cell;
-        neighborCallback(sourceCell, neighborCell, neighbor);
-        success = true;
-    });
-
-    if (!isAccessed) {
-        // If no neighbor, just handle the source cell
-        noNeighborCallback(sourceCell);
-        success = true;
-    }
-
-    return success;
 }

@@ -5,6 +5,7 @@
 #include "Keyframe.hpp"
 #include "KeyframeView.hpp"
 #include "KeyframeFlyweight.hpp"
+#include "LocationView.hpp"
 #include "RoleFlyweight.hpp"
 #include <string>
 #include <nlohmann/json.hpp>
@@ -23,11 +24,13 @@ struct CharacterApiView
     bool isActionable = false;
     int offset = -1;
     Array<KeyframeView, Character::MAX_KEYFRAMES> keyframes;
+    LocationView location;
+    int characterId = -1;
 
     inline CharacterApiView() = default;
 
     inline CharacterApiView(const Character& model, const MatchApiParameters& params)
-    : isHidden(params.isHidden(model.visibility))
+    : isHidden(params.isHidden(model.visibility)), characterId(model.characterId)
     {
         // hide masked characters
         if (isHidden) return;
@@ -36,6 +39,7 @@ struct CharacterApiView
         this->feats = model.feats;
         this->actions = model.actions;
         this->moves = model.moves;
+        this->location = model.location;
 
         this->keyframes = model.keyframes.transform([&](const Keyframe& keyframe){return KeyframeView(keyframe);});
 
@@ -60,7 +64,8 @@ inline void to_json(nlohmann::json& j, const CharacterApiView& view) {
         // hidden
         j = {
             {"offset", view.offset},
-            {"isHidden", true}
+            {"isHidden", true},
+            {"characterId", view.characterId}
         };
         return;
     }
@@ -76,7 +81,9 @@ inline void to_json(nlohmann::json& j, const CharacterApiView& view) {
         {"movesRemaining", view.movesRemaining},
         {"isObject", view.isObject},
         {"isActionable", view.isActionable},
-        {"keyframes", view.keyframes}
+        {"keyframes", view.keyframes},
+        {"location", view.location},
+        {"characterId", view.characterId}
     };
 }
 

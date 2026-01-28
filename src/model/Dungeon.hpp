@@ -29,12 +29,6 @@ struct Dungeon {
     int layout = 0;
     bool isBlueOpen = false;  // When true, blue doors are open and orange doors are closed
 
-    bool findCharacter(
-        Room& source,
-        int offset,
-        std::function<void(Cell&, const Cardinal, Room&, Cell&)> wallConsumer,
-        std::function<void(int, int, Cell&)> floorConsumer);
-
     bool accessLayout(CodeEnum& error, std::function<void(const iLayout&)>)const;
     bool accessLayoutFlyweight(CodeEnum& error, std::function<void(const LayoutFlyweight&)>)const;
 
@@ -46,26 +40,7 @@ struct Dungeon {
     Pointer<Room> getRoom(int roomId, CodeEnum&);
     Pointer<const Room> getRoom(int roomId, CodeEnum&) const;
 
-    bool accessWall(
-        Room& source,
-        Cardinal dir,
-        std::function<void(Cell&)> callback
-    );
+    bool accessWallNeighbor(Room& source, Cardinal dir, std::function<void(Wall&, Room&, int)> consumer);
+    bool accessWallNeighbor(const Room& source, Cardinal dir, std::function<void(const Wall&, const Room&, int)> consumer) const;
 
-    bool accessWall(
-        Room& source,
-        Cardinal dir,
-        std::function<void(Cell&, Cell&, Room&)> neighborCallback,
-        std::function<void(Cell&)> noNeighborCallback
-    );
-
-    bool accessWall(
-        const Room& source,
-        Cardinal dir,
-        std::function<void(const Cell&, const Cell&, const Room&)> neighborCallback,
-        std::function<void(const Cell&)> noNeighborCallback
-    ) const;
-
-    void toJson(JsonParameters& params, Json::Value& out) const;
-    bool fromJson(const Json::Value& in);
 };

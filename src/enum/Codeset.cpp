@@ -129,6 +129,10 @@ std::string Codeset::describe(const std::string& prefix) const {
     return output.str();
 }
 
+std::string Codeset::describe() const {
+    return describe("");
+}
+
 bool operator==(const Array<int, CODE_COUNT>& left, const Array<int, CODE_COUNT>& right) {
     auto i = 0;
     for (const auto& value: left) {

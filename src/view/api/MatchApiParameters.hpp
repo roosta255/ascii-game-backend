@@ -1,13 +1,18 @@
 #pragma once
 
 #include "Array.hpp"
+#include "int3.hpp"
+#include "Map.hpp"
 
 class Match;
+class MatchController;
 
 struct MatchApiParameters {
 public:
     int mask = ~0x0;
     const Match& match;
+    const Map<int3, int>& doors;
+    const Map<int3, int>& floors;
 
     constexpr inline bool isHidden(const int target) const
     {

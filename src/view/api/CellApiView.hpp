@@ -1,7 +1,6 @@
 #pragma once
 
 #include "adl_serializer.hpp"
-#include "Cell.hpp"
 #include <string>
 #include <nlohmann/json.hpp>
 
@@ -12,8 +11,8 @@ struct CellApiView
 
     inline CellApiView() = default;
  
-    inline CellApiView(const Cell& model, const MatchApiParameters& params, const int x, const int y)
-    : offset(model.offset), x(x), y(y)
+    inline CellApiView(const MatchApiParameters& params, const int x, const int y)
+    : x(x), y(y)
     {}
 };
 

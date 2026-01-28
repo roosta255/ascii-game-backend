@@ -121,6 +121,9 @@ void ApiController::getMatch
     if (!matchRepository.load(matchId, error, match))
         return invokeResponse404(code_to_message(error, "Failed to load match due to: "), std::move(callback));
 
+    Codeset codeset;
+    MatchController controller(match, codeset);
+
     // try {
     //     if (!matchRepository.load(matchId, error, match))
     //         return invokeResponse404(code_to_message(error, "Failed to load match due to: "), std::move(callback));
@@ -131,7 +134,9 @@ void ApiController::getMatch
 
     MatchApiParameters params{
         .mask = ~0x0,
-        .match = match
+        .match = match,
+        .doors = controller.getDoors(),
+        .floors = controller.getFloors()
     };
     MatchApiView view(params);
     nlohmann::json body(view);

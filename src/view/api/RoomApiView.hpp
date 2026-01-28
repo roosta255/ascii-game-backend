@@ -2,7 +2,6 @@
 
 #include "adl_serializer.hpp"
 #include "Array.hpp"
-#include "Cell.hpp"
 #include "CellApiView.hpp"
 #include "Dungeon.hpp"
 #include "Room.hpp"
@@ -31,12 +30,10 @@ struct RoomApiView
     {
         if (isHidden) return;
 
-        this->floorCells = model.getUsedFloorCells().transform([&](const int i, const Cell& cell){
-            int2 xy;
-            int index;
-            CodeEnum error; // shouldnt ever error because iterating through room's cells
-            model.containsFloorCell(cell, error, index, xy);
-            return CellApiView(cell, params, xy[0], xy[1]);
+        model.iterateFloor([&](const int index, const int2 xy){
+            auto cell = CellApiView(params, xy[0], xy[1]);
+            MatchController::isFloorOccupied(model.roomId, CHANNEL_CORPOREAL, index, cell.offset, params.match, params.floors);
+            floorCells.push_back(cell);
         });
         this->walls = model.walls.transform(
             [&](const int i, const Wall& wall){

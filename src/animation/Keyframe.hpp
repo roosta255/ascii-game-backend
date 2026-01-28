@@ -7,6 +7,9 @@
 #include "Timestamp.hpp"
 #include "int2.hpp"
 
+struct Codeset;
+struct Location;
+
 struct Keyframe
 {
     static constexpr int DATA_ARRAY_SIZE = 4;
@@ -34,11 +37,13 @@ struct Keyframe
     // wall -> wall, character passed 3 rooms, only room0 renders movement.
     static Keyframe buildWalking(const Timestamp& start, long duration, const int room0, const Cardinal wall0, const Cardinal wall1);
     // wall -> floor, character passes 2 rooms, only room0 renders movement.
-    static Keyframe buildWalking(const Timestamp& start, long duration, const int room0, const Cardinal wall0, const int2 xy1);
+    static Keyframe buildWalking(const Timestamp& start, long duration, const int room0, const Cardinal wall0, const int floorId1);
     // floor -> wall, character passes 2 rooms, only room0 renders movement.
-    static Keyframe buildWalking(const Timestamp& start, long duration, const int room0, const int2 xy0, const Cardinal wall1);
+    static Keyframe buildWalking(const Timestamp& start, long duration, const int room0, const int floorId0, const Cardinal wall1);
     // floor -> floor, character passes 1 room, only room0 renders movement.
-    static Keyframe buildWalking(const Timestamp& start, long duration, const int room0, const int2 xy0, const int2 xy1);
+    static Keyframe buildWalking(const Timestamp& start, long duration, const int room0, const int floorId0, const int floorId1);
+
+    static Keyframe buildWalking(const Timestamp& start, long duration, const Location& location0, const Location& location1, Codeset& codeset);
 
     static Keyframe buildHurtling(const Timestamp& start, long duration, const int room0, const int2 xy0, const int2 xy1);
 

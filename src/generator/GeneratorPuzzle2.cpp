@@ -6,9 +6,11 @@
 #include "LayoutEnum.hpp"
 #include "LayoutFlyweight.hpp"
 #include "Match.hpp"
+#include "MatchController.hpp"
 #include "RoleEnum.hpp"
 
 bool GeneratorPuzzle2::generate (int seed, Match& dst, Codeset& codeset) const {
+    MatchController controller(dst, codeset);
     constexpr auto LAYOUT = LAYOUT_2D_8x8;
     dst.dungeon.layout = LAYOUT;
     constexpr int w = DOOR_WALL;
@@ -19,9 +21,17 @@ bool GeneratorPuzzle2::generate (int seed, Match& dst, Codeset& codeset) const {
     if (!dst.setupSingleBuilder(error))
         return false;
 
-    for(auto& builder: dst.builders) {
+    // TODO: starting locations
+    int floorId = 0, builderId, roomId = 0;
+    dst.builders.access(0, [&](Builder& builder){
         builder.character.role = ROLE_BUILDER;
-    }
+        if (dst.containsCharacter(builder.character, builderId)) {
+            bool isBuilderFloorFree = controller.findFreeFloor(roomId, CHANNEL_CORPOREAL, floorId);
+            if (isBuilderFloorFree) {
+                controller.assignCharacterToFloor(builderId, roomId, CHANNEL_CORPOREAL, floorId);
+            }
+        }
+    });
 
     LayoutFlyweight::getFlyweights().accessConst(LAYOUT, [&](const LayoutFlyweight& flyweight){
         flyweight.layout.accessConst([&](const iLayout& layoutIntf){
@@ -31,21 +41,13 @@ bool GeneratorPuzzle2::generate (int seed, Match& dst, Codeset& codeset) const {
             success &= util.setupTogglerBlue(int4{0,0,0,0}, Cardinal::north());
             success &= util.setupTogglerOrange(int4{0,0,0,0}, Cardinal::east());
 
-            Room& entrance = layoutIntf.getEntrance(dst.dungeon.rooms);
-            entrance.getUsedFloorCells().access(0, [&](Cell& cell){
-                dst.builders.access(0, [&](Builder& builder){
-                    if (!dst.containsCharacter(builder.character, cell.offset)) {
-                        return;
-                    }
-                    success = true;
-                });
-            });
         });
     });
 
     Character toggler;
+    int outCharacterId;
     toggler.role = ROLE_TOGGLER;
-    success &= dst.addCharacterToFloor(toggler, 0); // 7448
+    success &= controller.addCharacterToFloor(toggler, 0, CHANNEL_CORPOREAL, outCharacterId); // 7448
 
     if (!success) {
         return false;

@@ -3,7 +3,6 @@
 #include "Array.hpp"
 #include "Builder.hpp"
 #include "Cardinal.hpp"
-#include "Cell.hpp"
 #include "CodeEnum.hpp"
 #include "Dungeon.hpp"
 #include "Pointer.hpp"
@@ -27,14 +26,19 @@ struct Match {
     Dungeon dungeon;
     Turner turner;
 
-    void setFilename();
+    // functions
+    void accessAllCharacters(std::function<void(Character&)> consumer);
+    void accessAllCharacters(std::function<void(const Character&)> consumer)const;
+    void accessUsedCharacters(std::function<void(const Character&)> consumer)const;
+    bool allocateCharacter(std::function<void(Character&)> consumer);
+
+    bool findCharacter(int& characterId, std::function<bool(const Character&)> predicate)const;
 
     bool join(const std::string& joiner);
     bool leave(const std::string& leaver, CodeEnum& error);
     bool start();
     bool setupSingleBuilder(CodeEnum& output);
     bool setupSingleTitan(CodeEnum& output);
-    bool addCharacterToFloor(const Character& character, int roomId);
 
     bool endTurn(const std::string& playerId, CodeEnum& error);
 
@@ -43,15 +47,14 @@ struct Match {
     bool isFull(CodeEnum& result) const;
     bool isEmpty(CodeEnum& result) const;
 
-    bool isCharacterInRoom(CodeEnum& error, Room& source, Character& offset);
-
     bool containsCharacter(const Character&, int& offset) const;
     bool containsOffset(int offset) const;
-    bool containsCellCharacter(const Cell& cell) const;
     Pointer<Character> getCharacter(int offset, CodeEnum&);
     Pointer<Player> getPlayer(const std::string& player, CodeEnum&);
     bool accessPlayer(const std::string& player, CodeEnum&, std::function<void(Titan&)>, std::function<void(Builder&)>);
 
     bool accessPlayers(CodeEnum&, std::function<void(Titan&, Player&)>, std::function<void(Builder&, Player&, const int)>);
+
+    void setFilename();
 
 };

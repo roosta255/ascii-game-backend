@@ -19,8 +19,60 @@ constexpr size_t KILOBYTE = 1024;
 static_assert(sizeof(Match) > KILOBYTE, "size milestone passed");
 static_assert(sizeof(Match) < KILOBYTE * KILOBYTE, "size milestone passed");
 
-void Match::setFilename() {
-    filename = make_filename("match-" + host + "-" + username);
+// functions
+
+void Match::accessAllCharacters(std::function<void(Character&)> consumer) {
+    // NOTE: new character sets have to be added here
+    for(auto& builder: builders) {
+        consumer(builder.character);
+    }
+    for(auto& character: dungeon.characters) {
+        consumer(character);
+    }
+}
+
+void Match::accessAllCharacters(std::function<void(const Character&)> consumer) const {
+    // NOTE: new character sets have to be added here
+    for(const auto& builder: builders) {
+        consumer(builder.character);
+    }
+    for(const auto& character: dungeon.characters) {
+        consumer(character);
+    }
+}
+
+void Match::accessUsedCharacters(std::function<void(const Character&)> consumer)const {
+    accessAllCharacters([&](const Character& character){
+        if (character.role != ROLE_EMPTY) {
+            consumer(character);
+        }
+    });
+}
+
+bool Match::allocateCharacter(std::function<void(Character&)> consumer) {
+    for (Character& character: dungeon.characters) {
+        if (character.role == ROLE_EMPTY) {
+            // Calculate the offset for the new character, guaranteed contained
+            // this will be reassigned after the consumer
+            int characterId;
+            containsCharacter(character, characterId);
+            consumer(character);
+            character.characterId = characterId;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Match::findCharacter(int& characterId, std::function<bool(const Character&)> predicate)const {
+    bool isFound = false;
+    accessAllCharacters([&](const Character& character) {
+        if (predicate(character)) {
+            isFound = true;
+            characterId = character.characterId;
+        }
+    });
+    return isFound;
 }
 
 bool Match::accessPlayer
@@ -102,26 +154,6 @@ bool Match::start() {
     return turner.startGame() == CODE_SUCCESS;
 }
 
-bool Match::isCharacterInRoom(CodeEnum& error, Room& source, Character& offset) {
-    int characterId;
-    if (!containsCharacter(offset, characterId)) {
-        error = CODE_INACCESSIBLE_CHARACTER_ID;
-        return false;
-    }
-
-    if (dungeon.findCharacter(
-        source,
-        characterId,
-        [&](Cell& local, Cardinal, Room&, Cell& other) {},
-        [&](int, int, Cell& cell) {}
-    )) {
-        return true;
-    }
-
-    error = CODE_CHARACTER_NOT_IN_ROOM;
-    return false;
-}
-
 bool Match::containsCharacter(const Character& source, int& offset) const {
     // Get base address of this match object as a byte pointer
     auto base = reinterpret_cast<const char*>(this);
@@ -141,10 +173,6 @@ bool Match::containsCharacter(const Character& source, int& offset) const {
 
 bool Match::containsOffset(int offset) const {
     return offset > 0 && offset < sizeof(Match);
-}
-
-bool Match::containsCellCharacter(const Cell& cell) const {
-    return containsOffset(cell.offset);
 }
 
 Pointer<Character> Match::getCharacter (int offset, CodeEnum& error) {
@@ -212,46 +240,6 @@ bool Match::isEmpty(CodeEnum& error) const {
     return true;
 }
 
-bool Match::addCharacterToFloor(const Character& source, int roomId) {
-    CodeEnum result;
-    // Validate room ID and get room
-    auto room = dungeon.getRoom(roomId, result);
-    if (room.isEmpty()) return false;
-
-    // Find an empty character slot
-    int characterOffset;
-    for (Character& character: dungeon.characters) {
-        if (character.role == ROLE_EMPTY) {
-            // Calculate the offset for the new character, guaranteed contained
-            containsCharacter(character, characterOffset);
-            character = source;
-            break;
-        }
-    }
-
-    // Find an empty floor cell
-    bool success = false;
-    room.access([&](Room& room) {
-        for (Cell& cell: room.getUsedFloorCells()) {
-            if (!containsOffset(cell.offset)) {
-                // Set the character offset in the cell
-                cell.offset = characterOffset;
-                success = true;
-                if (success) break;
-            }
-        }
-    });
-
-    // If we couldn't find an empty cell, reset the character slot
-    if (!success) {
-        getCharacter(characterOffset, result).access([&](Character& character) {
-            character.role = ROLE_EMPTY;
-        });
-    }
-
-    return success;
-}
-
 bool Match::leave(const std::string& playerId, CodeEnum& error) {
     return accessPlayer(playerId, error, [&](Titan& titan) {
         titan.player.account = "";
@@ -269,4 +257,8 @@ bool Match::endTurn(const std::string& playerId, CodeEnum& error)
     }, [&](Builder& builder) {
         turner.endBuilderTurn(*this);
     });
+}
+
+void Match::setFilename() {
+    filename = make_filename("match-" + host + "-" + username);
 }
