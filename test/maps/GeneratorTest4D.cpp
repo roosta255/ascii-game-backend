@@ -21,7 +21,7 @@ TEST_CASE("Test Time Gate", "[match][test4d]") {
     TestController controller(GENERATOR_TEST_4D);
 
     // Generate test layout
-    controller.controller.generate(0);
+    REQUIRE(controller.controller.generate(0));
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
 
     // Start the match
@@ -58,13 +58,28 @@ TEST_CASE("Test Time Gate", "[match][test4d]") {
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
     REQUIRE(controller.isSuccess);
 
+    controller.endTurn();
+    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
+    REQUIRE(controller.isSuccess);
+
+    // climb up ladder
+    controller.activateDoor(Cardinal::east());
+    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
+    REQUIRE(controller.isSuccess);
+    controller.latestPosition = 17;
+
     // set dormant cube into lightning-rod
     controller.activateLock(Cardinal::north());
+    // REQUIRE(controller.codeset.describe() == "");
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
     REQUIRE(controller.isSuccess);
     REQUIRE(controller.inventory.cubes == 0);
     REQUIRE(controller.inventory.isCubeAwakened == false);
     REQUIRE(controller.inventory.isCubeDormant == false);
+
+    controller.endTurn();
+    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
+    REQUIRE(controller.isSuccess);
 
     // take awakened cube
     controller.activateLock(Cardinal::north());
@@ -73,6 +88,12 @@ TEST_CASE("Test Time Gate", "[match][test4d]") {
     REQUIRE(controller.inventory.cubes == 1);
     REQUIRE(controller.inventory.isCubeAwakened);
     REQUIRE(controller.inventory.isCubeDormant == false);
+
+    // climb down pole
+    controller.activateDoor(Cardinal::west());
+    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
+    REQUIRE(controller.isSuccess);
+    controller.latestPosition = 8;
 
     controller.endTurn();
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());

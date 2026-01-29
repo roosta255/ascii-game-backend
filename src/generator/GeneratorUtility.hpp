@@ -28,6 +28,10 @@ public:
 
     Pointer<Room> getRoom(const int4&);
     bool accessRoomWall(const int4&, const Cardinal, std::function<void(Room&, Wall&, Wall&, Room&)> consumer);
+    
+    bool setupLadderUp(const int4&, const Cardinal);
+    bool setupPoleUp(const int4&, const Cardinal);
+    
     bool setupTogglerOrange(const int4&, const Cardinal);
     bool setupTogglerBlue(const int4&, const Cardinal);
     bool setupDoorway(const int4&, const Cardinal);

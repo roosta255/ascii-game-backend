@@ -1,9 +1,8 @@
 #pragma once
 
 #include "iActivator.hpp"
-#include "CodeEnum.hpp"
 
-class ActivatorInactiveItem : public iActivator {
+class ActivatorLadder : public iActivator {
 public:
     bool activate(Activation& activation) const override;
-}; 
+};

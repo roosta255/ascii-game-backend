@@ -9,6 +9,18 @@
 #include "CodeEnum.hpp"
 #include <json/json.h>
 
+bool Dungeon::accessCeilingNeighbor(const Room& source, std::function<void(const Room&)> consumer) const {
+    return this->rooms.accessConst(source.above, [&](const Room& neighbor) {
+        consumer(neighbor);
+    });
+}
+
+bool Dungeon::accessFloorNeighbor(const Room& source, std::function<void(const Room&)> consumer) const {
+    return this->rooms.accessConst(source.below, [&](const Room& neighbor) {
+        consumer(neighbor);
+    });
+}
+
 bool Dungeon::accessLayoutFlyweight(CodeEnum& error, std::function<void(const LayoutFlyweight&)> consumer) const
 {
     const bool isAccessed = LayoutFlyweight::getFlyweights().accessConst(layout, [&](const LayoutFlyweight& flyweight){

@@ -1,5 +1,6 @@
 #include "ActivatorShifter.hpp"
 #include "Character.hpp"
+#include "Codeset.hpp"
 #include "DoorEnum.hpp"
 #include "Inventory.hpp"
 #include "Match.hpp"
@@ -7,64 +8,52 @@
 #include "Player.hpp"
 #include "Room.hpp"
 
-CodeEnum ActivatorShifter::activate(Activation& activation) const {
-    // Check if character can use keys
-    CodeEnum result = CODE_PREACTIVATE_IN_ACTIVATOR;
+bool ActivatorShifter::activate(Activation& activation) const {
+    auto& controller = activation.controller;
+    auto& codeset = activation.codeset;
+    auto& subject = activation.character;
+    auto& inventory = activation.player.inventory;
 
-    if (!activation.character.isActor(result, true)) {
-        return result;
+    // Check if character can use keys
+    if (!controller.isCharacterKeyerValidation(subject)) {
+        return false;
     }
 
     Wall& sourceWall = activation.room.getWall(activation.direction);
 
-    if (!activation.character.isKeyer(result)) {
-        return result;
+    // checking occupancy even if keyless because a closed door should be occupied
+    if (!controller.validateSharedDoorNotOccupied(activation.getRoomId(), CHANNEL_CORPOREAL, activation.direction)) {
+        return false;
     }
 
-    const bool isKeying = sourceWall.door == DOOR_SHIFTER_EGRESS_KEYED;
-    if (!activation.player.inventory.processDelta(ITEM_KEY, isKeying, result, true)) {
-        return result;
-    }
-
-    int outCharacterId;
-
+    bool isSuccess = false;
     const bool isNeighborAccessed = activation.match.dungeon.accessWallNeighbor(activation.room, activation.direction,
         [&](Wall& neighborWall, Room& neighbor, int neighborId) {
             switch (sourceWall.door) {
                 case DOOR_SHIFTER_INGRESS_KEYLESS:
                     // Only at ingress keyless can we take a key
-                    if (activation.controller.isDoorOccupied(activation.getRoomId(), CHANNEL_CORPOREAL, activation.direction, outCharacterId)) {
-                        result = CODE_DOORWAY_OCCUPIED_BY_CHARACTER;
-                        return;
-                    }
-                    if (activation.controller.isDoorOccupied(neighborId, CHANNEL_CORPOREAL, activation.direction.getFlip(), outCharacterId)) {
-                        result = CODE_DOORWAY_OCCUPIED_BY_CHARACTER;
-                        return;
-                    }
-                    if (activation.player.inventory.takeItem(ITEM_KEY, result) && activation.character.takeAction(result)) {
+                    if (controller.takeCharacterAction(subject) && controller.takeInventoryItem(inventory, ITEM_KEY)) {
                         sourceWall.door = DOOR_SHIFTER_INGRESS_KEYED;
                         neighborWall.door = DOOR_SHIFTER_EGRESS_KEYED;
-                        result = CODE_SUCCESS;
+                        isSuccess = true;
                     }
                     return;
                 case DOOR_SHIFTER_EGRESS_KEYED:
                     // Only at egress keyed can we give a key
-                    if (activation.player.inventory.giveItem(ITEM_KEY, result) && activation.character.takeAction(result)) {
+                    if (controller.takeCharacterAction(subject) && controller.giveInventoryItem(inventory, ITEM_KEY)) {
                         sourceWall.door = DOOR_SHIFTER_EGRESS_KEYLESS;
                         neighborWall.door = DOOR_SHIFTER_INGRESS_KEYLESS;
-                        result = CODE_SUCCESS;
+                        isSuccess = true;
                     }
                     return;
                 default:
-                    result = CODE_SHIFTER_ACTIVATION_ON_NON_INGRESS_SHIFTER;
+                    codeset.addError(CODE_SHIFTER_ACTIVATION_ON_NON_INGRESS_SHIFTER);
                     return;
             }
         }
     );
 
-    if (!isNeighborAccessed) {
-        return CODE_INACCESSIBLE_NEIGHBORING_WALL;
-    }
+    codeset.addFailure(!isNeighborAccessed, CODE_INACCESSIBLE_NEIGHBORING_WALL);
 
-    return result;
+    return isSuccess;
 } 

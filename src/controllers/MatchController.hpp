@@ -12,6 +12,7 @@
 #include "Timestamp.hpp"
 
 class Codeset;
+class Inventory;
 class Match;
 class Player;
 class Room;
@@ -51,6 +52,12 @@ public:
     const Map<int3, int>& getDoors();
     const Map<int3, int>& getFloors();
 
+    bool giveInventoryItem(Inventory& inventory, const ItemEnum type, const bool isDryrun = false);
+
+    bool isCharacterActorValidation(const Character& character, const bool isCheckingCount = true);
+    bool isCharacterMoverValidation(const Character& character, const bool isCheckingCount = true);
+    bool isCharacterKeyerValidation(const Character& character);
+
     bool isCharacterWithinRoom(const Character& character, const Room& room, Codeset& codeset2) const;
     static bool isDoorOccupied(int roomId, ChannelEnum channel, Cardinal dir, int& outCharacterId, const Match& match, const Map<int3, int>& doors);
     static bool isFloorOccupied(int roomId, ChannelEnum channel, int floorId, int& outCharacterId, const Match& match, const Map<int3, int>& floors);
@@ -63,5 +70,11 @@ public:
     bool moveCharacterToWall(Room& room, Character& character, Cardinal, Timestamp time = Timestamp());
 
     void setupLocations(bool isForced = false);
+    bool takeCharacterAction(Character& character);
+    bool takeCharacterMove(Character& character);
+    bool takeInventoryItem(Inventory& inventory, const ItemEnum type, const bool isDryrun = false);
     bool updateCharacterLocation(Character& character, const Location& newLocation, Location& oldLocation);
+
+    bool validateDoorNotOccupied(int roomId, ChannelEnum channel, Cardinal dir);
+    bool validateSharedDoorNotOccupied(int roomId, ChannelEnum channel, Cardinal dir);
 };

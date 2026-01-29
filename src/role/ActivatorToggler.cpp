@@ -1,18 +1,18 @@
 #include "ActivatorToggler.hpp"
+#include "Codeset.hpp"
 #include "Match.hpp"
+#include "MatchController.hpp"
 
-CodeEnum ActivatorToggler::activate(Activation& activation) const {
-    CodeEnum result = CODE_UNKNOWN_ERROR;
-    if (activation.target.isEmpty()) {
-        return CODE_TARGET_CHARACTER_MISSING;
+bool ActivatorToggler::activate(Activation& activation) const {
+    if (activation.codeset.addFailure(activation.target.isEmpty(), CODE_TARGET_CHARACTER_MISSING)) {
+        return false;
     }
-    if (!activation.target.access([&](Character& target) {
-        if (target.isActor(result) && target.takeAction(result)) {
+    bool isSuccess = false;
+    activation.target.access([&](Character& target) {
+        if (activation.controller.takeCharacterAction(target)) {
             activation.match.dungeon.toggleDoors();
-            result = CODE_SUCCESS;
+            isSuccess = true;
         }
-    })) {
-        return result;
-    }
-    return result;
+    });
+    return isSuccess;
 }

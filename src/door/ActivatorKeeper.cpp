@@ -8,61 +8,55 @@
 #include "Player.hpp"
 #include "Room.hpp"
 
-CodeEnum ActivatorKeeper::activate(Activation& activation) const {
+bool ActivatorKeeper::activate(Activation& activation) const {
+    auto& controller = activation.controller;
+    auto& codeset = activation.codeset;
+    auto& subject = activation.character;
+    auto& inventory = activation.player.inventory;
+
     // Check if character can use keys
-    CodeEnum result = CODE_PREACTIVATE_IN_ACTIVATOR;
-
-    if (!activation.character.isActor(result, true)) {
-        return result;
-    }
-
-    if (!activation.character.isKeyer(result)) {
-        return result;
+    if (!controller.isCharacterKeyerValidation(activation.character)) {
+        return false;
     }
 
     Wall& sourceWall = activation.room.getWall(activation.direction);
 
-    const bool isKeying = sourceWall.door == DOOR_KEEPER_INGRESS_KEYED;
-    if (!activation.player.inventory.processDelta(ITEM_KEY, isKeying, result, true)) {
-        return result;
+    // checking occupancy even if keyless because a closed door should be occupied
+    if (!controller.validateSharedDoorNotOccupied(activation.getRoomId(), CHANNEL_CORPOREAL, activation.direction)) {
+        return false;
     }
 
+    bool isSuccess = false;
     const bool isNeighborAccessed = activation.match.dungeon.accessWallNeighbor(activation.room, activation.direction,
         [&](Wall& neighborWall, Room& neighbor, int neighborId) {
             int outCharacterId;
             switch (sourceWall.door) {
                 case DOOR_KEEPER_INGRESS_KEYED:
-                    if (activation.controller.isDoorOccupied(activation.getRoomId(), CHANNEL_CORPOREAL, activation.direction, outCharacterId)) {
-                        result = CODE_DOORWAY_OCCUPIED_BY_CHARACTER;
-                        return;
-                    }
-                    if (activation.controller.isDoorOccupied(neighborId, CHANNEL_CORPOREAL, activation.direction.getFlip(), outCharacterId)) {
-                        result = CODE_DOORWAY_OCCUPIED_BY_CHARACTER;
-                        return;
-                    }
-                    if (activation.player.inventory.giveItem(ITEM_KEY, result) && activation.character.takeAction(result)) {
-                        sourceWall.door = DOOR_KEEPER_INGRESS_KEYLESS;
-                        neighborWall.door = DOOR_KEEPER_EGRESS_KEYLESS;
-                        result = CODE_SUCCESS;
+                    if (controller.takeCharacterAction(subject)) {
+                        if (controller.giveInventoryItem(inventory, ITEM_KEY)) {
+                            sourceWall.door = DOOR_KEEPER_INGRESS_KEYLESS;
+                            neighborWall.door = DOOR_KEEPER_EGRESS_KEYLESS;
+                            isSuccess = true;
+                        }
                     }
                     return;
                 case DOOR_KEEPER_INGRESS_KEYLESS:
-                    if (activation.player.inventory.takeItem(ITEM_KEY, result) && activation.character.takeAction(result)) {
-                        sourceWall.door = DOOR_KEEPER_INGRESS_KEYED;
-                        neighborWall.door = DOOR_KEEPER_EGRESS_KEYED;
-                        result = CODE_SUCCESS;
+                    if (controller.takeCharacterAction(subject)) {
+                        if (controller.takeInventoryItem(inventory, ITEM_KEY)) {
+                            sourceWall.door = DOOR_KEEPER_INGRESS_KEYED;
+                            neighborWall.door = DOOR_KEEPER_EGRESS_KEYED;
+                            isSuccess = true;
+                        }
                     }
                     return;
                 default:
-                    result = CODE_KEEPER_ACTIVATION_ON_NON_INGRESS_KEEPER;
+                    codeset.addError(CODE_KEEPER_ACTIVATION_ON_NON_INGRESS_KEEPER);
                     return;
             }
         }
     );
 
-    if (!isNeighborAccessed) {
-        return CODE_INACCESSIBLE_NEIGHBORING_WALL;
-    }
+    codeset.addFailure(!isNeighborAccessed, CODE_INACCESSIBLE_NEIGHBORING_WALL);
 
-    return result;
+    return isSuccess;
 } 

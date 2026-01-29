@@ -39,7 +39,7 @@ void TestController::activateLock(Cardinal dir){
 }
 
 void TestController::endTurn(){
-    isSuccess = codeset.addSuccessElseFailure(match.endTurn(BUILDER_ID, codeset.error));
+    codeset.addFailure(!(isSuccess = match.endTurn(BUILDER_ID, codeset.error)));
     updateEverything();
 }
 

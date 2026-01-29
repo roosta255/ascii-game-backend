@@ -1,48 +1,53 @@
 #include "ActivatorTimeGateCube.hpp"
-#include "Match.hpp"
 #include "Room.hpp"
 #include "Character.hpp"
+#include "Codeset.hpp"
 #include "Inventory.hpp"
+#include "Match.hpp"
+#include "MatchController.hpp"
 #include "Player.hpp"
 #include "DoorEnum.hpp"
 
-CodeEnum ActivatorTimeGateCube::activate(Activation& activation) const {
-    // Check if character can use keys
-    CodeEnum result = CODE_PREACTIVATE_IN_ACTIVATOR;
+bool ActivatorTimeGateCube::activate(Activation& activation) const {
+    MatchController& controller = activation.controller;
+    Codeset& codeset = activation.codeset;
+    Character& subject = activation.character;
+    auto& inventory = activation.player.inventory;
 
-    if (!activation.character.isActor(result, true)) {
-        return result;
+    // Check if character can use keys
+    if (!controller.isCharacterKeyerValidation(subject)) {
+        return false;
     }
 
     Wall& sourceWall = activation.room.getWall(activation.direction);
 
-    auto& inventory = activation.player.inventory;
-
     switch (sourceWall.door) {
         case DOOR_TIME_GATE_AWAKENED:
             // give cube from rod
-            if (inventory.giveItem(ITEM_CUBE_AWAKENED, result) && activation.character.takeAction(result)) {
+            if (controller.takeCharacterAction(subject) && controller.giveInventoryItem(inventory, ITEM_CUBE_AWAKENED)) {
                 sourceWall.door = DOOR_TIME_GATE_EMPTY;
-                return CODE_SUCCESS;
+                return true;
             }
             break;
         case DOOR_TIME_GATE_DORMANT:
             // give cube from rod
-            if (inventory.giveItem(ITEM_CUBE_DORMANT, result) && activation.character.takeAction(result)) {
+            if (controller.takeCharacterAction(subject) && controller.giveInventoryItem(inventory, ITEM_CUBE_DORMANT)) {
                 sourceWall.door = DOOR_TIME_GATE_EMPTY;
-                return CODE_SUCCESS;
+                return true;
             }
             break;
         case DOOR_TIME_GATE_EMPTY:
             // take cube for rod
-            if (inventory.takeItem(ITEM_CUBE_AWAKENED, result) && activation.character.takeAction(result)) {
+            if (controller.takeCharacterAction(subject) && controller.takeInventoryItem(inventory, ITEM_CUBE_AWAKENED)) {
                 sourceWall.door = DOOR_TIME_GATE_AWAKENED;
-                return CODE_SUCCESS;
+                return true;
             }
             break;
         default:
-            return CODE_TIME_GATE_ACTIVATION_ON_NON_TIME_GATE;
+            codeset.addError(CODE_TIME_GATE_ACTIVATION_ON_NON_TIME_GATE);
+            return false;
     }
 
-    return result;
+    // switch makes this unreachable
+    return false;
 } 

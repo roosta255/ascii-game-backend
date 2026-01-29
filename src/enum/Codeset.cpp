@@ -21,39 +21,6 @@ void Codeset::addLogAndTableIfError(const CodeEnum& input) {
     }
 }
 
-bool Codeset::addSuccess(const bool input, const CodeEnum code) {
-    if (input) {
-        isAnySuccess = true;
-        return true;
-    }
-
-    addLogAndTableIfError(error);
-    if (error != code) {
-        addLogAndTableIfError(code);
-    }
-
-    return false;
-}
-
-bool Codeset::addSuccessElseFailure(const bool input, const CodeEnum code) {
-    if (input) {
-        isAnySuccess = true;
-        return true;
-    }
-
-    isAnyFailure = true;
-    addLogAndTableIfError(error);
-    if (error != code) {
-        addLogAndTableIfError(code);
-    }
-
-    return false;
-}
-
-bool Codeset::addSuccessElseFailureIfCodedSuccess(const CodeEnum code) {
-    return addSuccessElseFailure(code == CODE_SUCCESS);
-}
-
 bool Codeset::addFailure(const bool input, const CodeEnum code) {
     if (input) {
         isAnyFailure = true;
@@ -81,6 +48,12 @@ void Codeset::addTable(const CodeEnum& input, int value) {
     });
 }
 
+bool Codeset::addUnreachableError(const int line) {
+    addError(CODE_UNREACHABLE_CODE_WAS_REACHED);
+    setTable(CODE_UNREACHABLE_CODE_LINE, line);
+    return false;
+}
+
 void Codeset::setTable(const CodeEnum& input, int value) {
     table.access(input, [&](int& current){
         current = value;
@@ -96,10 +69,6 @@ CodeEnum Codeset::findErrorInTable()const {
         i++;
     }
     return CODE_UNSET;
-}
-
-bool Codeset::isAnySuccessfulWithoutFailures()const {
-    return isAnySuccess && !isAnyFailure;
 }
 
 std::string Codeset::describe(const std::string& prefix) const {
@@ -133,17 +102,6 @@ std::string Codeset::describe() const {
     return describe("");
 }
 
-bool operator==(const Array<int, CODE_COUNT>& left, const Array<int, CODE_COUNT>& right) {
-    auto i = 0;
-    for (const auto& value: left) {
-        if (value != right.getOrDefault(i, 0)) {
-            return false;
-        }
-        i++;
-    }
-    return true;
-}
-
 Array<int, CODE_COUNT> Codeset::getErrorTable()const {
     Array<int, CODE_COUNT> result;
     auto i = 0;
@@ -172,4 +130,19 @@ std::ostream& operator<<(std::ostream& os, const Array<int, CODE_COUNT>& table) 
     }
     os << " ]";
     return os;
+}
+
+bool operator==(const Array<int, CODE_COUNT>& left, const Array<int, CODE_COUNT>& right) {
+    auto i = 0;
+    for (const auto& value: left) {
+        if (value != right.getOrDefault(i, 0)) {
+            return false;
+        }
+        i++;
+    }
+    return true;
+}
+
+bool operator!=(const Array<int, CODE_COUNT>& left, const Array<int, CODE_COUNT>& right) {
+    return !(left == right);
 }

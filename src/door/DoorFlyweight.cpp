@@ -5,7 +5,9 @@
 #include "ActivatorJailer.hpp"
 #include "ActivatorKeeper.hpp"
 #include "ActivatorInactiveDoor.hpp"
+#include "ActivatorLadder.cpp"
 #include "ActivatorLightningRod.cpp"
+#include "ActivatorPole.cpp"
 #include "ActivatorShifter.cpp"
 #include "ActivatorTimeGate.cpp"
 #include "ActivatorTimeGateCube.cpp"
@@ -13,13 +15,14 @@
 const Array<DoorFlyweight, DOOR_COUNT>& DoorFlyweight::getFlyweights() {
     static auto flyweights = [](){
         Array<DoorFlyweight, DOOR_COUNT> flyweights;
-        #define DOOR_DECL( name_text, blockingness, doorActivator_, lockActivator_, doorway_ ) \
+        #define DOOR_DECL( name_text, blockingness, doorActivator_, lockActivator_, doorway_, is_shared_doorway_ ) \
             static doorActivator_ GLOBAL_DOOR_##name_text##doorActivator_; \
             static lockActivator_ GLOBAL_LOCK_##name_text##lockActivator_; \
             flyweights.getPointer( DOOR_##name_text ).access([](DoorFlyweight& flyweight){ \
                 flyweight.blocking = blockingness; \
                 flyweight.name = #name_text; \
                 flyweight.isDoorway = doorway_; \
+                flyweight.isSharedDoorway = is_shared_doorway_; \
                 flyweight.isDoorActionable = !std::is_same_v<doorActivator_, iActivator>; \
                 flyweight.isLockActionable = !std::is_same_v<lockActivator_, iActivator>; \
                 flyweight.doorActivator = GLOBAL_DOOR_##name_text##doorActivator_; \

@@ -4,5 +4,5 @@
 
 class ActivatorJailer : public iActivator {
 public:
-    CodeEnum activate(Activation& activation) const override;
+    bool activate(Activation& activation) const override;
 };
