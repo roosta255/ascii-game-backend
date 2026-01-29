@@ -1,36 +1,27 @@
 #include "ActivatorTimeGate.hpp"
+#include "Character.hpp"
 #include "Codeset.hpp"
+#include "DoorEnum.hpp"
+#include "Location.hpp"
 #include "Match.hpp"
 #include "MatchController.hpp"
-#include "Room.hpp"
-#include "Character.hpp"
-#include "iLayout.hpp"
-#include "Location.hpp"
-#include "Inventory.hpp"
 #include "Player.hpp"
-#include "DoorEnum.hpp"
+#include "Room.hpp"
 
-CodeEnum ActivatorTimeGate::activate(Activation& activation) const {
-    // Check if character can use keys
-    CodeEnum result = CODE_PREACTIVATE_IN_ACTIVATOR;
+bool ActivatorTimeGate::activate(Activation& activation) const {
     const auto roomId = activation.getRoomId();
-    Codeset& codeset = activation.codeset;
-    auto& character = activation.character;
-    MatchController controller(activation.match, activation.codeset);
-
-    if (!character.isMovable(result, true)) {
-        return result;
-    }
+    auto& controller = activation.controller;
+    auto& codeset = activation.codeset;
+    auto& subject = activation.character;
+    auto& inventory = activation.player.inventory;
 
     Wall& sourceWall = activation.room.getWall(activation.direction);
 
     // Check for occupied target cell
-    int outCharacterId;
-    if (activation.controller.isDoorOccupied(activation.getRoomId(), CHANNEL_CORPOREAL, TIME_GATE_DIRECTION, outCharacterId)) {
-        return CODE_OCCUPIED_TARGET_TIME_GATE_CELL;
+    if (codeset.addFailure(!controller.validateDoorNotOccupied(activation.getRoomId(), CHANNEL_CORPOREAL, TIME_GATE_DIRECTION), CODE_OCCUPIED_TARGET_TIME_GATE_CELL)) {
+        return false;
     }
 
-    auto& inventory = activation.player.inventory;
     int delta = 0;
     switch (activation.room.type) {
         case ROOM_TIME_GATE_TO_FUTURE:
@@ -40,9 +31,11 @@ CodeEnum ActivatorTimeGate::activate(Activation& activation) const {
             delta = -1;
             break;
         default:
-            return CODE_TIME_GATE_ACTIVATED_BUT_ROOM_ISNT_TIME_GATE;
+            codeset.addError(CODE_TIME_GATE_ACTIVATED_BUT_ROOM_ISNT_TIME_GATE);
+            return false;
     }
 
+    bool isSuccess = false;
     switch (sourceWall.door) {
         case DOOR_TIME_GATE_AWAKENED:
             {
@@ -54,33 +47,32 @@ CodeEnum ActivatorTimeGate::activate(Activation& activation) const {
                     wall2.door = DOOR_TIME_GATE_DORMANT;
                     
                     // clean and update locations
-                    const auto newLocation = Location::makeDoor(roomId, character.location.channel, TIME_GATE_DIRECTION);
+                    const auto newLocation = Location::makeDoor(roomId, subject.location.channel, TIME_GATE_DIRECTION);
                     Location oldLocation;
-                    activation.controller.updateCharacterLocation(character, newLocation, oldLocation);
+                    controller.updateCharacterLocation(subject, newLocation, oldLocation);
 
-                    // take character move
-                    if (character.takeMove(result)) {
+                    // take subject move
+                    if (controller.takeCharacterMove(subject)) {
 
                         // animate
                         const Keyframe keyframe = Keyframe::buildWalking(activation.time, MatchController::MOVE_ANIMATION_DURATION, oldLocation, newLocation, codeset);
-                        if(!Keyframe::insertKeyframe(Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(character.keyframes), keyframe)) {
+                        if(!Keyframe::insertKeyframe(Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(subject.keyframes), keyframe)) {
                             codeset.addLog(CODE_ANIMATION_OVERFLOW_IN_ACTIVATE_TIME_GATE);
                         }
                         // this is the end of the movement!!!
-                        result = CODE_SUCCESS;
+                        isSuccess = true;
                         return;
                     }
                 });
 
-                if (!isDeltaValid) {
-                    return CODE_TIME_GATE_ACTIVATED_BUT_NEIGHBOR_DNE;
-                }
+                codeset.addFailure(!isDeltaValid, CODE_TIME_GATE_ACTIVATED_BUT_NEIGHBOR_DNE);
             }
-            return result;
+            return isSuccess;
         default:
-            return CODE_TIME_GATE_ACTIVATED_BUT_WALL_MISSING_AWAKENED_CUBE;
+            codeset.addError(CODE_TIME_GATE_ACTIVATED_BUT_WALL_MISSING_AWAKENED_CUBE);
+            return false;
     }
 
-
-    return result;
+    codeset.addUnreachableError(__LINE__);
+    return false;
 }

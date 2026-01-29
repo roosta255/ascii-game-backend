@@ -1,6 +1,7 @@
 #include "Codeset.hpp"
 #include "Keyframe.hpp"
 #include "Location.hpp"
+#include "Maybe.hpp"
 
 bool Keyframe::isAvailable()const{
     Timestamp now;
@@ -48,32 +49,60 @@ Keyframe Keyframe::buildWalking(const Timestamp& start, long duration, const int
 }
 
 Keyframe Keyframe::buildWalking(const Timestamp& start, long duration, const Location& location0, const Location& location1, Codeset& codeset) {
-    if (location0.type == LOCATION_DOOR || location0.type == LOCATION_DOOR_SHARED) {
-        if (location1.type == LOCATION_DOOR || location1.type == LOCATION_DOOR_SHARED) {
-            // door -> door
-            return buildWalking(start, duration, location0.roomId, Cardinal(location0.data), Cardinal(location1.data));
-        } else if (location1.type == LOCATION_FLOOR) {
-            // door -> floor
-            return buildWalking(start, duration, location0.roomId, Cardinal(location0.data), location1.data);
-        } else {
-            codeset.addError(CODE_ANIMATION_WALKING_BUT_LOCATION_2_NOT_DOOR_NOR_FLOOR);
+    const auto coalesceLocation = [&](const Location& location){
+        switch(location.type){
+            case LOCATION_DOOR:
+            case LOCATION_DOOR_SHARED:
+            case LOCATION_SHAFT_BOTTOM:
+            case LOCATION_SHAFT_TOP:
+                return Maybe<LocationEnum>(LOCATION_DOOR);
+
+            case LOCATION_FLOOR:
+                return Maybe<LocationEnum>(LOCATION_FLOOR);
         }
-    } else if (location0.type == LOCATION_FLOOR) {
-        if (location1.type == LOCATION_DOOR || location1.type == LOCATION_DOOR_SHARED) {
-            // floor -> door
-            return buildWalking(start, duration, location0.roomId, location0.data, Cardinal(location1.data));
-        } else if (location1.type == LOCATION_FLOOR) {
-            // floor -> floor
-            return buildWalking(start, duration, location0.roomId, location0.data, location1.data);
-        } else {
-            codeset.addError(CODE_ANIMATION_WALKING_BUT_LOCATION_2_NOT_DOOR_NOR_FLOOR);
-            return buildWalking(start, duration, location0.roomId, 0, 1);
-        }
-    } else {
+        return Maybe<LocationEnum>();
+    };
+
+    const auto coalesced0 = coalesceLocation(location0);
+    if (coalesced0.isEmpty()) {
+        // invalid location detected
         codeset.addError(CODE_ANIMATION_WALKING_BUT_LOCATION_1_NOT_DOOR_NOR_FLOOR);
         return buildWalking(start, duration, location0.roomId, 0, 1);
     }
-    return buildWalking(start, duration, location0.roomId, 0, 1);
+
+    const auto coalesced1 = coalesceLocation(location1);
+    if (coalesced1.isEmpty()) {
+        // invalid location detected
+        codeset.addError(CODE_ANIMATION_WALKING_BUT_LOCATION_2_NOT_DOOR_NOR_FLOOR);
+        return buildWalking(start, duration, location0.roomId, 0, 1);
+    }
+
+    AnimationEnum animation;
+    if (coalesced0 == LOCATION_DOOR) {
+        if (coalesced1 == LOCATION_DOOR) {
+            // door -> door
+            animation = ANIMATION_WALKING_FROM_WALL_TO_WALL;
+        } else if (coalesced1 == LOCATION_FLOOR) {
+            // door -> floor
+            animation = ANIMATION_WALKING_FROM_WALL_TO_FLOOR;
+        }
+    } else if (coalesced0 == LOCATION_FLOOR) {
+        if (coalesced1 == LOCATION_DOOR) {
+            // floor -> door
+            animation = ANIMATION_WALKING_FROM_FLOOR_TO_WALL;
+        } else if (coalesced1 == LOCATION_FLOOR) {
+            // floor -> floor
+            animation = ANIMATION_WALKING_FROM_FLOOR_TO_FLOOR;
+        }
+    }
+
+    return Keyframe{
+        .animation = animation,
+        .t0 = start,
+        .t1 = start + duration,
+        .room0 = location0.roomId,
+        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{location0.data, 0, location1.data, 0})
+    };
 }
 
 Keyframe Keyframe::buildHurtling(const Timestamp& start, long duration, const int room0, const int2 xy0, const int2 xy1) {

@@ -29,9 +29,6 @@ struct Dungeon {
     int layout = 0;
     bool isBlueOpen = false;  // When true, blue doors are open and orange doors are closed
 
-    bool accessLayout(CodeEnum& error, std::function<void(const iLayout&)>)const;
-    bool accessLayoutFlyweight(CodeEnum& error, std::function<void(const LayoutFlyweight&)>)const;
-
     // Toggles all blue/orange doors in the dungeon based on isBlueOpen
     void toggleDoors();
 
@@ -40,7 +37,14 @@ struct Dungeon {
     Pointer<Room> getRoom(int roomId, CodeEnum&);
     Pointer<const Room> getRoom(int roomId, CodeEnum&) const;
 
+    bool accessCeilingNeighbor(const Room& source, std::function<void(const Room&)> consumer) const;
+    bool accessFloorNeighbor(const Room& source, std::function<void(const Room&)> consumer) const;
+
+    bool accessLayout(CodeEnum& error, std::function<void(const iLayout&)>)const;
+    bool accessLayoutFlyweight(CodeEnum& error, std::function<void(const LayoutFlyweight&)>)const;
+
     bool accessWallNeighbor(Room& source, Cardinal dir, std::function<void(Wall&, Room&, int)> consumer);
     bool accessWallNeighbor(const Room& source, Cardinal dir, std::function<void(const Wall&, const Room&, int)> consumer) const;
+
 
 };

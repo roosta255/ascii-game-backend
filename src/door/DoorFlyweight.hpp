@@ -10,7 +10,7 @@ class iActivator;
 
 struct DoorFlyweight {
     bool blocking = true;
-    bool isDoorway = false;
+    bool isDoorway = false, isSharedDoorway = false;
     const char* name;
     bool isDoorActionable = false;
     bool isLockActionable = false;

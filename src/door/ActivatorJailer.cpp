@@ -1,53 +1,41 @@
 #include "ActivatorJailer.hpp"
-#include "Match.hpp"
-#include "Room.hpp"
+#include "Codeset.hpp"
 #include "Character.hpp"
+#include "DoorEnum.hpp"
 #include "Inventory.hpp"
+#include "Match.hpp"
 #include "MatchController.hpp"
 #include "Player.hpp"
-#include "DoorEnum.hpp"
+#include "Room.hpp"
 
-CodeEnum ActivatorJailer::activate(Activation& activation) const {
+bool ActivatorJailer::activate(Activation& activation) const {
+    auto& controller = activation.controller;
+    auto& codeset = activation.codeset;
+    auto& subject = activation.character;
+    auto& inventory = activation.player.inventory;
+
     // Check if character can use keys
-    CodeEnum result = CODE_PREACTIVATE_IN_ACTIVATOR;
-
-    if (!activation.character.isActor(result, true)) {
-        return result;
-    }
-
-    if (!activation.player.inventory.takeItem(ITEM_KEY, result, true)) {
-        return result;
-    }
-
-    if (!activation.character.isKeyer(result)) {
-        return result;
+    if (!controller.isCharacterKeyerValidation(activation.character)) {
+        return false;
     }
 
     Wall& sourceWall = activation.room.getWall(activation.direction);
 
+    bool isSuccess = false;
     const bool isNeighborAccessed = activation.match.dungeon.accessWallNeighbor(activation.room, activation.direction,
         [&](Wall& neighborWall, Room& neighbor, int neighborId) {
             int outCharacterId;
             // Only at ingress keyless can we give a key
-            if (activation.controller.isDoorOccupied(activation.getRoomId(), CHANNEL_CORPOREAL, activation.direction, outCharacterId)) {
-                result = CODE_DOORWAY_OCCUPIED_BY_CHARACTER;
-                return;
-            }
-            if (activation.controller.isDoorOccupied(neighborId, CHANNEL_CORPOREAL, activation.direction.getFlip(), outCharacterId)) {
-                result = CODE_DOORWAY_OCCUPIED_BY_CHARACTER;
-                return;
-            }
-            if (activation.player.inventory.takeItem(ITEM_KEY, result) && activation.character.takeAction(result)) {
-                sourceWall.door = DOOR_JAILER_INGRESS_KEYED;
-                neighborWall.door = DOOR_JAILER_EGRESS_KEYED;
-                result = CODE_SUCCESS;
+            if (controller.takeCharacterAction(subject)) {
+                if (controller.takeInventoryItem(inventory, ITEM_KEY)) {
+                    sourceWall.door = DOOR_JAILER_INGRESS_KEYED;
+                    neighborWall.door = DOOR_JAILER_EGRESS_KEYED;
+                    isSuccess = true;
+                }
             }
         }
     );
 
-    if (!isNeighborAccessed) {
-        return CODE_INACCESSIBLE_NEIGHBORING_WALL;
-    }
-
-    return result;
+    codeset.addFailure(!isNeighborAccessed, CODE_INACCESSIBLE_NEIGHBORING_WALL);
+    return isSuccess;
 } 

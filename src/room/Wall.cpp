@@ -4,15 +4,6 @@
 #include "iActivator.hpp"
 #include "MatchController.hpp"
 
-bool Wall::isWalkable(CodeEnum& error) const {
-    bool result = false;
-    accessDoor(error, [&](const DoorFlyweight& flyweight){
-        if (flyweight.blocking) error = CODE_BLOCKING_DOOR_TYPE;
-        else result = true;
-    });
-    return result;
-}
-
 bool Wall::accessDoor(CodeEnum& error, std::function<void(const DoorFlyweight&)> consumer) const {
     const bool isDoorFlyweightAccessible = DoorFlyweight::getFlyweights().accessConst(door, [&](const DoorFlyweight& flyweight){
         consumer(flyweight);
@@ -27,7 +18,7 @@ bool Wall::activateLock(Player& player, Character& character, Room& room, const 
         if (door.isLockActionable) {
             if (!door.lockActivator.accessConst([&](const iActivator& activatorIntf) {
                 Activation activation(player, character, room, Pointer<Character>::empty(), direction, match, codeset, controller, time);
-                isSuccess = codeset.addSuccessElseFailureIfCodedSuccess(activatorIntf.activate(activation));
+                codeset.addFailure(!(isSuccess = activatorIntf.activate(activation)));
             })) {
                 codeset.addError(CODE_DOOR_MISSING_ACTIVATOR);
                 codeset.setTable(CODE_ACTIVATION_ROOM_ID, room.roomId);
@@ -48,7 +39,7 @@ bool Wall::activateDoor(Player& player, Character& character, Room& room, const 
         if (door.isDoorActionable) {
             if (!door.doorActivator.accessConst([&](const iActivator& activatorIntf) {
                 Activation activation(player, character, room, Pointer<Character>::empty(), direction, match, codeset, controller, time);
-                isSuccess = codeset.addSuccessElseFailureIfCodedSuccess(activatorIntf.activate(activation));
+                codeset.addFailure(!(isSuccess = activatorIntf.activate(activation)));
             })) {
                 codeset.addError(CODE_DOOR_MISSING_ACTIVATOR);
                 codeset.setTable(CODE_ACTIVATION_ROOM_ID, room.roomId);
@@ -61,4 +52,22 @@ bool Wall::activateDoor(Player& player, Character& character, Room& room, const 
         }
     }));
     return isSuccess;
+}
+
+bool Wall::readIsSharedDoorway(CodeEnum& error, bool& isSharedDoorway) const {
+    bool isSuccess = false;
+    accessDoor(error, [&](const DoorFlyweight& flyweight){
+        isSharedDoorway = flyweight.isSharedDoorway;
+        isSuccess = true;
+    });
+    return isSuccess;
+}
+
+bool Wall::isWalkable(CodeEnum& error) const {
+    bool result = false;
+    accessDoor(error, [&](const DoorFlyweight& flyweight){
+        if (flyweight.blocking) error = CODE_BLOCKING_DOOR_TYPE;
+        else result = true;
+    });
+    return result;
 }

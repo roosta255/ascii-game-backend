@@ -20,6 +20,24 @@ Location Location::makeDoor(int roomId, ChannelEnum channel, Cardinal dir){
     };
 }
 
+Location Location::makeShaftBottom(int roomId, ChannelEnum channel, Cardinal dir){
+    return Location{
+        .type = LOCATION_SHAFT_BOTTOM,
+        .roomId = roomId,
+        .channel = channel,
+        .data = dir.getIndex()
+    };
+}
+
+Location Location::makeShaftTop(int roomId, ChannelEnum channel, Cardinal dir){
+    return Location{
+        .type = LOCATION_SHAFT_TOP,
+        .roomId = roomId,
+        .channel = channel,
+        .data = dir.getIndex()
+    };
+}
+
 Location Location::makeSharedDoor(int roomId, ChannelEnum channel, Cardinal dir){
     return Location{
         .type = LOCATION_DOOR_SHARED,
@@ -50,6 +68,18 @@ void Location::apply(int offset, const Array<Room, DUNGEON_ROOM_COUNT>& rooms, M
             return;
         case LOCATION_DOOR:
             setDoor(roomId, dir);
+            return;
+        case LOCATION_SHAFT_BOTTOM:
+            setDoor(roomId, dir);
+            rooms.accessConst(roomId, [&](const Room& room){
+                setDoor(room.above, dir);
+            });
+            return;
+        case LOCATION_SHAFT_TOP:
+            setDoor(roomId, dir);
+            rooms.accessConst(roomId, [&](const Room& room){
+                setDoor(room.below, dir);
+            });
             return;
         case LOCATION_DOOR_SHARED:
             setDoor(roomId, dir);

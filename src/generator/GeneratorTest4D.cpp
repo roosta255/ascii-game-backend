@@ -39,51 +39,25 @@ bool GeneratorTest4D::generate (int seed, Match& dst, Codeset& codeset) const {
 
             util.setupTimeGateRoomToFuture(int4{1,1,0,0}, true, false);
 
-            const auto testTimeGateRoomSetup = [&](){
-                codeset.addFailure(!util.getRoom(int4{1,1,0,1}).access([&](Room& room){
-                    success &= room.type == ROOM_TIME_GATE_TO_PAST;
-                    if (room.type != ROOM_TIME_GATE_TO_PAST) {
-                        success &= false;
-                        error = CODE_GENERATOR_TEST_4D_HAS_FUTURE_ROOM_WITH_WRONG_TYPE;
-                    }
-                }), CODE_GENERATOR_TEST_4D_HAS_INNACCESSIBLE_FUTURE_ROOM);
-                return true;
-            };
-
-            if (!testTimeGateRoomSetup()) {
-                return;
-            }
-
-
             // this dungeon has 2 timezones
             for (int t = 0; t < 2; t++) {
-                success &= util.setup2x5Room(int4{0,1,0,t});
-                success &= util.setup2x5Room(int4{2,1,0,t});
-                success &= util.setup4x1Room(int4{1,0,0,t});
-                success &= util.setup4x1Room(int4{1,2,0,t});
-                success &= util.setupLightningRodRoom(int4{2,2,0,t}, false, false);
-                success &= util.setupDoorway(int4{0,0,0,t}, Cardinal::east());
-                success &= util.setupDoorway(int4{0,1,0,t}, Cardinal::east());
-                success &= util.setupDoorway(int4{1,1,0,t}, Cardinal::east());
-                success &= util.setupDoorway(int4{1,0,0,t}, Cardinal::north());
-                success &= util.setupDoorway(int4{2,0,0,t}, Cardinal::north());
-                success &= util.setupDoorway(int4{2,1,0,t}, Cardinal::north());
-            }
-
-            if (!testTimeGateRoomSetup()) {
-                return;
+                success &= util.setup2x5Room(int4{0,1,0,t})
+                        && util.setup2x5Room(int4{2,1,0,t})
+                        && util.setup4x1Room(int4{1,0,0,t})
+                        && util.setup4x1Room(int4{1,2,0,t})
+                        && util.setupLightningRodRoom(int4{2,2,1,t}, false, false)
+                        && util.setupPoleUp(int4{2,2,0,t}, Cardinal::west())
+                        && util.setupLadderUp(int4{2,2,0,t}, Cardinal::east())
+                        && util.setupDoorway(int4{0,0,0,t}, Cardinal::east())
+                        && util.setupDoorway(int4{0,1,0,t}, Cardinal::east())
+                        && util.setupDoorway(int4{1,1,0,t}, Cardinal::east())
+                        && util.setupDoorway(int4{1,0,0,t}, Cardinal::north())
+                        && util.setupDoorway(int4{2,0,0,t}, Cardinal::north())
+                        && util.setupDoorway(int4{2,1,0,t}, Cardinal::north());
             }
 
             success &= util.setupDoorway(int4{0,2,0,1}, Cardinal::east());
             success &= util.setupDoorway(int4{1,2,0,1}, Cardinal::east());
-
-            if (!testTimeGateRoomSetup()) {
-                return;
-            }
-
-            if (!testTimeGateRoomSetup()) {
-                return;
-            }
 
         });
     });

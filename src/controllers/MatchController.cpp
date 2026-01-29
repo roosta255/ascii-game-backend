@@ -52,7 +52,7 @@ bool MatchController::activateCharacter(const std::string& playerId, int charact
                 // this lets the iActivator needs to decide whether thats a problem
                 CodeEnum error = CODE_UNSET;
                 auto target = match.getCharacter(targetId, error);
-                isSuccess = codeset.addSuccessElseFailure(activateCharacter(player, character, room, target, time));
+                codeset.addFailure(!(isSuccess = activateCharacter(player, character, room, target, time)));
             }));
         }));
     }));
@@ -100,7 +100,7 @@ bool MatchController::activateCharacter(Player& player, Character& subject, Room
         } else {
             flyweight.activator.accessConst([&](const iActivator& activatorIntf){
                 Activation activation(player, subject, room, target, Cardinal::north(), match, codeset, *this, time);
-                isSuccess = codeset.addSuccessElseFailureIfCodedSuccess(activatorIntf.activate(activation));
+                codeset.addFailure(!(isSuccess = activatorIntf.activate(activation)));
             });
         }
     }), CODE_INACCESSIBLE_ROLE_FLYWEIGHT);
@@ -121,7 +121,7 @@ bool MatchController::activateDoor(Player& player, Character& character, Room& r
 
     // Get and validate the door
     Wall& wall = room.getWall(direction);
-    return codeset.addSuccessElseFailure(wall.activateDoor(player, character, room, direction, match, codeset, *this, time));
+    return !codeset.addFailure(!wall.activateDoor(player, character, room, direction, match, codeset, *this, time));
 }
 
 bool MatchController::activateDoor(const std::string& playerId, int characterId, int roomId, int direction, Timestamp time) {
@@ -132,7 +132,7 @@ bool MatchController::activateDoor(const std::string& playerId, int characterId,
         codeset.addFailure(!match.getCharacter(characterId, codeset.error).access([&](Character& character) {
             // Get the room
             codeset.addFailure(!match.dungeon.getRoom(roomId, codeset.error).access([&](Room& room) {
-                isSuccess = codeset.addSuccessElseFailure(activateDoor(player, character, room, Cardinal(direction), time));
+                codeset.addFailure(!(isSuccess = activateDoor(player, character, room, Cardinal(direction), time)));
             }));
         }));
     }));
@@ -147,7 +147,7 @@ bool MatchController::activateInventoryItem(const std::string& playerId, int cha
         codeset.addFailure(!match.getCharacter(characterId, codeset.error).access([&](Character& character) {
             codeset.addFailure(!match.dungeon.getRoom(roomId, codeset.error).access([&](Room& room) {
                 codeset.addFailure(!player.inventory.accessItem(itemId, codeset.error, [&](Item& item){
-                    isSuccess = codeset.addSuccessElseFailure(activateInventoryItem(player, character, room, item, time));
+                    codeset.addFailure(!(isSuccess = activateInventoryItem(player, character, room, item, time)));
                 }));
             }));
         }));
@@ -177,7 +177,7 @@ bool MatchController::activateInventoryItem(Player& player, Character& subject, 
     codeset.addFailure(!item.accessFlyweight([&](const ItemFlyweight& flyweight){
         flyweight.useActivator.accessConst([&](const iActivator& activatorIntf){
             Activation activation(player, subject, room, item, Cardinal::north(), match, codeset, *this, time);
-            isSuccess = codeset.addSuccessElseFailureIfCodedSuccess(activatorIntf.activate(activation));
+            codeset.addFailure(!(isSuccess = activatorIntf.activate(activation)));
         });
     }), CODE_INACCESSIBLE_INVENTORY_FLYWEIGHT);
 
@@ -197,7 +197,7 @@ bool MatchController::activateLock(Player& player, Character& character, Room& r
 
     // Get and validate the door
     Wall& wall = room.getWall(direction);
-    return codeset.addSuccessElseFailure(wall.activateLock(player, character, room, direction, match, codeset, *this, time));
+    return !codeset.addFailure(!wall.activateLock(player, character, room, direction, match, codeset, *this, time));
 }
 
 bool MatchController::activateLock(const std::string& playerId, int characterId, int roomId, int direction, Timestamp time) {
@@ -208,7 +208,7 @@ bool MatchController::activateLock(const std::string& playerId, int characterId,
         codeset.addFailure(!match.getCharacter(characterId, codeset.error).access([&](Character& character) {
             // Get the room
             codeset.addFailure(!match.dungeon.getRoom(roomId, codeset.error).access([&](Room& room) {
-                isSuccess = codeset.addSuccessElseFailure(activateLock(player, character, room, Cardinal(direction), time));
+                codeset.addFailure(!(isSuccess = activateLock(player, character, room, Cardinal(direction), time)));
             }));
         }));
     }));
@@ -222,7 +222,7 @@ bool MatchController::assignCharacterToFloor(int characterId, int roomId, Channe
         codeset.addFailure(!match.dungeon.getRoom(roomId, codeset.error).access([&](Room& room) {
             int conflictingCharacterId;
             if (codeset.addFailure(isFloorOccupied(roomId, channel, floorId, conflictingCharacterId), CODE_OCCUPIED_TARGET_FLOOR_CELL)) {
-                return false;
+                return;
             }
 
             // update location
@@ -291,16 +291,44 @@ const Map<int3, int>& MatchController::getFloors() {
     return floors;
 }
 
+bool MatchController::giveInventoryItem(Inventory& inventory, const ItemEnum type, const bool isDryrun) {
+    return !codeset.addFailure(!inventory.giveItem(type, codeset.error, isDryrun));
+}
+
+bool MatchController::isCharacterActorValidation(const Character& character, const bool isCheckingCount) {
+    return !codeset.addFailure(!character.isActor(codeset.error, isCheckingCount));
+}
+
+bool MatchController::isCharacterMoverValidation(const Character& character, const bool isCheckingCount) {
+    return !codeset.addFailure(!character.isMovable(codeset.error, isCheckingCount));
+}
+
+bool MatchController::isCharacterKeyerValidation(const Character& character) {
+    return !codeset.addFailure(!character.isKeyer(codeset.error));
+}
+
 bool MatchController::isCharacterWithinRoom(const Character& character, const Room& room, Codeset& codeset2) const {
     int roomId;
     if (codeset2.addFailure(!match.dungeon.containsRoom(room, roomId), CODE_ROOM_NOT_WITHIN_DUNGEON)) {
         return false;
     }
 
+    int neighborId = -1;
     switch(character.location.type) {
         case LOCATION_DOOR:
+            return character.location.roomId == roomId;
         case LOCATION_FLOOR:
             return character.location.roomId == roomId;
+        case LOCATION_SHAFT_BOTTOM:
+            if (character.location.roomId == roomId) {
+                return true;
+            }
+            return character.location.roomId == room.above;
+        case LOCATION_SHAFT_TOP:
+            if (character.location.roomId == roomId) {
+                return true;
+            }
+            return character.location.roomId == room.below;
         case LOCATION_DOOR_SHARED:
             if (character.location.roomId == roomId) {
                 return true;
@@ -428,8 +456,7 @@ bool MatchController::moveCharacterToWall(Room& room, Character& character, Card
     bool isShared = false;
     match.dungeon.rooms.access(next.adjacent, [&](Room& room2){
         // hide this error because it's not a problem
-        CodeEnum error;
-        isShared = room2.getWall(direction.getFlip()).isWalkable(error);
+        codeset.addFailure(!room2.getWall(direction.getFlip()).readIsSharedDoorway(codeset.error, isShared));
     });
 
     const auto newLocation = isShared ? Location::makeSharedDoor(next.adjacent, character.location.channel, direction.getFlip()) : Location::makeDoor(roomId, character.location.channel, direction);
@@ -462,6 +489,18 @@ void MatchController::setupLocations(bool isForced) {
     isLocationsSetup = true;
 }
 
+bool MatchController::takeCharacterAction(Character& character) {
+    return !codeset.addFailure(!character.takeAction(codeset.error));
+}
+
+bool MatchController::takeCharacterMove(Character& character) {
+    return !codeset.addFailure(!character.takeMove(codeset.error));
+}
+
+bool MatchController::takeInventoryItem(Inventory& inventory, const ItemEnum type, const bool isDryrun) {
+    return !codeset.addFailure(!inventory.takeItem(type, codeset.error, isDryrun));
+}
+
 bool MatchController::updateCharacterLocation(Character& character, const Location& newLocation, Location& oldLocation) {
     setupLocations(false);
 
@@ -477,4 +516,37 @@ bool MatchController::updateCharacterLocation(Character& character, const Locati
     character.location.apply(characterId, match.dungeon.rooms, floors, doors);
 
     return true;
+}
+
+bool MatchController::validateDoorNotOccupied(int roomId, ChannelEnum channel, Cardinal dir) {
+    int outCharacterId = -1;
+    if (codeset.addFailure(isDoorOccupied(roomId, channel, dir, outCharacterId), CODE_DOORWAY_OCCUPIED_BY_CHARACTER)) {
+        codeset.setTable(CODE_OCCUPIED_CHARACTER_ID, outCharacterId);
+        return false;
+    }
+    return true;
+}
+
+bool MatchController::validateSharedDoorNotOccupied(int roomId, ChannelEnum channel, Cardinal dir) {
+    int outCharacterId = -1;
+    if (codeset.addFailure(isDoorOccupied(roomId, channel, dir, outCharacterId), CODE_DOORWAY_OCCUPIED_BY_CHARACTER)) {
+        codeset.setTable(CODE_DOORWAY_OCCUPIED_CHARACTER_ID, outCharacterId);
+        return false;
+    }
+    bool isValid = false;
+    match.dungeon.rooms.accessConst(roomId, [&](const Room& room){
+        const auto adjacentRoomId = room.getWall(dir).adjacent;
+        match.dungeon.rooms.accessConst(adjacentRoomId, [&](const Room& adjacentRoom){
+            bool isSharedDoorway = false;
+            if (codeset.addFailure(!adjacentRoom.getWall(dir.getFlip()).readIsSharedDoorway(codeset.error, isSharedDoorway), CODE_SHARED_DOORWAY_CALLED_ON_DOOR_NOT_FLAGGED_AS_SHARED)){
+                return;
+            }
+            if (codeset.addFailure(isDoorOccupied(adjacentRoomId, channel, dir.getFlip(), outCharacterId), CODE_SHARED_DOORWAY_OCCUPIED_BY_CHARACTER)) {
+                codeset.setTable(CODE_SHARED_DOORWAY_OCCUPIED_CHARACTER_ID, outCharacterId);
+                return;
+            }
+            isValid = true;
+        });
+    });
+    return isValid;
 }

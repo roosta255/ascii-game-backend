@@ -17,11 +17,11 @@ constexpr static Maybe empty(){
 	return Maybe();
 }
 
-constexpr bool isEmpty(){
+constexpr bool isEmpty()const{
 	return !_exists;
 }
 
-constexpr bool isPresent(){
+constexpr bool isPresent()const{
 	return _exists;
 }
 
@@ -43,8 +43,8 @@ inline Maybe<T>& operator=(const T& setting){
 	return *this;
 }
 
-inline bool operator==(const T& rhs){
-	return _data == rhs;
+inline bool operator==(const T& rhs)const{
+	return isPresent() && _data == rhs;
 }
 
 inline const T& orElse(const T& defau1t){

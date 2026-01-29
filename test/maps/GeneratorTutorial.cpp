@@ -130,10 +130,11 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     REQUIRE(controller.builderCharacterPtr->location == Location::makeSharedDoor(2, CHANNEL_CORPOREAL, Cardinal::east()));
     REQUIRE(controller.controller.isDoorOccupied(2, CHANNEL_CORPOREAL, Cardinal::east(), nullCharacterId));
     controller.activateLock(Cardinal::east());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
+    REQUIRE(controller.codeset.getErrorTable() != Codeset::getEmptyTable());
     REQUIRE(controller.isSuccess == false);
     REQUIRE(controller.inventory.isEmpty);
     REQUIRE(controller.inventory.keys == 0);
+    controller.codeset = Codeset();
 
     controller.endTurn();
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
@@ -210,6 +211,10 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     REQUIRE(controller.isSuccess);
 
     controller.endTurn();
+    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
+    REQUIRE(controller.isSuccess);
+
+    controller.moveCharacterToFloor(2);
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
     REQUIRE(controller.isSuccess);
 

@@ -12,6 +12,6 @@ class Match;
 
 class iActivator {
 public:
-    virtual CodeEnum activate(Activation& activation) const { return CODE_NOOP; }
+    virtual bool activate(Activation& activation) const { return CODE_NOOP; }
     virtual ~iActivator() = default;
 }; 

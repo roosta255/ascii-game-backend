@@ -24,6 +24,8 @@ public:
     // makers
     static Location makeFloor(int roomId, ChannelEnum channel, int floor);
     static Location makeDoor(int roomId, ChannelEnum channel, Cardinal dir);
+    static Location makeShaftBottom(int roomId, ChannelEnum channel, Cardinal dir);
+    static Location makeShaftTop(int roomId, ChannelEnum channel, Cardinal dir);
     static Location makeSharedDoor(int roomId, ChannelEnum channel, Cardinal dir);
     static Location makeNone();
 
