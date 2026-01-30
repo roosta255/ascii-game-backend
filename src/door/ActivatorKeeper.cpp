@@ -13,21 +13,22 @@ bool ActivatorKeeper::activate(Activation& activation) const {
     auto& codeset = activation.codeset;
     auto& subject = activation.character;
     auto& inventory = activation.player.inventory;
+    auto& room = activation.room;
 
     // Check if character can use keys
     if (!controller.isCharacterKeyerValidation(activation.character)) {
         return false;
     }
 
-    Wall& sourceWall = activation.room.getWall(activation.direction);
+    Wall& sourceWall = room.getWall(activation.direction);
 
     // checking occupancy even if keyless because a closed door should be occupied
-    if (!controller.validateSharedDoorNotOccupied(activation.getRoomId(), CHANNEL_CORPOREAL, activation.direction)) {
+    if (!controller.validateSharedDoorNotOccupied(room.roomId, CHANNEL_CORPOREAL, activation.direction)) {
         return false;
     }
 
     bool isSuccess = false;
-    const bool isNeighborAccessed = activation.match.dungeon.accessWallNeighbor(activation.room, activation.direction,
+    const bool isNeighborAccessed = activation.match.dungeon.accessWallNeighbor(room, activation.direction,
         [&](Wall& neighborWall, Room& neighbor, int neighborId) {
             int outCharacterId;
             switch (sourceWall.door) {

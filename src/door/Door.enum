@@ -30,9 +30,9 @@ DOOR_DECL(LIGHTNING_ROD_AWAKENED, false,        iActivator, ActivatorLightningRo
 DOOR_DECL(LIGHTNING_ROD_DORMANT,  false,        iActivator, ActivatorLightningRod, false, false)
 DOOR_DECL(LIGHTNING_ROD_EMPTY,    false,        iActivator, ActivatorLightningRod, false, false)
 
-DOOR_DECL(TIME_GATE_AWAKENED,     false, ActivatorTimeGate, ActivatorTimeGateCube, false, false)
-DOOR_DECL(TIME_GATE_DORMANT,      false,        iActivator, ActivatorTimeGateCube, false, false)
-DOOR_DECL(TIME_GATE_EMPTY,        false,        iActivator, ActivatorTimeGateCube, false, false)
+DOOR_DECL(TIME_GATE_AWAKENED,     true, ActivatorTimeGate, ActivatorTimeGateCube, false, false)
+DOOR_DECL(TIME_GATE_DORMANT,      true,        iActivator, ActivatorTimeGateCube, false, false)
+DOOR_DECL(TIME_GATE_EMPTY,        true,        iActivator, ActivatorTimeGateCube, false, false)
 
 DOOR_DECL(POLE_1_BOTTOM,           true,        iActivator,            iActivator,  true, false)
 DOOR_DECL(POLE_1_TOP,             false,     ActivatorPole,            iActivator,  true, false)

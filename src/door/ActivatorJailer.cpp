@@ -13,16 +13,17 @@ bool ActivatorJailer::activate(Activation& activation) const {
     auto& codeset = activation.codeset;
     auto& subject = activation.character;
     auto& inventory = activation.player.inventory;
+    auto& room = activation.room;
 
     // Check if character can use keys
     if (!controller.isCharacterKeyerValidation(activation.character)) {
         return false;
     }
 
-    Wall& sourceWall = activation.room.getWall(activation.direction);
+    Wall& sourceWall = room.getWall(activation.direction);
 
     bool isSuccess = false;
-    const bool isNeighborAccessed = activation.match.dungeon.accessWallNeighbor(activation.room, activation.direction,
+    const bool isNeighborAccessed = activation.match.dungeon.accessWallNeighbor(room, activation.direction,
         [&](Wall& neighborWall, Room& neighbor, int neighborId) {
             int outCharacterId;
             // Only at ingress keyless can we give a key

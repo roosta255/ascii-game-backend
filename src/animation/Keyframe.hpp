@@ -43,7 +43,7 @@ struct Keyframe
     // floor -> floor, character passes 1 room, only room0 renders movement.
     static Keyframe buildWalking(const Timestamp& start, long duration, const int room0, const int floorId0, const int floorId1);
 
-    static Keyframe buildWalking(const Timestamp& start, long duration, const Location& location0, const Location& location1, Codeset& codeset);
+    static Keyframe buildWalking(const Timestamp& start, long duration, const int room0, const Location& location0, const Location& location1, Codeset& codeset);
 
     static Keyframe buildHurtling(const Timestamp& start, long duration, const int room0, const int2 xy0, const int2 xy1);
 

@@ -9,8 +9,9 @@
 #include "Room.hpp"
 
 bool ActivatorTimeGate::activate(Activation& activation) const {
-    const auto roomId = activation.getRoomId();
     auto& controller = activation.controller;
+    auto& room = activation.room;
+    const auto roomId = room.roomId;
     auto& codeset = activation.codeset;
     auto& subject = activation.character;
     auto& inventory = activation.player.inventory;
@@ -18,7 +19,7 @@ bool ActivatorTimeGate::activate(Activation& activation) const {
     Wall& sourceWall = activation.room.getWall(activation.direction);
 
     // Check for occupied target cell
-    if (codeset.addFailure(!controller.validateDoorNotOccupied(activation.getRoomId(), CHANNEL_CORPOREAL, TIME_GATE_DIRECTION), CODE_OCCUPIED_TARGET_TIME_GATE_CELL)) {
+    if (codeset.addFailure(!controller.validateDoorNotOccupied(room.roomId, CHANNEL_CORPOREAL, TIME_GATE_DIRECTION), CODE_OCCUPIED_TARGET_TIME_GATE_CELL)) {
         return false;
     }
 
@@ -55,7 +56,7 @@ bool ActivatorTimeGate::activate(Activation& activation) const {
                     if (controller.takeCharacterMove(subject)) {
 
                         // animate
-                        const Keyframe keyframe = Keyframe::buildWalking(activation.time, MatchController::MOVE_ANIMATION_DURATION, oldLocation, newLocation, codeset);
+                        const Keyframe keyframe = Keyframe::buildWalking(activation.time, MatchController::MOVE_ANIMATION_DURATION, room.roomId, oldLocation, newLocation, codeset);
                         if(!Keyframe::insertKeyframe(Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(subject.keyframes), keyframe)) {
                             codeset.addLog(CODE_ANIMATION_OVERFLOW_IN_ACTIVATE_TIME_GATE);
                         }

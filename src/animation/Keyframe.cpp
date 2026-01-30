@@ -48,49 +48,50 @@ Keyframe Keyframe::buildWalking(const Timestamp& start, long duration, const int
     };
 }
 
-Keyframe Keyframe::buildWalking(const Timestamp& start, long duration, const Location& location0, const Location& location1, Codeset& codeset) {
+Keyframe Keyframe::buildWalking(const Timestamp& start, long duration, const int room0, const Location& location0, const Location& location1, Codeset& codeset) {
     const auto coalesceLocation = [&](const Location& location){
         switch(location.type){
             case LOCATION_DOOR:
             case LOCATION_DOOR_SHARED:
+                return std::make_pair(Maybe<LocationEnum>(LOCATION_DOOR), room0 != location.roomId ? (location.data + 2) % 4 : location.data);
             case LOCATION_SHAFT_BOTTOM:
             case LOCATION_SHAFT_TOP:
-                return Maybe<LocationEnum>(LOCATION_DOOR);
+                return std::make_pair(Maybe<LocationEnum>(LOCATION_DOOR), location.data);
 
             case LOCATION_FLOOR:
-                return Maybe<LocationEnum>(LOCATION_FLOOR);
+                return std::make_pair(Maybe<LocationEnum>(LOCATION_FLOOR), location.data);
         }
-        return Maybe<LocationEnum>();
+        return std::make_pair(Maybe<LocationEnum>(), 0);
     };
 
     const auto coalesced0 = coalesceLocation(location0);
-    if (coalesced0.isEmpty()) {
+    if (coalesced0.first.isEmpty()) {
         // invalid location detected
         codeset.addError(CODE_ANIMATION_WALKING_BUT_LOCATION_1_NOT_DOOR_NOR_FLOOR);
         return buildWalking(start, duration, location0.roomId, 0, 1);
     }
 
     const auto coalesced1 = coalesceLocation(location1);
-    if (coalesced1.isEmpty()) {
+    if (coalesced1.first.isEmpty()) {
         // invalid location detected
         codeset.addError(CODE_ANIMATION_WALKING_BUT_LOCATION_2_NOT_DOOR_NOR_FLOOR);
         return buildWalking(start, duration, location0.roomId, 0, 1);
     }
 
     AnimationEnum animation;
-    if (coalesced0 == LOCATION_DOOR) {
-        if (coalesced1 == LOCATION_DOOR) {
+    if (coalesced0.first == LOCATION_DOOR) {
+        if (coalesced1.first == LOCATION_DOOR) {
             // door -> door
             animation = ANIMATION_WALKING_FROM_WALL_TO_WALL;
-        } else if (coalesced1 == LOCATION_FLOOR) {
+        } else if (coalesced1.first == LOCATION_FLOOR) {
             // door -> floor
             animation = ANIMATION_WALKING_FROM_WALL_TO_FLOOR;
         }
-    } else if (coalesced0 == LOCATION_FLOOR) {
-        if (coalesced1 == LOCATION_DOOR) {
+    } else if (coalesced0.first == LOCATION_FLOOR) {
+        if (coalesced1.first == LOCATION_DOOR) {
             // floor -> door
             animation = ANIMATION_WALKING_FROM_FLOOR_TO_WALL;
-        } else if (coalesced1 == LOCATION_FLOOR) {
+        } else if (coalesced1.first == LOCATION_FLOOR) {
             // floor -> floor
             animation = ANIMATION_WALKING_FROM_FLOOR_TO_FLOOR;
         }
@@ -100,8 +101,8 @@ Keyframe Keyframe::buildWalking(const Timestamp& start, long duration, const Loc
         .animation = animation,
         .t0 = start,
         .t1 = start + duration,
-        .room0 = location0.roomId,
-        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{location0.data, 0, location1.data, 0})
+        .room0 = room0,
+        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{location0.data, 0, coalesced1.second, 0})
     };
 }
 
