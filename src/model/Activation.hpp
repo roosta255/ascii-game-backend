@@ -48,6 +48,4 @@ struct Activation {
         MatchController& controller,
         Timestamp time = Timestamp()
     );
-
-    int getRoomId()const;
 }; 

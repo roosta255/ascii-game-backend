@@ -399,7 +399,7 @@ bool MatchController::moveCharacterToFloor(Room& room, Character& character, int
     Location oldLocation;
     codeset.addFailure(!updateCharacterLocation(character, newLocation, oldLocation), CODE_UPDATE_CHARACTER_LOCATION_FAILED);
 
-    const auto keyframe = Keyframe::buildWalking(time, MOVE_ANIMATION_DURATION, oldLocation, newLocation, codeset);
+    const auto keyframe = Keyframe::buildWalking(time, MOVE_ANIMATION_DURATION, room.roomId, oldLocation, newLocation, codeset);
     if(!Keyframe::insertKeyframe(Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(character.keyframes), keyframe)) {
         codeset.addLog(CODE_ANIMATION_OVERFLOW_IN_MOVE_CHARACTER_TO_FLOOR);
     }
@@ -451,7 +451,6 @@ bool MatchController::moveCharacterToWall(Room& room, Character& character, Card
         return false;
     }
 
-
     // most doors do share a wall, and it can be assumed that if the next room 1) exists 2) is walkable, then that's a 2-way door.
     bool isShared = false;
     match.dungeon.rooms.access(next.adjacent, [&](Room& room2){
@@ -464,7 +463,7 @@ bool MatchController::moveCharacterToWall(Room& room, Character& character, Card
     Location oldLocation;
     updateCharacterLocation(character, newLocation, oldLocation);
 
-    const auto keyframe = Keyframe::buildWalking(time, MOVE_ANIMATION_DURATION, oldLocation, newLocation, codeset);
+    const auto keyframe = Keyframe::buildWalking(time, MOVE_ANIMATION_DURATION, room.roomId, oldLocation, newLocation, codeset);
     if(!Keyframe::insertKeyframe(Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(character.keyframes), keyframe)) {
         codeset.addLog(CODE_ANIMATION_OVERFLOW_IN_MOVE_CHARACTER_TO_FLOOR);
     }

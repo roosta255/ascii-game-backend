@@ -10,24 +10,25 @@ bool ActivatorLadder::activate(Activation& activation) const {
     auto& codeset = activation.codeset;
     auto& subject = activation.character;
     auto& inventory = activation.player.inventory;
+    auto& room = activation.room;
     const auto direction = activation.direction;
-    const auto roomId = activation.getRoomId();
+    const auto roomId = room.roomId;
 
     // Check for occupied target cell
-    if (codeset.addFailure(!controller.validateDoorNotOccupied(activation.getRoomId(), CHANNEL_CORPOREAL, direction), CODE_OCCUPIED_TARGET_TIME_GATE_CELL)) {
+    if (codeset.addFailure(!controller.validateDoorNotOccupied(roomId, CHANNEL_CORPOREAL, direction), CODE_OCCUPIED_TARGET_TIME_GATE_CELL)) {
         return false;
     }
 
     Location newLocation;
     int neighborRoomId = -1;
-    switch (activation.room.getWall(direction).door) {
+    switch (room.getWall(direction).door) {
         case DOOR_LADDER_1_TOP:
-            neighborRoomId = activation.room.below;
-            newLocation = Location::makeShaftBottom(activation.room.below, subject.location.channel, direction);
+            neighborRoomId = room.below;
+            newLocation = Location::makeShaftBottom(room.below, subject.location.channel, direction);
             break;
         case DOOR_LADDER_1_BOTTOM:
-            neighborRoomId = activation.room.above;
-            newLocation = Location::makeShaftTop(activation.room.above, subject.location.channel, direction);
+            neighborRoomId = room.above;
+            newLocation = Location::makeShaftTop(room.above, subject.location.channel, direction);
             break;
         default:
             codeset.addError(CODE_ACTIVATOR_LADDER_NEEDS_LADDER_DOOR_TYPE);
@@ -50,7 +51,7 @@ bool ActivatorLadder::activate(Activation& activation) const {
         if (controller.takeCharacterMove(subject)) {
 
             // animate
-            const Keyframe keyframe = Keyframe::buildWalking(activation.time, MatchController::MOVE_ANIMATION_DURATION, oldLocation, newLocation, codeset);
+            const Keyframe keyframe = Keyframe::buildWalking(activation.time, MatchController::MOVE_ANIMATION_DURATION, room.roomId, oldLocation, newLocation, codeset);
             if(!Keyframe::insertKeyframe(Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(subject.keyframes), keyframe)) {
                 codeset.addLog(CODE_ANIMATION_OVERFLOW_IN_ACTIVATE_LADDER);
             }
