@@ -47,45 +47,27 @@ bool GeneratorUtility::setupPoleUp(const int4& coord, const Cardinal dir) {
 }
 
 bool GeneratorUtility::setupJailer (const int4& coord, const Cardinal dir, const bool isKeyed) {
-    return !codeset.addFailure(!accessRoomWall(coord, dir, [&](Room&, Wall& wall1, Wall& wall2, Room&){
-        wall1.door = isKeyed ? DOOR_JAILER_INGRESS_KEYED : DOOR_JAILER_INGRESS_KEYLESS;
-        wall2.door = isKeyed ? DOOR_JAILER_EGRESS_KEYED : DOOR_JAILER_EGRESS_KEYLESS;
-    }), CODE_GENERATOR_UTILITY_FAILED_TO_SETUP_JAILER);
+    return !codeset.addFailure(!setSharedDoor(coord, dir, isKeyed ? DOOR_JAILER_INGRESS_KEYED : DOOR_JAILER_INGRESS_KEYLESS, isKeyed ? DOOR_JAILER_EGRESS_KEYED : DOOR_JAILER_EGRESS_KEYLESS), CODE_GENERATOR_UTILITY_FAILED_TO_SETUP_JAILER);
 }
 
 bool GeneratorUtility::setupKeeper (const int4& coord, const Cardinal dir, const bool isKeyed) {
-    return !codeset.addFailure(!accessRoomWall(coord, dir, [&](Room&, Wall& wall1, Wall& wall2, Room&){
-        wall1.door = isKeyed ? DOOR_KEEPER_INGRESS_KEYED : DOOR_KEEPER_INGRESS_KEYLESS;
-        wall2.door = isKeyed ? DOOR_KEEPER_EGRESS_KEYED : DOOR_KEEPER_EGRESS_KEYLESS;
-    }), CODE_GENERATOR_UTILITY_FAILED_TO_SETUP_KEEPER);
+    return !codeset.addFailure(!setSharedDoor(coord, dir, isKeyed ? DOOR_KEEPER_INGRESS_KEYED : DOOR_KEEPER_INGRESS_KEYLESS, isKeyed ? DOOR_KEEPER_EGRESS_KEYED : DOOR_KEEPER_EGRESS_KEYLESS), CODE_GENERATOR_UTILITY_FAILED_TO_SETUP_KEEPER);
 }
 
 bool GeneratorUtility::setupShifter (const int4& coord, const Cardinal dir, const bool isKeyed) {
-    return !codeset.addFailure(!accessRoomWall(coord, dir, [&](Room&, Wall& wall1, Wall& wall2, Room&){
-        wall1.door = isKeyed ? DOOR_SHIFTER_INGRESS_KEYED : DOOR_SHIFTER_INGRESS_KEYLESS;
-        wall2.door = isKeyed ? DOOR_SHIFTER_EGRESS_KEYED : DOOR_SHIFTER_EGRESS_KEYLESS;
-    }), CODE_GENERATOR_UTILITY_FAILED_TO_SETUP_SHIFTER);
+    return !codeset.addFailure(!setSharedDoor(coord, dir, isKeyed ? DOOR_SHIFTER_INGRESS_KEYED : DOOR_SHIFTER_INGRESS_KEYLESS, isKeyed ? DOOR_SHIFTER_EGRESS_KEYED : DOOR_SHIFTER_EGRESS_KEYLESS), CODE_GENERATOR_UTILITY_FAILED_TO_SETUP_SHIFTER);
 }
 
 bool GeneratorUtility::setupTogglerOrange (const int4& coord, const Cardinal dir) {
-    return !codeset.addFailure(!accessRoomWall(coord, dir, [&](Room&, Wall& wall1, Wall& wall2, Room&){
-        wall1.door = DOOR_TOGGLER_ORANGE_OPEN;
-        wall2.door = DOOR_TOGGLER_ORANGE_OPEN;
-    }), CODE_GENERATOR_UTILITY_FAILED_TO_SETUP_TOGGLER_ORANGE);
+    return !codeset.addFailure(!setSharedDoor(coord, dir, DOOR_TOGGLER_ORANGE_OPEN, DOOR_TOGGLER_ORANGE_OPEN), CODE_GENERATOR_UTILITY_FAILED_TO_SETUP_TOGGLER_ORANGE);
 }
 
 bool GeneratorUtility::setupTogglerBlue (const int4& coord, const Cardinal dir) {
-    return !codeset.addFailure(!accessRoomWall(coord, dir, [&](Room&, Wall& wall1, Wall& wall2, Room&){
-        wall1.door = DOOR_TOGGLER_BLUE_CLOSED;
-        wall2.door = DOOR_TOGGLER_BLUE_CLOSED;
-    }), CODE_GENERATOR_UTILITY_FAILED_TO_SETUP_TOGGLER_BLUE);
+    return !codeset.addFailure(!setSharedDoor(coord, dir, DOOR_TOGGLER_BLUE_CLOSED, DOOR_TOGGLER_BLUE_CLOSED), CODE_GENERATOR_UTILITY_FAILED_TO_SETUP_TOGGLER_BLUE);
 }
 
 bool GeneratorUtility::setupDoorway (const int4& coord, const Cardinal dir) {
-    return !codeset.addFailure(!accessRoomWall(coord, dir, [&](Room&, Wall& wall1, Wall& wall2, Room&){
-        wall1.door = DOOR_DOORWAY;
-        wall2.door = DOOR_DOORWAY;
-    }), CODE_GENERATOR_UTILITY_FAILED_TO_SETUP_DOORWAY);
+    return !codeset.addFailure(!setSharedDoor(coord, dir, DOOR_DOORWAY, DOOR_DOORWAY), CODE_GENERATOR_UTILITY_FAILED_TO_SETUP_DOORWAY);
 }
 
 bool GeneratorUtility::accessRoomWall (const int4& coord, const Cardinal dir, std::function<void(Room&, Wall&, Wall&, Room&)> consumer) {
@@ -97,6 +79,55 @@ bool GeneratorUtility::accessRoomWall (const int4& coord, const Cardinal dir, st
         });
     })) {
     }
+    return success;
+}
+
+bool GeneratorUtility::setDoor(const int4& coord, const Cardinal dir, const DoorEnum& type) {
+    bool success = false;
+    codeset.addFailure(!getRoom(coord).access([&](Room& room){
+        auto& wall = room.getWall(dir);
+        if (wall.door == DOOR_WALL) {
+            wall.door = type;
+            success = true;
+        } else {
+            codeset.addError(CODE_GENERATOR_UTILITY_SET_DOOR_REQUIRES_DEFAULT_DOOR);
+        }
+    }), CODE_GENERATOR_UTILITY_SET_DOOR_FAILED_TO_ACCESS_ROOM);
+    return success;
+}
+
+bool GeneratorUtility::setRoom(const int4& coord, const RoomEnum& type) {
+    bool success = false;
+    codeset.addFailure(!getRoom(coord).access([&](Room& room){
+        if (room.type == ROOM_RECT_4_x_5) {
+            room.setType(type);
+            success = true;
+        } else {
+            codeset.addError(CODE_GENERATOR_UTILITY_SET_ROOM_REQUIRES_DEFAULT_ROOM);
+        }
+    }), CODE_GENERATOR_UTILITY_SET_ROOM_FAILED_TO_ACCESS_ROOM);
+    return success;
+}
+
+bool GeneratorUtility::setSharedDoor(const int4& coord, const Cardinal dir, const DoorEnum& type1, const DoorEnum& type2) {
+    bool success = false;
+    codeset.addFailure(!getRoom(coord).access([&](Room& room){
+        auto& wall = room.getWall(dir);
+        if (wall.door != DOOR_WALL && wall.door != DOOR_DOORWAY) {
+            codeset.addError(CODE_GENERATOR_UTILITY_SET_SHARED_DOOR_REQUIRES_DEFAULT_DOOR_IN_ROOM_1);
+            return;
+        }
+        codeset.addFailure(!rooms.access(wall.adjacent, [&](Room& room2){
+            wall.door = type1;
+            auto& wall2 = room2.getWall(dir.getFlip());
+            if (wall2.door != DOOR_WALL && wall2.door != DOOR_DOORWAY) {
+                codeset.addError(CODE_GENERATOR_UTILITY_SET_SHARED_DOOR_REQUIRES_DEFAULT_DOOR_IN_ROOM_2);
+                return;
+            }
+            wall2.door = type2;
+            success = true;
+        }), CODE_GENERATOR_UTILITY_SET_SHARED_DOOR_FAILED_TO_ACCESS_ROOM_2);
+    }), CODE_GENERATOR_UTILITY_SET_SHARED_DOOR_FAILED_TO_ACCESS_ROOM_1);
     return success;
 }
 
@@ -168,24 +199,6 @@ bool GeneratorUtility::setup2x5Room(const int4& coord) {
 
 bool GeneratorUtility::setup3x3Room(const int4& coord) {
     return setRoom(coord, ROOM_RECT_3_x_3);
-}
-
-bool GeneratorUtility::setRoom(const int4& coord, const RoomEnum& type) {
-    bool success = false;
-    codeset.addFailure(!getRoom(coord).access([&](Room& room){
-        room.setType(type);
-        success = true;
-    }), CODE_GENERATOR_UTILITY_SET_ROOM_FAILED_TO_ACCESS_ROOM);
-    return success;
-}
-
-bool GeneratorUtility::setDoor(const int4& coord, const Cardinal dir, const DoorEnum& type) {
-    bool success = false;
-    codeset.addFailure(!getRoom(coord).access([&](Room& room){
-        room.getWall(dir).door = type;
-        success = true;
-    }), CODE_GENERATOR_UTILITY_SET_DOOR_FAILED_TO_ACCESS_ROOM);
-    return success;
 }
 
 bool GeneratorUtility::setupLightningRodRoom(const int4& coord, const bool isCubed, const bool isAwakened) {

@@ -104,6 +104,13 @@ class Array
 		_elems[index] = rhs;
 	}
 
+	inline void set
+	( const int index
+	, T rhs
+	) {
+		return assignValue(index, rhs);
+	}
+
 	template<typename Func>
 	auto transform(Func func) const -> Array<decltype(func(std::declval<T>())), N>
 	{
@@ -199,6 +206,16 @@ class Array
 
 	void access(const std::function<void(const std::array<T, N>&)> consumer) const {
 		consumer(_elems);
+	}
+
+	// operators
+	bool operator==(const std::array<T, N>& rhs)const {
+		for(auto i = 0; i < N; i++){
+			if (!(_elems[i] == rhs[i])) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	private:

@@ -1,0 +1,14 @@
+ACTION_DECL(NIL, iActivator)
+
+// activations
+ACTION_DECL(ACTIVATE_CHARACTER, ActivatorUseCharacter)
+ACTION_DECL(ACTIVATE_DOOR, ActivatorUseDoor)
+ACTION_DECL(ACTIVATE_INVENTORY_ITEM, ActivatorUseInventoryItem)
+ACTION_DECL(ACTIVATE_LOCK, ActivatorUseLock)
+
+// movements
+ACTION_DECL(MOVE_TO_DOOR, ActivatorMoveToDoor)
+ACTION_DECL(MOVE_TO_FLOOR, ActivatorMoveToFloor)
+
+// misc
+ACTION_DECL(END_TURN, ActivatorEndTurn)

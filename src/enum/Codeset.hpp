@@ -22,6 +22,7 @@ public:
     // returns the input
     bool addFailure(const bool input, const CodeEnum code = CODE_UNSET);
 
+    bool addDebugLine(const int line);
     void addLog(const CodeEnum& input, int value = 1);
     void addError(const CodeEnum& input, int value = 1);
     void addTable(const CodeEnum& input, int value = 1);

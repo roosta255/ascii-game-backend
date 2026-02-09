@@ -1,8 +1,20 @@
 #include "Character.hpp"
+#include "CharacterDigest.hpp"
 #include "JsonParameters.hpp"
 #include "Match.hpp"
 #include <json/json.h>
 #include "RoleFlyweight.hpp"
+
+bool Character::getDigest(CodeEnum& error, CharacterDigest& digest)const {
+    return accessRole(error, [&](const RoleFlyweight& flyweight){
+        digest = CharacterDigest{
+            .healthRemaining = Maybe<int>(flyweight.health - this->damage),
+            .featsRemaining = Maybe<int>(flyweight.feats - this->feats),
+            .actionsRemaining = flyweight.isActor || flyweight.isActionable ? Maybe<int>(flyweight.actions - this->actions) : Maybe<int>::empty(),
+            .movesRemaining = flyweight.isMovable ? Maybe<int>(flyweight.moves - this->moves) : Maybe<int>::empty()
+        };
+    });
+}
 
 bool Character::isMovable(CodeEnum& error, const bool isCheckingCount) const
 {
@@ -120,4 +132,17 @@ void Character::startTurn(Match& match)
 void Character::endTurn(Match& match)
 {
     // Currently no end-of-turn cleanup needed
+}
+
+std::ostream& operator<<(std::ostream& os, const Character& rhs) {
+    std::hash<Character> temp;
+    
+    return os << ", character:" << temp(rhs) << "{ "
+            << " location: " << rhs.location
+            << ", damage:" << rhs.damage
+            << ", role:" << rhs.role
+            << ", feats:" << rhs.feats
+            << ", actions:" << rhs.actions
+            << ", moves:" << rhs.moves
+            << " }";
 }

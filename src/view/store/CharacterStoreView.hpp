@@ -33,13 +33,13 @@ struct CharacterStoreView
     }
     inline operator Character() const {
         Character model{
+            .keyframes = this->keyframes.convert<Keyframe>(),
+            .location = this->location,
             .damage = this->damage,
             .feats = this->feats,
             .actions = this->actions,
             .moves = this->moves,
             .visibility = this->visibility,
-            .keyframes = this->keyframes.convert<Keyframe>(),
-            .location = this->location,
             .characterId = this->characterId
         };
         RoleFlyweight::indexByString(this->role, model.role);

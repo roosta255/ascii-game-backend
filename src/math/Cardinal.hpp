@@ -6,7 +6,7 @@ class Cardinal
 {
 public:
 
-constexpr Cardinal(int init)
+constexpr Cardinal(int init = 0)
 : _val(init % 4) {}
 
 explicit constexpr operator int()const{
@@ -80,6 +80,9 @@ constexpr Cardinal getCounterClockwise()const{
 constexpr int getIndex() const {
 	return _val;
 }
+
+constexpr bool operator==(const Cardinal& right)const{ return _val == right._val; }
+constexpr bool operator!=(const Cardinal& right)const{ return _val != right._val; }
 
 private:
 

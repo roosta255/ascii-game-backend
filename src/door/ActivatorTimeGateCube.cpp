@@ -14,30 +14,35 @@ bool ActivatorTimeGateCube::activate(Activation& activation) const {
     Character& subject = activation.character;
     auto& inventory = activation.player.inventory;
 
+    Cardinal direction;
+    if (codeset.addFailure(!activation.direction.copy(direction), CODE_ACTIVATION_DIRECTION_NOT_SPECIFIED)) {
+        return false;
+    }
+
     // Check if character can use keys
     if (!controller.isCharacterKeyerValidation(subject)) {
         return false;
     }
 
-    Wall& sourceWall = activation.room.getWall(activation.direction);
+    Wall& sourceWall = activation.room.getWall(direction);
 
     switch (sourceWall.door) {
         case DOOR_TIME_GATE_AWAKENED:
-            // give cube from rod
+            // give cube from gate
             if (controller.takeCharacterAction(subject) && controller.giveInventoryItem(inventory, ITEM_CUBE_AWAKENED)) {
                 sourceWall.door = DOOR_TIME_GATE_EMPTY;
                 return true;
             }
             break;
         case DOOR_TIME_GATE_DORMANT:
-            // give cube from rod
+            // give cube from gate
             if (controller.takeCharacterAction(subject) && controller.giveInventoryItem(inventory, ITEM_CUBE_DORMANT)) {
                 sourceWall.door = DOOR_TIME_GATE_EMPTY;
                 return true;
             }
             break;
         case DOOR_TIME_GATE_EMPTY:
-            // take cube for rod
+            // take cube to gate
             if (controller.takeCharacterAction(subject) && controller.takeInventoryItem(inventory, ITEM_CUBE_AWAKENED)) {
                 sourceWall.door = DOOR_TIME_GATE_AWAKENED;
                 return true;

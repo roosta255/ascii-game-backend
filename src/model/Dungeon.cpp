@@ -112,3 +112,13 @@ Pointer<const Room> Dungeon::getRoom(int roomId, CodeEnum& error) const {
     }
     return rooms.getPointer(roomId);
 }
+
+// operators
+bool Dungeon::operator==(const Dungeon& other) const {
+    // Since unique_representations is true, if the bits match, the objects match.
+    return std::memcmp(this, &other, sizeof(Dungeon)) == 0;
+}
+
+std::ostream& operator<<(std::ostream& os, const Dungeon& rhs) {
+    return os;
+}

@@ -1,3 +1,4 @@
+#include "ActionFlyweight.hpp"
 #include "ApiController.hpp"
 #include "AccountRepository.hpp"
 #include "CodeEnum.hpp"
@@ -10,6 +11,7 @@
 #include "MatchRepository.hpp"
 #include "MatchApiParameters.hpp"
 #include "MatchApiView.hpp"
+#include "Preactivation.hpp"
 #include "Timestamp.hpp"
 #include <json/json.h>
 
@@ -108,7 +110,7 @@ void ApiController::createMatch
         return invokeResponse409(code_to_message(error, "Failed to save match due to: "), std::move(callback));
 
     Json::Value out;
-    out["match"] = created.filename;
+    out["match"] = created.filename.toString();
     auto resp = drogon::HttpResponse::newHttpJsonResponse(out);
     return callback(resp);
 }
@@ -289,13 +291,23 @@ void ApiController::moveCharacterToDoor
     if (codeset.addFailure(!matchRepository.load(matchId, codeset.error, match)))
         return invokeResponse404(codeset.describe("Failed to load match due to: "), std::move(callback));
 
+    Preactivation preactivation{
+        .playerId = accountId,
+        .characterId = characterId,
+        .roomId = roomId,
+        .isSkippingAnimations = false,
+        .isSortingState = false,
+        .time = Timestamp()
+    };
     if (json->isMember("direction")) {
         Cardinal direction((*json)["direction"].asInt());
-        if (codeset.addFailure(!controller.moveCharacterToWall(roomId, characterId, direction)))
-            return invokeResponse409(codeset.describe("Movement to wall rejected due to "), std::move(callback));
+        preactivation.direction = direction;
+        if (!controller.activate(ActionFlyweight::getMoveToDoor(), preactivation))
+            return invokeResponse409(codeset.describe("Movement to door rejected due to "), std::move(callback));
     } else if (json->isMember("floor")) {
         int floorId = (*json)["floor"].asInt();
-        if (codeset.addFailure(!controller.moveCharacterToFloor(roomId, characterId, floorId)))
+        preactivation.floorId = floorId;
+        if (!controller.activate(ActionFlyweight::getMoveToFloor(), preactivation))
             return invokeResponse409(codeset.describe("Movement to floor rejected due to "), std::move(callback));
     }
 
@@ -339,9 +351,18 @@ void ApiController::activateCharacter
         return invokeResponse404(codeset.describe("Failed to load match due to: "), std::move(callback));
 
     // TODO: Validate that account can issue character orders
+    Preactivation preactivation{
+        .playerId = accountId,
+        .characterId = characterId,
+        .roomId = roomId,
+        .targetCharacterId = targetId,
+        .isSkippingAnimations = false,
+        .isSortingState = false,
+        .time = Timestamp()
+    };
 
     // Attempt to activate the character
-    if (codeset.addFailure(!controller.activateCharacter(accountId, characterId, roomId, targetId)))
+    if (!controller.activate(ActionFlyweight::getUseCharacter(), preactivation))
         return invokeResponse409(codeset.describe("Character activation rejected due to: "), std::move(callback));
 
     // Save the updated match state
@@ -384,9 +405,18 @@ void ApiController::activateInventoryItem
         return invokeResponse404(codeset.describe("Failed to load match due to: "), std::move(callback));
 
     // TODO: Validate that account can issue character orders
+    Preactivation preactivation{
+        .playerId = accountId,
+        .characterId = characterId,
+        .roomId = roomId,
+        .targetItemIndex = itemId,
+        .isSkippingAnimations = false,
+        .isSortingState = false,
+        .time = Timestamp()
+    };
 
     // Attempt to activate the character
-    if (codeset.addFailure(!controller.activateInventoryItem(accountId, characterId, roomId, itemId)))
+    if (!controller.activate(ActionFlyweight::getUseInventoryItem(), preactivation))
         return invokeResponse409(codeset.describe("Item activation rejected due to: "), std::move(callback));
 
     // Save the updated match state
@@ -421,15 +451,25 @@ void ApiController::activateDoor
     std::string accountId = (*json)["account"].asString();
     int roomId = (*json)["room"].asInt();
     int characterId = (*json)["character"].asInt();
-    int direction = (*json)["direction"].asInt();
+    Cardinal direction((*json)["direction"].asInt());
 
     Match match;
     MatchController controller(match, codeset);
     if (codeset.addFailure(!matchRepository.load(matchId, codeset.error, match)))
         return invokeResponse404(codeset.describe("Failed to load match due to: "), std::move(callback));
 
+    Preactivation preactivation{
+        .playerId = accountId,
+        .characterId = characterId,
+        .roomId = roomId,
+        .direction = direction,
+        .isSkippingAnimations = false,
+        .isSortingState = false,
+        .time = Timestamp()
+    };
+
     // Attempt to activate the lock
-    if (codeset.addFailure(!controller.activateDoor(accountId, characterId, roomId, direction)))
+    if (!controller.activate(ActionFlyweight::getUseDoor(), preactivation))
         return invokeResponse409(codeset.describe("Door activation rejected due to: "), std::move(callback));
 
     // Save the updated match state
@@ -464,15 +504,25 @@ void ApiController::activateLock
     std::string accountId = (*json)["account"].asString();
     int roomId = (*json)["room"].asInt();
     int characterId = (*json)["character"].asInt();
-    int direction = (*json)["direction"].asInt();
+    Cardinal direction((*json)["direction"].asInt());
 
     Match match;
     MatchController controller(match, codeset);
     if (codeset.addFailure(!matchRepository.load(matchId, codeset.error, match)))
         return invokeResponse404(codeset.describe("Failed to load match due to: "), std::move(callback));
 
+    Preactivation preactivation{
+        .playerId = accountId,
+        .characterId = characterId,
+        .roomId = roomId,
+        .direction = direction,
+        .isSkippingAnimations = false,
+        .isSortingState = false,
+        .time = Timestamp()
+    };
+
     // Attempt to activate the lock
-    if (codeset.addFailure(!controller.activateLock(accountId, characterId, roomId, direction)))
+    if (!controller.activate(ActionFlyweight::getUseLock(), preactivation))
         return invokeResponse409(codeset.describe("Lock activation rejected due to: "), std::move(callback));
 
     // Save the updated match state

@@ -3,16 +3,12 @@
 #include <functional>
 #include "Array.hpp"
 #include "CodeEnum.hpp"
+#include "HASH_MACRO_DECL.hpp"
 #include "Keyframe.hpp"
 #include "Location.hpp"
 #include "Pointer.hpp"
 
-namespace Json
-{
-    class Value;
-}
-
-class JsonParameters;
+class CharacterDigest;
 class Match;
 class RoleFlyweight;
 class Room;
@@ -20,11 +16,15 @@ class Room;
 struct Character
 {
     static constexpr int MAX_KEYFRAMES = 6;
+    Array<Keyframe, MAX_KEYFRAMES> keyframes;
+    Location location;
     int damage = 0;
     int role = 0;
     int feats = 0;
     int actions = 0;
     int moves = 0;
+    int visibility = ~0x0;
+    int characterId = -1;
 
     // there are two problems to solve:
     // 1) should the backend store animation data?
@@ -47,12 +47,10 @@ struct Character
     // one correct route, is for all animations to be keyframed.
     // so a character being hurt, dying, walking, jumping, these are all rendered in time.
 
-    int visibility = ~0x0;
-    Array<Keyframe, MAX_KEYFRAMES> keyframes;
-    Location location;
-    int characterId = -1;
-
     bool accessRole(CodeEnum &error, std::function<void(const RoleFlyweight &)>) const;
+
+    bool getDigest(CodeEnum& error, CharacterDigest& digest)const;
+
     bool isMovable(CodeEnum &error, const bool isCheckingCount = false) const;
     bool isActor(CodeEnum &error, const bool isCheckingCount = false) const;
     bool isActionable(CodeEnum &error, const bool isCheckingCount = false) const;
@@ -65,3 +63,7 @@ struct Character
     void startTurn(Match &match); // Reset moves/actions to their initial values based on role
     void endTurn(Match &match);   // Clean up any end-of-turn effects
 };
+
+std::ostream& operator<<(std::ostream& os, const Character& rhs);
+
+HASH_MACRO_DECL(Character)

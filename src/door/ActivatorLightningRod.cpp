@@ -15,12 +15,17 @@ bool ActivatorLightningRod::activate(Activation& activation) const {
     auto& inventory = activation.player.inventory;
     auto& room = activation.room;
 
+    Cardinal direction;
+    if (codeset.addFailure(!activation.direction.copy(direction), CODE_ACTIVATION_DIRECTION_NOT_SPECIFIED)) {
+        return false;
+    }
+
     // Check if character is actor
     if (!activation.controller.isCharacterKeyerValidation(subject)) {
         return false;
     }
 
-    Wall& sourceWall = room.getWall(activation.direction);
+    Wall& sourceWall = room.getWall(direction);
 
     switch (sourceWall.door) {
         case DOOR_LIGHTNING_ROD_AWAKENED:

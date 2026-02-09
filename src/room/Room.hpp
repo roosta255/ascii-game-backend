@@ -39,6 +39,8 @@ struct Room {
     int getDeltaTime(const int)const;
 };
 
+std::ostream& operator<<(std::ostream& os, const Room& rhs);
+
 // every grid a cell
 // pros:
 // * fast cell lookups

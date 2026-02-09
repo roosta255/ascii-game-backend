@@ -2,7 +2,9 @@
 
 #include <string>
 #include "CodeEnum.hpp"
+#include "HASH_MACRO_DECL.hpp"
 #include "Inventory.hpp"
+#include "Text.hpp"
 
 namespace Json {
     class Value;
@@ -13,7 +15,7 @@ class Match;
 class Character;
 
 struct Player {
-    std::string account;
+    TextID account;
     Inventory inventory;
 
     void startTurn(Match& match);  // Start turn for all owned characters
@@ -22,3 +24,5 @@ struct Player {
     bool isEmpty() const;
     bool isHuman() const;
 };
+
+HASH_MACRO_DECL(Player)

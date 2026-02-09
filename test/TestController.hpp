@@ -27,19 +27,23 @@ public:
     bool isSuccess = false;
     int builderOffset = -1;
     int latestPosition = 0;
+    bool isSkippingAnimations = false;
 
 
     // constructors
     TestController(const GeneratorEnum& generator);
 
     // functions
-    void activateCharacter(int characterId);
+    void activateCharacter(int subjectCharacterId, int objectCharacterId);
     void activateLock(Cardinal dir);
     void activateDoor(Cardinal dir);
+    void activateObjectCharacter(int objectCharacterId);
 
     void endTurn();
 
+    void moveCharacterToFloor(int roomId, int floorId);
     void moveCharacterToFloor(int floorId);
+    void moveCharacterToWall(int roomId, const Cardinal& dir);
     void moveCharacterToWall(const Cardinal& dir);
 
     void updateEverything();

@@ -56,8 +56,8 @@ bool GeneratorTest4D::generate (int seed, Match& dst, Codeset& codeset) const {
                         && util.setupDoorway(int4{2,1,0,t}, Cardinal::north());
             }
 
-            success &= util.setupDoorway(int4{0,2,0,1}, Cardinal::east());
-            success &= util.setupDoorway(int4{1,2,0,1}, Cardinal::east());
+            // success &= util.setupDoorway(int4{0,2,0,1}, Cardinal::east());
+            // success &= util.setupDoorway(int4{1,2,0,1}, Cardinal::east());
 
         });
     });

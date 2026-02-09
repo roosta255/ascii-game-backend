@@ -13,7 +13,7 @@ struct PlayerStoreView
 
     inline PlayerStoreView() = default;
     inline PlayerStoreView(const Player& model)
-    : account(model.account), inventory(model.inventory)
+    : account(model.account.toString()), inventory(model.inventory)
     {
     }
     inline operator Player() const {

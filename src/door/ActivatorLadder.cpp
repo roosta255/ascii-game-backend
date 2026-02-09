@@ -11,8 +11,12 @@ bool ActivatorLadder::activate(Activation& activation) const {
     auto& subject = activation.character;
     auto& inventory = activation.player.inventory;
     auto& room = activation.room;
-    const auto direction = activation.direction;
     const auto roomId = room.roomId;
+
+    Cardinal direction;
+    if (codeset.addFailure(!activation.direction.copy(direction), CODE_ACTIVATION_DIRECTION_NOT_SPECIFIED)) {
+        return false;
+    }
 
     // Check for occupied target cell
     if (codeset.addFailure(!controller.validateDoorNotOccupied(roomId, CHANNEL_CORPOREAL, direction), CODE_OCCUPIED_TARGET_TIME_GATE_CELL)) {
@@ -51,9 +55,11 @@ bool ActivatorLadder::activate(Activation& activation) const {
         if (controller.takeCharacterMove(subject)) {
 
             // animate
-            const Keyframe keyframe = Keyframe::buildWalking(activation.time, MatchController::MOVE_ANIMATION_DURATION, room.roomId, oldLocation, newLocation, codeset);
-            if(!Keyframe::insertKeyframe(Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(subject.keyframes), keyframe)) {
-                codeset.addLog(CODE_ANIMATION_OVERFLOW_IN_ACTIVATE_LADDER);
+            if (!activation.isSkippingAnimations) {
+                const Keyframe keyframe = Keyframe::buildWalking(activation.time, MatchController::MOVE_ANIMATION_DURATION, room.roomId, oldLocation, newLocation, codeset);
+                if(!Keyframe::insertKeyframe(Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(subject.keyframes), keyframe)) {
+                    codeset.addLog(CODE_ANIMATION_OVERFLOW_IN_ACTIVATE_LADDER);
+                }
             }
 
             // this is the end of the movement!!!

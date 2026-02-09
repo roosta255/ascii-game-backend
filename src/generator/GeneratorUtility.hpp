@@ -50,4 +50,5 @@ public:
 
     bool setRoom(const int4&, const RoomEnum&);
     bool setDoor(const int4&, const Cardinal, const DoorEnum&);
+    bool setSharedDoor(const int4&, const Cardinal, const DoorEnum& door1, const DoorEnum& door2);
 };

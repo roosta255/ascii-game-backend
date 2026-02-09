@@ -11,8 +11,8 @@ struct MatchApiParameters {
 public:
     int mask = ~0x0;
     const Match& match;
-    const Map<int3, int>& doors;
-    const Map<int3, int>& floors;
+    const Map<int, Map<int2, int> >& doors;
+    const Map<int, Map<int2, int> >& floors;
 
     constexpr inline bool isHidden(const int target) const
     {

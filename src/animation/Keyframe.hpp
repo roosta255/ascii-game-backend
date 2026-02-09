@@ -12,12 +12,12 @@ struct Location;
 
 struct Keyframe
 {
-    static constexpr int DATA_ARRAY_SIZE = 4;
-    int animation = ANIMATION_NIL;
     Timestamp t0 = Timestamp::nil();
     Timestamp t1 = Timestamp::nil();
+    static constexpr int DATA_ARRAY_SIZE = 4;
+    int animation = ANIMATION_NIL;
     int room0 = 0;
-    Array<int, DATA_ARRAY_SIZE> data;
+    Array<int, DATA_ARRAY_SIZE> data = {};
     // (walking, hurtling, smacking), (casting, sleeping), (hurting, dying)
 
     // WALKING_FROM_WALL_TO_WALL: [w0, .., w1, ..]

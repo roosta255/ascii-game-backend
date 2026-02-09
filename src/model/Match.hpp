@@ -5,7 +5,11 @@
 #include "Cardinal.hpp"
 #include "CodeEnum.hpp"
 #include "Dungeon.hpp"
+#include "EQUALITY_MACRO.hpp"
+#include <functional>
+#include "HASH_MACRO_DECL.hpp"
 #include "Pointer.hpp"
+#include "Text.hpp"
 #include "Titan.hpp"
 #include "Turner.hpp"
 #include <string>
@@ -15,9 +19,9 @@ class Codeset;
 struct Match {
     constexpr static int MATCH_BUILDER_COUNT = 3;
 
-    std::string filename = "ERROR_UNSET_FILENAME";
-    std::string username;
-    std::string host;
+    TextPath filename = "ERROR_UNSET_FILENAME";
+    TextID username;
+    TextID host;
     uint32_t version = 0;
     int generator = 0;
 
@@ -56,5 +60,13 @@ struct Match {
     bool accessPlayers(CodeEnum&, std::function<void(Titan&, Player&)>, std::function<void(Builder&, Player&, const int)>);
 
     void setFilename();
+    void setPathfinding();
 
+    // operators
+    EQUALITY_DECL(Match);
 };
+// static_assert(alignof(Player) == alignof(Character), "Alignment mismatch!");
+
+HASH_MACRO_DECL(Match)
+
+std::ostream& operator<<(std::ostream& os, const Match& rhs);
