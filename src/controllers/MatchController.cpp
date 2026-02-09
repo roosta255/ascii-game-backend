@@ -1,4 +1,8 @@
+#include "ActionFlyweight.hpp"
+#include "AssociatedPriorityMinQueue.hpp"
 #include "ChannelEnum.hpp"
+#include "CharacterAction.hpp"
+#include "CharacterDigest.hpp"
 #include "Codeset.hpp"
 #include "DoorFlyweight.hpp"
 #include "GeneratorFlyweight.hpp"
@@ -8,12 +12,46 @@
 #include "int3.hpp"
 #include "ItemFlyweight.hpp"
 #include "Keyframe.hpp"
-// #include "make_filename.hpp"
 #include "Match.hpp"
 #include "MatchController.hpp"
+#include "Preactivation.hpp"
 #include "RoleFlyweight.hpp"
 
 MatchController::MatchController(Match& match, Codeset& codeset): match(match), codeset(codeset) {}
+
+// functions
+bool MatchController::activate(const iActivator& activator, const Preactivation& preactivation) {
+    setupLocations();
+
+    // Check if match has started
+    if (codeset.addFailure(!match.isStarted(codeset.error))) return false;
+
+    bool isSuccess = false;
+    codeset.addFailure(!match.getPlayer(preactivation.playerId, codeset.error).access([&](Player& player) {
+        codeset.addFailure(!match.getCharacter(preactivation.characterId, codeset.error).access([&](Character& character) {
+            codeset.addFailure(!match.dungeon.getRoom(preactivation.roomId, codeset.error).access([&](Room& room) {
+                CodeEnum error = CODE_UNSET;
+                Activation activation{
+                    .player = player,
+                    .character = character,
+                    .room = room,
+                    .target = match.getCharacter(preactivation.targetCharacterId.orElse(-1), error),
+                    .item = player.inventory.items.getPointer(preactivation.targetItemIndex.orElse(-1)),
+                    .direction = preactivation.direction,
+                    .match = match,
+                    .codeset = codeset,
+                    .time = preactivation.time,
+                    .controller = *this,
+                    .floorId = preactivation.floorId,
+                    .isSkippingAnimations = preactivation.isSkippingAnimations,
+                    .isSortingState = preactivation.isSortingState
+                };
+                codeset.addFailure(!(isSuccess = activator.activate(activation)));
+            }));
+        }));
+    }));
+    return isSuccess;
+}
 
 bool MatchController::addCharacterToFloor(const Character& source, int roomId, ChannelEnum channel, int& characterId) {
     setupLocations(false);
@@ -41,181 +79,6 @@ bool MatchController::addCharacterToFloor(const Character& source, int roomId, C
     return isSuccess;
 }
 
-bool MatchController::activateCharacter(const std::string& playerId, int characterId, int roomId, int targetId, Timestamp time) {
-
-    bool isSuccess = false;
-
-    codeset.addFailure(!match.getPlayer(playerId, codeset.error).access([&](Player& player) {
-        codeset.addFailure(!match.getCharacter(characterId, codeset.error).access([&](Character& character) {
-            codeset.addFailure(!match.dungeon.getRoom(roomId, codeset.error).access([&](Room& room) {
-                // NOTE: this error code isn't captured as a failure/success
-                // this lets the iActivator needs to decide whether thats a problem
-                CodeEnum error = CODE_UNSET;
-                auto target = match.getCharacter(targetId, error);
-                codeset.addFailure(!(isSuccess = activateCharacter(player, character, room, target, time)));
-            }));
-        }));
-    }));
-
-    return isSuccess;
-}
-
-bool MatchController::activateCharacter(Player& player, Character& subject, Room& room, Pointer<Character> target, Timestamp time) {
-    setupLocations(false);
-
-    // Check if match has started
-    if (codeset.addFailure(!match.isStarted(codeset.error))) return false;
-
-    // Check if character can take an action
-    if (codeset.addFailure(!subject.isActionable(codeset.error))) return false;
-
-    int subjectOffset;
-    if(codeset.addFailure(!match.containsCharacter(subject, subjectOffset), CODE_INACCESSIBLE_SUBJECT_CHARACTER_ID)) {
-        return false;
-    }
-    if (codeset.addFailure(!isCharacterWithinRoom(subject, room, codeset), CODE_SUBJECT_CHARACTER_NOT_IN_ROOM)) {
-        return false;
-    }
-
-    bool isTargetValid = false;
-    target.access([&](Character& target) {
-        int targetOffset;
-        if(codeset.addFailure(!match.containsCharacter(target, targetOffset), CODE_INACCESSIBLE_TARGET_CHARACTER_ID)) {
-            return;
-        }
-        if (codeset.addFailure(!isCharacterWithinRoom(target, room, codeset), CODE_TARGET_CHARACTER_NOT_IN_ROOM)) {
-            return;
-        }
-        isTargetValid = true;
-    });
-
-    if (!isTargetValid) {
-        return false;
-    }
-
-    bool isSuccess = false;
-    codeset.addFailure(!subject.accessRole(codeset.error, [&](const RoleFlyweight& flyweight) {
-        if (codeset.addFailure(flyweight.activator.isEmpty(), CODE_MISSING_ACTIVATOR)) {
-            return;
-        } else {
-            flyweight.activator.accessConst([&](const iActivator& activatorIntf){
-                Activation activation(player, subject, room, target, Cardinal::north(), match, codeset, *this, time);
-                codeset.addFailure(!(isSuccess = activatorIntf.activate(activation)));
-            });
-        }
-    }), CODE_INACCESSIBLE_ROLE_FLYWEIGHT);
-
-    return isSuccess;
-}
-
-bool MatchController::activateDoor(Player& player, Character& character, Room& room, Cardinal direction, Timestamp time) {
-    setupLocations(false);
-
-    // Check if match has started
-    if (codeset.addFailure(!match.isStarted(codeset.error))) return false;
-
-    // Check if character is an actor
-    if (codeset.addFailure(!character.isActor(codeset.error))) {
-        return false;
-    }
-
-    // Get and validate the door
-    Wall& wall = room.getWall(direction);
-    return !codeset.addFailure(!wall.activateDoor(player, character, room, direction, match, codeset, *this, time));
-}
-
-bool MatchController::activateDoor(const std::string& playerId, int characterId, int roomId, int direction, Timestamp time) {
-    bool isSuccess = false;
-    // Get the player
-    codeset.addFailure(!match.getPlayer(playerId, codeset.error).access([&](Player& player) {
-        // Get the character
-        codeset.addFailure(!match.getCharacter(characterId, codeset.error).access([&](Character& character) {
-            // Get the room
-            codeset.addFailure(!match.dungeon.getRoom(roomId, codeset.error).access([&](Room& room) {
-                codeset.addFailure(!(isSuccess = activateDoor(player, character, room, Cardinal(direction), time)));
-            }));
-        }));
-    }));
-
-    return isSuccess;
-}
-
-bool MatchController::activateInventoryItem(const std::string& playerId, int characterId, int roomId, int itemId, Timestamp time) {
-    bool isSuccess = false;
-
-    codeset.addFailure(!match.getPlayer(playerId, codeset.error).access([&](Player& player) {
-        codeset.addFailure(!match.getCharacter(characterId, codeset.error).access([&](Character& character) {
-            codeset.addFailure(!match.dungeon.getRoom(roomId, codeset.error).access([&](Room& room) {
-                codeset.addFailure(!player.inventory.accessItem(itemId, codeset.error, [&](Item& item){
-                    codeset.addFailure(!(isSuccess = activateInventoryItem(player, character, room, item, time)));
-                }));
-            }));
-        }));
-    }));
-
-    return isSuccess;
-}
-
-bool MatchController::activateInventoryItem(Player& player, Character& subject, Room& room, Item& item, Timestamp time) {
-    setupLocations(false);
-
-    // Check if match has started
-    if (codeset.addFailure(!match.isStarted(codeset.error))) return false;
-
-    // Check if character can take an action
-    if (codeset.addFailure(!subject.isActor(codeset.error))) return false;
-
-    int subjectOffset;
-    if (codeset.addFailure(!match.containsCharacter(subject, subjectOffset), CODE_INACCESSIBLE_SUBJECT_CHARACTER_ID)) {
-        return false;
-    }
-    if (codeset.addFailure(!isCharacterWithinRoom(subject, room, codeset), CODE_SUBJECT_CHARACTER_NOT_IN_ROOM)) {
-        return false;
-    }
-
-    bool isSuccess = false;
-    codeset.addFailure(!item.accessFlyweight([&](const ItemFlyweight& flyweight){
-        flyweight.useActivator.accessConst([&](const iActivator& activatorIntf){
-            Activation activation(player, subject, room, item, Cardinal::north(), match, codeset, *this, time);
-            codeset.addFailure(!(isSuccess = activatorIntf.activate(activation)));
-        });
-    }), CODE_INACCESSIBLE_INVENTORY_FLYWEIGHT);
-
-    return isSuccess;
-}
-
-bool MatchController::activateLock(Player& player, Character& character, Room& room, Cardinal direction, Timestamp time) {
-    setupLocations(false);
-
-    // Check if match has started
-    if (codeset.addFailure(!match.isStarted(codeset.error))) return false;
-
-    // Check if character is an actor
-    if (codeset.addFailure(!character.isActor(codeset.error))) {
-        return false;
-    }
-
-    // Get and validate the door
-    Wall& wall = room.getWall(direction);
-    return !codeset.addFailure(!wall.activateLock(player, character, room, direction, match, codeset, *this, time));
-}
-
-bool MatchController::activateLock(const std::string& playerId, int characterId, int roomId, int direction, Timestamp time) {
-    bool isSuccess = false;
-    // Get the player
-    codeset.addFailure(!match.getPlayer(playerId, codeset.error).access([&](Player& player) {
-        // Get the character
-        codeset.addFailure(!match.getCharacter(characterId, codeset.error).access([&](Character& character) {
-            // Get the room
-            codeset.addFailure(!match.dungeon.getRoom(roomId, codeset.error).access([&](Room& room) {
-                codeset.addFailure(!(isSuccess = activateLock(player, character, room, Cardinal(direction), time)));
-            }));
-        }));
-    }));
-
-    return isSuccess;
-}
-
 bool MatchController::assignCharacterToFloor(int characterId, int roomId, ChannelEnum channel, int floorId) {
     bool isSuccess = false;
     codeset.addFailure(!match.getCharacter(characterId, codeset.error).access([&](Character& character) {
@@ -233,6 +96,91 @@ bool MatchController::assignCharacterToFloor(int characterId, int roomId, Channe
         }));
     }));
     return isSuccess;
+}
+
+bool MatchController::findCharacterPath(
+    const std::string& playerId,
+    int characterId,
+    int loops,
+    std::function<bool(const Match&)> destination,
+    std::function<int(const Match&)> heuristic,
+    std::function<void(const CharacterAction&, const Match&)> consumer
+) {
+    Match start = this->match;
+    start.setPathfinding();
+    auto frontier = AssociatedPriorityMinQueue<Match>();
+    frontier.push(0, start);
+
+    Map<Match, Match> came_from;
+    Map<Match, int> cost_so_far;
+    Map<Match, CharacterAction> action_from;
+
+    cost_so_far.set(start, 0);
+    Match goalMatch;
+    bool isFound = false;
+
+    while (true) {
+        if (codeset.addFailure(frontier.isEmpty(), CODE_PATHFINDING_EXHAUSTED_ALL_POSSIBLITIES)) {
+            return false;
+        }
+        if (codeset.addFailure(loops-- <= 0, CODE_PATHFINDING_FAILED_DUE_TO_INSUFFICIENT_LOOPS)) {
+            return false;
+        }
+        // We capture the match by value to process, then find its stable pointer later
+        frontier.pop([&](const Match& current) {
+            if (destination(current)) {
+                isFound = true;
+                goalMatch = current; 
+                loops = 0;
+                return;
+            }
+
+            Match tempMatch = current;
+            MatchController controller(tempMatch, codeset);
+            controller.permuteCharacterActions(playerId, characterId, [&](const CharacterAction& action, const Match& permuted) {
+                Match next = permuted;
+                codeset.addFailure(!next.endTurn(playerId, codeset.error), CODE_PATHFINDING_FAILED_TO_FORWARD_TURN);
+                next.setPathfinding();
+                int new_cost = cost_so_far.getOrDefault(current, 0) + 1;
+
+                if (!cost_so_far.containsKey(next) || new_cost < cost_so_far.getOrDefault(next, 0)) {
+                    cost_so_far.set(next, new_cost);
+                    int priority = new_cost + heuristic(next);
+                    frontier.push(priority, next);
+                    // These sets ensure 'next' exists as a key in our maps
+                    came_from.set(next, current);
+                    action_from.set(next, action);
+                }
+            });
+        });
+
+        if (isFound) {
+            // Path Reconstruction using Pointers
+            std::vector<const Match*> path_sequence;
+            const Match* step = &goalMatch;
+
+            while (step && !(*step == start)) {
+                path_sequence.push_back(step);
+
+                // Jump to the next parent pointer
+                // came_from.get_ptr returns the pointer to the Match stored in the map
+                came_from.getPointer(*step).access([&](Match& matchCamedFrom){
+                    step = &matchCamedFrom;
+                });
+            }
+
+            // Execute in chronological order
+            for (auto it = path_sequence.rbegin(); it != path_sequence.rend(); ++it) {
+                const Match* m = *it;
+                action_from.accessConst(*m, [&](const CharacterAction& actionFrom){
+                    consumer(actionFrom, *m);
+                });
+            }
+
+            return true;
+        }
+    }
+    return false;
 }
 
 bool MatchController::findFreeFloor(int roomId, ChannelEnum channel, int& output) {
@@ -281,12 +229,12 @@ bool MatchController::generate(int seed) {
     return success;
 }
 
-const Map<int3, int>& MatchController::getDoors() {
+const Map<int, Map<int2, int> >& MatchController::getDoors() {
     setupLocations(false);
     return doors;
 }
 
-const Map<int3, int>& MatchController::getFloors() {
+const Map<int, Map<int2, int> >& MatchController::getFloors() {
     setupLocations(false);
     return floors;
 }
@@ -307,39 +255,23 @@ bool MatchController::isCharacterKeyerValidation(const Character& character) {
     return !codeset.addFailure(!character.isKeyer(codeset.error));
 }
 
-bool MatchController::isCharacterWithinRoom(const Character& character, const Room& room, Codeset& codeset2) const {
-    int roomId;
-    if (codeset2.addFailure(!match.dungeon.containsRoom(room, roomId), CODE_ROOM_NOT_WITHIN_DUNGEON)) {
-        return false;
-    }
-
-    int neighborId = -1;
-    switch(character.location.type) {
-        case LOCATION_DOOR:
-            return character.location.roomId == roomId;
-        case LOCATION_FLOOR:
-            return character.location.roomId == roomId;
-        case LOCATION_SHAFT_BOTTOM:
-            if (character.location.roomId == roomId) {
-                return true;
+bool MatchController::isCharacterWithinRoom(int characterId, int roomId, bool& result) {
+    bool isSuccess = false;
+    codeset.addFailure(!match.getCharacter(characterId, codeset.error).access([&](Character& character) {
+        isSuccess = character.location.accessRoomIds(match.dungeon.rooms, [&](const int& locationRoomId){
+            if (roomId == locationRoomId) {
+                result = true;
             }
-            return character.location.roomId == room.above;
-        case LOCATION_SHAFT_TOP:
-            if (character.location.roomId == roomId) {
-                return true;
-            }
-            return character.location.roomId == room.below;
-        case LOCATION_DOOR_SHARED:
-            if (character.location.roomId == roomId) {
-                return true;
-            }
-            return character.location.roomId == room.getWall(Cardinal(character.location.data).getFlip()).adjacent;
-    }
-    return false;
+        });
+    }));
+    return isSuccess;
 }
 
-bool MatchController::isDoorOccupied(int roomId, ChannelEnum channel, Cardinal dir, int& outCharacterId, const Match& match, const Map<int3, int>& doors) {
-    outCharacterId = doors.getOrDefault(int3{roomId, channel, dir.getIndex()}, -1);
+bool MatchController::isDoorOccupied(int roomId, ChannelEnum channel, Cardinal dir, int& outCharacterId, const Match& match, const Map<int, Map<int2, int> >& doors) {
+    outCharacterId = -1;
+    doors.accessConst(roomId, [&](const Map<int2, int>& mapping){
+        outCharacterId = mapping.getOrDefault(int2{channel, dir.getIndex()}, -1);
+    });
     return match.containsOffset(outCharacterId);
 }
 
@@ -347,8 +279,11 @@ bool MatchController::isDoorOccupied(int roomId, ChannelEnum channel, Cardinal d
     return isDoorOccupied(roomId, channel, dir, outCharacterId, match, doors);
 }
 
-bool MatchController::isFloorOccupied(int roomId, ChannelEnum channel, int floorId, int& outCharacterId, const Match& match, const Map<int3, int>& floors) {
-    outCharacterId = floors.getOrDefault(int3{roomId, channel, floorId}, -1);
+bool MatchController::isFloorOccupied(int roomId, ChannelEnum channel, int floorId, int& outCharacterId, const Match& match, const Map<int, Map<int2, int> >& floors) {
+    outCharacterId = -1;
+    floors.accessConst(roomId, [&](const Map<int2, int>& mapping){
+        outCharacterId = mapping.getOrDefault(int2{channel, floorId}, -1);
+    });
     return match.containsOffset(outCharacterId);
 }
 
@@ -356,119 +291,121 @@ bool MatchController::isFloorOccupied(int roomId, ChannelEnum channel, int floor
     return isFloorOccupied(roomId, channel, floorId, outCharacterId, match, floors);
 }
 
-bool MatchController::moveCharacterToFloor(int roomId, int characterId, int floorId, Timestamp time) {
+bool MatchController::permuteCharacterActions(const std::string& playerId, int mainCharacterId, std::function<void(const CharacterAction&, const Match&)> consumer) {
     bool result = false;
-    codeset.addFailure(!match.getCharacter(characterId, codeset.error).access([&](Character& character){
-        codeset.addFailure(!match.dungeon.getRoom(roomId, codeset.error).access([&](Room& room) {
-            codeset.addFailure(!(result = moveCharacterToFloor(room, character, floorId, time)), CODE_MOVE_CHARACTER_TO_FLOOR_FAILED);
-        }));
+    codeset.addFailure(!match.getCharacter(mainCharacterId, codeset.error).access([&](Character& character){
+        
+        character.location.accessRoomIds(match.dungeon.rooms, [&](const int& roomId){
+            const auto isDoored = character.location.type == LOCATION_DOOR || character.location.type == LOCATION_DOOR;
+
+            // helper function with switch
+            const auto applyAction = [&](bool isDebugging, const CharacterAction& action){
+                Match newMatch = this->match;
+                Codeset nullCodes;
+                MatchController newController(newMatch, isDebugging ? codeset : nullCodes);
+
+                ActionFlyweight::getFlyweights().accessConst(action.type, [&](const ActionFlyweight& flyweight){
+                    flyweight.activator.accessConst([&](const iActivator& activator){
+                        Preactivation preactivation{
+                            .playerId = playerId,
+                            .characterId = action.characterId,
+                            .roomId = action.roomId,
+                            .targetCharacterId = action.targetCharacterId,
+                            .targetItemIndex = action.targetItemIndex,
+                            .direction = action.direction,
+                            .floorId = action.floorId,
+                            .isSkippingAnimations = true,
+                            .isSortingState = true
+                        };
+                        if (!newController.codeset.addFailure(!newController.activate(activator, preactivation), CODE_PATHFINDING_ACTIVATION_FAILED)){
+                            consumer(action, newMatch); // success
+                        }
+                    });
+                });
+            };
+
+            CharacterDigest digest;
+            if (codeset.addFailure(!character.getDigest(codeset.error, digest))) {
+                return;
+            }
+
+            // out of actions/moves may be good time to end turn
+            if (digest.actionsRemaining == 0 || digest.movesRemaining == 0) {
+                applyAction(false, CharacterAction{ .type = ACTION_END_TURN, .characterId = mainCharacterId, .roomId = roomId });
+            }
+
+            // movements
+            if (digest.movesRemaining.orElse(0) > 0) {
+                // if move to a wall, unless we're on that specific wall
+                for (const Cardinal dir: Cardinal::getAllCardinals()) {
+                    if (!isDoored || (isDoored && Cardinal(character.location.data) != dir)) {
+                        applyAction(false, CharacterAction{ .type = ACTION_MOVE_TO_DOOR, .characterId = mainCharacterId, .roomId = roomId, .direction = Maybe<Cardinal>(dir) });
+                    }
+                }
+
+                // move to a floor, unless already on any floor
+                int freeFloorId = -1;
+                if (character.location.type != LOCATION_FLOOR && findFreeFloor(roomId, character.location.channel, freeFloorId)) {
+                    applyAction(false, CharacterAction{ .type = ACTION_MOVE_TO_FLOOR, .characterId = mainCharacterId, .roomId = roomId, .floorId = freeFloorId });
+                }
+            }
+
+            const auto processTargetCharacter = [&](CharacterAction action, const int targetCharacterId){
+                if (targetCharacterId == mainCharacterId) {
+                    return;
+                }
+                action.targetCharacterId = targetCharacterId;
+                auto targetCharacterPtr = match.getCharacter(targetCharacterId, codeset.error);
+                targetCharacterPtr.accessConst([&](const Character& targetCharacter){
+                    switch (targetCharacter.role) {
+                        case ROLE_TOGGLER:
+                            action.characterId = targetCharacterId;
+                            action.targetCharacterId = mainCharacterId;
+                            return applyAction(false, action);
+                    }
+                });
+            };
+
+            // character actions
+            if (digest.actionsRemaining.orElse(0) > 0) {
+                
+                for (const auto it: floors.getOrDefault(roomId, Map<int2, int>())) { // floors
+                    const auto key = it.first;
+                    processTargetCharacter(CharacterAction{ .type = ACTION_ACTIVATE_CHARACTER, .characterId = mainCharacterId, .roomId = roomId }, it.second);
+                }
+
+                for (const auto it: doors.getOrDefault(roomId, Map<int2, int>())) { // doors
+                    const auto key = it.first;
+                    processTargetCharacter(CharacterAction{ .type = ACTION_ACTIVATE_CHARACTER, .characterId = mainCharacterId, .roomId = roomId }, it.second);
+                }
+
+                // activations
+                // ACTION_DECL(ACTIVATE_INVENTORY_ITEM)
+            }
+
+            codeset.addFailure(!match.dungeon.getRoom(roomId, codeset.error).accessConst([&](const Room& room){
+                for (const Cardinal dir: Cardinal::getAllCardinals()) {
+                    // check the doors for locks
+                    const auto& wall = room.getWall(dir);
+                    DoorFlyweight::getFlyweights().accessConst(wall.door, [&](const DoorFlyweight& flyweight){
+                        bool isDebugging = false;
+                        switch(wall.door){
+                            case DOOR_TIME_GATE_AWAKENED: isDebugging = true;
+                        }
+                        if (flyweight.isDoorActionable) {
+                            applyAction(isDebugging, CharacterAction{ .type = ACTION_ACTIVATE_DOOR, .characterId = mainCharacterId, .roomId = roomId, .direction = dir });
+                        }
+                        if (flyweight.isLockActionable) {
+                            applyAction(false, CharacterAction{ .type = ACTION_ACTIVATE_LOCK, .characterId = mainCharacterId, .roomId = roomId, .direction = dir });
+                        }
+                    });
+                }
+            }), CODE_PATHFINDING_FAILED_TO_ACCESS_PATHFINDERS_ROOM);
+        });
+
+        result = true;
     }));
     return result;
-}
-
-bool MatchController::moveCharacterToFloor(Room& room, Character& character, int floorId, Timestamp time) {
-
-    // Check if match has started
-    if (codeset.addFailure(!match.isStarted(codeset.error), CODE_MATCH_NOT_STARTED)) {
-        return false;
-    }
-
-    int roomId;
-    if (codeset.addFailure(!match.dungeon.containsRoom(room, roomId), CODE_ROOM_NOT_WITHIN_DUNGEON)) {
-        return false;
-    }
-
-    int characterId;
-    if (codeset.addFailure(!match.containsCharacter(character, characterId))) {
-        return false;
-    }
-
-    // Check for occupied target cell
-    int conflictingCharacterId;
-    if (codeset.addFailure(isFloorOccupied(roomId, character.location.channel, floorId, conflictingCharacterId), CODE_OCCUPIED_TARGET_FLOOR_CELL)) {
-        return false;
-    }
-
-    // take move, first mutation so no going back
-    if (codeset.addFailure(!character.takeMove(codeset.error))) {
-        return false;
-    }
-
-    const auto newLocation = Location::makeFloor(roomId, character.location.channel, floorId);
-
-    Location oldLocation;
-    codeset.addFailure(!updateCharacterLocation(character, newLocation, oldLocation), CODE_UPDATE_CHARACTER_LOCATION_FAILED);
-
-    const auto keyframe = Keyframe::buildWalking(time, MOVE_ANIMATION_DURATION, room.roomId, oldLocation, newLocation, codeset);
-    if(!Keyframe::insertKeyframe(Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(character.keyframes), keyframe)) {
-        codeset.addLog(CODE_ANIMATION_OVERFLOW_IN_MOVE_CHARACTER_TO_FLOOR);
-    }
-
-    return true;
-}
-
-bool MatchController::moveCharacterToWall(int roomId, int characterId, Cardinal direction, Timestamp time) {
-    bool isSuccess = false;
-    codeset.addFailure(!match.getCharacter(characterId, codeset.error).access([&](Character& character){
-        codeset.addFailure(!match.dungeon.getRoom(roomId, codeset.error).access([&](Room& room) {
-            codeset.addFailure(!(isSuccess = moveCharacterToWall(room, character, direction, time)), CODE_MOVE_CHARACTER_TO_WALL_FAILED);
-        }), CODE_INACCESSIBLE_ROOM_ID);
-    }), CODE_INACCESSIBLE_CHARACTER_ID);
-
-    return isSuccess;
-}
-
-bool MatchController::moveCharacterToWall(Room& room, Character& character, Cardinal direction, Timestamp time) {
-    
-    // Check if match has started
-    if (codeset.addFailure(!match.isStarted(codeset.error), CODE_MATCH_NOT_STARTED)) {
-        return false;
-    }
-
-    int roomId;
-    if (codeset.addFailure(!match.dungeon.containsRoom(room, roomId), CODE_ROOM_NOT_WITHIN_DUNGEON)) {
-        return false;
-    }
-
-    int characterId;
-    if (codeset.addFailure(!match.containsCharacter(character, characterId))) {
-        return false;
-    }
-
-    // Check for occupied target cell
-    int conflictingCharacterId;
-    if (codeset.addFailure(isDoorOccupied(roomId, character.location.channel, direction, conflictingCharacterId), CODE_OCCUPIED_TARGET_WALL_CELL)) {
-        return false;
-    }
-
-    Wall& next = room.getWall(direction);
-    if (codeset.addFailure(!next.isWalkable(codeset.error), CODE_DOOR_FAILED_WALKABILITY)) {
-        return false;
-    }
-
-    // take move, first mutation so no going back
-    if (codeset.addFailure(!character.takeMove(codeset.error))) {
-        return false;
-    }
-
-    // most doors do share a wall, and it can be assumed that if the next room 1) exists 2) is walkable, then that's a 2-way door.
-    bool isShared = false;
-    match.dungeon.rooms.access(next.adjacent, [&](Room& room2){
-        // hide this error because it's not a problem
-        codeset.addFailure(!room2.getWall(direction.getFlip()).readIsSharedDoorway(codeset.error, isShared));
-    });
-
-    const auto newLocation = isShared ? Location::makeSharedDoor(next.adjacent, character.location.channel, direction.getFlip()) : Location::makeDoor(roomId, character.location.channel, direction);
-
-    Location oldLocation;
-    updateCharacterLocation(character, newLocation, oldLocation);
-
-    const auto keyframe = Keyframe::buildWalking(time, MOVE_ANIMATION_DURATION, room.roomId, oldLocation, newLocation, codeset);
-    if(!Keyframe::insertKeyframe(Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(character.keyframes), keyframe)) {
-        codeset.addLog(CODE_ANIMATION_OVERFLOW_IN_MOVE_CHARACTER_TO_FLOOR);
-    }
-
-    return true;
 }
 
 void MatchController::setupLocations(bool isForced) {
@@ -486,6 +423,10 @@ void MatchController::setupLocations(bool isForced) {
     });
 
     isLocationsSetup = true;
+}
+
+void MatchController::sortFloorCharacters(int roomId) {
+    
 }
 
 bool MatchController::takeCharacterAction(Character& character) {
@@ -515,6 +456,14 @@ bool MatchController::updateCharacterLocation(Character& character, const Locati
     character.location.apply(characterId, match.dungeon.rooms, floors, doors);
 
     return true;
+}
+
+bool MatchController::validateCharacterWithinRoom(int characterId, int roomId) {
+    bool isSubjectWithinRoom = false;
+    if (codeset.addFailure(!isCharacterWithinRoom(characterId, roomId, isSubjectWithinRoom), CODE_FAILED_TO_CHECK_CHARACTER_WITHIN_ROOM)) {
+        return false;
+    }
+    return !codeset.addFailure(!isSubjectWithinRoom, CODE_CHARACTER_NOT_IN_ROOM);
 }
 
 bool MatchController::validateDoorNotOccupied(int roomId, ChannelEnum channel, Cardinal dir) {

@@ -3,7 +3,7 @@
 #include <string>
 
 #define ITEM_DECL( name, item_stack_size, droppable, deathdrops, activator ) ITEM_##name,
-enum ItemEnum
+enum ItemEnum: int32_t
 {
 #include "Item.enum"
 ITEM_COUNT

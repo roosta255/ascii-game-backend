@@ -6,6 +6,7 @@
 #include "Array.hpp"
 #include "CodeEnum.hpp"
 #include "DUNGEON_ROOM_COUNT.hpp"
+#include "HASH_MACRO_DECL.hpp"
 #include "int4.hpp"
 #include "Room.hpp"
 #include "Character.hpp"
@@ -27,7 +28,7 @@ struct Dungeon {
     Array<Room, DUNGEON_ROOM_COUNT> rooms;
     Array<Character, MAX_CHARACTERS> characters;
     int layout = 0;
-    bool isBlueOpen = false;  // When true, blue doors are open and orange doors are closed
+    int32_t isBlueOpen = false;  // When true, blue doors are open and orange doors are closed
 
     // Toggles all blue/orange doors in the dungeon based on isBlueOpen
     void toggleDoors();
@@ -46,5 +47,10 @@ struct Dungeon {
     bool accessWallNeighbor(Room& source, Cardinal dir, std::function<void(Wall&, Room&, int)> consumer);
     bool accessWallNeighbor(const Room& source, Cardinal dir, std::function<void(const Wall&, const Room&, int)> consumer) const;
 
-
+    // operators
+    bool operator==(const Dungeon& other) const;
 };
+
+std::ostream& operator<<(std::ostream& os, const Dungeon& rhs);
+
+HASH_MACRO_DECL(Dungeon)

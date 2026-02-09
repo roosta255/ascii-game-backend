@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CodeEnum.hpp"
+#include "HASH_MACRO_DECL.hpp"
 #include "TurnEnum.hpp"
 
 namespace Json {
@@ -31,4 +32,6 @@ public:
     int turn = 0;
     TurnEnum state = TURN_PREGAME_TITAN_ONLY;  // Start in pregame state
 private:
-}; 
+};
+
+HASH_MACRO_DECL(Turner)

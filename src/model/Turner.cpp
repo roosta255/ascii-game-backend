@@ -66,7 +66,7 @@ CodeEnum Turner::addTitan() {
 CodeEnum Turner::removeBuilder(const std::string& leaver, Match& match) {
     // if the game still has builders, don't change the state
     for (auto& builder : match.builders) {
-        if (builder.player.account.empty()) {
+        if (builder.player.account.isEmpty()) {
             continue;
         }
         if (builder.player.account != leaver) {

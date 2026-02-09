@@ -1,4 +1,5 @@
 
+#include "ActionFlyweight.hpp"
 #include "Array.hpp"
 #include "Builder.hpp"
 #include "Cardinal.hpp"
@@ -7,6 +8,7 @@
 #include "InventoryDigest.hpp"
 #include "Match.hpp"
 #include "MatchController.hpp"
+#include "Preactivation.hpp"
 #include "Room.hpp"
 #include "TestController.hpp"
 
@@ -23,35 +25,94 @@ TestController::TestController(const GeneratorEnum& generator): controller(match
 }
 
 // functions
-void TestController::activateCharacter(int characterId){
-    isSuccess = controller.activateCharacter(BUILDER_ID, characterId, latestPosition, builderOffset);
+void TestController::activateCharacter(int subjectCharacterId, int objectCharacterId){
+    Preactivation preactivation{
+        .playerId = BUILDER_ID,
+        .characterId = subjectCharacterId,
+        .roomId = latestPosition,
+        .targetCharacterId = objectCharacterId,
+        .isSkippingAnimations = isSkippingAnimations
+    };
+
+    isSuccess = controller.activate(ActionFlyweight::getUseCharacter(), preactivation);
     updateEverything();
 }
 
 void TestController::activateDoor(Cardinal dir){
-    isSuccess = controller.activateDoor(BUILDER_ID, builderOffset, latestPosition, dir.getIndex());
+    Preactivation preactivation{
+        .playerId = BUILDER_ID,
+        .characterId = builderOffset,
+        .roomId = latestPosition,
+        .direction = dir,
+        .isSkippingAnimations = isSkippingAnimations
+    };
+
+    isSuccess = controller.activate(ActionFlyweight::getUseDoor(), preactivation);
     updateEverything();
 }
 
 void TestController::activateLock(Cardinal dir){
-    isSuccess = controller.activateLock(BUILDER_ID, builderOffset, latestPosition, dir.getIndex());
+    Preactivation preactivation{
+        .playerId = BUILDER_ID,
+        .characterId = builderOffset,
+        .roomId = latestPosition,
+        .direction = dir,
+        .isSkippingAnimations = isSkippingAnimations
+    };
+    isSuccess = controller.activate(ActionFlyweight::getUseLock(), preactivation);
+    updateEverything();
+}
+
+void TestController::activateObjectCharacter(int objectCharacterId){
+    Preactivation preactivation{
+        .playerId = BUILDER_ID,
+        .characterId = objectCharacterId,
+        .roomId = latestPosition,
+        .targetCharacterId = builderOffset,
+        .isSkippingAnimations = isSkippingAnimations
+    };
+    isSuccess = controller.activate(ActionFlyweight::getUseCharacter(), preactivation);
     updateEverything();
 }
 
 void TestController::endTurn(){
+    Preactivation preactivation{
+        .playerId = BUILDER_ID,
+        .characterId = builderOffset,
+        .roomId = latestPosition,
+        .isSkippingAnimations = isSkippingAnimations
+    };
     codeset.addFailure(!(isSuccess = match.endTurn(BUILDER_ID, codeset.error)));
     updateEverything();
 }
 
-void TestController::moveCharacterToFloor(int floorId) {
-    isSuccess = controller.moveCharacterToFloor(latestPosition, builderOffset, floorId);
+void TestController::moveCharacterToFloor(int roomId, int floorId) {
+    Preactivation preactivation{
+        .playerId = BUILDER_ID,
+        .characterId = builderOffset,
+        .roomId = roomId,
+        .floorId = floorId,
+        .isSkippingAnimations = isSkippingAnimations
+    };
+    isSuccess = controller.activate(ActionFlyweight::getMoveToFloor(), preactivation);
     updateEverything();
 }
 
-void TestController::moveCharacterToWall(const Cardinal& dir){
-    isSuccess = controller.moveCharacterToWall(latestPosition, builderOffset, dir);
+void TestController::moveCharacterToFloor(int floorId) {
+    moveCharacterToFloor(latestPosition, floorId);
+}
+
+void TestController::moveCharacterToWall(int roomId, const Cardinal& dir){
+    Preactivation preactivation{
+        .playerId = BUILDER_ID,
+        .characterId = builderOffset,
+        .roomId = roomId,
+        .direction = dir,
+        .isSkippingAnimations = isSkippingAnimations
+    };
+    isSuccess = controller.activate(ActionFlyweight::getMoveToDoor(), preactivation);
     // TODO: add test codes for this line
-    match.dungeon.rooms.accessConst(latestPosition, [&](const Room& room){
+    match.dungeon.rooms.accessConst(roomId, [&](const Room& room){
         if (isSuccess) {
             latestPosition = room.getWall(dir).adjacent;
         }
@@ -59,6 +120,10 @@ void TestController::moveCharacterToWall(const Cardinal& dir){
         match.dungeon.rooms.containsIndex(latestPosition);
     });
     updateEverything();
+}
+
+void TestController::moveCharacterToWall(const Cardinal& dir){
+    moveCharacterToWall(latestPosition, dir);
 }
 
 void TestController::updateEverything() {

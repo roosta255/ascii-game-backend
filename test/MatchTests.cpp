@@ -1,3 +1,4 @@
+#include "ActionFlyweight.hpp"
 #include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 #include "Cardinal.hpp"
@@ -5,10 +6,11 @@
 #include "CodeEnum.hpp"
 #include "Codeset.hpp"
 #include "Dungeon.hpp"
-#include "Match.hpp"
-#include "MatchController.hpp"
 #include "GeneratorEnum.hpp"
 #include "GeneratorTutorial.hpp"
+#include "Match.hpp"
+#include "MatchController.hpp"
+#include "Preactivation.hpp"
 #include "Room.hpp"
 #include "RoleEnum.hpp"
 #include "TestController.hpp"
@@ -86,7 +88,16 @@ TEST_CASE("Test Character Animation", "[walking]") {
         REQUIRE(builder.character.location == Location::makeFloor(0,CHANNEL_CORPOREAL,0));
 
         // walk the character to wall
-        isSuccess = controller.moveCharacterToWall(0, builderOffset, Cardinal::east(), t0);
+        Preactivation preactivation{
+            .playerId = builderId,
+            .characterId = builderOffset,
+            .roomId = 0,
+            .direction = Cardinal::east(),
+            .isSkippingAnimations = false,
+            .time = t0
+        };
+
+        isSuccess = controller.activate(ActionFlyweight::getMoveToDoor(), preactivation);
         REQUIRE(codeset.getErrorTable() == Codeset::getEmptyTable());
         REQUIRE(isSuccess);
 

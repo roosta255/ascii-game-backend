@@ -13,7 +13,7 @@ struct PlayerApiView
 
     inline PlayerApiView() = default;
     inline PlayerApiView(const Player& model, const MatchApiParameters& params)
-    : account(model.account), inventory(model.inventory)
+    : account(model.account.toString()), inventory(model.inventory)
     {}
 };
 

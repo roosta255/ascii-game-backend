@@ -2,6 +2,7 @@
 
 #include <string>
 
+#include "HASH_MACRO_DECL.hpp"
 #include "Player.hpp"
 
 namespace Json {
@@ -17,3 +18,5 @@ struct Titan {
     void startTurn(Match& match);  // Start titan's turn
     void endTurn(Match& match);    // End titan's turn
 };
+
+HASH_MACRO_DECL(Titan)

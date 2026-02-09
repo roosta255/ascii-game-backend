@@ -31,8 +31,8 @@ struct MatchApiView
 
     inline MatchApiView() = default;
     inline MatchApiView(const MatchApiParameters& params)
-    : filename(params.match.filename), version(params.match.version)
-    , username(params.match.username), host(params.match.host)
+    : filename(params.match.filename.toString()), version(params.match.version)
+    , username(params.match.username.toString()), host(params.match.host.toString())
     , titan(params.match.titan, params)
     , builders(params.match.builders.transform([&](const Builder& builder){return BuilderApiView(builder, params);}))
     , dungeon(params.match.dungeon, params)
@@ -48,10 +48,10 @@ struct MatchApiView
 
         // turners
         if (params.match.turner.isTitansTurn()) {
-            turners.push_back(params.match.titan.player.account);
+            turners.push_back(params.match.titan.player.account.toString());
         } else {
             for (const auto& builder: params.match.builders) {
-                turners.push_back(builder.player.account);
+                turners.push_back(builder.player.account.toString());
             }
         }
 

@@ -10,6 +10,7 @@ find_package(Drogon REQUIRED)
 # ------------ Shared include directories -------------
 set(PROJECT_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/activator
     ${CMAKE_CURRENT_SOURCE_DIR}/src/algorithm
     ${CMAKE_CURRENT_SOURCE_DIR}/src/animation
     ${CMAKE_CURRENT_SOURCE_DIR}/src/controllers
@@ -19,6 +20,7 @@ set(PROJECT_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/generator
     ${CMAKE_CURRENT_SOURCE_DIR}/src/inventory
     ${CMAKE_CURRENT_SOURCE_DIR}/src/layout
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/macro
     ${CMAKE_CURRENT_SOURCE_DIR}/src/math
     ${CMAKE_CURRENT_SOURCE_DIR}/src/model
     ${CMAKE_CURRENT_SOURCE_DIR}/src/role
@@ -36,6 +38,17 @@ set(PROJECT_INCLUDE_DIRS
 
 # ------------ Shared Library -------------
 add_library(core_backend STATIC
+    src/activator/ActionEnum.cpp
+    src/activator/ActionFlyweight.cpp
+    src/activator/Activation.cpp
+    src/activator/ActivatorEndTurn.cpp
+    src/activator/ActivatorMoveToDoor.cpp
+    src/activator/ActivatorMoveToFloor.cpp
+    src/activator/ActivatorUseCharacter.cpp
+    src/activator/ActivatorUseDoor.cpp
+    src/activator/ActivatorUseInventoryItem.cpp
+    src/activator/ActivatorUseLock.cpp
+    src/activator/CharacterAction.cpp
     src/animation/AnimationEnum.cpp
     src/animation/Keyframe.cpp
     src/animation/KeyframeFlyweight.cpp
@@ -69,7 +82,6 @@ add_library(core_backend STATIC
     src/layout/LayoutFlyweight.cpp
     src/layout/LayoutGrid.cpp
     src/model/Account.cpp
-    src/model/Activation.cpp
     src/model/Builder.cpp
     src/model/Character.cpp
     src/model/Dungeon.cpp

@@ -14,10 +14,10 @@ void Player::endTurn(Match& match)
 
 bool Player::isEmpty() const
 {
-    return this->account.empty();
+    return this->account.isEmpty();
 }
 
 bool Player::isHuman() const
 {
-    return this->account.substr(0, 3) != "NPC";
+    return this->account.toString().substr(0, 3) != "NPC";
 }

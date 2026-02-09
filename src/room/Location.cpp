@@ -56,15 +56,40 @@ Location Location::makeNone(){
     };
 }
 
-void Location::apply(int offset, const Array<Room, DUNGEON_ROOM_COUNT>& rooms, Map<int3, int>& floors, Map<int3, int>& doors
+bool Location::accessRoomIds(const Array<Room, DUNGEON_ROOM_COUNT>& rooms, std::function<void(const int&)> consumer) const {
+    consumer(roomId);
+    Cardinal dir(data);
+    return rooms.accessConst(roomId, [&](const Room& room){
+        switch(type) {
+            case LOCATION_DOOR_SHARED:
+                consumer(room.getWall(dir).adjacent);
+                break;
+            case LOCATION_SHAFT_BOTTOM:
+                consumer(room.above);
+                break;
+            case LOCATION_SHAFT_TOP:
+                consumer(room.below);
+                break;
+        }
+    });
+}
+
+
+void Location::apply(int offset, const Array<Room, DUNGEON_ROOM_COUNT>& rooms, Map<int, Map<int2, int> >& floors, Map<int, Map<int2, int> >& doors
 ) const {
     const auto setDoor = [&](int setDoorRoomId, Cardinal dir){
-        doors.set(int3{setDoorRoomId, channel, dir.getIndex()}, offset);
+        const int2 key{channel, dir.getIndex()};
+        if (!doors.access(setDoorRoomId, [&](Map<int2, int>& mapping){ mapping.set(key, offset); })) {
+            doors.set(setDoorRoomId, Map<int2, int>(key, offset));
+        }
     };
     Cardinal dir(data);
+    const int2 key{channel, data};
     switch(type){
         case LOCATION_FLOOR:
-            floors.set(int3{roomId, channel, data}, offset);
+            if (!floors.access(roomId, [&](Map<int2, int>& mapping){ mapping.set(key, offset); })) {
+                floors.set(roomId, Map<int2, int>(key, offset));
+            }
             return;
         case LOCATION_DOOR:
             setDoor(roomId, dir);

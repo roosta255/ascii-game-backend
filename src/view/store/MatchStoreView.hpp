@@ -25,8 +25,8 @@ struct MatchStoreView
 
     inline MatchStoreView() = default;
     inline MatchStoreView(const Match& model)
-    : filename(model.filename), version(model.version)
-    , username(model.username), host(model.host)
+    : filename(model.filename.toString()), version(model.version)
+    , username(model.username.toString()), host(model.host.toString())
     , titan(model.titan)
     , builders(model.builders.convert<BuilderStoreView>())
     , dungeon(model.dungeon)

@@ -1,4 +1,5 @@
 #include "Codeset.hpp"
+#include <cstring>
 #include "DoorFlyweight.hpp"
 #include "GeneratorFlyweight.hpp"
 #include "iActivator.hpp"
@@ -14,10 +15,6 @@
 // #include "RoleFlyweight.hpp"
 // #include <json/json.h>
 // #include <nlohmann/json.hpp>
-
-constexpr size_t KILOBYTE = 1024;
-static_assert(sizeof(Match) > KILOBYTE, "size milestone passed");
-static_assert(sizeof(Match) < KILOBYTE * KILOBYTE, "size milestone passed");
 
 // functions
 
@@ -128,14 +125,14 @@ bool Match::setupSingleTitan(CodeEnum& error) {
 
 bool Match::join(const std::string& joiner) {
 
-    if (this->titan.player.account.empty()) {
+    if (this->titan.player.account.isEmpty()) {
         this->titan.player.account = joiner;
         turner.addTitan();
         return true;
     }
 
     for (auto& builder: builders) {
-        if (builder.player.account.empty()) {
+        if (builder.player.account.isEmpty()) {
             builder.player.account = joiner;
             turner.addBuilder();
             return true;
@@ -217,11 +214,11 @@ bool Match::isCompleted(CodeEnum& error) const {
 }
 
 bool Match::isFull(CodeEnum& error) const {
-    if (this->titan.player.account.empty()) {
+    if (this->titan.player.account.isEmpty()) {
         return false;
     }
     for (const auto& builder: this->builders) {
-        if (builder.player.account.empty()) {
+        if (builder.player.account.isEmpty()) {
             return false;
         }
     }
@@ -229,11 +226,11 @@ bool Match::isFull(CodeEnum& error) const {
 }
 
 bool Match::isEmpty(CodeEnum& error) const {
-    if (!this->titan.player.account.empty()) {
+    if (!this->titan.player.account.isEmpty()) {
         return false;
     }
     for (const auto& builder: this->builders) {
-        if (!builder.player.account.empty()) {
+        if (!builder.player.account.isEmpty()) {
             return false;
         }
     }
@@ -260,5 +257,104 @@ bool Match::endTurn(const std::string& playerId, CodeEnum& error)
 }
 
 void Match::setFilename() {
-    filename = make_filename("match-" + host + "-" + username);
+    filename = make_filename("match-" + host.toString() + "-" + username.toString());
 }
+
+void Match::setPathfinding() {
+    version = 0;
+    turner.turn = 0;
+    filename = "";
+    username = "";
+    host = "";
+    generator = 0;
+}
+
+// operators
+EQUALITY_DEF(Match)
+
+std::ostream& operator<<(std::ostream& os, const Match& rhs) {
+    std::hash<Player> player;
+    std::hash<Character> character;
+    {
+        std::hash<Match> temp;
+        os << "Match:" << temp(rhs) << " {";
+    }
+    os << "version: " << rhs.version;
+    {
+        std::hash<Dungeon> temp;
+        os << ", dungeon:" << temp(rhs.dungeon);
+    }
+    {
+        std::hash<Titan> temp;
+        os << ", titan:" << temp(rhs.titan);
+    }
+    {
+        std::hash<Turner> temp;
+        os << ", turner:" << temp(rhs.turner);
+    }
+    {
+        std::hash<Builder> temp;
+        int i = 0;
+        for (const auto& builder: rhs.builders) {
+            os << ", builder[" << i++ << "]:" << temp(builder) << " {";
+            {
+                os << " player:" << player(builder.player) << ", character:" << builder.character;
+            }
+            os << "}";
+        }
+    }
+    return os << "}";
+}
+
+// static assertions
+static_assert(std::is_trivially_copyable_v<Match>);
+static_assert(std::has_unique_object_representations_v<TextPath>);
+static_assert(std::has_unique_object_representations_v<TextID>);
+static_assert(std::has_unique_object_representations_v<Item>);
+static_assert(std::has_unique_object_representations_v<Array<Item, Inventory::STANDARD_ITEM_SLOTS> >);
+static_assert(std::has_unique_object_representations_v<Inventory>);
+static_assert(std::has_unique_object_representations_v<Player>);
+static_assert(std::has_unique_object_representations_v<int>);
+static_assert(std::has_unique_object_representations_v<Array<int, Keyframe::DATA_ARRAY_SIZE> >);
+static_assert(std::has_unique_object_representations_v<Location>);
+static_assert(std::has_unique_object_representations_v<Timestamp>);
+static_assert(std::has_unique_object_representations_v<Keyframe>);
+static_assert(std::has_unique_object_representations_v<Array<Keyframe, Character::MAX_KEYFRAMES> >);
+static_assert(std::has_unique_object_representations_v<Character>);
+static_assert(std::has_unique_object_representations_v<Titan>);
+static_assert(std::has_unique_object_representations_v<Builder>);
+static_assert(std::has_unique_object_representations_v<Wall>);
+static_assert(std::has_unique_object_representations_v<Room>);
+static_assert(std::has_unique_object_representations_v<Array<Room, DUNGEON_ROOM_COUNT> >);
+static_assert(std::has_unique_object_representations_v<Array<Character, Dungeon::MAX_CHARACTERS> >);
+static_assert(std::has_unique_object_representations_v<Dungeon>);
+static_assert(std::has_unique_object_representations_v<Match>);
+
+constexpr size_t KILOBYTE = 1024;
+static_assert(sizeof(Match) > KILOBYTE, "size milestone passed");
+static_assert(sizeof(Match) > KILOBYTE * 2, "size milestone passed");
+static_assert(sizeof(Match) > KILOBYTE * 4, "size milestone passed");
+static_assert(sizeof(Match) > KILOBYTE * 8, "size milestone passed");
+static_assert(sizeof(Match) < KILOBYTE * 16, "size milestone passed");
+static_assert(sizeof(Match) < KILOBYTE * 32, "size milestone passed");
+static_assert(sizeof(Match) < KILOBYTE * 64, "size milestone passed");
+static_assert(sizeof(Match) < KILOBYTE * 128, "size milestone passed");
+static_assert(sizeof(Match) < KILOBYTE * 256, "size milestone passed");
+static_assert(sizeof(Match) < KILOBYTE * KILOBYTE, "size milestone passed");
+
+static_assert(sizeof(Array<Room, DUNGEON_ROOM_COUNT>) > KILOBYTE, "size milestone passed");
+static_assert(sizeof(Array<Room, DUNGEON_ROOM_COUNT>) > KILOBYTE * 2, "size milestone passed");
+static_assert(sizeof(Array<Room, DUNGEON_ROOM_COUNT>) < KILOBYTE * 4, "size milestone passed");
+static_assert(sizeof(Array<Room, DUNGEON_ROOM_COUNT>) < KILOBYTE * 8, "size milestone passed");
+static_assert(sizeof(Array<Room, DUNGEON_ROOM_COUNT>) < KILOBYTE * 16, "size milestone passed");
+static_assert(sizeof(Array<Room, DUNGEON_ROOM_COUNT>) < KILOBYTE * 32, "size milestone passed");
+static_assert(sizeof(Array<Room, DUNGEON_ROOM_COUNT>) < KILOBYTE * 64, "size milestone passed");
+
+static_assert(sizeof(Array<Character, Dungeon::MAX_CHARACTERS>) > KILOBYTE, "size milestone passed");
+static_assert(sizeof(Array<Character, Dungeon::MAX_CHARACTERS>) > KILOBYTE * 2, "size milestone passed");
+static_assert(sizeof(Array<Character, Dungeon::MAX_CHARACTERS>) > KILOBYTE * 4, "size milestone passed");
+static_assert(sizeof(Array<Character, Dungeon::MAX_CHARACTERS>) > KILOBYTE * 8, "size milestone passed");
+static_assert(sizeof(Array<Character, Dungeon::MAX_CHARACTERS>) < KILOBYTE * 16, "size milestone passed");
+static_assert(sizeof(Array<Character, Dungeon::MAX_CHARACTERS>) < KILOBYTE * 32, "size milestone passed");
+static_assert(sizeof(Array<Character, Dungeon::MAX_CHARACTERS>) < KILOBYTE * 64, "size milestone passed");
+

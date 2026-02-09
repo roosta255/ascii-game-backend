@@ -28,7 +28,13 @@ constexpr bool isPresent()const{
 template<typename F>
 void access(F f){
 	if(isPresent())
-		f(*_data);
+		f(_data);
+}
+
+template<typename F>
+void accessConst(F f)const{
+	if(isPresent())
+		f(_data);
 }
 
 template<typename T2, typename F>
@@ -38,8 +44,17 @@ Maybe<T2> map(F f){
 	return Maybe<T2>();
 }
 
+inline bool copy(T& output)const{
+	if (isPresent()) {
+		output = _data;
+		return true;
+	}
+	return false;
+}
+
 inline Maybe<T>& operator=(const T& setting){
 	_data = setting;
+	_exists = true;
 	return *this;
 }
 
@@ -47,7 +62,11 @@ inline bool operator==(const T& rhs)const{
 	return isPresent() && _data == rhs;
 }
 
-inline const T& orElse(const T& defau1t){
+inline bool operator==(const Maybe<T>& rhs)const{
+	return isPresent() ? rhs.isPresent() && _data == rhs._data : rhs.isEmpty();
+}
+
+inline const T& orElse(const T& defau1t)const{
 	return isPresent()
     ? _data : defau1t;
 }

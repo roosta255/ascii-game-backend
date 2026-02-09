@@ -5,6 +5,12 @@ Codeset::Codeset(){
     rackLogs.setEmpty();
 }
 
+bool Codeset::addDebugLine(const int line) {
+    addLog(CODE_DEBUG_LINE_REACHED);
+    setTable(CODE_DEBUG_LINE, line);
+    return false;
+}
+
 void Codeset::addLog(const CodeEnum& input, int value ) {
     if (rackLogs.isFull()) {
         isAnyOverflow = true;

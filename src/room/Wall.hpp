@@ -19,13 +19,12 @@ struct Wall {
     int adjacent = -1;
 
     // functions
-    bool activateDoor(Player& player, Character& character, Room& room, const Cardinal& direction, Match& match, Codeset& error, MatchController& controller, Timestamp time = Timestamp());
-    bool activateLock(Player& player, Character& character, Room& room, const Cardinal& direction, Match& match, Codeset& error, MatchController& controller, Timestamp time = Timestamp());
-
+    bool accessDoor(CodeEnum& error, std::function<void(const DoorFlyweight&)>) const;
     bool isWalkable(CodeEnum& error) const;
     bool readIsSharedDoorway(CodeEnum& error, bool& isSharedDoorway) const;
-private:
-    // the last thing i want to do is to have a function that takes a function as a parameter
-    bool accessDoor(CodeEnum& error, std::function<void(const DoorFlyweight&)>) const;
 
 };
+
+// operators
+
+std::ostream& operator<<(std::ostream& os, const Wall& rhs);

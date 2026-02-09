@@ -30,12 +30,13 @@ public:
     static Location makeNone();
 
     // functions
+    bool accessRoomIds(const Array<Room, DUNGEON_ROOM_COUNT>& rooms, std::function<void(const int&)> consumer)const;
     void apply(
         int offset,
         const Array<Room, DUNGEON_ROOM_COUNT>& rooms,
         // TODO: add ceiling, flying, underground positions. 
-        Map<int3, int>& floors,
-        Map<int3, int>& doors
+        Map<int, Map<int2, int> >& floors,
+        Map<int, Map<int2, int> >& doors
     ) const;
 
     // operators

@@ -16,7 +16,12 @@ bool ActivatorTimeGate::activate(Activation& activation) const {
     auto& subject = activation.character;
     auto& inventory = activation.player.inventory;
 
-    Wall& sourceWall = activation.room.getWall(activation.direction);
+    Cardinal direction;
+    if (codeset.addFailure(!activation.direction.copy(direction), CODE_ACTIVATION_DIRECTION_NOT_SPECIFIED)) {
+        return false;
+    }
+
+    Wall& sourceWall = activation.room.getWall(direction);
 
     // Check for occupied target cell
     if (codeset.addFailure(!controller.validateDoorNotOccupied(room.roomId, CHANNEL_CORPOREAL, TIME_GATE_DIRECTION), CODE_OCCUPIED_TARGET_TIME_GATE_CELL)) {
@@ -48,7 +53,7 @@ bool ActivatorTimeGate::activate(Activation& activation) const {
                     wall2.door = DOOR_TIME_GATE_DORMANT;
                     
                     // clean and update locations
-                    const auto newLocation = Location::makeDoor(roomId, subject.location.channel, TIME_GATE_DIRECTION);
+                    const auto newLocation = Location::makeDoor(room2.roomId, subject.location.channel, TIME_GATE_DIRECTION);
                     Location oldLocation;
                     controller.updateCharacterLocation(subject, newLocation, oldLocation);
 
@@ -56,9 +61,11 @@ bool ActivatorTimeGate::activate(Activation& activation) const {
                     if (controller.takeCharacterMove(subject)) {
 
                         // animate
-                        const Keyframe keyframe = Keyframe::buildWalking(activation.time, MatchController::MOVE_ANIMATION_DURATION, room.roomId, oldLocation, newLocation, codeset);
-                        if(!Keyframe::insertKeyframe(Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(subject.keyframes), keyframe)) {
-                            codeset.addLog(CODE_ANIMATION_OVERFLOW_IN_ACTIVATE_TIME_GATE);
+                        if (!activation.isSkippingAnimations) {
+                            const Keyframe keyframe = Keyframe::buildWalking(activation.time, MatchController::MOVE_ANIMATION_DURATION, room.roomId, oldLocation, newLocation, codeset);
+                            if(!Keyframe::insertKeyframe(Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(subject.keyframes), keyframe)) {
+                                codeset.addLog(CODE_ANIMATION_OVERFLOW_IN_ACTIVATE_TIME_GATE);
+                            }
                         }
                         // this is the end of the movement!!!
                         isSuccess = true;
@@ -66,7 +73,9 @@ bool ActivatorTimeGate::activate(Activation& activation) const {
                     }
                 });
 
-                codeset.addFailure(!isDeltaValid, CODE_TIME_GATE_ACTIVATED_BUT_NEIGHBOR_DNE);
+                if (codeset.addFailure(!isDeltaValid, CODE_TIME_GATE_ACTIVATED_BUT_NEIGHBOR_DNE)) {
+                    return false;
+                }
             }
             return isSuccess;
         default:
