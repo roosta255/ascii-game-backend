@@ -176,7 +176,7 @@ TEST_CASE("Check A* can complete match[test4d]", "[match][test4d]") {
             bool isSuccess = false;
             controller2.isCharacterWithinRoom(builderOffset, 22, isSuccess);
             return isSuccess;
-        }, [&](const Match& match){
+        }, [&](const CharacterAction& action, const Match& match){
             return 0; // no heuristic
         },
         [&](const CharacterAction& action, const Match& match){

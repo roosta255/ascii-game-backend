@@ -1,4 +1,5 @@
 #include "Array.hpp"
+#include "GeneratorDoorwayDungeon1.hpp"
 #include "GeneratorEnum.hpp"
 #include "GeneratorFlyweight.hpp"
 #include "GeneratorTest.hpp"

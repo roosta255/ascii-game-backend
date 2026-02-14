@@ -75,6 +75,16 @@ void TestController::activateObjectCharacter(int objectCharacterId){
     updateEverything();
 }
 
+Remodel TestController::buildRemodel(int bossRoomId, std::function<bool(const Match&, const PathfindingCounter&)> acceptance) {
+    return Remodel {
+        .playerId= BUILDER_ID,
+        .characterId= builderOffset,
+        .bossRoomId= bossRoomId,
+        .codeset= codeset,
+        .acceptance= acceptance
+    };
+}
+
 void TestController::endTurn(){
     Preactivation preactivation{
         .playerId = BUILDER_ID,

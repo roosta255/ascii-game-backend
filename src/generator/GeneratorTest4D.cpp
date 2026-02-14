@@ -1,7 +1,7 @@
 #include "Codeset.hpp"
-#include "GeneratorUtility.hpp"
 #include "DoorEnum.hpp"
 #include "Dungeon.hpp"
+#include "DungeonAuthor.hpp"
 #include "GeneratorTest4D.hpp"
 #include "iLayout.hpp"
 #include "LayoutEnum.hpp"
@@ -34,8 +34,8 @@ bool GeneratorTest4D::generate (int seed, Match& dst, Codeset& codeset) const {
 
     LayoutFlyweight::getFlyweights().accessConst(LAYOUT, [&](const LayoutFlyweight& flyweight){
         flyweight.layout.accessConst([&](const iLayout& layoutIntf){
-            GeneratorUtility util(dst.dungeon.rooms, layoutIntf, codeset);
-            util.setupAdjacencyPointers();
+            layoutIntf.setupAdjacencyPointers(dst.dungeon.rooms);
+            DungeonAuthor util(controller, layoutIntf);
 
             util.setupTimeGateRoomToFuture(int4{1,1,0,0}, true, false);
 

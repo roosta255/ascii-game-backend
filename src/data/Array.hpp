@@ -218,6 +218,14 @@ class Array
 		return true;
 	}
 
+	Pointer<T> operator[](const int index){
+		return getPointer(index);
+	}
+
+	const T& getWindow(const int index) const {
+		return _elems[index % N];
+	}
+
 	private:
 
 	std::array<T, N> _elems;

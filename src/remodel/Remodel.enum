@@ -1,0 +1,9 @@
+REMODEL_DECL(JAILER, RemodelJailer, true)
+REMODEL_DECL(KEEPER_KEYLESS, RemodelKeeper, true)
+REMODEL_DECL(KEEPER_KEYED, RemodelKeeperKeyed, true)
+REMODEL_DECL(SHIFTER_KEYLESS, RemodelShifter, true)
+REMODEL_DECL(SHIFTER_KEYED, RemodelShifterKeyed, true)
+
+REMODEL_DECL(TOGGLER_BLUE, RemodelTogglerBlue, true)
+REMODEL_DECL(TOGGLER_ORANGE, RemodelTogglerOrange, true)
+REMODEL_DECL(TOGGLER_SWITCH, RemodelTogglerSwitch, false)

@@ -53,7 +53,7 @@ bool MatchController::activate(const iActivator& activator, const Preactivation&
     return isSuccess;
 }
 
-bool MatchController::addCharacterToFloor(const Character& source, int roomId, ChannelEnum channel, int& characterId) {
+bool MatchController::allocateCharacterToFloor(int roomId, ChannelEnum channel, std::function<void(Character&)> consumer, int& outCharacterId, int& outFloorId) {
     setupLocations(false);
 
     // Validate room ID and get room
@@ -66,12 +66,13 @@ bool MatchController::addCharacterToFloor(const Character& source, int roomId, C
     codeset.addFailure(!match.allocateCharacter([&](Character& character){
 
         // Find an empty floor cell
-        int floorId;
-        if (codeset.addFailure(!findFreeFloor(roomId, channel, floorId)))
+        if (codeset.addFailure(!findFreeFloor(roomId, channel, outFloorId)))
             return;
+
         // set character
-        character = source;
-        character.location = Location::makeFloor(roomId, channel, floorId);
+        outCharacterId = character.characterId;
+        consumer(character);
+        character.location = Location::makeFloor(roomId, channel, outFloorId);
         character.location.apply(character.characterId, match.dungeon.rooms, floors, doors);
         isSuccess = true;
 
@@ -103,8 +104,9 @@ bool MatchController::findCharacterPath(
     int characterId,
     int loops,
     std::function<bool(const Match&)> destination,
-    std::function<int(const Match&)> heuristic,
-    std::function<void(const CharacterAction&, const Match&)> consumer
+    std::function<int(const CharacterAction&, const Match&)> heuristic,
+    std::function<void(const CharacterAction&, const Match&)> consumer,
+    const bool isFailure
 ) {
     Match start = this->match;
     start.setPathfinding();
@@ -120,10 +122,10 @@ bool MatchController::findCharacterPath(
     bool isFound = false;
 
     while (true) {
-        if (codeset.addFailure(frontier.isEmpty(), CODE_PATHFINDING_EXHAUSTED_ALL_POSSIBLITIES)) {
+        if (codeset.addFailure(frontier.isEmpty(), isFailure ? CODE_PATHFINDING_EXHAUSTED_ALL_POSSIBLITIES : CODE_PATHFINDING_EXHAUSTED_ALL_POSSIBLITIES_ISSUE)) {
             return false;
         }
-        if (codeset.addFailure(loops-- <= 0, CODE_PATHFINDING_FAILED_DUE_TO_INSUFFICIENT_LOOPS)) {
+        if (codeset.addFailure(loops-- <= 0, isFailure ? CODE_PATHFINDING_FAILED_DUE_TO_INSUFFICIENT_LOOPS : CODE_PATHFINDING_FAILED_DUE_TO_INSUFFICIENT_LOOPS_ISSUE)) {
             return false;
         }
         // We capture the match by value to process, then find its stable pointer later
@@ -145,7 +147,7 @@ bool MatchController::findCharacterPath(
 
                 if (!cost_so_far.containsKey(next) || new_cost < cost_so_far.getOrDefault(next, 0)) {
                     cost_so_far.set(next, new_cost);
-                    int priority = new_cost + heuristic(next);
+                    int priority = new_cost + heuristic(action, next);
                     frontier.push(priority, next);
                     // These sets ensure 'next' exists as a key in our maps
                     came_from.set(next, current);

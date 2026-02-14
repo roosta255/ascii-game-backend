@@ -1,8 +1,9 @@
 #pragma once
 
+#include "ActionType.hpp"
 #include <string>
 
-#define ACTION_DECL( name, activation_intf_ ) ACTION_##name,
+#define ACTION_DECL( name, activation_intf__, action_type__ ) ACTION_##name,
 enum ActionEnum
 {
 #include "Action.enum"

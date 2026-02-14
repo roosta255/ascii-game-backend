@@ -17,3 +17,17 @@ Pointer<const Room> iLayout::getWallNeighbor(const Array<Room, DUNGEON_ROOM_COUN
     }
     return rooms.getPointer(index);
 }
+
+bool iLayout::setupAdjacencyPointers(Array<Room, DUNGEON_ROOM_COUNT>& rooms) const {
+    bool isSuccess = false;
+    for (auto& room: rooms) {
+        for (const auto& dir: Cardinal::getAllCardinals()) {
+            isSuccess |= this->getWallNeighbor(rooms, room, dir, room.getWall(dir).adjacent);
+        }
+        isSuccess |= this->getDepthDelta(rooms, room, -1, room.below);
+        isSuccess |= this->getDepthDelta(rooms, room, 1, room.above);
+        isSuccess |= this->getTimeDelta(rooms, room, -1, room.anterior);
+        isSuccess |= this->getTimeDelta(rooms, room, 1, room.posterior);
+    }
+    return isSuccess;
+}

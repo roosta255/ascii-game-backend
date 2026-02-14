@@ -1,6 +1,6 @@
 #pragma once
 
-#define LAYOUT_DECL( name ) LAYOUT_##name,
+#define LAYOUT_DECL( name, x__, y__, z__, t__ ) LAYOUT_##name,
 enum LayoutEnum
 {
 #include "Layout.enum"

@@ -69,7 +69,12 @@ inline bool operator==(T& rhs){
 	return _ptr == &rhs;
 }
 
-inline T& orElse(T& defau1t){
+inline const T& orElse(const T& defau1t)const{
+	return isPresent()
+    ? *_ptr : defau1t;
+}
+
+inline T& getOrDefault(T& defau1t){
 	return isPresent()
     ? *_ptr : defau1t;
 }

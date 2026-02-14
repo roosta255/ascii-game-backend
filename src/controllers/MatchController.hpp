@@ -23,10 +23,9 @@ struct Preactivation;
 class Room;
 
 struct MatchController {
-private:
+public:
     // members
     Match& match;
-public:
     Codeset& codeset;
 private:
     Map<int, Map<int2, int> > floors; // roomId -> <channel, floorId> -> characterId
@@ -42,7 +41,7 @@ public:
 
     // functions
     bool activate(const iActivator& activator, const Preactivation& preactivation);
-    bool addCharacterToFloor(const Character& character, int roomId, ChannelEnum channel, int& characterId);
+    bool allocateCharacterToFloor(int roomId, ChannelEnum channel, std::function<void(Character&)> consumer, int& outCharacterId, int& outFloorId);
     bool assignCharacterToFloor(int characterId, int roomId, ChannelEnum channel, int floorId);
 
     bool findFreeFloor(int roomId, ChannelEnum channel, int& output);
@@ -51,8 +50,9 @@ public:
         , int characterId
         , int loops
         , std::function<bool(const Match&)> destination
-        , std::function<int(const Match&)> heuristic
-        , std::function<void(const CharacterAction&, const Match&)> consumer);
+        , std::function<int(const CharacterAction&, const Match&)> heuristic
+        , std::function<void(const CharacterAction&, const Match&)> consumer
+        , const bool isFailure = true);
 
     bool generate(int seed);
     const Map<int, Map<int2, int> >& getDoors();

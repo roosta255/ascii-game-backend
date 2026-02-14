@@ -3,11 +3,6 @@
 #include "to_int4.hpp"
 // #include <drogon/drogon.h>
 
-Room& LayoutGrid::getEntrance (Array<Room, DUNGEON_ROOM_COUNT>& rooms) const {
-    static Room fake;
-    return rooms.getOrDefault(0, fake);
-}
-
 bool LayoutGrid::getDelta(const Array<Room, DUNGEON_ROOM_COUNT>& rooms, const Room& src, const int4& delta, int& output) const
 {
     int sourceId = -1;
