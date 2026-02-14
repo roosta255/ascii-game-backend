@@ -15,7 +15,7 @@
 
 bool GeneratorDoorwayDungeon2::generate (int seed, Match& dst, Codeset& codeset) const {
     MatchController controller(dst, codeset);
-    constexpr auto LAYOUT = LAYOUT_3D_5x4x3;
+    constexpr auto LAYOUT = LAYOUT_7_LEVEL_TOWER;
     dst.dungeon.layout = LAYOUT;
     bool success = true;
 
@@ -24,15 +24,15 @@ bool GeneratorDoorwayDungeon2::generate (int seed, Match& dst, Codeset& codeset)
         return false;
 
     // TODO: starting locations
-    int floorId = 0, builderId, startingRoomId = 42;
+    int floorId = 0, builderId;
     std::string playerId;
     dst.builders.access(0, [&](Builder& builder){
         playerId = builder.player.account.toString();
         builder.character.role = ROLE_BUILDER;
         if (dst.containsCharacter(builder.character, builderId)) {
-            bool isBuilderFloorFree = controller.findFreeFloor(startingRoomId, CHANNEL_CORPOREAL, floorId);
+            bool isBuilderFloorFree = controller.findFreeFloor(ENTRANCE_ROOM_ID, CHANNEL_CORPOREAL, floorId);
             if (isBuilderFloorFree) {
-                controller.assignCharacterToFloor(builderId, startingRoomId, CHANNEL_CORPOREAL, floorId);
+                controller.assignCharacterToFloor(builderId, ENTRANCE_ROOM_ID, CHANNEL_CORPOREAL, floorId);
             }
         }
     });
@@ -42,84 +42,61 @@ bool GeneratorDoorwayDungeon2::generate (int seed, Match& dst, Codeset& codeset)
             layoutIntf.setupAdjacencyPointers(dst.dungeon.rooms);
             DungeonAuthor util(controller, layoutIntf);
 
-            
+            int z;
             // setup all them walls/ladders
             constexpr int w = DOOR_WALL;
             constexpr int o = DOOR_DOORWAY;
 
-            // z: 0
-            util.setupHorizontalWalls({w, o, o, o, w}, 2, 0);
-            util.setupHorizontalWalls({w, o, w, o, w}, 1, 0);
-            util.setupHorizontalWalls({w, o, o, o, w}, 0, 0);
-            // z: 1
-            util.setupHorizontalWalls({o, o, o, o, o}, 2, 1);
-            util.setupHorizontalWalls({o, w, w, w, o}, 1, 1);
-            util.setupHorizontalWalls({o, o, o, o, o}, 0, 1);
-            // z: 2
-            util.setupHorizontalWalls({o, o, o, o, o}, 2, 2);
-            util.setupHorizontalWalls({w, o, w, o, w}, 1, 2);
-            util.setupHorizontalWalls({o, o, o, o, o}, 0, 2);
+            z = 6;
+            util.setupHorizontalWalls({o, o, o}, 1, z);
+            util.setupHorizontalWalls({o, o, o}, 0, z);
+            z = 5;
+            util.setupHorizontalWalls({o, o, o}, 1, z);
+            util.setupHorizontalWalls({o, o, o}, 0, z);
+            z = 4;
+            util.setupHorizontalWalls({w, o, w}, 1, z);
+            util.setupHorizontalWalls({w, o, w}, 0, z);
+            z = 3; 
+            util.setupHorizontalWalls({o, w, o}, 1, z);
+            util.setupHorizontalWalls({o, o, o}, 0, z);
+            z = 2;
+            util.setupHorizontalWalls({o, o, o}, 1, z);
+            util.setupHorizontalWalls({o, w, o}, 0, z);
+            z = 1;
+            util.setupHorizontalWalls({w, w, w}, 1, z);
+            util.setupHorizontalWalls({w, w, w}, 0, z);
+            z = 0;
+            util.setupHorizontalWalls({w, w, w}, 1, z);
+            util.setupHorizontalWalls({w, w, w}, 0, z);
 
-            // z: 0
-            util.setupVerticalWalls({o, w, w, o}, 3, 0);
-            util.setupVerticalWalls({o, w, o, o}, 2, 0);
-            util.setupVerticalWalls({o, o, o, o}, 1, 0);
-            util.setupVerticalWalls({o, w, w, o}, 0, 0);
-            // z: 1
-            util.setupVerticalWalls({o, o, o, o}, 3, 1);
-            util.setupVerticalWalls({w, w, w, w}, 2, 1);
-            util.setupVerticalWalls({w, w, w, w}, 1, 1);
-            util.setupVerticalWalls({o, o, o, o}, 0, 1);
-            // z: 2
-            util.setupVerticalWalls({w, o, o, w}, 3, 2);
-            util.setupVerticalWalls({o, w, w, o}, 2, 2);
-            util.setupVerticalWalls({o, w, w, o}, 1, 2);
-            util.setupVerticalWalls({w, o, o, w}, 0, 2);
-
-            util.setupLadderUp(int4{2,1,0,0}, Cardinal::north());
-            util.setupLadderUp(int4{2,3,1,0}, Cardinal::north());
-
-            if (seed == SKIP_SEED) {
-                return;
-            }
-            
-            /*
-            // z: 0
-            util.setupHorizontalWalls({o, o, o, o, o}, 2, 0);
-            util.setupHorizontalWalls({o, o, o, o, o}, 1, 0);
-            util.setupHorizontalWalls({o, o, w, o, o}, 0, 0);
-            // z: 1
-            util.setupHorizontalWalls({o, w, o, w, o}, 2, 1);
-            util.setupHorizontalWalls({w, w, o, w, w}, 1, 1);
-            util.setupHorizontalWalls({o, w, w, w, o}, 0, 1);
-            // z: 2
-            util.setupHorizontalWalls({w, o, w, o, w}, 2, 2);
-            util.setupHorizontalWalls({o, w, o, w, o}, 1, 2);
-            util.setupHorizontalWalls({o, w, o, o, o}, 0, 2);
-
-            // z: 0
-            util.setupVerticalWalls({o, w, w, o}, 3, 0);
-            util.setupVerticalWalls({w, o, o, w}, 2, 0);
-            util.setupVerticalWalls({w, o, o, w}, 1, 0);
-            util.setupVerticalWalls({o, o, o, o}, 0, 0);
-            // z: 1
-            util.setupVerticalWalls({o, o, o, o}, 3, 1);
-            util.setupVerticalWalls({o, o, o, o}, 2, 1);
-            util.setupVerticalWalls({o, o, o, o}, 1, 1);
-            util.setupVerticalWalls({o, o, o, o}, 0, 1);
-            // z: 2
-            util.setupVerticalWalls({o, o, o, o}, 3, 2);
-            util.setupVerticalWalls({o, w, w, o}, 2, 2);
-            util.setupVerticalWalls({o, w, w, w}, 1, 2);
-            util.setupVerticalWalls({o, o, o, o}, 0, 2);
-
-            util.setupLadderUp(int4{2,3,1,0}, Cardinal::north());
-            util.setupLadderUp(int4{2,0,0,0}, Cardinal::north());
-            */
-
-            // procedural generation starts
-            // i give it a match, and it would return a different mutated match because these mutations could be recursive
-            
+            z = 6;
+            util.setupVerticalWalls({w, w}, 2, z);
+            util.setupVerticalWalls({w, w}, 1, z);
+            util.setupVerticalWalls({o, o}, 0 , z);
+            z = 5;
+            util.setupVerticalWalls({w, w}, 2, z);
+            util.setupVerticalWalls({o, o}, 1, z);
+            util.setupVerticalWalls({w, w}, 0, z);
+            z = 4;
+            util.setupVerticalWalls({o, o}, 2, z);
+            util.setupVerticalWalls({o, o}, 1, z);
+            util.setupVerticalWalls({o, o}, 0, z);
+            z = 3;
+            util.setupVerticalWalls({o, o}, 2, z);
+            util.setupVerticalWalls({w, w}, 1, z);
+            util.setupVerticalWalls({o, o}, 0, z);
+            z = 2;
+            util.setupVerticalWalls({o, w}, 2, z);
+            util.setupVerticalWalls({w, o}, 1, z);
+            util.setupVerticalWalls({o, o}, 0, z);
+            z = 1; 
+            util.setupVerticalWalls({o, w}, 2, z);
+            util.setupVerticalWalls({o, o}, 1, z);
+            util.setupVerticalWalls({o, o}, 0, z);
+            z = 0;
+            util.setupVerticalWalls({o, o}, 2, z);
+            util.setupVerticalWalls({o, o}, 1, z);
+            util.setupVerticalWalls({o, o}, 0, z);
         });
     });
 
@@ -129,7 +106,7 @@ bool GeneratorDoorwayDungeon2::generate (int seed, Match& dst, Codeset& codeset)
     
     DungeonGenerator generator(playerId, builderId, BOSS_ROOM_ID, codeset);
     // generator.allowlist = Bitstick<REMODEL_COUNT>({REMODEL_TOGGLER_BLUE, REMODEL_TOGGLER_ORANGE, REMODEL_TOGGLER_SWITCH});
-    Maybe<Match> result = generator.remodelLoop(dst, 20);
+    Maybe<Match> result = generator.remodelLoop(dst, 2);
     if (codeset.addFailure(result.isEmpty())) {
         return false;
     }
