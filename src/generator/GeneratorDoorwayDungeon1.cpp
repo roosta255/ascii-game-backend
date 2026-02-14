@@ -129,7 +129,7 @@ bool GeneratorDoorwayDungeon1::generate (int seed, Match& dst, Codeset& codeset)
     
     DungeonGenerator generator(playerId, builderId, BOSS_ROOM_ID, codeset);
     // generator.allowlist = Bitstick<REMODEL_COUNT>({REMODEL_TOGGLER_BLUE, REMODEL_TOGGLER_ORANGE, REMODEL_TOGGLER_SWITCH});
-    Maybe<Match> result = generator.remodelLoop(dst, 20);
+    Maybe<Match> result = generator.remodelLoop(dst, 4);
     if (codeset.addFailure(result.isEmpty())) {
         return false;
     }
