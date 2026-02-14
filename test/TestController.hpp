@@ -5,6 +5,7 @@
 #include "GeneratorEnum.hpp"
 #include "InventoryDigest.hpp"
 #include "Match.hpp"
+#include "Remodel.hpp"
 
 class Inventory;
 
@@ -38,6 +39,8 @@ public:
     void activateLock(Cardinal dir);
     void activateDoor(Cardinal dir);
     void activateObjectCharacter(int objectCharacterId);
+
+    Remodel buildRemodel(int bossRoomId, std::function<bool(const Match&, const PathfindingCounter&)> acceptance);
 
     void endTurn();
 

@@ -1,6 +1,7 @@
-#include "GeneratorUtility.hpp"
+#include "Codeset.hpp"
 #include "DoorEnum.hpp"
 #include "Dungeon.hpp"
+#include "DungeonAuthor.hpp"
 #include "GeneratorPuzzle2.hpp"
 #include "iLayout.hpp"
 #include "LayoutEnum.hpp"
@@ -35,19 +36,20 @@ bool GeneratorPuzzle2::generate (int seed, Match& dst, Codeset& codeset) const {
 
     LayoutFlyweight::getFlyweights().accessConst(LAYOUT, [&](const LayoutFlyweight& flyweight){
         flyweight.layout.accessConst([&](const iLayout& layoutIntf){
-            GeneratorUtility util(dst.dungeon.rooms, layoutIntf, codeset);
-            util.setupAdjacencyPointers();
+            layoutIntf.setupAdjacencyPointers(dst.dungeon.rooms);
+            DungeonAuthor util(controller, layoutIntf);
 
             success &= util.setupTogglerBlue(int4{0,0,0,0}, Cardinal::north());
             success &= util.setupTogglerOrange(int4{0,0,0,0}, Cardinal::east());
 
+            const auto createToggler = [&](const int4& coord){
+                int outCharacterId, outFloorId;
+                codeset.addFailure(!(success &= util.setupTogglerSwitch(coord, outCharacterId, outFloorId)));
+                codeset.addFailure(!(success &= outCharacterId != -1), CODE_NEW_CHARACTER_BUT_BAD_ID);
+            };
+            createToggler(int4{0,0,0,0});
         });
     });
-
-    Character toggler;
-    int outCharacterId;
-    toggler.role = ROLE_TOGGLER;
-    success &= controller.addCharacterToFloor(toggler, 0, CHANNEL_CORPOREAL, outCharacterId); // 7448
 
     if (!success) {
         return false;

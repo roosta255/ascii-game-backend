@@ -53,6 +53,13 @@ bool Match::allocateCharacter(std::function<void(Character&)> consumer) {
             // this will be reassigned after the consumer
             int characterId;
             containsCharacter(character, characterId);
+
+            // zero out any attributes
+            Character blank;
+            character = blank;
+            character.characterId = characterId;
+
+            // run consumer
             consumer(character);
             character.characterId = characterId;
             return true;
@@ -267,6 +274,7 @@ void Match::setPathfinding() {
     username = "";
     host = "";
     generator = 0;
+    start();
 }
 
 // operators
@@ -358,3 +366,12 @@ static_assert(sizeof(Array<Character, Dungeon::MAX_CHARACTERS>) < KILOBYTE * 16,
 static_assert(sizeof(Array<Character, Dungeon::MAX_CHARACTERS>) < KILOBYTE * 32, "size milestone passed");
 static_assert(sizeof(Array<Character, Dungeon::MAX_CHARACTERS>) < KILOBYTE * 64, "size milestone passed");
 
+// TODO: think of ways to make hashing faster:
+// TODO: add hash to Match memory (zero out prior to hashing)
+
+// TODO: think of ways to use less memory
+// TODO: combine the adjacent pointers from 4 32b ints to 1
+// TODO: combine the posterior/anterior above/below 32b ints to 1
+// TODO: collapse all Character attributes
+// TODO: switch Keyframe data from 4 32b ints to 2 32b ints
+// TODO: combine Character: damage, feats, actions, moves

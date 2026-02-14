@@ -365,7 +365,7 @@ TEST_CASE("Base Case A*", "[match][tutorial]") {
                 isSuccess = character.location.roomId == 0;
             });
             return isSuccess;
-        }, [&](const Match& match){
+        }, [&](const CharacterAction& action, const Match& match){
             return 0; // no heuristic
         },
         [&](const CharacterAction& action, const Match& match){
@@ -397,7 +397,7 @@ TEST_CASE("Check A* moves east", "[match][tutorial]") {
                 isSuccess = character.location.roomId == 1;
             });
             return isSuccess;
-        }, [&](const Match& match){
+        }, [&](const CharacterAction& action, const Match& match){
             return 0; // no heuristic
         },
         [&](const CharacterAction& action, const Match& match){
@@ -458,7 +458,7 @@ TEST_CASE("Check A* moves east then runs toggler", "[match][tutorial]") {
     const bool isFound = controller.controller.findCharacterPath(controller.BUILDER_ID, builderOffset, expectedPathfindingLoops(EXPECTED_ACTIONS), 
         [&](const Match& match){
             return match.dungeon.isBlueOpen;
-        }, [&](const Match& match){
+        }, [&](const CharacterAction& action, const Match& match){
             return 0; // no heuristic
         },
         [&](const CharacterAction& action, const Match& match){
@@ -521,7 +521,7 @@ TEST_CASE("Check A* moves east then runs toggler, then goes north, then runs tog
                 isSuccess = character.location.roomId == 10;
             });
             return isSuccess;
-        }, [&](const Match& match){
+        }, [&](const CharacterAction& action, const Match& match){
             return 0; // no heuristic
         },
         [&](const CharacterAction& action, const Match& match){
@@ -593,7 +593,7 @@ TEST_CASE("Check A* can grab key from keeper", "[match][tutorial]") {
                 isSuccess = builder.character.location.roomId == 10 && builder.player.inventory.makeDigest().keys > 0;
             });
             return isSuccess;
-        }, [&](const Match& match){
+        }, [&](const CharacterAction& action, const Match& match){
             return 0; // no heuristic
         },
         [&](const CharacterAction& action, const Match& match){
@@ -667,7 +667,7 @@ TEST_CASE("Check A* can complete match", "[match][tutorial]") {
                 isSuccess = builder.character.location.roomId == 24;
             });
             return isSuccess;
-        }, [&](const Match& match){
+        }, [&](const CharacterAction& action, const Match& match){
             return 0; // no heuristic
         },
         [&](const CharacterAction& action, const Match& match){

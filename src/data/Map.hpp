@@ -65,6 +65,10 @@ public:
 
     bool containsKey(const K& key) { return _map.find(key) != _map.end(); }
 
+    void erase(const K& key){
+        _map.erase(key);
+    }
+
     const V& getOrDefault(const K& key, const V& option)const{
         auto it = _map.find(key);
         if (it == _map.end()) {

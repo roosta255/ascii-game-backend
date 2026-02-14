@@ -23,6 +23,7 @@ set(PROJECT_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/macro
     ${CMAKE_CURRENT_SOURCE_DIR}/src/math
     ${CMAKE_CURRENT_SOURCE_DIR}/src/model
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/remodel
     ${CMAKE_CURRENT_SOURCE_DIR}/src/role
     ${CMAKE_CURRENT_SOURCE_DIR}/src/room
     ${CMAKE_CURRENT_SOURCE_DIR}/src/store
@@ -62,12 +63,16 @@ add_library(core_backend STATIC
     src/door/ActivatorTimeGate.cpp
     src/door/ActivatorTimeGateCube.cpp
     src/door/DoorFlyweight.cpp
+    src/generator/DungeonAuthor.cpp
+    src/generator/DungeonGenerator.cpp
+    src/generator/DungeonMutator.cpp
+    src/generator/GeneratorDoorwayDungeon1.cpp
+    src/generator/GeneratorDoorwayDungeon2.cpp
     src/generator/GeneratorFlyweight.cpp
     src/generator/GeneratorPuzzle2.cpp
     src/generator/GeneratorTest.cpp
     src/generator/GeneratorTest4D.cpp
     src/generator/GeneratorTutorial.cpp
-    src/generator/GeneratorUtility.cpp
     src/generator/iGenerator.cpp
     src/enum/Codeset.cpp
     src/enum/CodeEnum.cpp
@@ -89,6 +94,17 @@ add_library(core_backend STATIC
     src/model/Player.cpp
     src/model/Titan.cpp
     src/model/Turner.cpp
+    src/remodel/iRemodel.cpp
+    src/remodel/Pathfinder.cpp
+    src/remodel/PathfindingCounter.cpp
+    src/remodel/Remodel.cpp
+    src/remodel/RemodelFlyweight.cpp
+    src/remodel/RemodelJailer.cpp
+    src/remodel/RemodelKeeper.cpp
+    src/remodel/RemodelShifter.cpp
+    src/remodel/RemodelTogglerBlue.cpp
+    src/remodel/RemodelTogglerOrange.cpp
+    src/remodel/RemodelTogglerSwitch.cpp
     src/role/ActivatorToggler.cpp
     src/role/RoleFlyweight.cpp
     src/room/ChannelEnum.cpp
@@ -129,6 +145,7 @@ add_executable(test_target
     test/main.cpp
     test/MatchTests.cpp
     test/TestController.cpp
+    test/maps/GeneratorDoorwayDungeon1.cpp
     test/maps/GeneratorTest.cpp
     test/maps/GeneratorTest4D.cpp
     test/maps/GeneratorTutorial.cpp

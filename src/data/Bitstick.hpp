@@ -5,12 +5,12 @@
 #include <initializer_list>
 #include <ostream>
 
-#include "algorithm/any_of.hpp"
-#include "algorithm/is_equal.hpp"
-#include "algorithm/isnt_equal.hpp"
-#include "algorithm/transform2.hpp"
-#include "iterator/iterator.hpp"
-#include "algorithm/byte_2_onbit.hpp"
+// #include "algorithm/any_of.hpp"
+#include "is_equal.hpp"
+// #include "algorithm/isnt_equal.hpp"
+// #include "algorithm/transform2.hpp"
+// #include "iterator/iterator.hpp"
+// #include "algorithm/byte_2_onbit.hpp"
 
 typedef std::uint64_t Bitline;
 constexpr static Bitline BITS_PER_LINE = sizeof(Bitline) * 8;
@@ -23,12 +23,8 @@ public:
 
 constexpr static Bitline BitCount = N;
 constexpr static Bitline WordCount = (BitCount - 1ull) / 64ull + 1ull;
-constexpr static Iterator Iterator = Iterator(BitCount);
 
-constexpr Bitstick
-(
-)
-{}
+constexpr Bitstick(): _state{0}{}
 
 constexpr Bitstick
 ( const Bitstick&
@@ -40,14 +36,11 @@ constexpr Bitstick
 : _state(state)
 {}
 
-Bitstick(std::initializer_list<Bitline> initials)
+Bitstick(std::initializer_list<int> initials)
 : _state{0}
 {
-    for(auto& state: _state)
-        state = 0ull;
-
     for(const auto& entry: initials)
-        operator|=(entry);
+        setIndexOn(entry);
 }
 
 Bitstick operator|
@@ -153,6 +146,16 @@ Bitstick operator-
     //});
 }
 
+Bitstick operator~() const
+{
+    std::array<Bitline, WordCount> result;
+
+    for(int i = 0; i < WordCount; i++)
+        result[i] = ~_state[i];
+
+    return result;
+}
+
 bool constexpr operator[]
 ( const int index
 ) const
@@ -171,7 +174,7 @@ bool constexpr operator!=
 ( const Bitstick& rhs
 ) const
 {
-    return isnt_equal(&_state[0], &_state[WordCount], &rhs._state[0]);
+    return !is_equal(&_state[0], &_state[WordCount], &rhs._state[0]);
 }
 
 /*Bitstick& operator++()
@@ -230,6 +233,6 @@ Bitline getFirst() const { return _state[0]; }
 
 private:
 
-std::array<Bitline, WordCount> _state;
+std::array<Bitline, WordCount> _state{};
 
 };

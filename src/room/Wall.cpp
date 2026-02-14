@@ -31,5 +31,5 @@ bool Wall::isWalkable(CodeEnum& error) const {
 }
 
 std::ostream& operator<<(std::ostream& os, const Wall& rhs) {
-    
+    return os << "Wall{}";
 }

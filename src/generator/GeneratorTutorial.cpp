@@ -1,7 +1,7 @@
 #include "Codeset.hpp"
-#include "GeneratorUtility.hpp"
 #include "DoorEnum.hpp"
 #include "Dungeon.hpp"
+#include "DungeonAuthor.hpp"
 #include "GeneratorTutorial.hpp"
 #include "iLayout.hpp"
 #include "LayoutEnum.hpp"
@@ -34,8 +34,8 @@ bool GeneratorTutorial::generate (int seed, Match& dst, Codeset& codeset) const 
 
     LayoutFlyweight::getFlyweights().accessConst(LAYOUT, [&](const LayoutFlyweight& flyweight){
         flyweight.layout.accessConst([&](const iLayout& layoutIntf){
-            GeneratorUtility util(dst.dungeon.rooms, layoutIntf, codeset);
-            util.setupAdjacencyPointers();
+            layoutIntf.setupAdjacencyPointers(dst.dungeon.rooms);
+            DungeonAuthor util(controller, layoutIntf);
 
             success &= util.setupDoorway(int4{0,0,0,0}, Cardinal::east());
             success &= util.setupDoorway(int4{0,2,0,0}, Cardinal::north());
@@ -53,21 +53,17 @@ bool GeneratorTutorial::generate (int seed, Match& dst, Codeset& codeset) const 
 
             success &= util.setupShifter(int4{3,2,0,0}, Cardinal::west(), false);
 
+            const auto createToggler = [&](const int4& coord){
+                int outCharacterId = -1, outFloorId = -1;
+                codeset.addFailure(!(success &= util.setupTogglerSwitch(coord, outCharacterId, outFloorId)));
+                codeset.addFailure(!(success &= outCharacterId != -1), CODE_NEW_CHARACTER_BUT_BAD_ID);
+            };
+            createToggler(int4{1,0,0,0});
+            createToggler(int4{1,1,0,0});
+            createToggler(int4{2,2,0,0});
+            createToggler(int4{3,0,0,0});
         });
     });
-
-    Character toggler;
-    toggler.role = ROLE_TOGGLER;
-    toggler.visibility = ~0x0;
-    int outCharacterId;
-    codeset.addFailure(!(success &= controller.addCharacterToFloor(toggler, 1, CHANNEL_CORPOREAL, outCharacterId)));
-    codeset.addFailure(outCharacterId == -1, CODE_NEW_CHARACTER_BUT_BAD_ID);
-    codeset.addFailure(!(success &= controller.addCharacterToFloor(toggler, 3, CHANNEL_CORPOREAL, outCharacterId)));
-    codeset.addFailure(outCharacterId == -1, CODE_NEW_CHARACTER_BUT_BAD_ID);
-    codeset.addFailure(!(success &= controller.addCharacterToFloor(toggler, 9, CHANNEL_CORPOREAL, outCharacterId)));
-    codeset.addFailure(outCharacterId == -1, CODE_NEW_CHARACTER_BUT_BAD_ID);
-    codeset.addFailure(!(success &= controller.addCharacterToFloor(toggler, 18, CHANNEL_CORPOREAL, outCharacterId)));
-    codeset.addFailure(outCharacterId == -1, CODE_NEW_CHARACTER_BUT_BAD_ID);
 
     if (!success) {
         return false;

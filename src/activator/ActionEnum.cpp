@@ -2,7 +2,7 @@
 
 const char* action_to_text(int index) {
     static const char* names[] = {
-        #define ACTION_DECL( name_text, activation_intf_ ) #name_text,
+        #define ACTION_DECL( name_text, activation_intf__, action_type__ ) #name_text,
         #include "Action.enum"
         #undef ACTION_DECL
     };

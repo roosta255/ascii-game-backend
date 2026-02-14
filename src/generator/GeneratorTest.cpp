@@ -1,6 +1,6 @@
-#include "GeneratorUtility.hpp"
 #include "DoorEnum.hpp"
 #include "Dungeon.hpp"
+#include "DungeonAuthor.hpp"
 #include "GeneratorTest.hpp"
 #include "iLayout.hpp"
 #include "LayoutEnum.hpp"
@@ -33,8 +33,8 @@ bool GeneratorTest::generate (int seed, Match& dst, Codeset& codeset) const {
 
     LayoutFlyweight::getFlyweights().accessConst(LAYOUT, [&](const LayoutFlyweight& flyweight){
         flyweight.layout.accessConst([&](const iLayout& layoutIntf){
-            GeneratorUtility util(dst.dungeon.rooms, layoutIntf, codeset);
-            util.setupAdjacencyPointers();
+            layoutIntf.setupAdjacencyPointers(dst.dungeon.rooms);
+            DungeonAuthor util(controller, layoutIntf);
 
             success &= util.setup2x5Room(int4{1,1,0,0});
             success &= util.setup2x5Room(int4{1,2,0,0});

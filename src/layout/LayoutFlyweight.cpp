@@ -6,30 +6,13 @@
 const Array<LayoutFlyweight, LAYOUT_COUNT>& LayoutFlyweight::getFlyweights() {
     static auto flyweights = [](){
         Array<LayoutFlyweight, LAYOUT_COUNT> flyweights;
-        #define LAYOUT_DECL( name_text ) flyweights.getPointer( LAYOUT_##name_text ).access([](LayoutFlyweight& flyweight){ flyweight.name = #name_text; });
+        #define LAYOUT_DECL( name_text, x__, y__, z__, t__ ) flyweights.getPointer( LAYOUT_##name_text ).access([](LayoutFlyweight& flyweight){ \
+            static LayoutGrid layout(x__, y__, z__, t__); \
+            flyweight.name = #name_text; \
+            flyweight.layout = layout; \
+        });
         #include "Layout.enum"
         #undef LAYOUT_DECL
-
-        flyweights.getPointer(LAYOUT_2D_8x8).access([](LayoutFlyweight& flyweight){
-            static LayoutGrid t;
-            t.setDimensions(8, 8, 1, 1);
-            flyweight.layout = t;
-        });
-        flyweights.getPointer(LAYOUT_3D_4x4x4).access([](LayoutFlyweight& flyweight){
-            static LayoutGrid t;
-            t.setDimensions(4, 4, 4, 1);
-            flyweight.layout = t;
-        });
-        flyweights.getPointer(LAYOUT_4D_3x3x2).access([](LayoutFlyweight& flyweight){
-            static LayoutGrid t;
-            t.setDimensions(3, 3, 2, 2);
-            flyweight.layout = t;
-        });
-        flyweights.getPointer(LAYOUT_7_LEVEL_TOWER).access([](LayoutFlyweight& flyweight){
-            static LayoutGrid t;
-            t.setDimensions(3, 3, 7, 1);
-            flyweight.layout = t;
-        });
 
         return flyweights;
     }();

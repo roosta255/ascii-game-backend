@@ -1,0 +1,10 @@
+#pragma once
+
+enum ActionType
+{
+    ACTION_TYPE_NOTHING,
+    ACTION_TYPE_MOVEMENT,
+    ACTION_TYPE_USAGE,
+    ACTION_TYPE_ACTIVITY,
+    ACTION_TYPE_COUNT
+};

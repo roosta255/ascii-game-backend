@@ -44,6 +44,13 @@ Maybe<T2> map(F f){
 	return Maybe<T2>();
 }
 
+template<typename T2, typename F>
+Maybe<T2> map(F f) const {
+    if(isPresent())
+        return Maybe<T2>(f(_data));
+	return Maybe<T2>();
+}
+
 inline bool copy(T& output)const{
 	if (isPresent()) {
 		output = _data;

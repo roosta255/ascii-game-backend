@@ -65,5 +65,5 @@ int Room::getDeltaTime(const int delta)const {
 // operators
 
 std::ostream& operator<<(std::ostream& os, const Room& rhs) {
-
+    return os << "Room{}";
 }

@@ -18,11 +18,12 @@ const Array<ActionFlyweight, ACTION_COUNT>& ActionFlyweight::getFlyweights()
     static auto flyweights = [](){
         Array<ActionFlyweight, ACTION_COUNT> flyweights;
 
-        #define ACTION_DECL( name_, activation_intf_ ) \
+        #define ACTION_DECL( name_, activation_intf_, action_type_ ) \
             static activation_intf_ GLOBAL_##name_##activation_intf_; \
             flyweights.getPointer( ACTION_##name_ ).access([&](ActionFlyweight& flyweight){ \
                 flyweight.name = #name_; \
                 flyweight.activator = GLOBAL_##name_##activation_intf_; \
+                flyweight.type = action_type_; \
             });
         #include "Action.enum"
         #undef ACTION_DECL
