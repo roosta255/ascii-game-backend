@@ -33,7 +33,7 @@ bool DungeonMutator::setDoor(const int& roomId, Cardinal dir, DoorEnum type) {
 
 bool DungeonMutator::setRoom(const int& roomId, RoomEnum type) {
     return getRoom(roomId).map<bool>([&](Room& room){
-            if (room.type != ROOM_RECT_4_x_5) {
+            if (room.type != ROOM_RECT_4_x_5 && room.type != type) {
                 codeset.addError(CODE_DUNGEON_MUTATOR_SET_ROOM_REQUIRES_DEFAULT_ROOM_TYPE);
                 return false;
             }
@@ -106,6 +106,16 @@ bool DungeonMutator::setup3x3Room(const int& roomId) {
 
 bool DungeonMutator::setup4x1Room(const int& roomId) {
     return setRoom(roomId, ROOM_RECT_4_x_1);
+}
+
+bool DungeonMutator::setupElevatorRoom(const int& elevatorRoomId, const Array<Maybe<int>, 4>& connectedRoomIds) {
+    bool isSuccess = true;
+    for (const auto dir: Cardinal::getAllCardinals()) {
+        connectedRoomIds.accessConst(dir, [&](const Maybe<int>& maybeRoomId){
+            // isSuccess &= maybeRoomId.map<bool>([&](const int& roomId){ setSharedDoor(); }).orElse(true);
+        });
+    }
+    return isSuccess && setRoom(elevatorRoomId, ROOM_ELEVATOR);
 }
 
 bool DungeonMutator::setupJailer (const int& roomId, const Cardinal dir, const bool isKeyed) {

@@ -6,3 +6,4 @@ ROOM_DECL(LIGHTNING_ROD,       4, 1, Bitcard::NORTH, Bitcard::NORTH | Bitcard::E
 ROOM_DECL(POWER_GENERATOR,     4, 5, Bitcard::NONE,  Bitcard::NONE)
 ROOM_DECL(TIME_GATE_TO_FUTURE, 4, 4, Bitcard::NORTH, Bitcard::NORTH)
 ROOM_DECL(TIME_GATE_TO_PAST,   4, 4, Bitcard::NORTH, Bitcard::NORTH)
+ROOM_DECL(ELEVATOR,            4, 5, Bitcard::NONE,  Bitcard::NORTH | Bitcard::SOUTH)

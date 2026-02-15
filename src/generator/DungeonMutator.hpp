@@ -27,6 +27,7 @@ public:
     bool setup2x5Room(const int& roomId);
     bool setup3x3Room(const int& roomId);
     bool setup4x1Room(const int& roomId);
+    bool setupElevatorRoom(const int& elevatorRoomId, const Array<Maybe<int>, 4>& connectedRoomIds);
     bool setupDoorway(const int& roomId, Cardinal dir);
     bool setupJailer(const int& roomId, Cardinal dir, bool isKeyed);
     bool setupKeeper(const int& roomId, Cardinal dir, bool isKeyed);
