@@ -100,10 +100,6 @@ bool GeneratorDoorwayDungeon2::generate (int seed, Match& dst, Codeset& codeset)
         });
     });
 
-    if (seed == SKIP_SEED) {
-        return success;
-    }
-    
     DungeonGenerator generator(playerId, builderId, BOSS_ROOM_ID, codeset);
     // generator.allowlist = Bitstick<REMODEL_COUNT>({REMODEL_TOGGLER_BLUE, REMODEL_TOGGLER_ORANGE, REMODEL_TOGGLER_SWITCH});
     Maybe<Match> result = generator.remodelLoop(dst, 2);
