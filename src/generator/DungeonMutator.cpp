@@ -1,7 +1,9 @@
+#include "ActivatorElevator.hpp"
 #include "ActivatorLightningRod.hpp"
 #include "ActivatorTimeGate.hpp"
 #include "Character.hpp"
 #include "Codeset.hpp"
+#include "DoorEnum.hpp"
 #include "Dungeon.hpp"
 #include "DungeonMutator.hpp"
 #include "Match.hpp"
@@ -19,14 +21,15 @@ Pointer<Room> DungeonMutator::getRoom(const int& roomId) {
     return roomPtr;
 }
 
-bool DungeonMutator::setDoor(const int& roomId, Cardinal dir, DoorEnum type) {
+bool DungeonMutator::setDoor(const int& roomId, Cardinal dir, DoorEnum type, const Maybe<int> setRoomId) {
     return getRoom(roomId).map<bool>([&](Room& room){
             Wall& wall = room.getWall(dir);
-            if (wall.door != DOOR_WALL && wall.door != DOOR_DOORWAY) {
+            if (wall.door != DOOR_WALL && wall.door != DOOR_DOORWAY && wall.door != type) {
                codeset.addError(CODE_DUNGEON_MUTATOR_SET_DOOR_REQUIRES_DEFAULT_DOOR_TYPE);
                 return false;
             }
             wall.door = type;
+            setRoomId.accessConst([&](const int& roomId2){wall.adjacent = roomId2;});
             return true;
         }).orElse(false);
 }
@@ -46,7 +49,8 @@ bool DungeonMutator::setSharedDoor(
     const int& room1Id,
     Cardinal dir,
     DoorEnum door1,
-    DoorEnum door2
+    DoorEnum door2,
+    const Maybe<int> setRoomId
 ) {
     return getRoom(room1Id).map<bool>([&](Room& room1){
             Wall& wall1 = room1.getWall(dir);
@@ -54,7 +58,7 @@ bool DungeonMutator::setSharedDoor(
                 codeset.addError(CODE_DUNGEON_MUTATOR_SET_SHARED_DOOR_REQUIRES_DEFAULT_DOOR_TYPE_FROM_DOOR_1);
                 return false;
             }
-            return getRoom(wall1.adjacent).map<bool>([&](Room& room2){
+            return getRoom(setRoomId.orElse(wall1.adjacent)).map<bool>([&](Room& room2){
                     Wall& wall2 = room2.getWall(dir.getFlip());
                     if (wall2.door != DOOR_WALL && wall2.door != DOOR_DOORWAY) {
                         codeset.addError(CODE_DUNGEON_MUTATOR_SET_SHARED_DOOR_REQUIRES_DEFAULT_DOOR_TYPE_FROM_DOOR_2);
@@ -62,6 +66,10 @@ bool DungeonMutator::setSharedDoor(
                     }
                     wall1.door = door1;
                     wall2.door = door2;
+                    setRoomId.accessConst([&](const int& room2Id){
+                        wall1.adjacent = room2Id;
+                        wall2.adjacent = room1Id;
+                    });
                     return true;
                 }).orElse(false);
         }).orElse(false);
@@ -108,13 +116,50 @@ bool DungeonMutator::setup4x1Room(const int& roomId) {
     return setRoom(roomId, ROOM_RECT_4_x_1);
 }
 
-bool DungeonMutator::setupElevatorRoom(const int& elevatorRoomId, const Array<Maybe<int>, 4>& connectedRoomIds) {
+bool DungeonMutator::setupElevatorLevel(const int elevatorRoomId, const Array<Maybe<int>, 4>& connectedRoomIds, const bool isElevatorPresent, const bool isPaid, const bool isDoorway, const bool isExistingHigher, const bool isExistingLower) {
     bool isSuccess = true;
     for (const auto dir: Cardinal::getAllCardinals()) {
-        connectedRoomIds.accessConst(dir, [&](const Maybe<int>& maybeRoomId){
-            // isSuccess &= maybeRoomId.map<bool>([&](const int& roomId){ setSharedDoor(); }).orElse(true);
+        const auto exteriorDoorType = ActivatorElevator::getExteriorType(isElevatorPresent, isPaid);
+        const auto interiorDoorType = ActivatorElevator::getInteriorType(dir, isPaid, true, isExistingHigher, isExistingLower);
+        connectedRoomIds.accessConst(dir.getIndex(), [&](const Maybe<int>& maybeRoomId){
+            if (isElevatorPresent) {
+                isSuccess &= maybeRoomId.isPresent() ? setSharedDoor(elevatorRoomId, dir, interiorDoorType, exteriorDoorType, maybeRoomId) : setDoor(elevatorRoomId, dir, interiorDoorType, maybeRoomId);
+            } else {
+                // elevator not present
+                isSuccess &= maybeRoomId.map<bool>([&](const int& roomId2){
+                    return setDoor(roomId2, dir.getFlip(), exteriorDoorType);
+                }).orElse(true);
+            }
         });
     }
+    return isSuccess;
+}
+
+bool DungeonMutator::setupElevatorColumn(const int& elevatorRoomId, const Rack<ElevatorProperties>& elevatorPropertyList) {
+    bool isSuccess = true;
+
+    // ok, so the whole thing
+    // default for the elevator starting at first paid level
+    bool isPaidFound = false;
+    int i = 0;
+    for (const auto& elevatorProperties: elevatorPropertyList) {
+        // what needs to be set?
+        // adjacent
+        // doorType:
+        // * first paid level door is OPEN
+        // * the inside up/down keyless/buttons need to reflect the paid status within the elevator
+        // * the outside button to call the elevator needs to be available on every paid level that is closed
+        const bool isElevatorPresent = !isPaidFound && elevatorProperties.isPaid;
+        isPaidFound = isPaidFound || elevatorProperties.isPaid;
+
+        const bool isExistingHigher = i != elevatorPropertyList.size() - 1;
+        const bool isExistingLower = i != 0;
+
+        setupElevatorLevel(elevatorRoomId, elevatorProperties.connectedRoomIds, isElevatorPresent, elevatorProperties.isPaid, true, isExistingHigher, isExistingLower);
+
+        i++;
+    }
+
     return isSuccess && setRoom(elevatorRoomId, ROOM_ELEVATOR);
 }
 

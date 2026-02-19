@@ -2,5 +2,6 @@
     "files.associations": {
         "*.macro": "cpp",
         "*.enum": "cpp"
-    }
+    },
+    "C_Cpp.default.compileCommands": "${workspaceFolder}/build/compile_commands.json"
 }

@@ -54,6 +54,7 @@ add_library(core_backend STATIC
     src/animation/Keyframe.cpp
     src/animation/KeyframeFlyweight.cpp
     src/controllers/MatchController.cpp
+    src/door/ActivatorElevator.cpp
     src/door/ActivatorInactiveDoor.cpp
     src/door/ActivatorInactiveDoor.cpp
     src/door/ActivatorKeeper.cpp
@@ -146,6 +147,7 @@ add_executable(test_target
     test/MatchTests.cpp
     test/TestController.cpp
     test/maps/GeneratorDoorwayDungeon1.cpp
+    test/maps/GeneratorDoorwayDungeon2.cpp
     test/maps/GeneratorTest.cpp
     test/maps/GeneratorTest4D.cpp
     test/maps/GeneratorTutorial.cpp
@@ -161,3 +163,5 @@ target_link_libraries(test_target PRIVATE
 
 enable_testing()
 add_test(NAME unit_tests COMMAND test_target)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

@@ -104,6 +104,33 @@ class Array
 		_elems[index] = rhs;
 	}
 
+	template<typename T2, typename F>
+	Maybe<T2> mapIndexAlaConst(const int index, F f) const {
+		if(containsIndex(index))
+			return Maybe<T2>(f(_elems[index]));
+		return Maybe<T2>();
+	}
+
+	template<typename F>
+	const T& findFirst(const T& defau1t, F f) const {
+		for (const auto& elem : _elems) {
+			if (f(elem)) {
+				return elem;
+			}
+		}
+		return defau1t;
+	}
+
+	template<typename F>
+	bool isAny(F f)const {
+		for (const auto& elem: _elems) {
+			if (f(elem)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	inline void set
 	( const int index
 	, T rhs

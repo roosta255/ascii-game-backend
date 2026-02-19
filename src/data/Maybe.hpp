@@ -73,7 +73,7 @@ inline bool operator==(const Maybe<T>& rhs)const{
 	return isPresent() ? rhs.isPresent() && _data == rhs._data : rhs.isEmpty();
 }
 
-inline const T& orElse(const T& defau1t)const{
+inline constexpr const T& orElse(const T& defau1t)const{
 	return isPresent()
     ? _data : defau1t;
 }

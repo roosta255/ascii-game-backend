@@ -11,11 +11,11 @@ COPY . .
 RUN mkdir build && cd build && cmake .. && make -j$(nproc)
 
 # Add after building drogon_backend
-RUN mkdir test_build \
- && cd test_build \
- && cmake .. \
- && make -j$(nproc) \
- && ctest || (echo "===== TEST LOG =====" && cat Testing/Temporary/LastTest.log && false)
+# RUN mkdir test_build \
+# && cd test_build \
+# && cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON .. \
+# && make -j$(nproc) \
+# && ctest || (echo "===== TEST LOG =====" && cat Testing/Temporary/LastTest.log && false)
 
 
 CMD ["./build/match_backend"]

@@ -1,6 +1,8 @@
 #pragma once
 
 #include "DoorEnum.hpp"
+#include "Maybe.hpp"
+#include "Rack.hpp"
 #include "Room.hpp"
 #include "RoomEnum.hpp"
 
@@ -17,18 +19,27 @@ private:
     Pointer<Room> getRoom(const int& roomId);
 
 public:
+    // structs
+    struct ElevatorProperties {
+        Array<Maybe<int>, 4> connectedRoomIds;
+        bool isPaid;
+    };
+
+    // constructors
     DungeonMutator(MatchController& controller);
 
-    bool setDoor(const int& roomId, Cardinal dir, DoorEnum type);
+    // functions
+    bool setDoor(const int& roomId, Cardinal dir, DoorEnum type, const Maybe<int> setRoomId = Maybe<int>::empty());
     bool setRoom(const int& roomId, RoomEnum type);
     bool setSharedShaftAbove(const int& roomA, Cardinal dir, DoorEnum doorA, DoorEnum doorB);
-    bool setSharedDoor(const int& roomA, Cardinal dir, DoorEnum doorA, DoorEnum doorB);
+    bool setSharedDoor(const int& roomA, Cardinal dir, DoorEnum doorA, DoorEnum doorB, const Maybe<int> setRoomId = Maybe<int>::empty());
 
     bool setup2x5Room(const int& roomId);
     bool setup3x3Room(const int& roomId);
     bool setup4x1Room(const int& roomId);
-    bool setupElevatorRoom(const int& elevatorRoomId, const Array<Maybe<int>, 4>& connectedRoomIds);
     bool setupDoorway(const int& roomId, Cardinal dir);
+    bool setupElevatorColumn(const int& elevatorRoomId, const Rack<ElevatorProperties>& elevatorPropertyList);
+    bool setupElevatorLevel(const int elevatorRoomId, const Array<Maybe<int>, 4>& connectedRoomIds, const bool isElevatorPresent, const bool isPaid, const bool isDoorway, const bool isExistingHigher, const bool isExistingLower);
     bool setupJailer(const int& roomId, Cardinal dir, bool isKeyed);
     bool setupKeeper(const int& roomId, Cardinal dir, bool isKeyed);
     bool setupLadderUp(const int& bottomRoom, Cardinal dir);

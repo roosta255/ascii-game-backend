@@ -2,6 +2,7 @@
 #include "DoorEnum.hpp"
 #include "DoorFlyweight.hpp"
 #include "iActivator.hpp"
+#include "ActivatorElevator.hpp"
 #include "ActivatorJailer.hpp"
 #include "ActivatorKeeper.hpp"
 #include "ActivatorInactiveDoor.hpp"
@@ -46,4 +47,11 @@ bool DoorFlyweight::indexByString (const std::string& name, int& output) {
         output++;
     }
     return false;
+}
+
+std::ostream& operator<<(std::ostream& os, const DoorEnum& code) {
+    DoorFlyweight::getFlyweights().accessConst(code, [&](const DoorFlyweight& flyweight){
+        os << std::string(flyweight.name);
+    });
+    return os;
 }
