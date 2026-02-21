@@ -37,6 +37,8 @@ set(PROJECT_INCLUDE_DIRS
     /usr/include/jsoncpp
 )
 
+# Sync test line 40 - third
+
 # ------------ Shared Library -------------
 add_library(core_backend STATIC
     src/activator/ActionEnum.cpp

@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [gamma]
 
-jobs:
+jjobs:
   test:
     runs-on: ubuntu-latest
     steps:
@@ -13,5 +13,14 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Build backend Docker image
-        run: docker build -t game-backend .
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake libjsoncpp-dev # Add Drogon deps here
+
+      - name: Build and Run Catch2 Tests
+        run: |
+          mkdir -p build && cd build
+          cmake ..
+          make test_target
+          ./test_target # <--- THIS is what breaks the build on logic errors

@@ -1,0 +1,18 @@
+services:
+  # C++ Drogon App
+  agame-backendi:
+    build: .
+    container_name: drogon_backend
+    env_file: .env
+    ports:
+      - "8080:8080" # Matches Drogon port
+    restart: unless-stopped
+
+  # The Bridge to the Internet
+  cloudflare_tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflare_tunnel
+    restart: always
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}

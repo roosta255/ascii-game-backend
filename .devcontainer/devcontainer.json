@@ -2,9 +2,16 @@
   "name": "ascii-backend",
   "dockerFile": "../Dockerfile",
   "context": "..",
-  "workspaceFolder": "/app",
+  "workspaceFolder": "/workspaces/backend",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/backend,type=bind",
   "extensions": [
     "ms-vscode.cpptools",
     "ms-vscode.cmake-tools"
-  ]
+  ],
+  "runArgs": [
+    "--network=backend_default"
+  ],
+  "settings": {
+    "terminal.integrated.shell.linux": "/bin/bash"
+  }
 }

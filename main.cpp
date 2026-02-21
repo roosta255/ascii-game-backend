@@ -26,6 +26,13 @@ int main() {
         { drogon::Options }  // Respond only to OPTIONS
     );
 
+    drogon::app().registerHandler("/", [](const drogon::HttpRequestPtr& req, 
+        std::function<void (const drogon::HttpResponsePtr &)> &&callback) {
+        auto resp = drogon::HttpResponse::newHttpResponse();
+        resp->setBody("<h1>ASCII Game Backend is LIVE</h1>");
+        callback(resp);
+    });
+
     drogon::app().run();
     return 0;
 }
