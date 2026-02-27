@@ -37,14 +37,15 @@ const Array<DoorFlyweight, DOOR_COUNT>& DoorFlyweight::getFlyweights() {
     return flyweights;
 }
 
-bool DoorFlyweight::indexByString (const std::string& name, int& output) {
-    output = 0;
+bool DoorFlyweight::indexByString (const std::string& name, DoorEnum& output) {
+    int i = 0;
     const auto& flyweights = getFlyweights(); 
     for(const DoorFlyweight& flyweight: flyweights) {
         if(name == flyweight.name) {
+            output = (DoorEnum)i;
             return true;
         }
-        output++;
+        i++;
     }
     return false;
 }

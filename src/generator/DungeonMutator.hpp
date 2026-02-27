@@ -15,8 +15,12 @@ private:
     Dungeon& dungeon;
     Codeset& codeset;
     MatchController& controller;
-
+public:
+    bool isElevatorOverride = false;
+private:
+    // internal functions
     Pointer<Room> getRoom(const int& roomId);
+    bool setDoor(DoorEnum& source, DoorEnum next);
 
 public:
     // structs
@@ -39,7 +43,7 @@ public:
     bool setup4x1Room(const int& roomId);
     bool setupDoorway(const int& roomId, Cardinal dir);
     bool setupElevatorColumn(const int& elevatorRoomId, const Rack<ElevatorProperties>& elevatorPropertyList);
-    bool setupElevatorLevel(const int elevatorRoomId, const Array<Maybe<int>, 4>& connectedRoomIds, const bool isElevatorPresent, const bool isPaid, const bool isDoorway, const bool isExistingHigher, const bool isExistingLower);
+    bool setupElevatorLevel(const int elevatorRoomId, const ElevatorProperties& connectedRoomIds, const bool isElevatorPresent, const bool isExistingHigher, const bool isExistingLower);
     bool setupJailer(const int& roomId, Cardinal dir, bool isKeyed);
     bool setupKeeper(const int& roomId, Cardinal dir, bool isKeyed);
     bool setupLadderUp(const int& bottomRoom, Cardinal dir);

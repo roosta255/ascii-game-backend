@@ -4,6 +4,7 @@
 #include "Codeset.hpp"
 #include "GeneratorEnum.hpp"
 #include "InventoryDigest.hpp"
+#include "ItemEnum.hpp"
 #include "Match.hpp"
 #include "Remodel.hpp"
 
@@ -30,7 +31,6 @@ public:
     int latestPosition = 0;
     bool isSkippingAnimations = false;
 
-
     // constructors
     TestController(const GeneratorEnum& generator);
 
@@ -43,6 +43,9 @@ public:
     Remodel buildRemodel(int bossRoomId, std::function<bool(const Match&, const PathfindingCounter&)> acceptance);
 
     void endTurn();
+
+    void generate(int seed);
+    void giveItem(ItemEnum type);
 
     void moveCharacterToFloor(int roomId, int floorId);
     void moveCharacterToFloor(int floorId);

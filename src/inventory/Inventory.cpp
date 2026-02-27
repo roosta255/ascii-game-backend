@@ -19,6 +19,9 @@ InventoryDigest Inventory::makeDigest() const
         if (item.type == ITEM_KEY) {
             digest.keys += item.stacks;
         }
+        if (item.type == ITEM_KEY_ELEVATOR) {
+            digest.elevatorKeys += item.stacks;
+        }
         if (item.type == ITEM_CUBE_AWAKENED) {
             digest.cubes += 1;
             digest.isCubeAwakened = true;

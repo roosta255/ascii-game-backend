@@ -49,7 +49,7 @@ TEST_CASE("Test default generation", "[match][GENERATOR_DOORWAY_DUNGEON_1]") {
     TestController controller(GENERATOR_DOORWAY_DUNGEON_1);
 
     // Generate test layout
-    controller.controller.generate(0);
+    controller.generate(0);
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
 
     const auto path = Pathfinder::build(controller.BUILDER_ID, controller.builderOffset, GeneratorDoorwayDungeon1::BOSS_ROOM_ID, controller.match, controller.codeset);
@@ -81,7 +81,7 @@ TEST_CASE("Verify empty dungeon is navigable manually", "[match][GENERATOR_DOORW
     TestController controller(GENERATOR_DOORWAY_DUNGEON_1);
 
     // Generate test layout
-    controller.controller.generate(GeneratorDoorwayDungeon1::SKIP_SEED);
+    controller.generate(GeneratorDoorwayDungeon1::SKIP_SEED);
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
 
     // Start the match
@@ -138,7 +138,7 @@ TEST_CASE("Test keeper generation", "[match][GENERATOR_DOORWAY_DUNGEON_1]") {
     TestController controller(GENERATOR_DOORWAY_DUNGEON_1);
 
     // Generate test layout
-    controller.controller.generate(GeneratorDoorwayDungeon1::SKIP_SEED);
+    controller.generate(GeneratorDoorwayDungeon1::SKIP_SEED);
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
 
     

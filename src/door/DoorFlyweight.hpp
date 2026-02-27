@@ -18,5 +18,5 @@ struct DoorFlyweight {
     Pointer<const iActivator> doorActivator;
 
     static const Array<DoorFlyweight, DOOR_COUNT>& getFlyweights();
-    static bool indexByString(const std::string& name, int& output);
+    static bool indexByString(const std::string& name, DoorEnum& output);
 };

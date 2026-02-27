@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CodeEnum.hpp"
+#include "DoorEnum.hpp"
 #include <functional>
 #include "Timestamp.hpp"
 
@@ -15,7 +16,7 @@ class MatchController;
 class Cardinal;
 
 struct Wall {
-    int door = 0;
+    DoorEnum door = DOOR_WALL;
     int adjacent = -1;
 
     // functions

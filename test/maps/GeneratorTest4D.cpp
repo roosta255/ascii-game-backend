@@ -24,7 +24,7 @@ TEST_CASE("Test Time Gate", "[match][test4d]") {
     TestController controller(GENERATOR_TEST_4D);
 
     // Generate test layout
-    controller.isSuccess = controller.controller.generate(0);
+    controller.generate(0);
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
     REQUIRE(controller.isSuccess);
 
@@ -157,7 +157,7 @@ TEST_CASE("Check A* can complete match[test4d]", "[match][test4d]") {
     TestController controller(GENERATOR_TEST_4D);
 
     // Generate test layout
-    controller.controller.generate(0);
+    controller.generate(0);
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
 
     // Start the match

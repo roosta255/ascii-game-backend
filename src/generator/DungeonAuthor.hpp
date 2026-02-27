@@ -48,6 +48,6 @@ public:
     bool setupTogglerOrange(const int4&, const Cardinal);
     bool setupTogglerSwitch(const int4&, int& outCharacterId, int& outFloorId);
 
-    bool setupHorizontalWalls (std::initializer_list<int> row, int y, int z);
-    bool setupVerticalWalls (std::initializer_list<int> row, int y, int z);
+    bool setupHorizontalWalls (std::initializer_list<DoorEnum> row, int y, int z);
+    bool setupVerticalWalls (std::initializer_list<DoorEnum> row, int y, int z);
 };

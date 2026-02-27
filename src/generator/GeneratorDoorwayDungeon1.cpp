@@ -44,8 +44,8 @@ bool GeneratorDoorwayDungeon1::generate (int seed, Match& dst, Codeset& codeset)
 
             
             // setup all them walls/ladders
-            constexpr int w = DOOR_WALL;
-            constexpr int o = DOOR_DOORWAY;
+            constexpr DoorEnum w = DOOR_WALL;
+            constexpr DoorEnum o = DOOR_DOORWAY;
 
             // z: 0
             util.setupHorizontalWalls({w, o, o, o, w}, 2, 0);

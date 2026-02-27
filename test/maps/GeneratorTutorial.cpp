@@ -21,7 +21,7 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     int nullCharacterId = -1;
 
     // Generate test layout
-    controller.controller.generate(0);
+    controller.generate(0);
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
 
     // Start the match
@@ -348,7 +348,7 @@ TEST_CASE("Base Case A*", "[match][tutorial]") {
     TestController controller(GENERATOR_TUTORIAL);
 
     // Generate test layout
-    controller.controller.generate(0);
+    controller.generate(0);
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
 
     // Start the match
@@ -379,7 +379,7 @@ TEST_CASE("Check A* moves east", "[match][tutorial]") {
     TestController controller(GENERATOR_TUTORIAL);
 
     // Generate test layout
-    controller.controller.generate(0);
+    controller.generate(0);
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
 
     // Start the match
@@ -417,7 +417,7 @@ TEST_CASE("Check A* moves east then runs toggler", "[match][tutorial]") {
     TestController controller(GENERATOR_TUTORIAL);
 
     // Generate test layout
-    controller.controller.generate(0);
+    controller.generate(0);
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
 
     // Start the match
@@ -475,7 +475,7 @@ TEST_CASE("Check A* moves east then runs toggler, then goes north, then runs tog
     TestController controller(GENERATOR_TUTORIAL);
 
     // Generate test layout
-    controller.controller.generate(0);
+    controller.generate(0);
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
 
     // Start the match
@@ -543,7 +543,7 @@ TEST_CASE("Check A* can grab key from keeper", "[match][tutorial]") {
     TestController controller(GENERATOR_TUTORIAL);
 
     // Generate test layout
-    controller.controller.generate(0);
+    controller.generate(0);
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
 
     // Start the match
@@ -617,7 +617,7 @@ TEST_CASE("Check A* can complete match", "[match][tutorial]") {
     TestController controller(GENERATOR_TUTORIAL);
 
     // Generate test layout
-    controller.controller.generate(0);
+    controller.generate(0);
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
 
     // Start the match
@@ -722,7 +722,7 @@ TEST_CASE("Match collapsing base case", "[match][tutorial]") {
     controller.isSkippingAnimations = true;
 
     // Generate test layout
-    controller.controller.generate(0);
+    controller.generate(0);
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
 
     // Start the match
@@ -736,7 +736,7 @@ TEST_CASE("Match collapsing end turn", "[match][tutorial]") {
     controller.isSkippingAnimations = true;
 
     // Generate test layout
-    controller.controller.generate(0);
+    controller.generate(0);
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
 
     // Start the match
@@ -754,7 +754,7 @@ TEST_CASE("Match collapsing from floor move to wall", "[match][tutorial]") {
     controller.isSkippingAnimations = true;
 
     // Generate test layout
-    controller.controller.generate(0);
+    controller.generate(0);
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
 
     // Start the match
@@ -790,7 +790,7 @@ TEST_CASE("Match collapsing from wall move to floor", "[match][tutorial]") {
     controller.isSkippingAnimations = true;
 
     // Generate test layout
-    controller.controller.generate(0);
+    controller.generate(0);
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
 
     // Start the match

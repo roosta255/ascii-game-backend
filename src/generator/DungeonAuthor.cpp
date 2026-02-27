@@ -104,7 +104,7 @@ bool DungeonAuthor::setupTogglerSwitch (const int4& coord, int& outCharacterId, 
         }).orElse(false);
 }
 
-bool DungeonAuthor::setupHorizontalWalls(std::initializer_list<int> row, int y, int z) {
+bool DungeonAuthor::setupHorizontalWalls(std::initializer_list<DoorEnum> row, int y, int z) {
     if (row.size() != size[0]) {
         return false;
     }
@@ -133,7 +133,7 @@ bool DungeonAuthor::setupHorizontalWalls(std::initializer_list<int> row, int y, 
     return true;
 }
 
-bool DungeonAuthor::setupVerticalWalls(std::initializer_list<int> row, int y, int z) {
+bool DungeonAuthor::setupVerticalWalls(std::initializer_list<DoorEnum> row, int y, int z) {
     if (row.size() != size[0] - 1) {
         return false;
     }

@@ -8,6 +8,18 @@ class ActivatorElevator : public iActivator {
 public:
 
     // functions
+    static constexpr bool isElevator(const DoorEnum type) {
+        return type == DOOR_ELEVATOR_CLOSED_KEYED
+        || type == DOOR_ELEVATOR_CLOSED_KEYED_BUTTON
+        || type == DOOR_ELEVATOR_CLOSED_KEYLESS
+        || type == DOOR_ELEVATOR_CLOSED_KEYLESS_BUTTON
+        || type == DOOR_ELEVATOR_CLOSED_CALL_BUTTON
+        || type == DOOR_ELEVATOR_OPEN_KEYED
+        || type == DOOR_ELEVATOR_OPEN_KEYED_BUTTON
+        || type == DOOR_ELEVATOR_OPEN_KEYLESS
+        || type == DOOR_ELEVATOR_OPEN_KEYLESS_BUTTON;
+    }
+
     static constexpr bool isKeyed(const DoorEnum type) {
         return type == DOOR_ELEVATOR_CLOSED_KEYED
         || type == DOOR_ELEVATOR_CLOSED_KEYED_BUTTON

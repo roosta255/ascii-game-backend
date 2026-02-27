@@ -96,6 +96,16 @@ void TestController::endTurn(){
     updateEverything();
 }
 
+void TestController::generate(int seed) {
+    isSuccess = controller.generate(seed);
+    latestPosition = builderCharacterPtr->location.roomId;
+}
+
+void TestController::giveItem(ItemEnum type) {
+    isSuccess = inventoryPtr->giveItem(type, codeset.error);
+    updateInventory();
+}
+
 void TestController::moveCharacterToFloor(int roomId, int floorId) {
     Preactivation preactivation{
         .playerId = BUILDER_ID,
