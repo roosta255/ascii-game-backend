@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [gamma]
 
-jjobs:
+jobs:
   test:
     runs-on: ubuntu-latest
     steps:
