@@ -12,4 +12,5 @@ struct Item {
     int stacks = 0;
 
     bool accessFlyweight(std::function<void(const ItemFlyweight&)> consumer)const;
+    bool operator==(const Item& rhs)const;
 };

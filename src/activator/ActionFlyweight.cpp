@@ -1,5 +1,6 @@
 #include "ActionFlyweight.hpp"
 #include "ActivatorEndTurn.hpp"
+#include "ActivatorLootChest.hpp"
 #include "ActivatorMoveToDoor.hpp"
 #include "ActivatorMoveToFloor.hpp"
 #include "ActivatorUseCharacter.hpp"
@@ -31,36 +32,6 @@ const Array<ActionFlyweight, ACTION_COUNT>& ActionFlyweight::getFlyweights()
         return flyweights;
     }();
     return flyweights;
-}
-
-const iActivator& ActionFlyweight::getMoveToDoor() {
-    static ActivatorMoveToDoor activator;
-    return activator;
-}
-
-const iActivator& ActionFlyweight::getMoveToFloor() {
-    static ActivatorMoveToFloor activator;
-    return activator;
-}
-
-const iActivator& ActionFlyweight::getUseCharacter() {
-    static ActivatorUseCharacter activator;
-    return activator;
-}
-
-const iActivator& ActionFlyweight::getUseDoor() {
-    static ActivatorUseDoor activator;
-    return activator;
-}
-
-const iActivator& ActionFlyweight::getUseInventoryItem() {
-    static ActivatorUseInventoryItem activator;
-    return activator;
-}
-
-const iActivator& ActionFlyweight::getUseLock() {
-    static ActivatorUseLock activator;
-    return activator;
 }
 
 bool ActionFlyweight::indexByString

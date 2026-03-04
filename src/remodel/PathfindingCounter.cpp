@@ -16,7 +16,7 @@ bool PathfindingCounter::loopDoorways(std::function<bool(const int&, const Cardi
         doorwayMoveCounter.doors.accessConst(dir.getIndex(), [&](const Bitstick<DUNGEON_ROOM_COUNT>& rooms){
             for (int i = 0; i < DUNGEON_ROOM_COUNT && !isDone; i++) {
                 const auto index = ROOM_IDS.getWindow(i + seed);
-                if (rooms[index]) {
+                if (rooms[index].orElse(false)) {
                     isDone = consumer(index, dir);
                 }
             }
@@ -30,7 +30,7 @@ bool PathfindingCounter::loopRooms(std::function<bool(const int&)> consumer, con
     bool isDone = false;
     for (int i = 0; i < DUNGEON_ROOM_COUNT && !isDone; i++) {
         const auto index = ROOM_IDS.getWindow(i + seed);
-        if (doorwayMoveCounter.rooms[index]) {
+        if (doorwayMoveCounter.rooms[index].orElse(false)) {
             isDone = consumer(index);
         }
     }

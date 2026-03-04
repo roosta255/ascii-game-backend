@@ -13,6 +13,7 @@ set(PROJECT_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/activator
     ${CMAKE_CURRENT_SOURCE_DIR}/src/algorithm
     ${CMAKE_CURRENT_SOURCE_DIR}/src/animation
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/chest
     ${CMAKE_CURRENT_SOURCE_DIR}/src/controllers
     ${CMAKE_CURRENT_SOURCE_DIR}/src/data
     ${CMAKE_CURRENT_SOURCE_DIR}/src/door
@@ -29,6 +30,7 @@ set(PROJECT_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/store
     ${CMAKE_CURRENT_SOURCE_DIR}/src/struct
     ${CMAKE_CURRENT_SOURCE_DIR}/src/time
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/traits
     ${CMAKE_CURRENT_SOURCE_DIR}/src/server
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vector
     ${CMAKE_CURRENT_SOURCE_DIR}/src/view
@@ -55,6 +57,11 @@ add_library(core_backend STATIC
     src/animation/AnimationEnum.cpp
     src/animation/Keyframe.cpp
     src/animation/KeyframeFlyweight.cpp
+    src/chest/ActivatorCritterBite.cpp
+    src/chest/ActivatorLootChest.cpp
+    src/chest/Chest.cpp
+    src/chest/LockEnum.cpp
+    src/chest/LockFlyweight.cpp
     src/controllers/MatchController.cpp
     src/door/ActivatorElevator.cpp
     src/door/ActivatorInactiveDoor.cpp
@@ -118,6 +125,10 @@ add_library(core_backend STATIC
     src/room/Wall.cpp
     src/store/FileStore.cpp
     src/time/Timestamp.cpp
+    src/traits/TraitBits.cpp
+    src/traits/TraitEnum.cpp
+    src/traits/TraitFlyweight.cpp
+    src/traits/TraitModifier.cpp
     src/vector/int4_to_json.cpp
 )
 
@@ -153,6 +164,7 @@ add_executable(test_target
     test/maps/GeneratorTest.cpp
     test/maps/GeneratorTest4D.cpp
     test/maps/GeneratorTutorial.cpp
+    test/TraitModifierTests.cpp
 )
 
 target_include_directories(test_target PRIVATE ${PROJECT_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/test)

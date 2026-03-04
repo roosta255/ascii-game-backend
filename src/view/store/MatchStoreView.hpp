@@ -39,14 +39,13 @@ struct MatchStoreView
 
     inline explicit operator Match() const
     {
-        Match model{
-            .filename = this->filename,
-            .host = this->host,
-            .version = this->version,
-            .builders = this->builders.convert<Builder>(),
-            .dungeon = this->dungeon,
-            .turner = this->turner
-        };
+        Match model;
+        model.filename = this->filename;
+        model.host = this->host;
+        model.version = this->version;
+        model.builders = this->builders.convert<Builder>();
+        model.dungeon = this->dungeon;
+        model.turner = this->turner;
         model.username = this->username;
         model.titan = this->titan;
         GeneratorFlyweight::indexByString(this->generator, model.generator);

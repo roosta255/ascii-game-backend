@@ -3,6 +3,7 @@
 #include <array>
 #include <functional>
 
+#include "Maybe.hpp"
 #include "Pointer.hpp"
 
 template<typename T, unsigned N>
@@ -183,7 +184,7 @@ class Array
 	constexpr bool containsAddress
 	( const T& elem
 	) const {
-		return containsIndex(getAddress(elem));
+		return getAddress(elem).isPresent();
 	}
 
 	template<typename T2>
@@ -198,17 +199,14 @@ class Array
 
 	bool containsAddress(const T& elem, int& index)const
 	{
-		if (containsAddress(elem)) {
-			index = &elem - &_elems[0];
-			return true;
-		}
-		return false;
+		return getAddress(elem).copy(index);
 	}
 
-	constexpr int getAddress
+	constexpr Maybe<int> getAddress
 	( const T& elem
 	) const {
-		return &elem - &_elems[0];
+		const int index = static_cast<int>(&elem - &_elems[0]);
+		return containsIndex(index) ? Maybe<int>(index) : Maybe<int>::empty();
 	}
 
 	constexpr T* begin()

@@ -11,6 +11,7 @@ struct CharacterAction {
     int roomId = 0;
     Maybe<int> targetCharacterId;
     Maybe<int> targetItemIndex;
+    Maybe<int> targetInventoryIndex;
     Maybe<Cardinal> direction;
     Maybe<int> floorId;
 
@@ -21,6 +22,7 @@ struct CharacterAction {
             && roomId == rhs.roomId
             && targetCharacterId == rhs.targetCharacterId
             && targetItemIndex == rhs.targetItemIndex
+            && targetInventoryIndex == rhs.targetInventoryIndex
             && direction == rhs.direction
             && floorId == rhs.floorId;
     }

@@ -12,13 +12,14 @@ const Array<RoomFlyweight, ROOM_COUNT>& RoomFlyweight::getFlyweights()
     static auto flyweights = [](){
         Array<RoomFlyweight, ROOM_COUNT> flyweights;
 
-        #define ROOM_DECL( name_, width_, height_, isBlockingDoor_, isBlockingLock_ ) \
+        #define ROOM_DECL( name_, width_, height_, isBlockingDoor_, isBlockingLock_, room_source_attributes_ ) \
             flyweights.getPointer( ROOM_##name_ ).access([&](RoomFlyweight& flyweight){ \
                 flyweight.name = #name_; \
                 flyweight.width = width_; \
                 flyweight.height = height_; \
                 flyweight.isBlockingDoor = isBlockingDoor_; \
                 flyweight.isBlockingLock = isBlockingLock_; \
+                flyweight.roomSourceAttributes = room_source_attributes_; \
             });
         #include "Room.enum"
         #undef ROOM_DECL

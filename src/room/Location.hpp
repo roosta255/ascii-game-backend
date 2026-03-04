@@ -22,6 +22,7 @@ public:
     int32_t data = 0;
 
     // makers
+    static Location makeChest(int roomId, ChannelEnum channel, int containerCharacterId);
     static Location makeFloor(int roomId, ChannelEnum channel, int floor);
     static Location makeDoor(int roomId, ChannelEnum channel, Cardinal dir);
     static Location makeShaftBottom(int roomId, ChannelEnum channel, Cardinal dir);

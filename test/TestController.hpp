@@ -46,6 +46,7 @@ public:
 
     void generate(int seed);
     void giveItem(ItemEnum type);
+    void lootInventory(int characterId, const ItemEnum& targetItemType);
 
     void moveCharacterToFloor(int roomId, int floorId);
     void moveCharacterToFloor(int floorId);
@@ -55,5 +56,4 @@ public:
     void updateEverything();
     void updateInventory();
     void updateTable();
-
 };

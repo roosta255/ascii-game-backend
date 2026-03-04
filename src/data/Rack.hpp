@@ -68,6 +68,13 @@ constexpr static Rack<T> buildFromArray
     return Rack<T>(arr.begin(), arr.end(), arr.end());
 }
 
+template<long unsigned N>
+constexpr static Rack<T> buildEmptyStackFromArray
+(Array<T, N>& arr) noexcept
+{
+    return Rack<T>(arr.begin(), arr.begin(), arr.end());
+}
+
 Pointer<T> getPointer
 ( const int index
 )

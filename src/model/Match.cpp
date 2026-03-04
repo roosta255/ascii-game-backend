@@ -16,6 +16,16 @@
 // #include <json/json.h>
 // #include <nlohmann/json.hpp>
 
+// constructors
+Match::Match() {
+    accessAllCharacters([&](Character& character){
+        containsCharacter(character, character.characterId);
+    });
+    accessAllInventories([&](Inventory& inventory){
+        containsInventory(inventory, inventory.inventoryId);
+    });
+}
+
 // functions
 
 void Match::accessAllCharacters(std::function<void(Character&)> consumer) {
@@ -35,6 +45,16 @@ void Match::accessAllCharacters(std::function<void(const Character&)> consumer) 
     }
     for(const auto& character: dungeon.characters) {
         consumer(character);
+    }
+}
+
+void Match::accessAllInventories(std::function<void(Inventory&)> consumer) {
+    // NOTE: new character sets have to be added here
+    for(auto& builder: builders) {
+        consumer(builder.player.inventory);
+    }
+    for(auto& chest: dungeon.chests) {
+        consumer(chest.inventory);
     }
 }
 
@@ -58,10 +78,30 @@ bool Match::allocateCharacter(std::function<void(Character&)> consumer) {
             Character blank;
             character = blank;
             character.characterId = characterId;
+            // Claim this slot before calling the consumer to prevent nested
+            // allocateCharacter calls from selecting the same slot again.
+            character.role = ROLE_COUNT;
 
             // run consumer
             consumer(character);
             character.characterId = characterId;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Match::allocateChest(std::function<void(Chest&)> consumer) {
+    for (Chest& chest : dungeon.chests) {
+        if (chest.containerCharacterId == -1) {
+            Chest blank;
+            chest = blank;
+            int inventoryId = -1;
+            containsInventory(chest.inventory, inventoryId);
+            chest.inventory.inventoryId = inventoryId;
+            consumer(chest);
+            // set it twice in case of overridden in consumer
+            chest.inventory.inventoryId = inventoryId;
             return true;
         }
     }
@@ -134,6 +174,7 @@ bool Match::join(const std::string& joiner) {
 
     if (this->titan.player.account.isEmpty()) {
         this->titan.player.account = joiner;
+        
         turner.addTitan();
         return true;
     }
@@ -175,6 +216,17 @@ bool Match::containsCharacter(const Character& source, int& offset) const {
     return false;
 }
 
+bool Match::containsInventory(const Inventory& source, int& offset) const {
+    auto base = reinterpret_cast<const char*>(this);
+    auto ptr = reinterpret_cast<const char*>(&source);
+    auto end = base + sizeof(Match);
+    if (ptr >= base && ptr < end) {
+        offset = static_cast<int>(ptr - base);
+        return true;
+    }
+    return false;
+}
+
 bool Match::containsOffset(int offset) const {
     return offset > 0 && offset < sizeof(Match);
 }
@@ -189,6 +241,15 @@ Pointer<Character> Match::getCharacter (int offset, CodeEnum& error) {
         return Pointer<Character>(*reinterpret_cast<Character*>(ptr));
     error = CODE_INACCESSIBLE_CHARACTER_ID;
     return Pointer<Character>::empty();
+}
+
+Pointer<Inventory> Match::getInventory(int offset, CodeEnum& error) {
+    auto base = reinterpret_cast<char*>(this);
+    auto ptr = base + offset;
+    if (containsOffset(offset))
+        return Pointer<Inventory>(*reinterpret_cast<Inventory*>(ptr));
+    error = CODE_INACCESSIBLE_INVENTORY_ID;
+    return Pointer<Inventory>::empty();
 }
 
 Pointer<Player> Match::getPlayer(const std::string& player, CodeEnum& error) {
@@ -343,7 +404,7 @@ static_assert(sizeof(Match) > KILOBYTE, "size milestone passed");
 static_assert(sizeof(Match) > KILOBYTE * 2, "size milestone passed");
 static_assert(sizeof(Match) > KILOBYTE * 4, "size milestone passed");
 static_assert(sizeof(Match) > KILOBYTE * 8, "size milestone passed");
-static_assert(sizeof(Match) < KILOBYTE * 16, "size milestone passed");
+static_assert(sizeof(Match) >= KILOBYTE * 16, "size milestone passed");
 static_assert(sizeof(Match) < KILOBYTE * 32, "size milestone passed");
 static_assert(sizeof(Match) < KILOBYTE * 64, "size milestone passed");
 static_assert(sizeof(Match) < KILOBYTE * 128, "size milestone passed");
@@ -365,6 +426,11 @@ static_assert(sizeof(Array<Character, Dungeon::MAX_CHARACTERS>) > KILOBYTE * 8, 
 static_assert(sizeof(Array<Character, Dungeon::MAX_CHARACTERS>) < KILOBYTE * 16, "size milestone passed");
 static_assert(sizeof(Array<Character, Dungeon::MAX_CHARACTERS>) < KILOBYTE * 32, "size milestone passed");
 static_assert(sizeof(Array<Character, Dungeon::MAX_CHARACTERS>) < KILOBYTE * 64, "size milestone passed");
+
+// TODO: think of ways to make A* faster:
+// TODO: pathfinding flag location that doesn't use floorIds, only roomIds
+// TODO: pathfinding process that floodfills character movements to room bitstick
+// TODO: sort inventory items
 
 // TODO: think of ways to make hashing faster:
 // TODO: add hash to Match memory (zero out prior to hashing)

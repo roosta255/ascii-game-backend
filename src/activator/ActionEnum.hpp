@@ -11,7 +11,7 @@ ACTION_COUNT
 };
 #undef ACTION_DECL
 
-const char* action_to_text(int);
+const char* action_to_text(const ActionEnum&);
 
 inline std::ostream& operator<<(std::ostream& os, ActionEnum action) {
     return os << std::string(action_to_text(action));

@@ -9,6 +9,9 @@ std::ostream& operator<<(std::ostream& os, const CharacterAction& rhs) {
     rhs.targetItemIndex.accessConst([&](const auto& field){
         os << ", .targetItemIndex=" << field;
     });
+    rhs.targetInventoryIndex.accessConst([&](const auto& field){
+        os << ", .targetInventoryIndex=" << field;
+    });
     rhs.direction.accessConst([&](const auto& field){
         os << ", .direction=" << field.getIndex();
     });

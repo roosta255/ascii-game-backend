@@ -30,11 +30,15 @@ struct Match {
     Dungeon dungeon;
     Turner turner;
 
+    Match();
+
     // functions
     void accessAllCharacters(std::function<void(Character&)> consumer);
     void accessAllCharacters(std::function<void(const Character&)> consumer)const;
+    void accessAllInventories(std::function<void(Inventory&)> consumer);
     void accessUsedCharacters(std::function<void(const Character&)> consumer)const;
     bool allocateCharacter(std::function<void(Character&)> consumer);
+    bool allocateChest(std::function<void(Chest&)> consumer);
 
     bool findCharacter(int& characterId, std::function<bool(const Character&)> predicate)const;
 
@@ -52,8 +56,10 @@ struct Match {
     bool isEmpty(CodeEnum& result) const;
 
     bool containsCharacter(const Character&, int& offset) const;
+    bool containsInventory(const Inventory&, int& offset) const;
     bool containsOffset(int offset) const;
     Pointer<Character> getCharacter(int offset, CodeEnum&);
+    Pointer<Inventory> getInventory(int offset, CodeEnum&);
     Pointer<Player> getPlayer(const std::string& player, CodeEnum&);
     bool accessPlayer(const std::string& player, CodeEnum&, std::function<void(Titan&)>, std::function<void(Builder&)>);
 

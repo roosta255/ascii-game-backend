@@ -13,11 +13,13 @@ struct InventoryApiView
     Array<ItemApiView, Inventory::STANDARD_ITEM_SLOTS> items;
     bool isEmpty = false;
     int keys = 0;
+    int inventoryId = -1;
 
     inline InventoryApiView() = default;
 
-    inline InventoryApiView(const Inventory& model):
-        items(model.items.convert<ItemApiView>())
+    inline InventoryApiView(const Inventory& model)
+        : items(model.items.convert<ItemApiView>())
+        , inventoryId(model.inventoryId)
     {
         const auto digest = model.makeDigest();
         this->keys = digest.keys;
@@ -31,4 +33,4 @@ struct InventoryApiView
 };
 
 // Reflection-based JSON serialization
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(InventoryApiView, items, isEmpty, keys)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(InventoryApiView, items, isEmpty, keys, inventoryId)

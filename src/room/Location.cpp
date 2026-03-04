@@ -2,12 +2,12 @@
 #include "Room.hpp"
 #include "Wall.hpp"
 
-Location Location::makeFloor(int roomId, ChannelEnum channel, int floor){
+Location Location::makeChest(int roomId, ChannelEnum channel, int containerCharacterId){
     return Location{
-        .type = LOCATION_FLOOR,
+        .type = LOCATION_CHEST,
         .roomId = roomId,
         .channel = channel,
-        .data = floor
+        .data = containerCharacterId
     };
 }
 
@@ -17,6 +17,15 @@ Location Location::makeDoor(int roomId, ChannelEnum channel, Cardinal dir){
         .roomId = roomId,
         .channel = channel,
         .data = dir.getIndex()
+    };
+}
+
+Location Location::makeFloor(int roomId, ChannelEnum channel, int floor){
+    return Location{
+        .type = LOCATION_FLOOR,
+        .roomId = roomId,
+        .channel = channel,
+        .data = floor
     };
 }
 

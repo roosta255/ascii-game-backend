@@ -65,7 +65,7 @@ Maybe<Match> DungeonGenerator::remodel(const Match& original) {
 
     Maybe<Match> result;
     for (int i = 0; i < REMODEL_COUNT && result.isEmpty(); i++) {
-        if (blockers[i]) {
+        if (blockers[i].orElse(false)) {
             RemodelFlyweight::getFlyweights().accessConst(i, [&](const RemodelFlyweight& flyweight){
                 flyweight.remodel.accessConst([&](const iRemodel& fixerRemodel){
                     result = fixerRemodel.buildMatch(params, original);

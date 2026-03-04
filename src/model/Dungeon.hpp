@@ -4,6 +4,7 @@
 #include <json/json.h>
 
 #include "Array.hpp"
+#include "Chest.hpp"
 #include "CodeEnum.hpp"
 #include "DUNGEON_ROOM_COUNT.hpp"
 #include "HASH_MACRO_DECL.hpp"
@@ -12,6 +13,7 @@
 #include "Character.hpp"
 #include "Pointer.hpp"
 #include "Cardinal.hpp"
+#include "TraitBits.hpp"
 
 namespace Json {
     class Value;
@@ -23,15 +25,20 @@ class LayoutFlyweight;
 class Match;
 
 struct Dungeon {
-    static constexpr int MAX_CHARACTERS = 32;
+    static constexpr auto MAX_CHARACTERS = 32;
+    static constexpr auto MAX_CHESTS = 8;
 
     Array<Room, DUNGEON_ROOM_COUNT> rooms;
     Array<Character, MAX_CHARACTERS> characters;
+    Array<Chest, MAX_CHESTS> chests;
     int layout = 0;
     int32_t isBlueOpen = false;  // When true, blue doors are open and orange doors are closed
 
     // Toggles all blue/orange doors in the dungeon based on isBlueOpen
     void toggleDoors();
+
+    // Helper functions for chest management
+    Pointer<Chest> findChestByContainerId(int containerCharacterId, CodeEnum& error);
 
     // Helper functions for room management
     bool containsRoom(const Room& room, int& roomId) const;

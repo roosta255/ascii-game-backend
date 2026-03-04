@@ -8,6 +8,7 @@
 #include "DUNGEON_ROOM_COUNT.hpp"
 #include "Rack.hpp"
 #include "RoomEnum.hpp"
+#include "TraitBits.hpp"
 #include "Wall.hpp"
 #include <functional>
 

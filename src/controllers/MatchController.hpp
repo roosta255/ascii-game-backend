@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ActionEnum.hpp"
 #include "Activation.hpp"
 #include "Cardinal.hpp"
 #include "Character.hpp"
@@ -15,6 +16,7 @@
 
 class CharacterAction;
 class Codeset;
+struct Chest;
 class iActivator;
 class Inventory;
 class Match;
@@ -28,6 +30,7 @@ public:
     Match& match;
     Codeset& codeset;
 private:
+    // TODO: put both room maps in a struct
     Map<int, Map<int2, int> > floors; // roomId -> <channel, floorId> -> characterId
     Map<int, Map<int2, int> > doors; // roomId -> <channel, direction> -> characterId
 
@@ -40,7 +43,10 @@ public:
     MatchController(Match& match, Codeset& codeset);
 
     // functions
+    bool activate(const Preactivation& preactivation);
     bool activate(const iActivator& activator, const Preactivation& preactivation);
+    bool allocateChest(int roomId, std::function<void(Chest&, Character&)> consumer);
+    bool allocateChest(int roomId, std::function<void(Chest&, Character&, Character&)> consumer);
     bool allocateCharacterToFloor(int roomId, ChannelEnum channel, std::function<void(Character&)> consumer, int& outCharacterId, int& outFloorId);
     bool assignCharacterToFloor(int characterId, int roomId, ChannelEnum channel, int floorId);
 

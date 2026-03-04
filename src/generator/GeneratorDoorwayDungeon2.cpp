@@ -1,3 +1,4 @@
+#include "Chest.hpp"
 #include "Codeset.hpp"
 #include "DoorEnum.hpp"
 #include "Dungeon.hpp"
@@ -5,6 +6,7 @@
 #include "DungeonGenerator.hpp"
 #include "GeneratorDoorwayDungeon2.hpp"
 #include "iLayout.hpp"
+#include "ItemEnum.hpp"
 #include "LayoutEnum.hpp"
 #include "LayoutFlyweight.hpp"
 #include "Match.hpp"
@@ -35,6 +37,7 @@ bool GeneratorDoorwayDungeon2::generate (int seed, Match& dst, Codeset& codeset)
                 controller.assignCharacterToFloor(builderId, ENTRANCE_ROOM_ID, CHANNEL_CORPOREAL, floorId);
             }
         }
+        builder.character.updateTraits();
     });
 
     LayoutFlyweight::getFlyweights().accessConst(LAYOUT, [&](const LayoutFlyweight& flyweight){
@@ -110,6 +113,12 @@ bool GeneratorDoorwayDungeon2::generate (int seed, Match& dst, Codeset& codeset)
                 };
         }));
     mutator.setupElevatorColumn(ELEVATOR_ROOM_ID, Rack(elevatorProperties));
+
+    success &= controller.allocateChest(FLOOR_7_CHEST_ROOM_ID, [&](Chest& chest, Character& container, Character& critter) {
+        container.role = ROLE_CHEST;
+        critter.role = ROLE_SPIDER;
+        success &= controller.giveInventoryItem(chest.inventory, ITEM_KEY_ELEVATOR);
+    });
 
     return success;
 }

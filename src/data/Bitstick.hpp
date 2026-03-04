@@ -5,24 +5,20 @@
 #include <initializer_list>
 #include <ostream>
 
-// #include "algorithm/any_of.hpp"
 #include "is_equal.hpp"
-// #include "algorithm/isnt_equal.hpp"
-// #include "algorithm/transform2.hpp"
-// #include "iterator/iterator.hpp"
-// #include "algorithm/byte_2_onbit.hpp"
+#include "Maybe.hpp"
 
-typedef std::uint64_t Bitline;
+typedef std::uint32_t Bitline;
 constexpr static Bitline BITS_PER_LINE = sizeof(Bitline) * 8;
 
 template<std::size_t N>
-//constexpr std::uint64_t N = 128;
+//constexpr std::uint32_t N = 128;
 class Bitstick
 {
 public:
 
 constexpr static Bitline BitCount = N;
-constexpr static Bitline WordCount = (BitCount - 1ull) / 64ull + 1ull;
+constexpr static Bitline WordCount = (BitCount - 1ull) / 32ull + 1ull;
 
 constexpr Bitstick(): _state{0}{}
 
@@ -66,10 +62,10 @@ Bitstick& setIndexOn
 ( const Bitline index
 )
 {
-    const Bitline bit = index % 64ull;
+    const Bitline bit = index % 32ull;
     const Bitline mask = 1ull << bit;
 
-    _state[index / 64ull] |= mask;
+    _state[index / 32ull] |= mask;
 
     return *this;
 }
@@ -78,10 +74,10 @@ Bitstick& setIndexOff
 ( const Bitline index
 )
 {
-    const Bitline bit = index % 64ull;
+    const Bitline bit = index % 32ull;
     const Bitline mask = 1ull << bit;
 
-    _state[index / 64ull] &= ~mask;
+    _state[index / 32ull] &= ~mask;
 
     return *this;
 }
@@ -156,11 +152,11 @@ Bitstick operator~() const
     return result;
 }
 
-bool constexpr operator[]
+Maybe<bool> constexpr operator[]
 ( const int index
 ) const
 {
-    return _state[index / 64ull] & (1ull << (index % 64u));
+    return index < N ? Maybe<bool>(_state[index / 32ull] & (1ull << (index % 32u))) : Maybe<bool>::empty();
 }
 
 bool constexpr operator==
@@ -184,17 +180,17 @@ bool constexpr operator!=
     // find the first non-empty element
 
     // find the first bit
-    const std::uint64_t bit = bit_on_uint64(_state);
+    const std::uint32_t bit = bit_on_uint32(_state);
 
     _state &= ~(1ull << bit);
 
     return before;
 }*/
 
-explicit constexpr operator bool()const
+constexpr bool isAny()const
 {
     const Bitstick nil;
-    return isnt_equal(&_state[0], &_state[WordCount], &nil._state[0]);
+    return !is_equal(&_state[0], &_state[WordCount], &nil._state[0]);
 }
 
 constexpr bool isEmpty()const
@@ -221,7 +217,7 @@ std::ostream& operator<<(std::ostream& out, const Bitstick<N>& bits)
     {
         if(i % 8 == 0)
             out << " ";
-        if(i % 64 == 0)
+        if(i % 32 == 0)
             out << "\n";
         out << bits[i] ? "1" : "0";
     }

@@ -18,7 +18,7 @@ bool ActivatorUseInventoryItem::activate(Activation& activation) const {
     }
 
     bool isSuccess = false;
-    codeset.addFailure(!activation.item.access([&](Item& item){
+    codeset.addFailure(!activation.sourceItem.access([&](Item& item){
         codeset.addFailure(!item.accessFlyweight([&](const ItemFlyweight& flyweight){
             flyweight.useActivator.accessConst([&](const iActivator& activatorIntf){
                 codeset.addFailure(!(isSuccess = activatorIntf.activate(activation)));

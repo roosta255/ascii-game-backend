@@ -98,6 +98,17 @@ bool ActivatorElevator::activate(Activation& activation) const {
             return false;
         }
 
+        if (isMoving) {
+            // check all door occupancies before moving.
+            for (const auto dir: Cardinal::getAllCardinals()) {
+                int blockingCharacterId = -1;
+                const auto isDoorOccupied = controller.isDoorOccupied(room.roomId, CHANNEL_CORPOREAL, dir, blockingCharacterId);
+                if (codeset.addFailure(isDoorOccupied, CODE_ELEVATOR_DOOR_IS_OCCUPIED_BY_CHARACTER)){
+                    return false;
+                }
+            }
+        }
+
         // this will be on the next level, whether directly above or below
         // only moving will update the current level (to close it)
         const auto directUpdateElevatorProperties = DungeonMutator::ElevatorProperties

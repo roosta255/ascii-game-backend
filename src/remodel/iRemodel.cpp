@@ -57,7 +57,7 @@ Maybe<Match> iRemodel::buildMatch(Remodel& params, const Match& source) const {
                 }).orElse(fixlist) - params.blocklist.orElse(Bitstick<REMODEL_COUNT>());
             for (int r = 0; r < REMODEL_COUNT && result.isEmpty(); r++) {
                 const auto remodel_id = REMODEL_IDS.getWindow(r + params.seed);
-                if (fixers[remodel_id]) {
+                if (fixers[remodel_id].orElse(false)) {
                     RemodelFlyweight::getFlyweights().accessConst(remodel_id, [&](const RemodelFlyweight& flyweight){
                         flyweight.remodel.accessConst([&](const iRemodel& fixerRemodel){
                             // result = fixerRemodel.buildMatch(params, proposed);

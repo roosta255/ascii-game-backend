@@ -29,6 +29,7 @@ bool GeneratorTest::generate (int seed, Match& dst, Codeset& codeset) const {
                 controller.assignCharacterToFloor(builderId, roomId, CHANNEL_CORPOREAL, floorId);
             }
         }
+        builder.character.updateTraits();
     });
 
     LayoutFlyweight::getFlyweights().accessConst(LAYOUT, [&](const LayoutFlyweight& flyweight){

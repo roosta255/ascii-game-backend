@@ -9,6 +9,7 @@
 
 class Player;
 class Character;
+class Inventory;
 class Room;
 class Match;
 class MatchController;
@@ -19,7 +20,8 @@ struct Activation {
     Character& character;
     Room& room;
     Pointer<Character> target;
-    Pointer<Item> item;
+    Pointer<Item> sourceItem;
+    Pointer<Item> targetItem;
     Maybe<Cardinal> direction;
     Match& match;
     Codeset& codeset;
@@ -28,4 +30,6 @@ struct Activation {
     Maybe<int> floorId;
     bool isSkippingAnimations = false;
     bool isSortingState = false;
-}; 
+    Pointer<Inventory> sourceInventory;
+    Pointer<Inventory> targetInventory;
+};

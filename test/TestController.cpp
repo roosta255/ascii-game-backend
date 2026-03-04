@@ -27,51 +27,63 @@ TestController::TestController(const GeneratorEnum& generator): controller(match
 // functions
 void TestController::activateCharacter(int subjectCharacterId, int objectCharacterId){
     Preactivation preactivation{
+        .action = {
+            .type = ACTION_ACTIVATE_CHARACTER,
+            .characterId = subjectCharacterId,
+            .roomId = latestPosition,
+            .targetCharacterId = objectCharacterId,
+        },
         .playerId = BUILDER_ID,
-        .characterId = subjectCharacterId,
-        .roomId = latestPosition,
-        .targetCharacterId = objectCharacterId,
         .isSkippingAnimations = isSkippingAnimations
     };
 
-    isSuccess = controller.activate(ActionFlyweight::getUseCharacter(), preactivation);
+    isSuccess = controller.activate(preactivation);
     updateEverything();
 }
 
 void TestController::activateDoor(Cardinal dir){
     Preactivation preactivation{
+        .action = {
+            .type = ACTION_ACTIVATE_DOOR,
+            .characterId = builderOffset,
+            .roomId = latestPosition,
+            .direction = dir,
+        },
         .playerId = BUILDER_ID,
-        .characterId = builderOffset,
-        .roomId = latestPosition,
-        .direction = dir,
         .isSkippingAnimations = isSkippingAnimations
     };
 
-    isSuccess = controller.activate(ActionFlyweight::getUseDoor(), preactivation);
+    isSuccess = controller.activate(preactivation);
     updateEverything();
 }
 
 void TestController::activateLock(Cardinal dir){
     Preactivation preactivation{
+        .action = {
+            .type = ACTION_ACTIVATE_LOCK,
+            .characterId = builderOffset,
+            .roomId = latestPosition,
+            .direction = dir,
+        },
         .playerId = BUILDER_ID,
-        .characterId = builderOffset,
-        .roomId = latestPosition,
-        .direction = dir,
         .isSkippingAnimations = isSkippingAnimations
     };
-    isSuccess = controller.activate(ActionFlyweight::getUseLock(), preactivation);
+    isSuccess = controller.activate(preactivation);
     updateEverything();
 }
 
 void TestController::activateObjectCharacter(int objectCharacterId){
     Preactivation preactivation{
+        .action = {
+            .type = ACTION_ACTIVATE_CHARACTER,
+            .characterId = objectCharacterId,
+            .roomId = latestPosition,
+            .targetCharacterId = builderOffset,
+        },
         .playerId = BUILDER_ID,
-        .characterId = objectCharacterId,
-        .roomId = latestPosition,
-        .targetCharacterId = builderOffset,
         .isSkippingAnimations = isSkippingAnimations
     };
-    isSuccess = controller.activate(ActionFlyweight::getUseCharacter(), preactivation);
+    isSuccess = controller.activate(preactivation);
     updateEverything();
 }
 
@@ -86,12 +98,6 @@ Remodel TestController::buildRemodel(int bossRoomId, std::function<bool(const Ma
 }
 
 void TestController::endTurn(){
-    Preactivation preactivation{
-        .playerId = BUILDER_ID,
-        .characterId = builderOffset,
-        .roomId = latestPosition,
-        .isSkippingAnimations = isSkippingAnimations
-    };
     codeset.addFailure(!(isSuccess = match.endTurn(BUILDER_ID, codeset.error)));
     updateEverything();
 }
@@ -106,15 +112,46 @@ void TestController::giveItem(ItemEnum type) {
     updateInventory();
 }
 
-void TestController::moveCharacterToFloor(int roomId, int floorId) {
+void TestController::lootInventory(int containerCharacterId, const ItemEnum& targetItemType) {
     Preactivation preactivation{
+        .action = {
+            .type = ACTION_LOOT_CHEST,
+            .characterId = builderOffset,
+            .roomId = latestPosition,
+            .targetCharacterId = containerCharacterId,
+        },
         .playerId = BUILDER_ID,
-        .characterId = builderOffset,
-        .roomId = roomId,
-        .floorId = floorId,
         .isSkippingAnimations = isSkippingAnimations
     };
-    isSuccess = controller.activate(ActionFlyweight::getMoveToFloor(), preactivation);
+    match.dungeon.findChestByContainerId(containerCharacterId, codeset.error).access([&](Chest& chest) {
+        int targetInventoryId = -1;
+        if (match.containsInventory(chest.inventory, targetInventoryId)) {
+            preactivation.action.targetInventoryIndex = targetInventoryId;
+        }
+        chest.inventory.accessItem(targetItemType, [&](const Item& item){
+            // item.type is correctly the ITEM_KEY_ELEVATOR
+            int targetItemIndex = -1;
+            if (chest.inventory.items.containsAddress(item, targetItemIndex)) {
+                preactivation.action.targetItemIndex = targetItemIndex;
+            }
+        });
+    });
+    isSuccess = controller.activate(preactivation);
+    updateInventory();
+}
+
+void TestController::moveCharacterToFloor(int roomId, int floorId) {
+    Preactivation preactivation{
+        .action = {
+            .type = ACTION_MOVE_TO_FLOOR,
+            .characterId = builderOffset,
+            .roomId = roomId,
+            .floorId = floorId,
+        },
+        .playerId = BUILDER_ID,
+        .isSkippingAnimations = isSkippingAnimations
+    };
+    isSuccess = controller.activate(preactivation);
     updateEverything();
 }
 
@@ -124,13 +161,16 @@ void TestController::moveCharacterToFloor(int floorId) {
 
 void TestController::moveCharacterToWall(int roomId, const Cardinal& dir){
     Preactivation preactivation{
+        .action = {
+            .type = ACTION_MOVE_TO_DOOR,
+            .characterId = builderOffset,
+            .roomId = roomId,
+            .direction = dir,
+        },
         .playerId = BUILDER_ID,
-        .characterId = builderOffset,
-        .roomId = roomId,
-        .direction = dir,
         .isSkippingAnimations = isSkippingAnimations
     };
-    isSuccess = controller.activate(ActionFlyweight::getMoveToDoor(), preactivation);
+    isSuccess = controller.activate(preactivation);
     // TODO: add test codes for this line
     match.dungeon.rooms.accessConst(roomId, [&](const Room& room){
         if (isSuccess) {

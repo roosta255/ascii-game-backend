@@ -4,13 +4,15 @@
 #include "Match.hpp"
 #include <json/json.h>
 #include "RoleFlyweight.hpp"
+#include "TraitBits.hpp"
+#include "TraitEnum.hpp"
 
 bool Character::getDigest(CodeEnum& error, CharacterDigest& digest)const {
     return accessRole(error, [&](const RoleFlyweight& flyweight){
         digest = CharacterDigest{
             .healthRemaining = Maybe<int>(flyweight.health - this->damage),
             .featsRemaining = Maybe<int>(flyweight.feats - this->feats),
-            .actionsRemaining = flyweight.isActor || flyweight.isActionable ? Maybe<int>(flyweight.actions - this->actions) : Maybe<int>::empty(),
+            .actionsRemaining = traitsComputed[TRAIT_CHARACTER_ACTOR].orElse(false) || flyweight.isActionable ? Maybe<int>(flyweight.actions - this->actions) : Maybe<int>::empty(),
             .movesRemaining = flyweight.isMovable ? Maybe<int>(flyweight.moves - this->moves) : Maybe<int>::empty()
         };
     });
@@ -35,7 +37,7 @@ bool Character::isActor(CodeEnum& error, const bool isCheckingCount) const
     bool result = false;
     int actionsTaken = actions;
     accessRole(error, [&](const RoleFlyweight& flyweight){
-        if (!flyweight.isActor) error = CODE_CHARACTER_NOT_ACTOR;
+        if (!traitsComputed[TRAIT_CHARACTER_ACTOR].orElse(false)) error = CODE_CHARACTER_NOT_ACTOR;
         else if (isCheckingCount && flyweight.actions - actionsTaken <= 0)
             error = CODE_CHARACTER_OUT_OF_ACTIONS;
         else result = true;
@@ -60,11 +62,16 @@ bool Character::isKeyer(CodeEnum& error) const
 {
     bool result = false;
     accessRole(error, [&](const RoleFlyweight& flyweight){
-        if (!flyweight.isKeyer)
+        if (!traitsComputed[TRAIT_CHARACTER_KEYER].orElse(false))
             error = CODE_CHARACTER_NOT_KEYER;
         else result = true;
     });
     return result;
+}
+
+bool Character::isObject() const
+{
+    return traitsComputed[TRAIT_CHARACTER_OBJECT].orElse(false);
 }
 
 bool Character::takeAction(CodeEnum& error)
@@ -107,6 +114,14 @@ bool Character::takeFeat(CodeEnum& error)
         }
     });
     return result;
+}
+
+bool Character::updateTraits() {
+    const auto updatedMaybe = TraitModifier::computeCharacterTraits(*this);
+    updatedMaybe.accessConst([&](const TraitBits& updated){
+        traitsComputed = updated;
+    });
+    return updatedMaybe.isPresent();
 }
 
 bool Character::accessRole

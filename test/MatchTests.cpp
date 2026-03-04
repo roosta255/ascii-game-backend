@@ -89,15 +89,18 @@ TEST_CASE("Test Character Animation", "[walking]") {
 
         // walk the character to wall
         Preactivation preactivation{
+            .action = {
+                .type = ACTION_MOVE_TO_DOOR,
+                .characterId = builderOffset,
+                .roomId = 0,
+                .direction = Cardinal::east(),
+            },
             .playerId = builderId,
-            .characterId = builderOffset,
-            .roomId = 0,
-            .direction = Cardinal::east(),
             .isSkippingAnimations = false,
             .time = t0
         };
 
-        isSuccess = controller.activate(ActionFlyweight::getMoveToDoor(), preactivation);
+        isSuccess = controller.activate(preactivation);
         REQUIRE(codeset.getErrorTable() == Codeset::getEmptyTable());
         REQUIRE(isSuccess);
 

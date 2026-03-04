@@ -12,6 +12,7 @@
 struct Inventory {
     static constexpr int STANDARD_ITEM_SLOTS = 10;
     Array<Item, STANDARD_ITEM_SLOTS> items;
+    int inventoryId = -1;
 
     bool accessItem(ItemEnum target, std::function<void(Item&)>);
     bool accessItem(ItemEnum target, std::function<void(const Item&)>)const;

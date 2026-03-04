@@ -9,6 +9,16 @@
 #include "CodeEnum.hpp"
 #include <json/json.h>
 
+Pointer<Chest> Dungeon::findChestByContainerId(int containerCharacterId, CodeEnum& error) {
+    for (Chest& chest : chests) {
+        if (chest.containerCharacterId == containerCharacterId) {
+            return Pointer<Chest>(chest);
+        }
+    }
+    error = CODE_LOOT_CHEST_NOT_FOUND;
+    return Pointer<Chest>::empty();
+}
+
 bool Dungeon::accessCeilingNeighbor(const Room& source, std::function<void(const Room&)> consumer) const {
     return this->rooms.accessConst(source.above, [&](const Room& neighbor) {
         consumer(neighbor);

@@ -10,16 +10,28 @@
 #include "iGenerator.hpp"
 #include "iLayout.hpp"
 #include "int3.hpp"
+#include "Inventory.hpp"
 #include "ItemFlyweight.hpp"
 #include "Keyframe.hpp"
 #include "Match.hpp"
 #include "MatchController.hpp"
 #include "Preactivation.hpp"
 #include "RoleFlyweight.hpp"
+#include "TraitModifier.hpp"
 
 MatchController::MatchController(Match& match, Codeset& codeset): match(match), codeset(codeset) {}
 
 // functions
+bool MatchController::activate(const Preactivation& preactivation) {
+    bool isSuccess = false;
+    ActionFlyweight::getFlyweights().accessConst((int)preactivation.action.type, [&](const ActionFlyweight& flyweight){
+        codeset.addFailure(!flyweight.activator.accessConst([&](const iActivator& activator){
+            isSuccess = activate(activator, preactivation);
+        }), CODE_ACTION_MISSING_ACTIVATION);
+    });
+    return isSuccess;
+}
+
 bool MatchController::activate(const iActivator& activator, const Preactivation& preactivation) {
     setupLocations();
 
@@ -28,24 +40,34 @@ bool MatchController::activate(const iActivator& activator, const Preactivation&
 
     bool isSuccess = false;
     codeset.addFailure(!match.getPlayer(preactivation.playerId, codeset.error).access([&](Player& player) {
-        codeset.addFailure(!match.getCharacter(preactivation.characterId, codeset.error).access([&](Character& character) {
-            codeset.addFailure(!match.dungeon.getRoom(preactivation.roomId, codeset.error).access([&](Room& room) {
-                CodeEnum error = CODE_UNSET;
+        codeset.addFailure(!match.getCharacter(preactivation.action.characterId, codeset.error).access([&](Character& character) {
+            codeset.addFailure(!match.dungeon.getRoom(preactivation.action.roomId, codeset.error).access([&](Room& room) {
+                Pointer<Inventory> sourceInventory = preactivation.sourceInventoryId.isPresent()
+                    ? match.getInventory(preactivation.sourceInventoryId.orElse(-1), codeset.error)
+                    : Pointer<Inventory>(player.inventory);
+                Pointer<Inventory> targetInventory = match.getInventory(preactivation.action.targetInventoryIndex.orElse(-1), codeset.error);
                 Activation activation{
                     .player = player,
                     .character = character,
                     .room = room,
-                    .target = match.getCharacter(preactivation.targetCharacterId.orElse(-1), error),
-                    .item = player.inventory.items.getPointer(preactivation.targetItemIndex.orElse(-1)),
-                    .direction = preactivation.direction,
+                    .target = match.getCharacter(preactivation.action.targetCharacterId.orElse(-1), codeset.error),
+                    .direction = preactivation.action.direction,
                     .match = match,
                     .codeset = codeset,
                     .time = preactivation.time,
                     .controller = *this,
-                    .floorId = preactivation.floorId,
+                    .floorId = preactivation.action.floorId,
                     .isSkippingAnimations = preactivation.isSkippingAnimations,
-                    .isSortingState = preactivation.isSortingState
+                    .isSortingState = preactivation.isSortingState,
+                    .sourceInventory = sourceInventory,
+                    .targetInventory = targetInventory
                 };
+                sourceInventory.access([&](Inventory& inventory){
+                    activation.sourceItem = inventory.items.getPointer(preactivation.sourceItemIndex.orElse(-1));
+                });
+                targetInventory.access([&](Inventory& inventory){
+                    activation.targetItem = inventory.items.getPointer(preactivation.action.targetItemIndex.orElse(-1));
+                });
                 codeset.addFailure(!(isSuccess = activator.activate(activation)));
             }));
         }));
@@ -72,11 +94,63 @@ bool MatchController::allocateCharacterToFloor(int roomId, ChannelEnum channel, 
         // set character
         outCharacterId = character.characterId;
         consumer(character);
+        character.updateTraits();
         character.location = Location::makeFloor(roomId, channel, outFloorId);
         character.location.apply(character.characterId, match.dungeon.rooms, floors, doors);
         isSuccess = true;
 
     }), CODE_UNABLE_TO_FIND_FREE_CHARACTER_IN_DUNGEON);
+    return isSuccess;
+}
+
+bool MatchController::allocateChest(int roomId, std::function<void(Chest&, Character&)> consumer) {
+    setupLocations(false);
+
+    bool isSuccess = false;
+    codeset.addFailure(!match.allocateChest([&](Chest& chest) {
+        int containerCharacterId, containerFloorId;
+        if (codeset.addFailure(!allocateCharacterToFloor(
+            roomId,
+            CHANNEL_CORPOREAL,
+            [&](Character& containerCharacter) {
+                chest.containerCharacterId = containerCharacter.characterId;
+                consumer(chest, containerCharacter);
+                isSuccess = true;
+            },
+            containerCharacterId,
+            containerFloorId
+        )))
+            return;
+    }), CODE_UNABLE_TO_FIND_FREE_CHEST_IN_DUNGEON);
+
+    return isSuccess;
+}
+
+bool MatchController::allocateChest(int roomId, std::function<void(Chest&, Character&, Character&)> consumer) {
+    setupLocations(false);
+
+    bool isSuccess = false;
+    codeset.addFailure(!match.allocateChest([&](Chest& chest) {
+        int containerCharacterId, containerFloorId;
+        if (codeset.addFailure(!allocateCharacterToFloor(
+            roomId,
+            CHANNEL_CORPOREAL,
+            [&](Character& containerCharacter) {
+                codeset.addFailure(!match.allocateCharacter([&](Character& critterCharacter) {
+                    chest.containerCharacterId = containerCharacter.characterId;
+                    chest.critterCharacterId = critterCharacter.characterId;
+                    consumer(chest, containerCharacter, critterCharacter);
+                    critterCharacter.location = Location::makeChest(roomId, CHANNEL_CORPOREAL, containerCharacter.characterId);
+                    critterCharacter.updateTraits();
+                    isSuccess = true;
+                }), CODE_UNABLE_TO_FIND_FREE_CHARACTER_IN_DUNGEON);
+            },
+            containerCharacterId,
+            containerFloorId
+        )))
+            return;
+    }), CODE_UNABLE_TO_FIND_FREE_CHEST_IN_DUNGEON);
+
     return isSuccess;
 }
 
@@ -309,13 +383,8 @@ bool MatchController::permuteCharacterActions(const std::string& playerId, int m
                 ActionFlyweight::getFlyweights().accessConst(action.type, [&](const ActionFlyweight& flyweight){
                     flyweight.activator.accessConst([&](const iActivator& activator){
                         Preactivation preactivation{
+                            .action = action,
                             .playerId = playerId,
-                            .characterId = action.characterId,
-                            .roomId = action.roomId,
-                            .targetCharacterId = action.targetCharacterId,
-                            .targetItemIndex = action.targetItemIndex,
-                            .direction = action.direction,
-                            .floorId = action.floorId,
                             .isSkippingAnimations = true,
                             .isSortingState = true
                         };
@@ -379,6 +448,28 @@ bool MatchController::permuteCharacterActions(const std::string& playerId, int m
                 for (const auto it: doors.getOrDefault(roomId, Map<int2, int>())) { // doors
                     const auto key = it.first;
                     processTargetCharacter(CharacterAction{ .type = ACTION_ACTIVATE_CHARACTER, .characterId = mainCharacterId, .roomId = roomId }, it.second);
+                }
+
+                // chest looting
+                for (Chest& chest : match.dungeon.chests) {
+                    if (chest.containerCharacterId == -1) continue;
+                    bool containerInRoom = false;
+                    isCharacterWithinRoom(chest.containerCharacterId, roomId, containerInRoom);
+                    if (!containerInRoom) continue;
+                    int slot = 0;
+                    for (const Item& item : chest.inventory.items) {
+                        if (item.type != ITEM_NIL) {
+                            applyAction(false, CharacterAction{
+                                .type = ACTION_LOOT_CHEST,
+                                .characterId = mainCharacterId,
+                                .roomId = roomId,
+                                .targetCharacterId = chest.containerCharacterId,
+                                .targetItemIndex = slot,
+                                .targetInventoryIndex = (int)(reinterpret_cast<char*>(&chest.inventory) - reinterpret_cast<char*>(&this->match))
+                            });
+                        }
+                        slot++;
+                    }
                 }
 
                 // activations

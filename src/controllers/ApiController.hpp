@@ -12,6 +12,7 @@ public:
     ADD_METHOD_TO(ApiController::leaveMatch, "/api/match/{1}/leave", drogon::Post, drogon::Options);
     ADD_METHOD_TO(ApiController::startMatch, "/api/match/{1}/start", drogon::Post, drogon::Options);
     ADD_METHOD_TO(ApiController::moveCharacterToDoor, "/api/match/{1}/move_character", drogon::Post, drogon::Options);
+    ADD_METHOD_TO(ApiController::performCharacterAction, "/api/match/{1}/perform_character_action", drogon::Post, drogon::Options);
     ADD_METHOD_TO(ApiController::activateCharacter, "/api/match/{1}/activate_character", drogon::Post, drogon::Options);
     ADD_METHOD_TO(ApiController::activateInventoryItem, "/api/match/{1}/activate_inventory_item", drogon::Post, drogon::Options);
     ADD_METHOD_TO(ApiController::activateDoor, "/api/match/{1}/activate_door", drogon::Post, drogon::Options);
@@ -67,6 +68,10 @@ public:
     void endTurn(const drogon::HttpRequestPtr& req,
                  std::function<void (const drogon::HttpResponsePtr &)> &&callback,
                  std::string matchId);
+
+    void performCharacterAction(const drogon::HttpRequestPtr& req,
+                               std::function<void (const drogon::HttpResponsePtr &)> &&callback,
+                               std::string matchId);
 
     static void invokeResponse(const drogon::HttpStatusCode code, const std::string& body, std::function<void (const drogon::HttpResponsePtr &)> &&callback);
     static void invokeResponse200(const std::string& body, std::function<void (const drogon::HttpResponsePtr &)> &&callback);

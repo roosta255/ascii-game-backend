@@ -7,6 +7,8 @@
 #include "Keyframe.hpp"
 #include "Location.hpp"
 #include "Pointer.hpp"
+#include "RoleEnum.hpp"
+#include "TraitBits.hpp"
 
 class CharacterDigest;
 class Match;
@@ -19,12 +21,13 @@ struct Character
     Array<Keyframe, MAX_KEYFRAMES> keyframes;
     Location location;
     int damage = 0;
-    int role = 0;
+    RoleEnum role = ROLE_EMPTY;
     int feats = 0;
     int actions = 0;
     int moves = 0;
     int visibility = ~0x0;
     int characterId = -1;
+    TraitBits traitsAfflicted, traitsComputed;
 
     // there are two problems to solve:
     // 1) should the backend store animation data?
@@ -55,12 +58,14 @@ struct Character
     bool isActor(CodeEnum &error, const bool isCheckingCount = false) const;
     bool isActionable(CodeEnum &error, const bool isCheckingCount = false) const;
     bool isKeyer(CodeEnum &error) const;
+    bool isObject() const;
 
     bool takeAction(CodeEnum &error); // Returns false if character is out of actions
     bool takeMove(CodeEnum &error);   // Returns false if character is out of moves
     bool takeFeat(CodeEnum &error);   // Returns false if character is out of feats
 
     void startTurn(Match &match); // Reset moves/actions to their initial values based on role
+    bool updateTraits();
     void endTurn(Match &match);   // Clean up any end-of-turn effects
 };
 

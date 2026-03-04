@@ -46,10 +46,11 @@ struct CharacterApiView
         // offset
         params.match.containsCharacter(model, this->offset);
 
+        this->isObject = model.isObject();
+
         // role
         RoleFlyweight::getFlyweights().accessConst(model.role, [&](const RoleFlyweight& flyweight) {
             this->role = flyweight.name;
-            this->isObject = flyweight.isObject;
             this->isActionable = flyweight.isActionable;
             this->actionsRemaining = flyweight.actions - model.actions;
             this->movesRemaining = flyweight.moves - model.moves;

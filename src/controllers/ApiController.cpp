@@ -260,7 +260,6 @@ void ApiController::moveCharacterToDoor
 ( const drogon::HttpRequestPtr& req, std::function<void (const drogon::HttpResponsePtr &)> &&callback, std::string matchId
 )
 {
-    Codeset codeset;
     auto json = req->getJsonObject();
 
     if (!json)
@@ -281,48 +280,14 @@ void ApiController::moveCharacterToDoor
     if (json->isMember("direction") && json->isMember("floor"))
         return invokeResponse400("Both floor and direction fields set, but must choose one", std::move(callback));
 
-    std::string accountId = (*json)["account"].asString();
-    
-    int roomId = (*json)["room"].asInt();
-    int characterId = (*json)["character"].asInt();
-
-    Match match;
-    MatchController controller(match, codeset);
-    if (codeset.addFailure(!matchRepository.load(matchId, codeset.error, match)))
-        return invokeResponse404(codeset.describe("Failed to load match due to: "), std::move(callback));
-
-    Preactivation preactivation{
-        .playerId = accountId,
-        .characterId = characterId,
-        .roomId = roomId,
-        .isSkippingAnimations = false,
-        .isSortingState = false,
-        .time = Timestamp()
-    };
-    if (json->isMember("direction")) {
-        Cardinal direction((*json)["direction"].asInt());
-        preactivation.direction = direction;
-        if (!controller.activate(ActionFlyweight::getMoveToDoor(), preactivation))
-            return invokeResponse409(codeset.describe("Movement to door rejected due to "), std::move(callback));
-    } else if (json->isMember("floor")) {
-        int floorId = (*json)["floor"].asInt();
-        preactivation.floorId = floorId;
-        if (!controller.activate(ActionFlyweight::getMoveToFloor(), preactivation))
-            return invokeResponse409(codeset.describe("Movement to floor rejected due to "), std::move(callback));
-    }
-
-    // Save the updated match state
-    if (codeset.addFailure(!matchRepository.save(match, codeset.error)))
-        return invokeResponse409(codeset.describe("Failed to save match due to: "), std::move(callback));
-
-    return invokeResponse200("Character moved", std::move(callback));
+    (*json)["action"] = json->isMember("direction") ? action_to_text(ACTION_MOVE_TO_DOOR): action_to_text(ACTION_MOVE_TO_FLOOR);
+    return performCharacterAction(req, std::move(callback), matchId);
 }
 
 void ApiController::activateCharacter
 ( const drogon::HttpRequestPtr& req, std::function<void (const drogon::HttpResponsePtr &)> &&callback, std::string matchId
 )
 {
-    Codeset codeset;
     auto json = req->getJsonObject();
 
     if (!json)
@@ -340,43 +305,14 @@ void ApiController::activateCharacter
     if (!json->isMember("target"))
         return invokeResponse400("Missing target field", std::move(callback));
 
-    std::string accountId = (*json)["account"].asString();
-    int roomId = (*json)["room"].asInt();
-    int characterId = (*json)["character"].asInt();
-    int targetId = (*json)["target"].asInt();
-
-    Match match;
-    MatchController controller(match, codeset);
-    if (codeset.addFailure(!matchRepository.load(matchId, codeset.error, match)))
-        return invokeResponse404(codeset.describe("Failed to load match due to: "), std::move(callback));
-
-    // TODO: Validate that account can issue character orders
-    Preactivation preactivation{
-        .playerId = accountId,
-        .characterId = characterId,
-        .roomId = roomId,
-        .targetCharacterId = targetId,
-        .isSkippingAnimations = false,
-        .isSortingState = false,
-        .time = Timestamp()
-    };
-
-    // Attempt to activate the character
-    if (!controller.activate(ActionFlyweight::getUseCharacter(), preactivation))
-        return invokeResponse409(codeset.describe("Character activation rejected due to: "), std::move(callback));
-
-    // Save the updated match state
-    if (codeset.addFailure(!matchRepository.save(match, codeset.error)))
-        return invokeResponse409(codeset.describe("Failed to save match due to: "), std::move(callback));
-
-    return invokeResponse200("Character activated", std::move(callback));
+    (*json)["action"] = action_to_text(ACTION_ACTIVATE_CHARACTER);
+    return performCharacterAction(req, std::move(callback), matchId);
 }
 
 void ApiController::activateInventoryItem
 ( const drogon::HttpRequestPtr& req, std::function<void (const drogon::HttpResponsePtr &)> &&callback, std::string matchId
 )
 {
-    Codeset codeset;
     auto json = req->getJsonObject();
 
     if (!json)
@@ -391,46 +327,17 @@ void ApiController::activateInventoryItem
     if (!json->isMember("room"))
         return invokeResponse400("Missing room field", std::move(callback));
 
-    if (!json->isMember("item"))
-        return invokeResponse400("Missing target field", std::move(callback));
+    if (!json->isMember("item") && !json->isMember("source_item") && !json->isMember("target_item"))
+        return invokeResponse400("Missing item field", std::move(callback));
 
-    std::string accountId = (*json)["account"].asString();
-    int roomId = (*json)["room"].asInt();
-    int characterId = (*json)["character"].asInt();
-    int itemId = (*json)["item"].asInt();
-
-    Match match;
-    MatchController controller(match, codeset);
-    if (codeset.addFailure(!matchRepository.load(matchId, codeset.error, match)))
-        return invokeResponse404(codeset.describe("Failed to load match due to: "), std::move(callback));
-
-    // TODO: Validate that account can issue character orders
-    Preactivation preactivation{
-        .playerId = accountId,
-        .characterId = characterId,
-        .roomId = roomId,
-        .targetItemIndex = itemId,
-        .isSkippingAnimations = false,
-        .isSortingState = false,
-        .time = Timestamp()
-    };
-
-    // Attempt to activate the character
-    if (!controller.activate(ActionFlyweight::getUseInventoryItem(), preactivation))
-        return invokeResponse409(codeset.describe("Item activation rejected due to: "), std::move(callback));
-
-    // Save the updated match state
-    if (codeset.addFailure(!matchRepository.save(match, codeset.error)))
-        return invokeResponse409(codeset.describe("Failed to save match due to: "), std::move(callback));
-
-    return invokeResponse200("Item activated", std::move(callback));
+    (*json)["action"] = action_to_text(ACTION_ACTIVATE_INVENTORY_ITEM);
+    return performCharacterAction(req, std::move(callback), matchId);
 }
 
 void ApiController::activateDoor
 ( const drogon::HttpRequestPtr& req, std::function<void (const drogon::HttpResponsePtr &)> &&callback, std::string matchId
 )
 {
-    Codeset codeset;
     auto json = req->getJsonObject();
 
     if (!json)
@@ -448,42 +355,14 @@ void ApiController::activateDoor
     if (!json->isMember("direction"))
         return invokeResponse400("Missing direction field", std::move(callback));
 
-    std::string accountId = (*json)["account"].asString();
-    int roomId = (*json)["room"].asInt();
-    int characterId = (*json)["character"].asInt();
-    Cardinal direction((*json)["direction"].asInt());
-
-    Match match;
-    MatchController controller(match, codeset);
-    if (codeset.addFailure(!matchRepository.load(matchId, codeset.error, match)))
-        return invokeResponse404(codeset.describe("Failed to load match due to: "), std::move(callback));
-
-    Preactivation preactivation{
-        .playerId = accountId,
-        .characterId = characterId,
-        .roomId = roomId,
-        .direction = direction,
-        .isSkippingAnimations = false,
-        .isSortingState = false,
-        .time = Timestamp()
-    };
-
-    // Attempt to activate the lock
-    if (!controller.activate(ActionFlyweight::getUseDoor(), preactivation))
-        return invokeResponse409(codeset.describe("Door activation rejected due to: "), std::move(callback));
-
-    // Save the updated match state
-    if (codeset.addFailure(!matchRepository.save(match, codeset.error)))
-        return invokeResponse409(codeset.describe("Failed to save match due to: "), std::move(callback));
-
-    return invokeResponse200("Door activated", std::move(callback));
+    (*json)["action"] = action_to_text(ACTION_ACTIVATE_DOOR);
+    return performCharacterAction(req, std::move(callback), matchId);
 }
 
 void ApiController::activateLock
 ( const drogon::HttpRequestPtr& req, std::function<void (const drogon::HttpResponsePtr &)> &&callback, std::string matchId
 )
 {
-    Codeset codeset;
     auto json = req->getJsonObject();
 
     if (!json)
@@ -501,35 +380,8 @@ void ApiController::activateLock
     if (!json->isMember("direction"))
         return invokeResponse400("Missing direction field", std::move(callback));
 
-    std::string accountId = (*json)["account"].asString();
-    int roomId = (*json)["room"].asInt();
-    int characterId = (*json)["character"].asInt();
-    Cardinal direction((*json)["direction"].asInt());
-
-    Match match;
-    MatchController controller(match, codeset);
-    if (codeset.addFailure(!matchRepository.load(matchId, codeset.error, match)))
-        return invokeResponse404(codeset.describe("Failed to load match due to: "), std::move(callback));
-
-    Preactivation preactivation{
-        .playerId = accountId,
-        .characterId = characterId,
-        .roomId = roomId,
-        .direction = direction,
-        .isSkippingAnimations = false,
-        .isSortingState = false,
-        .time = Timestamp()
-    };
-
-    // Attempt to activate the lock
-    if (!controller.activate(ActionFlyweight::getUseLock(), preactivation))
-        return invokeResponse409(codeset.describe("Lock activation rejected due to: "), std::move(callback));
-
-    // Save the updated match state
-    if (codeset.addFailure(!matchRepository.save(match, codeset.error)))
-        return invokeResponse409(codeset.describe("Failed to save match due to: "), std::move(callback));
-
-    return invokeResponse200("Lock activated", std::move(callback));
+    (*json)["action"] = action_to_text(ACTION_ACTIVATE_LOCK);
+    return performCharacterAction(req, std::move(callback), matchId);
 }
 
 void ApiController::endTurn
@@ -544,24 +396,76 @@ void ApiController::endTurn
     if (!json->isMember("account"))
         return invokeResponse400("Missing account field", std::move(callback));
 
+    if (!json->isMember("character")) (*json)["character"] = 0;
+    if (!json->isMember("room")) (*json)["room"] = 0;
+    (*json)["action"] = action_to_text(ACTION_END_TURN);
+    return performCharacterAction(req, std::move(callback), matchId);
+}
+
+void ApiController::performCharacterAction
+( const drogon::HttpRequestPtr& req, std::function<void (const drogon::HttpResponsePtr &)> &&callback, std::string matchId
+)
+{
+    Codeset codeset;
+    auto json = req->getJsonObject();
+
+    if (!json)
+        return invokeResponse400("Missing json", std::move(callback));
+
+    if (!json->isMember("account"))
+        return invokeResponse400("Missing account field", std::move(callback));
+
+    if (!json->isMember("character"))
+        return invokeResponse400("Missing character field", std::move(callback));
+
+    if (!json->isMember("room"))
+        return invokeResponse400("Missing room field", std::move(callback));
+
     std::string accountId = (*json)["account"].asString();
+    
+    int roomId = (*json)["room"].asInt();
+    int characterId = (*json)["character"].asInt();
 
-    CodeEnum error = CODE_UNKNOWN_ERROR;
     Match match;
-    if (!matchRepository.load(matchId, error, match))
-        return invokeResponse404(code_to_message(error, "Failed to load match due to: "), std::move(callback));
+    MatchController controller(match, codeset);
+    if (codeset.addFailure(!matchRepository.load(matchId, codeset.error, match)))
+        return invokeResponse404(codeset.describe("Failed to load match due to: "), std::move(callback));
 
-    // End current player's turn
-    CodeEnum result = CODE_SUCCESS;
-    match.endTurn(accountId, result);
-    if (result != CODE_SUCCESS)
-        return invokeResponse409(std::string("Turn end rejected due to ") + code_to_text(result), std::move(callback));
+    if (!json->isMember("action"))
+        return invokeResponse400("Missing action field", std::move(callback));
+    std::string actionString = (*json)["action"].asString();
+    ActionEnum actionEnum;
+    if (codeset.addFailure(!ActionFlyweight::indexByString(actionString, actionEnum)))
+        return invokeResponse404("Failed to parse action: " + actionString, std::move(callback));
+
+    // TODO: Validate that account can issue character orders
+    Preactivation preactivation{
+        .action = {
+            .type = actionEnum,
+            .characterId = characterId,
+            .roomId = roomId,
+            .targetCharacterId = json->isMember("target") ? (*json)["target"].asInt() : Maybe<int>::empty(),
+            .targetItemIndex = json->isMember("target_item") ? (*json)["target_item"].asInt() : json->isMember("item") ? (*json)["item"].asInt() : Maybe<int>::empty(),
+            .targetInventoryIndex = json->isMember("target_inventory") ? (*json)["target_inventory"].asInt() : Maybe<int>::empty(),
+            .direction = json->isMember("direction") ? Cardinal((*json)["direction"].asInt()) : Maybe<Cardinal>::empty(),
+        },
+        .playerId = accountId,
+        .sourceItemIndex = json->isMember("source_item") ? (*json)["source_item"].asInt() : json->isMember("item") ? (*json)["item"].asInt() : Maybe<int>::empty(),
+        .sourceInventoryId = json->isMember("source_inventory") ? (*json)["source_inventory"].asInt() : Maybe<int>::empty(),
+        .isSkippingAnimations = false,
+        .isSortingState = false,
+        .time = Timestamp()
+    };
+
+    // Attempt to perform the character action
+    if (!controller.activate(preactivation))
+        return invokeResponse409(codeset.describe("Character activation rejected due to: "), std::move(callback));
 
     // Save the updated match state
-    if (!matchRepository.save(match, result))
-        return invokeResponse409(code_to_message(result, "Failed to save match due to: "), std::move(callback));
+    if (codeset.addFailure(!matchRepository.save(match, codeset.error)))
+        return invokeResponse409(codeset.describe("Failed to save match due to: "), std::move(callback));
 
-    return invokeResponse200("Turn ended", std::move(callback));
+    return invokeResponse200("Character performed action", std::move(callback));
 }
 
 void ApiController::invokeResponse
