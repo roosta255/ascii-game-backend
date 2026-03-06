@@ -396,10 +396,19 @@ void ApiController::endTurn
     if (!json->isMember("account"))
         return invokeResponse400("Missing account field", std::move(callback));
 
-    if (!json->isMember("character")) (*json)["character"] = 0;
-    if (!json->isMember("room")) (*json)["room"] = 0;
-    (*json)["action"] = action_to_text(ACTION_END_TURN);
-    return performCharacterAction(req, std::move(callback), matchId);
+    std::string accountId = (*json)["account"].asString();
+    CodeEnum error = CODE_UNKNOWN_ERROR;
+    Match match;
+    if (!matchRepository.load(matchId, error, match))
+        return invokeResponse404(code_to_message(error, "Failed to load match due to: "), std::move(callback));
+
+    if (!match.endTurn(accountId, error))
+        return invokeResponse409(code_to_message(error, "End turn rejected due to: "), std::move(callback));
+
+    if (!matchRepository.save(match, error))
+        return invokeResponse409(code_to_message(error, "Failed to save match due to: "), std::move(callback));
+
+    return invokeResponse200("Turn ended", std::move(callback));
 }
 
 void ApiController::performCharacterAction
@@ -448,6 +457,7 @@ void ApiController::performCharacterAction
             .targetItemIndex = json->isMember("target_item") ? (*json)["target_item"].asInt() : json->isMember("item") ? (*json)["item"].asInt() : Maybe<int>::empty(),
             .targetInventoryIndex = json->isMember("target_inventory") ? (*json)["target_inventory"].asInt() : Maybe<int>::empty(),
             .direction = json->isMember("direction") ? Cardinal((*json)["direction"].asInt()) : Maybe<Cardinal>::empty(),
+            .floorId = json->isMember("floor") ? (*json)["floor"].asInt() : Maybe<int>::empty(),
         },
         .playerId = accountId,
         .sourceItemIndex = json->isMember("source_item") ? (*json)["source_item"].asInt() : json->isMember("item") ? (*json)["item"].asInt() : Maybe<int>::empty(),
