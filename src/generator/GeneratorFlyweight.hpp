@@ -10,6 +10,7 @@ class iGenerator;
 
 struct GeneratorFlyweight {
     const char* name;
+    bool isTest = false;
 
     Pointer<const iGenerator> generator;
 

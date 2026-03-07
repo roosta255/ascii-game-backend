@@ -7,7 +7,7 @@
 #include "TraitBits.hpp"
 #include "TraitEnum.hpp"
 
-bool Character::getDigest(CodeEnum& error, CharacterDigest& digest)const {
+bool Character::getDigest(CodeEnum& error, CharacterDigest& digest, const TraitBits& traitsComputed) const {
     return accessRole(error, [&](const RoleFlyweight& flyweight){
         digest = CharacterDigest{
             .healthRemaining = Maybe<int>(flyweight.health - this->damage),
@@ -32,7 +32,7 @@ bool Character::isMovable(CodeEnum& error, const bool isCheckingCount) const
     return result;
 }
 
-bool Character::isActor(CodeEnum& error, const bool isCheckingCount) const
+bool Character::isActor(CodeEnum& error, const TraitBits& traitsComputed, const bool isCheckingCount) const
 {
     bool result = false;
     int actionsTaken = actions;
@@ -58,7 +58,7 @@ bool Character::isActionable(CodeEnum& error, const bool isCheckingCount) const
     return result;
 }
 
-bool Character::isKeyer(CodeEnum& error) const
+bool Character::isKeyer(CodeEnum& error, const TraitBits& traitsComputed) const
 {
     bool result = false;
     accessRole(error, [&](const RoleFlyweight& flyweight){
@@ -69,7 +69,7 @@ bool Character::isKeyer(CodeEnum& error) const
     return result;
 }
 
-bool Character::isObject() const
+bool Character::isObject(const TraitBits& traitsComputed) const
 {
     return traitsComputed[TRAIT_CHARACTER_OBJECT].orElse(false);
 }
@@ -114,14 +114,6 @@ bool Character::takeFeat(CodeEnum& error)
         }
     });
     return result;
-}
-
-bool Character::updateTraits() {
-    const auto updatedMaybe = TraitModifier::computeCharacterTraits(*this);
-    updatedMaybe.accessConst([&](const TraitBits& updated){
-        traitsComputed = updated;
-    });
-    return updatedMaybe.isPresent();
 }
 
 bool Character::accessRole

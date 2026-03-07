@@ -11,7 +11,7 @@
 const Array<GeneratorFlyweight, GENERATOR_COUNT>& GeneratorFlyweight::getFlyweights() {
     static auto flyweights = [](){
         Array<GeneratorFlyweight, GENERATOR_COUNT> flyweights;
-        #define GENERATOR_DECL( name_, class_ ) flyweights.getPointer( GENERATOR_##name_ ).access([](GeneratorFlyweight& flyweight){ flyweight.name = #name_; static class_ t; flyweight.generator = t; });
+        #define GENERATOR_DECL( name_, class_, isTest_ ) flyweights.getPointer( GENERATOR_##name_ ).access([](GeneratorFlyweight& flyweight){ flyweight.name = #name_; flyweight.isTest = isTest_; static class_ t; flyweight.generator = t; });
         #include "Generator.enum"
         #undef GENERATOR_DECL
 

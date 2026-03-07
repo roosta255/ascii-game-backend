@@ -37,7 +37,7 @@ bool GeneratorDoorwayDungeon2::generate (int seed, Match& dst, Codeset& codeset)
                 controller.assignCharacterToFloor(builderId, ENTRANCE_ROOM_ID, CHANNEL_CORPOREAL, floorId);
             }
         }
-        builder.character.updateTraits();
+        controller.updateTraits(builder.character);
     });
 
     LayoutFlyweight::getFlyweights().accessConst(LAYOUT, [&](const LayoutFlyweight& flyweight){

@@ -27,7 +27,7 @@ struct Character
     int moves = 0;
     int visibility = ~0x0;
     int characterId = -1;
-    TraitBits traitsAfflicted, traitsComputed;
+    TraitBits traitsAfflicted;
 
     // there are two problems to solve:
     // 1) should the backend store animation data?
@@ -52,20 +52,19 @@ struct Character
 
     bool accessRole(CodeEnum &error, std::function<void(const RoleFlyweight &)>) const;
 
-    bool getDigest(CodeEnum& error, CharacterDigest& digest)const;
-
     bool isMovable(CodeEnum &error, const bool isCheckingCount = false) const;
-    bool isActor(CodeEnum &error, const bool isCheckingCount = false) const;
+    bool isActor(CodeEnum &error, const TraitBits &traitsComputed, const bool isCheckingCount = false) const;
     bool isActionable(CodeEnum &error, const bool isCheckingCount = false) const;
-    bool isKeyer(CodeEnum &error) const;
-    bool isObject() const;
+    bool isKeyer(CodeEnum &error, const TraitBits &traitsComputed) const;
+    bool isObject(const TraitBits &traitsComputed) const;
+
+    bool getDigest(CodeEnum &error, CharacterDigest &digest, const TraitBits &traitsComputed) const;
 
     bool takeAction(CodeEnum &error); // Returns false if character is out of actions
     bool takeMove(CodeEnum &error);   // Returns false if character is out of moves
     bool takeFeat(CodeEnum &error);   // Returns false if character is out of feats
 
     void startTurn(Match &match); // Reset moves/actions to their initial values based on role
-    bool updateTraits();
     void endTurn(Match &match);   // Clean up any end-of-turn effects
 };
 

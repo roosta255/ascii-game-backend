@@ -11,7 +11,7 @@ bool ActivatorCritterBite::activate(Activation& activation) const {
     auto& codeset = activation.codeset;
     auto& subject = activation.character;
 
-    bool isBiting = subject.traitsComputed[TRAIT_CRITTER_BITES].orElse(false);
+    bool isBiting = activation.controller.getTraitsComputed(subject.characterId)[TRAIT_CRITTER_BITES].orElse(false);
     codeset.addTable(CODE_CRITTER_BITE_ACTIVATED_WITH_BITES_TRAIT, isBiting);
     codeset.addTable(CODE_CRITTER_BITE_ACTIVATED_WITHOUT_BITES_TRAIT, !isBiting);
     if (!isBiting) {
@@ -26,6 +26,7 @@ bool ActivatorCritterBite::activate(Activation& activation) const {
         subject.accessRole(roleError, [&](const RoleFlyweight& critterRole) {
             critterRole.biteTraitModifier.accessConst([&](const TraitModifier& modifier) {
                 modifier.applyAffliction(target);
+                activation.controller.updateTraits(target);
                 isSuccess = true;
             });
         });

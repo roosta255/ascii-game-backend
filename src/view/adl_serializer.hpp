@@ -2,9 +2,38 @@
 
 #include <array>
 #include "Array.hpp"
+#include "TraitBits.hpp"
+#include "TraitFlyweight.hpp"
 #include <nlohmann/json.hpp>
 
 namespace nlohmann {
+
+// Serializes TraitBits as an array of trait name strings for the set bits.
+// Unknown names on deserialization are silently skipped for forward compatibility.
+template<>
+struct adl_serializer<TraitBits> {
+    static void to_json(json& j, const TraitBits& bits) {
+        j = json::array();
+        for (int i = 0; i < (int)TRAIT_COUNT; ++i) {
+            if (bits[i].orElse(false)) {
+                TraitFlyweight::getFlyweights().accessConst(i, [&](const TraitFlyweight& flyweight) {
+                    j.push_back(flyweight.name);
+                });
+            }
+        }
+    }
+
+    static void from_json(const json& j, TraitBits& bits) {
+        if (!j.is_array())
+            throw json::type_error::create(302, "Expected array of trait names", j);
+        bits = TraitBits{};
+        for (const auto& item : j) {
+            TraitEnum traitEnum;
+            if (TraitFlyweight::indexByString(item.get<std::string>(), traitEnum))
+                bits.setIndexOn((Bitline)traitEnum);
+        }
+    }
+};
 
 template<typename T, unsigned N>
 struct adl_serializer<Array<T, N>> {

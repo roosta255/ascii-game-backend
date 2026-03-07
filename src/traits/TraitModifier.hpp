@@ -31,7 +31,7 @@ struct TraitModifier
     static Maybe<TraitBits> computeCharacterTraits(const Character& character);
 
     // Validates required/restricted against character's computed traits, then applies
-    // set/clear directly to character.traitsAfflicted and calls character.updateTraits().
+    // set/clear directly to character.traitsAfflicted. Caller must update traitsComputed.
     bool applyAffliction(Character& character) const;
 
 private:

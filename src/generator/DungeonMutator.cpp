@@ -221,6 +221,5 @@ bool DungeonMutator::setupTogglerSwitch (const int& roomId, int& outCharacterId,
     return !codeset.addFailure(!controller.allocateCharacterToFloor(roomId, CHANNEL_CORPOREAL, [&](Character& character){
         character.role = ROLE_TOGGLER;
         character.visibility = ~0x0;
-        character.updateTraits();
     }, outCharacterId, outFloorId), CODE_DUNGEON_MUTATOR_FAILED_TO_SETUP_TOGGLER_SWITCH);
 }

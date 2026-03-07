@@ -1,6 +1,6 @@
 #pragma once
 
-#define GENERATOR_DECL( name_, class_ ) GENERATOR_##name_,
+#define GENERATOR_DECL( name_, class_, isTest_ ) GENERATOR_##name_,
 enum GeneratorEnum
 {
 #include "Generator.enum"

@@ -1,3 +1,4 @@
 .env
 build/
 *.tar
+var/state/matches/

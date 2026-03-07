@@ -67,7 +67,6 @@ bool TraitModifier::applyAffliction(Character& character) const {
         if ((computed & restricted).isAny()) return;
         character.traitsAfflicted = character.traitsAfflicted | set;
         character.traitsAfflicted = character.traitsAfflicted & ~clear;
-        character.updateTraits();
         applied = true;
     });
     return applied;

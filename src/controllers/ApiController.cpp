@@ -138,7 +138,8 @@ void ApiController::getMatch
         .mask = ~0x0,
         .match = match,
         .doors = controller.getDoors(),
-        .floors = controller.getFloors()
+        .floors = controller.getFloors(),
+        .traitsComputed = controller.getTraitsComputedMap()
     };
     MatchApiView view(params);
     nlohmann::json body(view);
@@ -185,7 +186,7 @@ void ApiController::getGeneratorList
     Json::Value generators(Json::arrayValue);
 
     for (const auto& flyweight: GeneratorFlyweight::getFlyweights()) {
-        generators.append(flyweight.name);
+        if (!flyweight.isTest) generators.append(flyweight.name);
     }
 
     Json::Value response;
@@ -436,9 +437,9 @@ void ApiController::performCharacterAction
     int characterId = (*json)["character"].asInt();
 
     Match match;
-    MatchController controller(match, codeset);
     if (codeset.addFailure(!matchRepository.load(matchId, codeset.error, match)))
         return invokeResponse404(codeset.describe("Failed to load match due to: "), std::move(callback));
+    MatchController controller(match, codeset);
 
     if (!json->isMember("action"))
         return invokeResponse400("Missing action field", std::move(callback));

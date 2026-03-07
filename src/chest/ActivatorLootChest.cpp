@@ -17,7 +17,7 @@ bool ActivatorLootChest::activate(Activation& activation) const {
     auto& room = activation.room;
     auto& item = activation.targetItem;
 
-    if (codeset.addFailure(!subject.isActor(codeset.error))) {
+    if (codeset.addFailure(!subject.isActor(codeset.error, controller.getTraitsComputed(subject.characterId)))) {
         return false;
     }
 

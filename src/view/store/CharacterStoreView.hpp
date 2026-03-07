@@ -7,6 +7,7 @@
 #include "KeyframeFlyweight.hpp"
 #include "LocationView.hpp"
 #include "RoleFlyweight.hpp"
+#include "TraitBits.hpp"
 #include <string>
 #include <nlohmann/json.hpp>
 
@@ -21,11 +22,12 @@ struct CharacterStoreView
     Array<KeyframeView, Character::MAX_KEYFRAMES> keyframes;
     LocationView location;
     int characterId = -1;
+    TraitBits traitsAfflicted;
 
     inline CharacterStoreView() = default;
     inline CharacterStoreView(const Character& model)
     : damage(model.damage), feats(model.feats), actions(model.actions), moves(model.moves), visibility(model.visibility), keyframes(model.keyframes.transform([&](const Keyframe& keyframe){return KeyframeView(keyframe);}))
-    , location(model.location), characterId(model.characterId)
+    , location(model.location), characterId(model.characterId), traitsAfflicted(model.traitsAfflicted)
     {
         RoleFlyweight::getFlyweights().accessConst(model.role, [&](const RoleFlyweight& flyweight) {
             this->role = flyweight.name;
@@ -40,12 +42,33 @@ struct CharacterStoreView
             .actions = this->actions,
             .moves = this->moves,
             .visibility = this->visibility,
-            .characterId = this->characterId
+            .characterId = this->characterId,
+            .traitsAfflicted = this->traitsAfflicted,
         };
         RoleFlyweight::indexByString(this->role, model.role);
         return model;
     }
 };
 
-// Reflection-based JSON serialization
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(CharacterStoreView, damage, role, feats, actions, moves, keyframes, location, characterId)
+inline void to_json(nlohmann::json& j, const CharacterStoreView& v) {
+    j = {
+        {"damage", v.damage}, {"role", v.role}, {"feats", v.feats},
+        {"actions", v.actions}, {"moves", v.moves}, {"visibility", v.visibility},
+        {"keyframes", v.keyframes}, {"location", v.location},
+        {"characterId", v.characterId}, {"traitsAfflicted", v.traitsAfflicted}
+    };
+}
+
+inline void from_json(const nlohmann::json& j, CharacterStoreView& v) {
+    j.at("damage").get_to(v.damage);
+    j.at("role").get_to(v.role);
+    j.at("feats").get_to(v.feats);
+    j.at("actions").get_to(v.actions);
+    j.at("moves").get_to(v.moves);
+    if (j.contains("visibility")) j.at("visibility").get_to(v.visibility);
+    j.at("keyframes").get_to(v.keyframes);
+    j.at("location").get_to(v.location);
+    j.at("characterId").get_to(v.characterId);
+    // traitsAfflicted is new — default to empty TraitBits{} for old saves
+    if (j.contains("traitsAfflicted")) j.at("traitsAfflicted").get_to(v.traitsAfflicted);
+}

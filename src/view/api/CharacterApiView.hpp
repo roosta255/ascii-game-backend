@@ -46,7 +46,7 @@ struct CharacterApiView
         // offset
         params.match.containsCharacter(model, this->offset);
 
-        this->isObject = model.isObject();
+        this->isObject = model.isObject(params.traitsComputed.getOrDefault(model.characterId, TraitBits{}));
 
         // role
         RoleFlyweight::getFlyweights().accessConst(model.role, [&](const RoleFlyweight& flyweight) {

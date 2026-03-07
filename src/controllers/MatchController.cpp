@@ -19,7 +19,11 @@
 #include "RoleFlyweight.hpp"
 #include "TraitModifier.hpp"
 
-MatchController::MatchController(Match& match, Codeset& codeset): match(match), codeset(codeset) {}
+MatchController::MatchController(Match& match, Codeset& codeset): match(match), codeset(codeset) {
+    match.accessUsedCharacters([&](const Character& character) {
+        traitsComputed.set(character.characterId, TraitModifier::computeCharacterTraits(character).orElse(TraitBits{}));
+    });
+}
 
 // functions
 bool MatchController::activate(const Preactivation& preactivation) {
@@ -94,7 +98,7 @@ bool MatchController::allocateCharacterToFloor(int roomId, ChannelEnum channel, 
         // set character
         outCharacterId = character.characterId;
         consumer(character);
-        character.updateTraits();
+        updateTraits(character);
         character.location = Location::makeFloor(roomId, channel, outFloorId);
         character.location.apply(character.characterId, match.dungeon.rooms, floors, doors);
         isSuccess = true;
@@ -141,7 +145,7 @@ bool MatchController::allocateChest(int roomId, std::function<void(Chest&, Chara
                     chest.critterCharacterId = critterCharacter.characterId;
                     consumer(chest, containerCharacter, critterCharacter);
                     critterCharacter.location = Location::makeChest(roomId, CHANNEL_CORPOREAL, containerCharacter.characterId);
-                    critterCharacter.updateTraits();
+                    updateTraits(critterCharacter);
                     isSuccess = true;
                 }), CODE_UNABLE_TO_FIND_FREE_CHARACTER_IN_DUNGEON);
             },
@@ -302,6 +306,16 @@ bool MatchController::generate(int seed) {
             codeset.addFailure(!(success = generator.generate(seed, match, codeset)));
         });
     }), CODE_MATCH_GENERATE_FAILED_DUE_TO_INNACCESSIBLE_GENERATOR_FLYWEIGHT);
+
+    // Rebuild traitsComputed from the fully-populated match so callers on this
+    // controller instance see up-to-date traits (the inner generator creates its
+    // own MatchController whose traits map is discarded on return).
+    if (success) {
+        match.accessUsedCharacters([&](const Character& character) {
+            traitsComputed.set(character.characterId, TraitModifier::computeCharacterTraits(character).orElse(TraitBits{}));
+        });
+    }
+
     return success;
 }
 
@@ -320,7 +334,7 @@ bool MatchController::giveInventoryItem(Inventory& inventory, const ItemEnum typ
 }
 
 bool MatchController::isCharacterActorValidation(const Character& character, const bool isCheckingCount) {
-    return !codeset.addFailure(!character.isActor(codeset.error, isCheckingCount));
+    return !codeset.addFailure(!character.isActor(codeset.error, getTraitsComputed(character.characterId), isCheckingCount));
 }
 
 bool MatchController::isCharacterMoverValidation(const Character& character, const bool isCheckingCount) {
@@ -328,7 +342,7 @@ bool MatchController::isCharacterMoverValidation(const Character& character, con
 }
 
 bool MatchController::isCharacterKeyerValidation(const Character& character) {
-    return !codeset.addFailure(!character.isKeyer(codeset.error));
+    return !codeset.addFailure(!character.isKeyer(codeset.error, getTraitsComputed(character.characterId)));
 }
 
 bool MatchController::isCharacterWithinRoom(int characterId, int roomId, bool& result) {
@@ -396,7 +410,7 @@ bool MatchController::permuteCharacterActions(const std::string& playerId, int m
             };
 
             CharacterDigest digest;
-            if (codeset.addFailure(!character.getDigest(codeset.error, digest))) {
+            if (codeset.addFailure(!character.getDigest(codeset.error, digest, getTraitsComputed(character.characterId)))) {
                 return;
             }
 
@@ -549,6 +563,18 @@ bool MatchController::updateCharacterLocation(Character& character, const Locati
     character.location.apply(characterId, match.dungeon.rooms, floors, doors);
 
     return true;
+}
+
+void MatchController::updateTraits(Character& character) {
+    traitsComputed.set(character.characterId, TraitModifier::computeCharacterTraits(character).orElse(TraitBits{}));
+}
+
+TraitBits MatchController::getTraitsComputed(int characterId) const {
+    return traitsComputed.getOrDefault(characterId, TraitBits{});
+}
+
+const Map<int, TraitBits>& MatchController::getTraitsComputedMap() const {
+    return traitsComputed;
 }
 
 bool MatchController::validateCharacterWithinRoom(int characterId, int roomId) {

@@ -226,6 +226,7 @@ std::ostream& operator<<(std::ostream& out, const Bitstick<N>& bits)
 }
 
 Bitline getFirst() const { return _state[0]; }
+const std::array<Bitline, WordCount>& getWords() const { return _state; }
 
 private:
 

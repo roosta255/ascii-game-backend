@@ -30,7 +30,7 @@ bool GeneratorTutorial::generate (int seed, Match& dst, Codeset& codeset) const 
                 controller.assignCharacterToFloor(builderId, roomId, CHANNEL_CORPOREAL, floorId);
             }
         }
-        builder.character.updateTraits();
+        controller.updateTraits(builder.character);
     });
 
     LayoutFlyweight::getFlyweights().accessConst(LAYOUT, [&](const LayoutFlyweight& flyweight){
