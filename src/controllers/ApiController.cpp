@@ -23,6 +23,14 @@ static bool isValidInput(const std::string& s) {
     return true;
 }
 
+// Match IDs also allow '-' as a system delimiter.
+static bool isValidMatchId(const std::string& s) {
+    if (s.empty()) return false;
+    for (unsigned char c : s)
+        if (!std::isalnum(c) && c != '_' && c != '-') return false;
+    return true;
+}
+
 static FileStore matchStore("var/state/matches");
 static FileStore accountStore("var/state/accounts");
 static MatchRepository matchRepository(matchStore);
@@ -132,7 +140,7 @@ void ApiController::createMatch
 void ApiController::getMatch
 ( const drogon::HttpRequestPtr &, std::function<void(const drogon::HttpResponsePtr &)> &&callback, std::string matchId )
 {
-    if (!isValidInput(matchId))
+    if (!isValidMatchId(matchId))
         return invokeResponse400("Invalid match id", std::move(callback));
     CodeEnum error = CODE_UNKNOWN_ERROR;
     Match match;
@@ -214,7 +222,7 @@ void ApiController::getGeneratorList
 void ApiController::joinMatch
 ( const drogon::HttpRequestPtr &req, std::function<void(const drogon::HttpResponsePtr &)> &&callback, std::string matchId )
 {
-    if (!isValidInput(matchId))
+    if (!isValidMatchId(matchId))
         return invokeResponse400("Invalid match id", std::move(callback));
     auto json = req->getJsonObject();
     if (!json || !json->isMember("account"))
@@ -240,7 +248,7 @@ void ApiController::joinMatch
 void ApiController::leaveMatch
 ( const drogon::HttpRequestPtr &req, std::function<void(const drogon::HttpResponsePtr &)> &&callback, std::string matchId )
 {
-    if (!isValidInput(matchId))
+    if (!isValidMatchId(matchId))
         return invokeResponse400("Invalid match id", std::move(callback));
     auto json = req->getJsonObject();
     if (!json || !json->isMember("account"))
@@ -267,7 +275,7 @@ void ApiController::startMatch
 ( const drogon::HttpRequestPtr &, std::function<void(const drogon::HttpResponsePtr &)> &&callback, std::string matchId
 )
 {
-    if (!isValidInput(matchId))
+    if (!isValidMatchId(matchId))
         return invokeResponse400("Invalid match id", std::move(callback));
     CodeEnum error = CODE_UNKNOWN_ERROR;
     Match match;
@@ -415,7 +423,7 @@ void ApiController::endTurn
 ( const drogon::HttpRequestPtr& req, std::function<void (const drogon::HttpResponsePtr &)> &&callback, std::string matchId
 )
 {
-    if (!isValidInput(matchId))
+    if (!isValidMatchId(matchId))
         return invokeResponse400("Invalid match id", std::move(callback));
     auto json = req->getJsonObject();
 
@@ -446,7 +454,7 @@ void ApiController::performCharacterAction
 ( const drogon::HttpRequestPtr& req, std::function<void (const drogon::HttpResponsePtr &)> &&callback, std::string matchId
 )
 {
-    if (!isValidInput(matchId))
+    if (!isValidMatchId(matchId))
         return invokeResponse400("Invalid match id", std::move(callback));
     Codeset codeset;
     auto json = req->getJsonObject();
