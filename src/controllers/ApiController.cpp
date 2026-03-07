@@ -15,6 +15,14 @@
 #include "Timestamp.hpp"
 #include <json/json.h>
 
+// Accepts only alphanumeric characters and underscores.
+static bool isValidInput(const std::string& s) {
+    if (s.empty()) return false;
+    for (unsigned char c : s)
+        if (!std::isalnum(c) && c != '_') return false;
+    return true;
+}
+
 static FileStore matchStore("var/state/matches");
 static FileStore accountStore("var/state/accounts");
 static MatchRepository matchRepository(matchStore);
@@ -88,11 +96,17 @@ void ApiController::createMatch
     auto json = req->getJsonObject();
     if (!json || !json->isMember("host"))
         return invokeResponse400("Missing host field", std::move(callback));
-    created.host = (*json)["host"].asString();
+    const auto host = (*json)["host"].asString();
+    if (!isValidInput(host))
+        return invokeResponse400("Invalid host field", std::move(callback));
+    created.host = host;
 
     if (!json || !json->isMember("name"))
         return invokeResponse400("Missing name field", std::move(callback));
-    created.username = (*json)["name"].asString();
+    const auto name = (*json)["name"].asString();
+    if (!isValidInput(name))
+        return invokeResponse400("Invalid name field", std::move(callback));
+    created.username = name;
 
     if (!json || !json->isMember("generator"))
         return invokeResponse400("Missing generator field", std::move(callback));
@@ -118,6 +132,8 @@ void ApiController::createMatch
 void ApiController::getMatch
 ( const drogon::HttpRequestPtr &, std::function<void(const drogon::HttpResponsePtr &)> &&callback, std::string matchId )
 {
+    if (!isValidInput(matchId))
+        return invokeResponse400("Invalid match id", std::move(callback));
     CodeEnum error = CODE_UNKNOWN_ERROR;
     Match match;
     if (!matchRepository.load(matchId, error, match))
@@ -198,11 +214,15 @@ void ApiController::getGeneratorList
 void ApiController::joinMatch
 ( const drogon::HttpRequestPtr &req, std::function<void(const drogon::HttpResponsePtr &)> &&callback, std::string matchId )
 {
+    if (!isValidInput(matchId))
+        return invokeResponse400("Invalid match id", std::move(callback));
     auto json = req->getJsonObject();
     if (!json || !json->isMember("account"))
         return invokeResponse400("Missing account field", std::move(callback));
 
     std::string builder = (*json)["account"].asString();
+    if (!isValidInput(builder))
+        return invokeResponse400("Invalid account field", std::move(callback));
     CodeEnum error = CODE_UNKNOWN_ERROR;
     Match match;
     if (!matchRepository.load(matchId, error, match))
@@ -220,11 +240,15 @@ void ApiController::joinMatch
 void ApiController::leaveMatch
 ( const drogon::HttpRequestPtr &req, std::function<void(const drogon::HttpResponsePtr &)> &&callback, std::string matchId )
 {
+    if (!isValidInput(matchId))
+        return invokeResponse400("Invalid match id", std::move(callback));
     auto json = req->getJsonObject();
     if (!json || !json->isMember("account"))
         return invokeResponse400("Missing account field", std::move(callback));
 
     std::string builder = (*json)["account"].asString();
+    if (!isValidInput(builder))
+        return invokeResponse400("Invalid account field", std::move(callback));
     CodeEnum error = CODE_UNKNOWN_ERROR;
     Match match;
     if (!matchRepository.load(matchId, error, match))
@@ -243,6 +267,8 @@ void ApiController::startMatch
 ( const drogon::HttpRequestPtr &, std::function<void(const drogon::HttpResponsePtr &)> &&callback, std::string matchId
 )
 {
+    if (!isValidInput(matchId))
+        return invokeResponse400("Invalid match id", std::move(callback));
     CodeEnum error = CODE_UNKNOWN_ERROR;
     Match match;
     if (!matchRepository.load(matchId, error, match))
@@ -389,6 +415,8 @@ void ApiController::endTurn
 ( const drogon::HttpRequestPtr& req, std::function<void (const drogon::HttpResponsePtr &)> &&callback, std::string matchId
 )
 {
+    if (!isValidInput(matchId))
+        return invokeResponse400("Invalid match id", std::move(callback));
     auto json = req->getJsonObject();
 
     if (!json)
@@ -398,6 +426,8 @@ void ApiController::endTurn
         return invokeResponse400("Missing account field", std::move(callback));
 
     std::string accountId = (*json)["account"].asString();
+    if (!isValidInput(accountId))
+        return invokeResponse400("Invalid account field", std::move(callback));
     CodeEnum error = CODE_UNKNOWN_ERROR;
     Match match;
     if (!matchRepository.load(matchId, error, match))
@@ -416,6 +446,8 @@ void ApiController::performCharacterAction
 ( const drogon::HttpRequestPtr& req, std::function<void (const drogon::HttpResponsePtr &)> &&callback, std::string matchId
 )
 {
+    if (!isValidInput(matchId))
+        return invokeResponse400("Invalid match id", std::move(callback));
     Codeset codeset;
     auto json = req->getJsonObject();
 
@@ -432,6 +464,8 @@ void ApiController::performCharacterAction
         return invokeResponse400("Missing room field", std::move(callback));
 
     std::string accountId = (*json)["account"].asString();
+    if (!isValidInput(accountId))
+        return invokeResponse400("Invalid account field", std::move(callback));
     
     int roomId = (*json)["room"].asInt();
     int characterId = (*json)["character"].asInt();
