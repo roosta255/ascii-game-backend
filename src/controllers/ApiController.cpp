@@ -481,6 +481,12 @@ void ApiController::performCharacterAction
     Match match;
     if (codeset.addFailure(!matchRepository.load(matchId, codeset.error, match)))
         return invokeResponse404(codeset.describe("Failed to load match due to: "), std::move(callback));
+
+    if (json->isMember("isForcedTurnEnd") && (*json)["isForcedTurnEnd"].asBool()) {
+        if (codeset.addFailure(!match.endTurn(accountId, codeset.error)))
+            return invokeResponse409(codeset.describe("Forced turn end rejected due to: "), std::move(callback));
+    }
+
     MatchController controller(match, codeset);
 
     if (!json->isMember("action"))
