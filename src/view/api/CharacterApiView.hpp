@@ -70,6 +70,7 @@ inline void to_json(nlohmann::json& j, const CharacterApiView& view) {
         };
         return;
     }
+
     // shown
     j = {
         {"offset", view.offset},

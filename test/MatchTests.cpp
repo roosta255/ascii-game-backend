@@ -114,3 +114,130 @@ TEST_CASE("Test Character Animation", "[walking]") {
 
     REQUIRE(isBuilder0Accessed);
 }
+
+TEST_CASE("Test Character Animation - movement keyframes queue sequentially", "[walking]") {
+    Match match;
+    Codeset codeset;
+    MatchController controller(match, codeset);
+    const std::string builderId = "builder_1";
+
+    match.host = builderId;
+    match.filename = "match_anim_queue";
+    match.generator = GENERATOR_TUTORIAL;
+
+    REQUIRE(controller.generate(0));
+    REQUIRE(codeset.getErrorTable() == Codeset::getEmptyTable());
+    REQUIRE(match.start());
+
+    match.builders.access(0, [&](Builder& builder) {
+        int builderOffset;
+        REQUIRE(match.containsCharacter(builder.character, builderOffset));
+
+        // First move at t=1000
+        const auto t0 = Timestamp::buildTimestamp(1000);
+        const auto expectedT1 = t0 + MatchController::MOVE_ANIMATION_DURATION;
+
+        Preactivation firstMove{
+            .action = {
+                .type = ACTION_MOVE_TO_DOOR,
+                .characterId = builderOffset,
+                .roomId = 0,
+                .direction = Cardinal::east(),
+            },
+            .playerId = builderId,
+            .isSkippingAnimations = false,
+            .time = t0
+        };
+        REQUIRE(controller.activate(firstMove));
+        REQUIRE(codeset.getErrorTable() == Codeset::getEmptyTable());
+
+        // Second move at t=1000 (same time, animation still in-flight)
+        // Expected: new keyframe starts at expectedT1 (end of first), not at t0
+        const auto secondExpectedT0 = expectedT1;
+        const auto secondExpectedT1 = secondExpectedT0 + MatchController::MOVE_ANIMATION_DURATION;
+
+        Preactivation secondMove{
+            .action = {
+                .type = ACTION_MOVE_TO_FLOOR,
+                .characterId = builderOffset,
+                .roomId = 0,
+                .floorId = 0,
+            },
+            .playerId = builderId,
+            .isSkippingAnimations = false,
+            .time = t0
+        };
+        REQUIRE(controller.activate(secondMove));
+        REQUIRE(codeset.getErrorTable() == Codeset::getEmptyTable());
+
+        // Find the second (floor) walking keyframe
+        const auto it = std::find_if(builder.character.keyframes.begin(), builder.character.keyframes.end(),
+            [](const Keyframe& kf){ return kf.animation == ANIMATION_WALKING_FROM_WALL_TO_FLOOR; });
+
+        REQUIRE(it != builder.character.keyframes.end());
+        REQUIRE(it->t0 == secondExpectedT0);
+        REQUIRE(it->t1 == secondExpectedT1);
+    });
+}
+
+TEST_CASE("Test Character Animation - movement keyframe does not delay when previous expired", "[walking]") {
+    Match match;
+    Codeset codeset;
+    MatchController controller(match, codeset);
+    const std::string builderId = "builder_1";
+
+    match.host = builderId;
+    match.filename = "match_anim_noqueue";
+    match.generator = GENERATOR_TUTORIAL;
+
+    REQUIRE(controller.generate(0));
+    REQUIRE(codeset.getErrorTable() == Codeset::getEmptyTable());
+    REQUIRE(match.start());
+
+    match.builders.access(0, [&](Builder& builder) {
+        int builderOffset;
+        REQUIRE(match.containsCharacter(builder.character, builderOffset));
+
+        // First move at t=1000
+        const auto t0 = Timestamp::buildTimestamp(1000);
+
+        Preactivation firstMove{
+            .action = {
+                .type = ACTION_MOVE_TO_DOOR,
+                .characterId = builderOffset,
+                .roomId = 0,
+                .direction = Cardinal::east(),
+            },
+            .playerId = builderId,
+            .isSkippingAnimations = false,
+            .time = t0
+        };
+        REQUIRE(controller.activate(firstMove));
+        REQUIRE(codeset.getErrorTable() == Codeset::getEmptyTable());
+
+        // Second move at a time well past the first animation's t1
+        const auto laterTime = t0 + MatchController::MOVE_ANIMATION_DURATION * 10;
+
+        Preactivation secondMove{
+            .action = {
+                .type = ACTION_MOVE_TO_FLOOR,
+                .characterId = builderOffset,
+                .roomId = 0,
+                .floorId = 0,
+            },
+            .playerId = builderId,
+            .isSkippingAnimations = false,
+            .time = laterTime
+        };
+        REQUIRE(controller.activate(secondMove));
+        REQUIRE(codeset.getErrorTable() == Codeset::getEmptyTable());
+
+        // The second keyframe should start at laterTime, not chained from the first
+        const auto it = std::find_if(builder.character.keyframes.begin(), builder.character.keyframes.end(),
+            [](const Keyframe& kf){ return kf.animation == ANIMATION_WALKING_FROM_WALL_TO_FLOOR; });
+
+        REQUIRE(it != builder.character.keyframes.end());
+        REQUIRE(it->t0 == laterTime);
+        REQUIRE(it->t1 == laterTime + MatchController::MOVE_ANIMATION_DURATION);
+    });
+}

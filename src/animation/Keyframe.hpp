@@ -58,4 +58,11 @@ struct Keyframe
     static Keyframe buildDying(const Timestamp& start, long duration, const int room0);
 
     static bool insertKeyframe(Rack<Keyframe> rack, const Keyframe& insertion);
+
+    // Returns true if animation is a movement type (walking/hurtling/smacking).
+    static bool isMovement(int animation);
+
+    // Returns the latest t1 of any active movement keyframes in rack,
+    // or fallback if no active movement keyframes exist.
+    static Timestamp getLatestMovementEnd(Rack<Keyframe> rack, const Timestamp& fallback);
 };

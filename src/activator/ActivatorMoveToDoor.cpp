@@ -46,8 +46,10 @@ bool ActivatorMoveToDoor::activate(Activation& activation) const {
     controller.updateCharacterLocation(subject, newLocation, oldLocation);
 
     if (!activation.isSkippingAnimations) {
-        const auto keyframe = Keyframe::buildWalking(activation.time, MatchController::MOVE_ANIMATION_DURATION, room.roomId, oldLocation, newLocation, codeset);
-        if(!Keyframe::insertKeyframe(Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(subject.keyframes), keyframe)) {
+        auto rack = Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(subject.keyframes);
+        const auto start = Keyframe::getLatestMovementEnd(rack, activation.time);
+        const auto keyframe = Keyframe::buildWalking(start, MatchController::MOVE_ANIMATION_DURATION, room.roomId, oldLocation, newLocation, codeset);
+        if(!Keyframe::insertKeyframe(rack, keyframe)) {
             codeset.addLog(CODE_ANIMATION_OVERFLOW_IN_MOVE_CHARACTER_TO_FLOOR);
         }
     }

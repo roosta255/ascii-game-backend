@@ -171,3 +171,22 @@ bool Keyframe::insertKeyframe(Rack<Keyframe> rack, const Keyframe& insertion) {
     }
     return false;
 }
+
+bool Keyframe::isMovement(int animation) {
+    return animation == ANIMATION_WALKING_FROM_WALL_TO_WALL
+        || animation == ANIMATION_WALKING_FROM_WALL_TO_FLOOR
+        || animation == ANIMATION_WALKING_FROM_FLOOR_TO_WALL
+        || animation == ANIMATION_WALKING_FROM_FLOOR_TO_FLOOR
+        || animation == ANIMATION_HURTLING
+        || animation == ANIMATION_SMACKING;
+}
+
+Timestamp Keyframe::getLatestMovementEnd(Rack<Keyframe> rack, const Timestamp& fallback) {
+    Timestamp latest = fallback;
+    for (const auto& keyframe: rack) {
+        if (isMovement(keyframe.animation) && keyframe.t1 > latest) {
+            latest = keyframe.t1;
+        }
+    }
+    return latest;
+}
