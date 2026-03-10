@@ -1,3 +1,5 @@
+#pragma once
+
 #include "Array.hpp"
 #include <iostream>
 #include <array>

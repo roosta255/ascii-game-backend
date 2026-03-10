@@ -1,8 +1,15 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.16)
 project(match_backend)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# ccache
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+endif()
+
 
 # Find dependencies
 find_package(Drogon REQUIRED)
@@ -65,7 +72,6 @@ add_library(core_backend STATIC
     src/chest/LockFlyweight.cpp
     src/controllers/MatchController.cpp
     src/door/ActivatorElevator.cpp
-    src/door/ActivatorInactiveDoor.cpp
     src/door/ActivatorInactiveDoor.cpp
     src/door/ActivatorKeeper.cpp
     src/door/ActivatorJailer.cpp

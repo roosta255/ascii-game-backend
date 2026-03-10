@@ -1,0 +1,14 @@
+/workspaces/backend/build_ninja/CMakeFiles/core_backend.dir
+/workspaces/backend/build_ninja/CMakeFiles/match_backend.dir
+/workspaces/backend/build_ninja/CMakeFiles/test_target.dir
+/workspaces/backend/build_ninja/CMakeFiles/test.dir
+/workspaces/backend/build_ninja/CMakeFiles/edit_cache.dir
+/workspaces/backend/build_ninja/CMakeFiles/rebuild_cache.dir
+/workspaces/backend/build_ninja/extern/Catch2/CMakeFiles/test.dir
+/workspaces/backend/build_ninja/extern/Catch2/CMakeFiles/edit_cache.dir
+/workspaces/backend/build_ninja/extern/Catch2/CMakeFiles/rebuild_cache.dir
+/workspaces/backend/build_ninja/extern/Catch2/src/CMakeFiles/Catch2.dir
+/workspaces/backend/build_ninja/extern/Catch2/src/CMakeFiles/Catch2WithMain.dir
+/workspaces/backend/build_ninja/extern/Catch2/src/CMakeFiles/test.dir
+/workspaces/backend/build_ninja/extern/Catch2/src/CMakeFiles/edit_cache.dir
+/workspaces/backend/build_ninja/extern/Catch2/src/CMakeFiles/rebuild_cache.dir

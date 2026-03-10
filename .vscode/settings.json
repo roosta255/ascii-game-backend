@@ -3,5 +3,5 @@
         "*.macro": "cpp",
         "*.enum": "cpp"
     },
-    "C_Cpp.default.compileCommands": "${workspaceFolder}/build/compile_commands.json"
+    "C_Cpp.default.compileCommands": "${workspaceFolder}/build_ninja/compile_commands.json"
 }
