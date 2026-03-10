@@ -21,7 +21,7 @@
 
 MatchController::MatchController(Match& match, Codeset& codeset): match(match), codeset(codeset) {
     match.accessUsedCharacters([&](const Character& character) {
-        traitsComputed.set(character.characterId, TraitModifier::computeCharacterTraits(character).orElse(TraitBits{}));
+        traitsComputed.set(character.characterId, TraitModifier::computeCharacterTraits(character).orElse(TraitModifier::TraitComputation{}));
     });
 }
 
@@ -312,7 +312,7 @@ bool MatchController::generate(int seed) {
     // own MatchController whose traits map is discarded on return).
     if (success) {
         match.accessUsedCharacters([&](const Character& character) {
-            traitsComputed.set(character.characterId, TraitModifier::computeCharacterTraits(character).orElse(TraitBits{}));
+            traitsComputed.set(character.characterId, TraitModifier::computeCharacterTraits(character).orElse(TraitModifier::TraitComputation{}));
         });
     }
 
@@ -334,7 +334,7 @@ bool MatchController::giveInventoryItem(Inventory& inventory, const ItemEnum typ
 }
 
 bool MatchController::isCharacterActorValidation(const Character& character, const bool isCheckingCount) {
-    return !codeset.addFailure(!character.isActor(codeset.error, getTraitsComputed(character.characterId), isCheckingCount));
+    return !codeset.addFailure(!character.isActor(codeset.error, getTraitsComputed(character.characterId).final, isCheckingCount));
 }
 
 bool MatchController::isCharacterMoverValidation(const Character& character, const bool isCheckingCount) {
@@ -342,7 +342,7 @@ bool MatchController::isCharacterMoverValidation(const Character& character, con
 }
 
 bool MatchController::isCharacterKeyerValidation(const Character& character) {
-    return !codeset.addFailure(!character.isKeyer(codeset.error, getTraitsComputed(character.characterId)));
+    return !codeset.addFailure(!character.isKeyer(codeset.error, getTraitsComputed(character.characterId).final));
 }
 
 bool MatchController::isCharacterWithinRoom(int characterId, int roomId, bool& result) {
@@ -410,7 +410,7 @@ bool MatchController::permuteCharacterActions(const std::string& playerId, int m
             };
 
             CharacterDigest digest;
-            if (codeset.addFailure(!character.getDigest(codeset.error, digest, getTraitsComputed(character.characterId)))) {
+            if (codeset.addFailure(!character.getDigest(codeset.error, digest, getTraitsComputed(character.characterId).final))) {
                 return;
             }
 
@@ -566,14 +566,14 @@ bool MatchController::updateCharacterLocation(Character& character, const Locati
 }
 
 void MatchController::updateTraits(Character& character) {
-    traitsComputed.set(character.characterId, TraitModifier::computeCharacterTraits(character).orElse(TraitBits{}));
+    traitsComputed.set(character.characterId, TraitModifier::computeCharacterTraits(character).orElse(TraitModifier::TraitComputation{}));
 }
 
-TraitBits MatchController::getTraitsComputed(int characterId) const {
-    return traitsComputed.getOrDefault(characterId, TraitBits{});
+TraitModifier::TraitComputation MatchController::getTraitsComputed(int characterId) const {
+    return traitsComputed.getOrDefault(characterId, TraitModifier::TraitComputation{});
 }
 
-const Map<int, TraitBits>& MatchController::getTraitsComputedMap() const {
+const Map<int, TraitModifier::TraitComputation>& MatchController::getTraitsComputedMap() const {
     return traitsComputed;
 }
 

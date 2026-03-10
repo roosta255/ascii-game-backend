@@ -14,6 +14,7 @@
 #include <string>
 #include "Timestamp.hpp"
 #include "TraitBits.hpp"
+#include "TraitModifier.hpp"
 
 class CharacterAction;
 class Codeset;
@@ -34,7 +35,7 @@ private:
     // TODO: put both room maps in a struct
     Map<int, Map<int2, int> > floors; // roomId -> <channel, floorId> -> characterId
     Map<int, Map<int2, int> > doors; // roomId -> <channel, direction> -> characterId
-    Map<int, TraitBits> traitsComputed; // characterId -> computed traits (always fresh, never persisted)
+    Map<int, TraitModifier::TraitComputation> traitsComputed; // characterId -> computed traits (always fresh, never persisted)
 
     bool isLocationsSetup = false;
 public:
@@ -88,8 +89,8 @@ public:
     bool updateCharacterLocation(Character& character, const Location& newLocation, Location& oldLocation);
 
     void updateTraits(Character& character);
-    TraitBits getTraitsComputed(int characterId) const;
-    const Map<int, TraitBits>& getTraitsComputedMap() const;
+    TraitModifier::TraitComputation getTraitsComputed(int characterId) const;
+    const Map<int, TraitModifier::TraitComputation>& getTraitsComputedMap() const;
 
     bool validateCharacterWithinRoom(int characterId, int roomId);
     bool validateDoorNotOccupied(int roomId, ChannelEnum channel, Cardinal dir);

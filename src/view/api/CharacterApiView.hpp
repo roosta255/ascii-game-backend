@@ -2,6 +2,7 @@
 
 #include "adl_serializer.hpp"
 #include "Character.hpp"
+#include "CharacterSheetApiView.hpp"
 #include "Keyframe.hpp"
 #include "KeyframeView.hpp"
 #include "KeyframeFlyweight.hpp"
@@ -26,6 +27,7 @@ struct CharacterApiView
     Array<KeyframeView, Character::MAX_KEYFRAMES> keyframes;
     LocationView location;
     int characterId = -1;
+    CharacterSheetApiView sheet;
 
     inline CharacterApiView() = default;
 
@@ -46,7 +48,9 @@ struct CharacterApiView
         // offset
         params.match.containsCharacter(model, this->offset);
 
-        this->isObject = model.isObject(params.traitsComputed.getOrDefault(model.characterId, TraitBits{}));
+        const auto computed = params.traitsComputed.getOrDefault(model.characterId, TraitModifier::TraitComputation{});
+        this->isObject = model.isObject(computed.final);
+        this->sheet = CharacterSheetApiView(model, computed);
 
         // role
         RoleFlyweight::getFlyweights().accessConst(model.role, [&](const RoleFlyweight& flyweight) {
@@ -85,7 +89,8 @@ inline void to_json(nlohmann::json& j, const CharacterApiView& view) {
         {"isActionable", view.isActionable},
         {"keyframes", view.keyframes},
         {"location", view.location},
-        {"characterId", view.characterId}
+        {"characterId", view.characterId},
+        {"sheet", view.sheet}
     };
 }
 

@@ -1,6 +1,7 @@
 #include "ActionFlyweight.hpp"
 #include "ApiController.hpp"
 #include "AccountRepository.hpp"
+#include "CharacterSheetApiView.hpp"
 #include "CodeEnum.hpp"
 #include "Codeset.hpp"
 #include "FileStore.hpp"
@@ -525,6 +526,40 @@ void ApiController::performCharacterAction
         return invokeResponse409(codeset.describe("Failed to save match due to: "), std::move(callback));
 
     return invokeResponse200("Character performed action", std::move(callback));
+}
+
+void ApiController::getCharacterSheet
+( const drogon::HttpRequestPtr&, std::function<void(const drogon::HttpResponsePtr &)> &&callback, std::string matchId, std::string characterIdStr
+)
+{
+    if (!isValidMatchId(matchId))
+        return invokeResponse400("Invalid match id", std::move(callback));
+
+    int characterId = 0;
+    try { characterId = std::stoi(characterIdStr); }
+    catch (...) { return invokeResponse400("Invalid character id", std::move(callback)); }
+
+    CodeEnum error = CODE_UNKNOWN_ERROR;
+    Match match;
+    if (!matchRepository.load(matchId, error, match))
+        return invokeResponse404(code_to_message(error, "Failed to load match due to: "), std::move(callback));
+
+    Codeset codeset;
+    MatchController controller(match, codeset);
+
+    const Character* found = nullptr;
+    match.accessUsedCharacters([&](const Character& ch) {
+        if (ch.characterId == characterId) found = &ch;
+    });
+
+    if (!found)
+        return invokeResponse404("Character not found", std::move(callback));
+
+    const auto computed = controller.getTraitsComputed(characterId);
+    CharacterSheetApiView view(*found, computed);
+    nlohmann::json body(view);
+    auto resp = drogon::HttpResponse::newHttpJsonResponse(body.dump());
+    return callback(resp);
 }
 
 void ApiController::invokeResponse

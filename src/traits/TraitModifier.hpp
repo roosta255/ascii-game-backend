@@ -12,6 +12,13 @@ class Dungeon;
 
 struct TraitModifier
 {
+    struct TraitComputation {
+        TraitBits initial;
+        TraitBits final;
+        TraitBits added;
+        TraitBits cleared;
+    };
+
     bool isGlobal = false; // global traits will evaluate even if the current traitbits is off. please use copious required/restricted lists to correctly evaluate
     TraitBits required;
     TraitBits restricted;
@@ -28,7 +35,7 @@ struct TraitModifier
 
     TraitModifier(std::initializer_list<std::initializer_list<TraitEnum>> nested);
 
-    static Maybe<TraitBits> computeCharacterTraits(const Character& character);
+    static Maybe<TraitComputation> computeCharacterTraits(const Character& character);
 
     // Validates required/restricted against character's computed traits, then applies
     // set/clear directly to character.traitsAfflicted. Caller must update traitsComputed.
@@ -36,7 +43,7 @@ struct TraitModifier
 
 private:
 
-    static Maybe<TraitBits> computeTraits(const TraitBits& traits);
+    static Maybe<TraitComputation> computeTraits(const TraitBits& traits);
 
     static void applyList(
         TraitBits& bits,

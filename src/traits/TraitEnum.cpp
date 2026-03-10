@@ -2,7 +2,7 @@
 
 const char* action_to_text(int index) {
     static const char* names[] = {
-        #define TRAIT_DECL( name_, type_ ) #name_,
+        #define TRAIT_DECL( name_, types_ ) #name_,
         #define TRAIT_MODIFIER_DECL( is_global_, modifier_ ) 
         #include "Trait.enum"
         #undef TRAIT_DECL

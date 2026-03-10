@@ -165,6 +165,7 @@ add_executable(test_target
     test/maps/GeneratorTest4D.cpp
     test/maps/GeneratorTutorial.cpp
     test/TraitModifierTests.cpp
+    test/CharacterSheetApiViewTests.cpp
 )
 
 target_include_directories(test_target PRIVATE ${PROJECT_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/test)

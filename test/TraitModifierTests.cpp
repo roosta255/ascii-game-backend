@@ -5,8 +5,8 @@
 #include "TraitModifier.hpp"
 
 // Helper: returns true if the given trait bit is set in the result
-static bool hasTrait(const Maybe<TraitBits>& result, TraitEnum trait) {
-    return result.orElse(TraitBits{})[static_cast<int>(trait)].orElse(false);
+static bool hasTrait(const Maybe<TraitModifier::TraitComputation>& result, TraitEnum trait) {
+    return result.orElse(TraitModifier::TraitComputation{}).final[static_cast<int>(trait)].orElse(false);
 }
 
 // AFFLICTION_SNAKE_BITE modifier:

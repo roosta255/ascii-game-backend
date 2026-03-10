@@ -8,7 +8,7 @@ RUN git clone https://github.com/drogonframework/drogon.git &&     cd drogon && 
 
 WORKDIR /app
 COPY . .
-RUN mkdir build && cd build && cmake .. && make -j$(nproc)
+RUN mkdir -p build && cd build && cmake .. && make -j$(nproc)
 
 # Add after building drogon_backend
 # RUN mkdir test_build \

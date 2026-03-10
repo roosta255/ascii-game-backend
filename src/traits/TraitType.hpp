@@ -4,5 +4,17 @@ enum TraitType
 {
     TRAIT_TYPE_SOURCE, // externally granted: role, room, inventory
     TRAIT_TYPE_AFFLICTION, // persistent state:
-    TRAIT_TYPE_DERIVED // computed only
+    TRAIT_TYPE_DERIVED, // computed only
+    TRAIT_TYPE_ATTRIBUTE,
+    TRAIT_TYPE_CAPABILITY,
+    TRAIT_TYPE_DEBUFF,
+    TRAIT_TYPE_STATE,
+    TRAIT_TYPE_CHARACTER,
+    TRAIT_TYPE_CRITTER,
+    TRAIT_TYPE_ITEM,
+    TRAIT_TYPE_DUNGEON,
+    TRAIT_TYPE_ROOM,
+    TRAIT_TYPE_SIZE,
+    TRAIT_TYPE_SYSTEM,
+    TRAIT_TYPE_COUNT
 };

@@ -42,7 +42,7 @@ void TraitModifier::applyList(
     }
 }
 
-Maybe<TraitBits> TraitModifier::computeCharacterTraits
+Maybe<TraitModifier::TraitComputation> TraitModifier::computeCharacterTraits
 (
     const Character& character
 )
@@ -62,9 +62,9 @@ Maybe<TraitBits> TraitModifier::computeCharacterTraits
 
 bool TraitModifier::applyAffliction(Character& character) const {
     bool applied = false;
-    computeCharacterTraits(character).accessConst([&](const TraitBits& computed) {
-        if ((computed & required) != required) return;
-        if ((computed & restricted).isAny()) return;
+    computeCharacterTraits(character).accessConst([&](const TraitComputation& computed) {
+        if ((computed.final & required) != required) return;
+        if ((computed.final & restricted).isAny()) return;
         character.traitsAfflicted = character.traitsAfflicted | set;
         character.traitsAfflicted = character.traitsAfflicted & ~clear;
         applied = true;
@@ -72,11 +72,13 @@ bool TraitModifier::applyAffliction(Character& character) const {
     return applied;
 }
 
-Maybe<TraitBits> TraitModifier::computeTraits(const TraitBits& traits)
+Maybe<TraitModifier::TraitComputation> TraitModifier::computeTraits(const TraitBits& traits)
 {
+    TraitComputation result;
+    result.initial = traits;
+    
     TraitBits current = traits;
-    // Flatten all modifiers into a single list
-    constexpr auto MAX_ITERATIONS = (size_t)TRAIT_COUNT * 4; // safe cap
+    constexpr auto MAX_ITERATIONS = (size_t)TRAIT_COUNT * 4;
 
     bool changed = true;
     size_t iterations = 0;
@@ -86,30 +88,34 @@ Maybe<TraitBits> TraitModifier::computeTraits(const TraitBits& traits)
         changed = false;
 
         int i = 0;
-        for (const auto& flyweight: TraitFlyweight::getFlyweights()) {
+        for (const auto& flyweight : TraitFlyweight::getFlyweights()) {
             const bool isTraitCurrentlyOn = current[i++].orElse(false);
-            for (const auto& modifier: flyweight.modifiers) {
-                // process modifier
-                if (!isTraitCurrentlyOn && !modifier.isGlobal) {
-                    continue;
-                }
-                if ((current & modifier.required) != modifier.required) {
-                    continue;
-                }
-                if ((current & modifier.restricted).isAny()) {
-                    continue;
-                }
+            
+            for (const auto& modifier : flyweight.modifiers) {
+                if (!isTraitCurrentlyOn && !modifier.isGlobal) continue;
+                if ((current & modifier.required) != modifier.required) continue;
+                if ((current & modifier.restricted).isAny()) continue;
 
                 TraitBits before = current;
 
-                current = current | (modifier.set);
-                current = current & (~modifier.clear);
+                // Apply changes
+                current = (current | modifier.set) & (~modifier.clear);
 
-                if (before != current)
+                if (before != current) {
                     changed = true;
+                    
+                    // Track bits that were turned ON (present in current, wasn't in before)
+                    result.added = result.added | (current & ~before);
+                    
+                    // Track bits that were turned OFF (was in before, missing in current)
+                    result.cleared = result.cleared | (before & ~current);
+                }
             }
         }
     }
 
-    return iterations >= MAX_ITERATIONS ? Maybe<TraitBits>::empty() : current;
+    if (iterations >= MAX_ITERATIONS) return Maybe<TraitComputation>::empty();
+
+    result.final = current;
+    return result;
 }

@@ -18,6 +18,7 @@ public:
     ADD_METHOD_TO(ApiController::activateDoor, "/api/match/{1}/activate_door", drogon::Post, drogon::Options);
     ADD_METHOD_TO(ApiController::activateLock, "/api/match/{1}/activate_lock", drogon::Post, drogon::Options);
     ADD_METHOD_TO(ApiController::endTurn, "/api/match/{1}/end_turn", drogon::Post, drogon::Options);
+    ADD_METHOD_TO(ApiController::getCharacterSheet, "/api/match/{1}/character/{2}/sheet", drogon::Get);
     METHOD_LIST_END
 
     void createMatch(const drogon::HttpRequestPtr &,
@@ -68,6 +69,11 @@ public:
     void endTurn(const drogon::HttpRequestPtr& req,
                  std::function<void (const drogon::HttpResponsePtr &)> &&callback,
                  std::string matchId);
+
+    void getCharacterSheet(const drogon::HttpRequestPtr& req,
+                           std::function<void (const drogon::HttpResponsePtr &)> &&callback,
+                           std::string matchId,
+                           std::string characterId);
 
     void performCharacterAction(const drogon::HttpRequestPtr& req,
                                std::function<void (const drogon::HttpResponsePtr &)> &&callback,

@@ -4,6 +4,7 @@
 #include "int3.hpp"
 #include "Map.hpp"
 #include "TraitBits.hpp"
+#include "TraitModifier.hpp"
 
 class Match;
 class MatchController;
@@ -14,7 +15,7 @@ public:
     const Match& match;
     const Map<int, Map<int2, int> >& doors;
     const Map<int, Map<int2, int> >& floors;
-    const Map<int, TraitBits>& traitsComputed;
+    const Map<int, TraitModifier::TraitComputation>& traitsComputed;
 
     constexpr inline bool isHidden(const int target) const
     {

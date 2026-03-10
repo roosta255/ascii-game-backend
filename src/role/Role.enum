@@ -1,4 +1,4 @@
-//        name_,     health_, moves_, actions_, feats_, activator_,       traits_sourced_,                                                                                
+//        name_,     health_, moves_, actions_, feats_, activator_,       traits_sourced_,
 ROLE_DECL(EMPTY,     1,       0,      0,        0,      iActivator,       ( { TRAIT_NIL } )                                                                               )
 ROLE_DECL(BUILDER,   1,       2,      2,        1,      iActivator,       ( { TRAIT_CHARACTER_ACTOR, TRAIT_CHARACTER_KEYER, TRAIT_CHARACTER_FOGGY, TRAIT_CHARACTER_ORGANIC } )                     )
 ROLE_DECL(TINKER,    1,       2,      2,        1,      iActivator,       ( { TRAIT_CHARACTER_ACTOR, TRAIT_CHARACTER_KEYER, TRAIT_CHARACTER_FOGGY, TRAIT_CHARACTER_ORGANIC } )                     )
