@@ -2,6 +2,7 @@
 #include "LockFlyweight.hpp"
 #include "Match.hpp"
 #include "iActivator.hpp"
+#include "ActivatorChestLockKey.hpp"
 #include "ActivatorToggler.hpp"
 #include <unordered_map>
 

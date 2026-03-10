@@ -18,34 +18,34 @@ static bool hasTrait(const Maybe<TraitModifier::TraitComputation>& result, Trait
 TEST_CASE("TraitModifier required: modifier does not fire when required trait is absent", "[traits]") {
     Character character;
     // Snake bite present but CHARACTER_DEXTERITY is NOT set
-    character.traitsAfflicted = makeTraitBits({TRAIT_AFFLICTION_SNAKE_BITE});
+    character.traitsAfflicted = makeTraitBits({TRAIT_SNAKE_BITE});
 
     auto result = TraitModifier::computeCharacterTraits(character);
 
     REQUIRE(result.isPresent());
-    REQUIRE(!hasTrait(result, TRAIT_DERIVED_DEXTERITY_DEBUFF));
+    REQUIRE(!hasTrait(result, TRAIT_DEXTERITY_DEBUFF));
 }
 
 TEST_CASE("TraitModifier set: modifier sets bits when required traits are met", "[traits]") {
     Character character;
     // Both snake bite and CHARACTER_DEXTERITY present — modifier fires and sets the debuff
-    character.traitsAfflicted = makeTraitBits({TRAIT_AFFLICTION_SNAKE_BITE, TRAIT_CHARACTER_DEXTERITY});
+    character.traitsAfflicted = makeTraitBits({TRAIT_SNAKE_BITE, TRAIT_DEXTERITY});
 
     auto result = TraitModifier::computeCharacterTraits(character);
 
     REQUIRE(result.isPresent());
-    REQUIRE(hasTrait(result, TRAIT_DERIVED_DEXTERITY_DEBUFF));
+    REQUIRE(hasTrait(result, TRAIT_DEXTERITY_DEBUFF));
 }
 
 TEST_CASE("TraitModifier clear: modifier clears bits when it fires", "[traits]") {
     Character character;
     // Snake bite fires and clears CHARACTER_DEXTERITY
-    character.traitsAfflicted = makeTraitBits({TRAIT_AFFLICTION_SNAKE_BITE, TRAIT_CHARACTER_DEXTERITY});
+    character.traitsAfflicted = makeTraitBits({TRAIT_SNAKE_BITE, TRAIT_DEXTERITY});
 
     auto result = TraitModifier::computeCharacterTraits(character);
 
     REQUIRE(result.isPresent());
-    REQUIRE(!hasTrait(result, TRAIT_CHARACTER_DEXTERITY));
+    REQUIRE(!hasTrait(result, TRAIT_DEXTERITY));
 }
 
 // DERIVED_IS_DEAD modifier:
@@ -58,14 +58,14 @@ TEST_CASE("TraitModifier restricted: modifier does not fire when a restricted tr
     Character character;
     // Dead + organic + undead: UNDEAD blocks the modifier, so ACTOR must survive
     character.traitsAfflicted = makeTraitBits({
-        TRAIT_DERIVED_IS_DEAD,
-        TRAIT_CHARACTER_ORGANIC,
-        TRAIT_CHARACTER_UNDEAD,
-        TRAIT_CHARACTER_ACTOR
+        TRAIT_IS_DEAD,
+        TRAIT_ORGANIC,
+        TRAIT_UNDEAD,
+        TRAIT_ACTOR
     });
 
     auto result = TraitModifier::computeCharacterTraits(character);
 
     REQUIRE(result.isPresent());
-    REQUIRE(hasTrait(result, TRAIT_CHARACTER_ACTOR));
+    REQUIRE(hasTrait(result, TRAIT_ACTOR));
 }

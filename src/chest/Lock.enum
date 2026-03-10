@@ -1,1 +1,5 @@
 LOCK_DECL(NIL, false, iActivator)
+LOCK_DECL(KEY_CATALYST_OPEN, false, iActivator)
+LOCK_DECL(KEY_CATALYST_CLOSED, true, ActivatorChestLockKey)
+LOCK_DECL(KEY_CONSUMER_OPEN, false, iActivator)
+LOCK_DECL(KEY_CONSUMER_CLOSED, true, ActivatorChestLockKey)

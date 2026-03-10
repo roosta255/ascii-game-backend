@@ -1,18 +1,22 @@
 #include <algorithm>
 #include <catch2/catch_test_macros.hpp>
+#include "ActivatorChestLockKey.hpp"
+#include "Cardinal.hpp"
+#include "Character.hpp"
+#include "Chest.hpp"
+#include "CodeEnum.hpp"
 #include "Codeset.hpp"
-#include "Match.hpp"
-#include "MatchController.hpp"
+#include "Dungeon.hpp"
 #include "GeneratorEnum.hpp"
 #include "GeneratorTutorial.hpp"
-#include "TestController.hpp"
-#include "Cardinal.hpp"
-#include "Dungeon.hpp"
-#include "Room.hpp"
-#include "Character.hpp"
-#include "CodeEnum.hpp"
+#include "ItemEnum.hpp"
+#include "LockEnum.hpp"
 #include "Match.hpp"
+#include "MatchController.hpp"
+#include "Preactivation.hpp"
 #include "RoleEnum.hpp"
+#include "Room.hpp"
+#include "TestController.hpp"
 
 TEST_CASE("Test jailer", "[match][test]") {
     TestController controller(GENERATOR_TEST);
@@ -88,4 +92,77 @@ TEST_CASE("Test jailer", "[match][test]") {
     match.endTurn(builderId, result);
     REQUIRE(result == CODE_SUCCESS);
 */
+}
+
+static int findChestContainerByLock(TestController& tc, LockEnum targetLock) {
+    for (const Chest& chest : tc.match.dungeon.chests) {
+        if (chest.lock == targetLock) return chest.containerCharacterId;
+    }
+    return -1;
+}
+
+TEST_CASE("Catalyst key chest: key not consumed, action taken", "[match][chest][lock]") {
+    TestController tc(GENERATOR_TEST);
+
+    tc.generate(0);
+    REQUIRE(tc.codeset.getErrorTable() == Codeset::getEmptyTable());
+    REQUIRE(tc.match.start());
+
+    tc.giveItem(ITEM_KEY);
+    REQUIRE(tc.inventory.keys == 1);
+
+    int containerId = findChestContainerByLock(tc, LOCK_KEY_CATALYST_CLOSED);
+    REQUIRE(containerId != -1);
+
+    static ActivatorChestLockKey activator;
+    tc.isSuccess = tc.controller.activate(activator, Preactivation{
+        .action = {
+            .characterId = tc.builderOffset,
+            .roomId = tc.latestPosition,
+            .targetCharacterId = containerId,
+        },
+        .playerId = TestController::BUILDER_ID,
+    });
+    tc.updateInventory();
+
+    REQUIRE(tc.codeset.getErrorTable() == Codeset::getEmptyTable());
+    REQUIRE(tc.isSuccess);
+    REQUIRE(tc.inventory.keys == 1);                        // key NOT consumed
+    REQUIRE(tc.builderCharacterPtr->actions == 1);          // one action taken
+
+    int openContainerId = findChestContainerByLock(tc, LOCK_KEY_CATALYST_OPEN);
+    REQUIRE(openContainerId == containerId);                 // lock transitioned to open
+}
+
+TEST_CASE("Consumer key chest: key consumed, action taken", "[match][chest][lock]") {
+    TestController tc(GENERATOR_TEST);
+
+    tc.generate(0);
+    REQUIRE(tc.codeset.getErrorTable() == Codeset::getEmptyTable());
+    REQUIRE(tc.match.start());
+
+    tc.giveItem(ITEM_KEY);
+    REQUIRE(tc.inventory.keys == 1);
+
+    int containerId = findChestContainerByLock(tc, LOCK_KEY_CONSUMER_CLOSED);
+    REQUIRE(containerId != -1);
+
+    static ActivatorChestLockKey activator;
+    tc.isSuccess = tc.controller.activate(activator, Preactivation{
+        .action = {
+            .characterId = tc.builderOffset,
+            .roomId = tc.latestPosition,
+            .targetCharacterId = containerId,
+        },
+        .playerId = TestController::BUILDER_ID,
+    });
+    tc.updateInventory();
+
+    REQUIRE(tc.codeset.getErrorTable() == Codeset::getEmptyTable());
+    REQUIRE(tc.isSuccess);
+    REQUIRE(tc.inventory.keys == 0);                        // key consumed
+    REQUIRE(tc.builderCharacterPtr->actions == 1);          // one action taken
+
+    int openContainerId = findChestContainerByLock(tc, LOCK_KEY_CONSUMER_OPEN);
+    REQUIRE(openContainerId == containerId);                 // lock transitioned to open
 }

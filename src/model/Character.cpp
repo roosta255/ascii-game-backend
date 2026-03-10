@@ -12,7 +12,7 @@ bool Character::getDigest(CodeEnum& error, CharacterDigest& digest, const TraitB
         digest = CharacterDigest{
             .healthRemaining = Maybe<int>(flyweight.health - this->damage),
             .featsRemaining = Maybe<int>(flyweight.feats - this->feats),
-            .actionsRemaining = traitsComputed[TRAIT_CHARACTER_ACTOR].orElse(false) || flyweight.isActionable ? Maybe<int>(flyweight.actions - this->actions) : Maybe<int>::empty(),
+            .actionsRemaining = traitsComputed[TRAIT_ACTOR].orElse(false) || flyweight.isActionable ? Maybe<int>(flyweight.actions - this->actions) : Maybe<int>::empty(),
             .movesRemaining = flyweight.isMovable ? Maybe<int>(flyweight.moves - this->moves) : Maybe<int>::empty()
         };
     });
@@ -37,7 +37,7 @@ bool Character::isActor(CodeEnum& error, const TraitBits& traitsComputed, const 
     bool result = false;
     int actionsTaken = actions;
     accessRole(error, [&](const RoleFlyweight& flyweight){
-        if (!traitsComputed[TRAIT_CHARACTER_ACTOR].orElse(false)) error = CODE_CHARACTER_NOT_ACTOR;
+        if (!traitsComputed[TRAIT_ACTOR].orElse(false)) error = CODE_CHARACTER_NOT_ACTOR;
         else if (isCheckingCount && flyweight.actions - actionsTaken <= 0)
             error = CODE_CHARACTER_OUT_OF_ACTIONS;
         else result = true;
@@ -62,7 +62,7 @@ bool Character::isKeyer(CodeEnum& error, const TraitBits& traitsComputed) const
 {
     bool result = false;
     accessRole(error, [&](const RoleFlyweight& flyweight){
-        if (!traitsComputed[TRAIT_CHARACTER_KEYER].orElse(false))
+        if (!traitsComputed[TRAIT_KEYER].orElse(false))
             error = CODE_CHARACTER_NOT_KEYER;
         else result = true;
     });
@@ -71,7 +71,7 @@ bool Character::isKeyer(CodeEnum& error, const TraitBits& traitsComputed) const
 
 bool Character::isObject(const TraitBits& traitsComputed) const
 {
-    return traitsComputed[TRAIT_CHARACTER_OBJECT].orElse(false);
+    return traitsComputed[TRAIT_OBJECT].orElse(false);
 }
 
 bool Character::takeAction(CodeEnum& error)

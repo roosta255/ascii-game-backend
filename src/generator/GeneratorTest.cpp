@@ -1,3 +1,4 @@
+#include "Chest.hpp"
 #include "DoorEnum.hpp"
 #include "Dungeon.hpp"
 #include "DungeonAuthor.hpp"
@@ -5,6 +6,7 @@
 #include "iLayout.hpp"
 #include "LayoutEnum.hpp"
 #include "LayoutFlyweight.hpp"
+#include "LockEnum.hpp"
 #include "Match.hpp"
 #include "MatchController.hpp"
 #include "RoleEnum.hpp"
@@ -78,6 +80,16 @@ bool GeneratorTest::generate (int seed, Match& dst, Codeset& codeset) const {
             success &= util.setupJailer(int4{1,2,0,0}, Cardinal::west(), false);
 
         });
+    });
+
+    success &= controller.allocateChest(0, [&](Chest& chest, Character& container) {
+        container.role = ROLE_CHEST;
+        chest.lock = LOCK_KEY_CATALYST_CLOSED;
+    });
+
+    success &= controller.allocateChest(0, [&](Chest& chest, Character& container) {
+        container.role = ROLE_CHEST;
+        chest.lock = LOCK_KEY_CONSUMER_CLOSED;
     });
 
     if (!success) {

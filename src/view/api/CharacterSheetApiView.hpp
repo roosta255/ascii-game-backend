@@ -59,6 +59,9 @@ struct CharacterSheetApiView
             }
         };
         for (const auto& flyweight: traitFlyweights) {
+            if (flyweight.types[TRAIT_TYPE_UNSHEETED].orElse(false)) {
+                continue;
+            }
             if (flyweight.types[TRAIT_TYPE_AFFLICTION].orElse(false)) {
                 pushStreamedTraitView(flyweight, afflictions);
             }
