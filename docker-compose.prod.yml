@@ -3,6 +3,8 @@ services:
     image: ${IMAGE_NAME}
     container_name: drogon_backend
     env_file: .env
+    environment:
+      - CONFIG_FILE=config.prod.json
     ports:
       - "8080:8080"
     restart: unless-stopped

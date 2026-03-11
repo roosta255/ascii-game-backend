@@ -10,14 +10,6 @@ RUN git clone https://github.com/drogonframework/drogon.git &&     cd drogon && 
 
 WORKDIR /app
 COPY . .
-RUN mkdir -p build && cd build && cmake .. && make -j$(nproc)
+RUN cmake -B build_ninja -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build_ninja -j$(nproc)
 
-# Add after building drogon_backend
-# RUN mkdir test_build \
-# && cd test_build \
-# && cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON .. \
-# && make -j$(nproc) \
-# && ctest || (echo "===== TEST LOG =====" && cat Testing/Temporary/LastTest.log && false)
-
-
-CMD ["./build/match_backend"]
+CMD ["./build_ninja/match_backend"]

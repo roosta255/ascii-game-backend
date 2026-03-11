@@ -1,9 +1,11 @@
 #include <drogon/drogon.h>
 #include "CORSFilter.hpp"
+#include <cstdlib>
 #include <filesystem> // For C++17 and above
 
 int main() {
-    drogon::app().loadConfigFile("config.json");
+    const char* configFile = std::getenv("CONFIG_FILE");
+    drogon::app().loadConfigFile(configFile ? configFile : "config.json");
 
     // Apply CORS headers to all outgoing responses
     drogon::app().registerPostHandlingAdvice([](const drogon::HttpRequestPtr &, const drogon::HttpResponsePtr &resp) {

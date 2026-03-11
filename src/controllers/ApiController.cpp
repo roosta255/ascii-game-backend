@@ -1,3 +1,4 @@
+#include <drogon/drogon.h>
 #include "ActionFlyweight.hpp"
 #include "ApiController.hpp"
 #include "AccountRepository.hpp"
@@ -210,8 +211,9 @@ void ApiController::getGeneratorList
 {
     Json::Value generators(Json::arrayValue);
 
+    const bool isTestMode = drogon::app().getCustomConfig().get("test_mode", false).asBool();
     for (const auto& flyweight: GeneratorFlyweight::getFlyweights()) {
-        if (!flyweight.isTest) generators.append(flyweight.name);
+        if (isTestMode || !flyweight.isTest) generators.append(flyweight.name);
     }
 
     Json::Value response;

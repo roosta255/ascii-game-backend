@@ -3,6 +3,7 @@
 #include "adl_serializer.hpp"
 #include "Array.hpp"
 #include "CharacterApiView.hpp"
+#include "ChestApiView.hpp"
 #include "Dungeon.hpp"
 #include "LayoutFlyweight.hpp"
 #include "RoomApiView.hpp"
@@ -16,12 +17,14 @@ struct DungeonApiView
 
     Array<CharacterApiView, Dungeon::MAX_CHARACTERS> characters;
     Array<RoomApiView, DUNGEON_ROOM_COUNT> rooms;
+    Array<ChestApiView, Dungeon::MAX_CHESTS> chests;
 
     inline DungeonApiView() = default;
 
     inline DungeonApiView(const Dungeon& model, const MatchApiParameters& params)
     : isBlueOpen(model.isBlueOpen)
     , characters(model.characters.transform([&](const Character& character){return CharacterApiView(character, params);}))
+    , chests(model.chests.transform([&](const Chest& chest){return ChestApiView(chest);}))
     , rooms(model.rooms.transform([&](const Room& room){return RoomApiView(room, params);}))
     {
         LayoutFlyweight::getFlyweights().accessConst(model.layout, [&](const LayoutFlyweight& flyweight){
@@ -31,4 +34,4 @@ struct DungeonApiView
 };
 
 // Reflection-based JSON serialization
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(DungeonApiView, isBlueOpen, layout, characters, rooms)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(DungeonApiView, isBlueOpen, layout, characters, rooms, chests)
