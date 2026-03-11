@@ -475,45 +475,39 @@ bool MatchController::permuteCharacterActions(const std::string& playerId, int m
                     processTargetCharacter(CharacterAction{ .type = ACTION_ACTIVATE_CHARACTER, .characterId = mainCharacterId, .roomId = roomId }, it.second);
                 }
 
-                // chest looting
+                // chest interactions
                 for (Chest& chest : match.dungeon.chests) {
                     if (chest.containerCharacterId == -1) continue;
                     bool containerInRoom = false;
                     isCharacterWithinRoom(chest.containerCharacterId, roomId, containerInRoom);
                     if (!containerInRoom) continue;
-                    int slot = 0;
-                    for (const Item& item : chest.inventory.items) {
-                        if (item.type != ITEM_NIL) {
-                            applyAction(false, CharacterAction{
-                                .type = ACTION_LOOT_CHEST,
-                                .characterId = mainCharacterId,
-                                .roomId = roomId,
-                                .targetCharacterId = chest.containerCharacterId,
-                                .targetItemIndex = slot,
-                                .targetInventoryIndex = (int)(reinterpret_cast<char*>(&chest.inventory) - reinterpret_cast<char*>(&this->match))
-                            });
-                        }
-                        slot++;
-                    }
-                }
-
-                // chest lock activation
-                for (Chest& chest : match.dungeon.chests) {
-                    if (chest.containerCharacterId == -1) continue;
                     bool isLocked = false;
                     LockFlyweight::getFlyweights().accessConst(chest.lock, [&](const LockFlyweight& lf){
                         isLocked = lf.isLocked;
                     });
-                    if (!isLocked) continue;
-                    bool containerInRoom = false;
-                    isCharacterWithinRoom(chest.containerCharacterId, roomId, containerInRoom);
-                    if (!containerInRoom) continue;
-                    applyAction(false, CharacterAction{
-                        .type = ACTION_USE_CHEST_LOCK,
-                        .characterId = mainCharacterId,
-                        .roomId = roomId,
-                        .targetCharacterId = chest.containerCharacterId,
-                    });
+                    if (isLocked) {
+                        applyAction(false, CharacterAction{
+                            .type = ACTION_USE_CHEST_LOCK,
+                            .characterId = mainCharacterId,
+                            .roomId = roomId,
+                            .targetCharacterId = chest.containerCharacterId,
+                        });
+                    } else {
+                        int slot = 0;
+                        for (const Item& item : chest.inventory.items) {
+                            if (item.type != ITEM_NIL) {
+                                applyAction(false, CharacterAction{
+                                    .type = ACTION_LOOT_CHEST,
+                                    .characterId = mainCharacterId,
+                                    .roomId = roomId,
+                                    .targetCharacterId = chest.containerCharacterId,
+                                    .targetItemIndex = slot,
+                                    .targetInventoryIndex = (int)(reinterpret_cast<char*>(&chest.inventory) - reinterpret_cast<char*>(&this->match))
+                                });
+                            }
+                            slot++;
+                        }
+                    }
                 }
 
                 // activations

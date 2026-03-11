@@ -1,8 +1,10 @@
 #include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 #include "ActivatorChestLockKey.hpp"
+#include "ActionEnum.hpp"
 #include "Cardinal.hpp"
 #include "Character.hpp"
+#include "CharacterAction.hpp"
 #include "Chest.hpp"
 #include "CodeEnum.hpp"
 #include "Codeset.hpp"
@@ -165,4 +167,80 @@ TEST_CASE("Consumer key chest: key consumed, action taken", "[match][chest][lock
 
     int openContainerId = findChestContainerByLock(tc, LOCK_KEY_CONSUMER_OPEN);
     REQUIRE(openContainerId == containerId);                 // lock transitioned to open
+}
+
+TEST_CASE("Pathfinding: catalyst key chest USE_CHEST_LOCK action is found", "[match][chest][lock][pathfinding]") {
+    TestController tc(GENERATOR_TEST);
+
+    tc.generate(0);
+    REQUIRE(tc.codeset.getErrorTable() == Codeset::getEmptyTable());
+    REQUIRE(tc.match.start());
+
+    tc.giveItem(ITEM_KEY);
+    REQUIRE(tc.inventory.keys == 1);
+
+    int containerId = findChestContainerByLock(tc, LOCK_KEY_CATALYST_CLOSED);
+    REQUIRE(containerId != -1);
+
+    int actionCount = 0;
+    CharacterAction foundAction{};
+    const bool isFound = tc.controller.findCharacterPath(
+        TestController::BUILDER_ID, tc.builderOffset, 10,
+        [&](const Match& match) {
+            for (const Chest& chest : match.dungeon.chests) {
+                if (chest.containerCharacterId == containerId && chest.lock == LOCK_KEY_CATALYST_OPEN)
+                    return true;
+            }
+            return false;
+        },
+        [&](const CharacterAction&, const Match&) { return 0; },
+        [&](const CharacterAction& action, const Match&) {
+            foundAction = action;
+            actionCount++;
+        }
+    );
+
+    REQUIRE(tc.codeset.getErrorTable() == Codeset::getEmptyTable());
+    REQUIRE(isFound);
+    REQUIRE(actionCount == 1);
+    REQUIRE(foundAction.type == ACTION_USE_CHEST_LOCK);
+    REQUIRE(foundAction.targetCharacterId == containerId);
+}
+
+TEST_CASE("Pathfinding: consumer key chest USE_CHEST_LOCK action is found", "[match][chest][lock][pathfinding]") {
+    TestController tc(GENERATOR_TEST);
+
+    tc.generate(0);
+    REQUIRE(tc.codeset.getErrorTable() == Codeset::getEmptyTable());
+    REQUIRE(tc.match.start());
+
+    tc.giveItem(ITEM_KEY);
+    REQUIRE(tc.inventory.keys == 1);
+
+    int containerId = findChestContainerByLock(tc, LOCK_KEY_CONSUMER_CLOSED);
+    REQUIRE(containerId != -1);
+
+    int actionCount = 0;
+    CharacterAction foundAction{};
+    const bool isFound = tc.controller.findCharacterPath(
+        TestController::BUILDER_ID, tc.builderOffset, 10,
+        [&](const Match& match) {
+            for (const Chest& chest : match.dungeon.chests) {
+                if (chest.containerCharacterId == containerId && chest.lock == LOCK_KEY_CONSUMER_OPEN)
+                    return true;
+            }
+            return false;
+        },
+        [&](const CharacterAction&, const Match&) { return 0; },
+        [&](const CharacterAction& action, const Match&) {
+            foundAction = action;
+            actionCount++;
+        }
+    );
+
+    REQUIRE(tc.codeset.getErrorTable() == Codeset::getEmptyTable());
+    REQUIRE(isFound);
+    REQUIRE(actionCount == 1);
+    REQUIRE(foundAction.type == ACTION_USE_CHEST_LOCK);
+    REQUIRE(foundAction.targetCharacterId == containerId);
 }
