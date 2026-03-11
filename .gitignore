@@ -1,4 +1,5 @@
 .env
 build/
+build_ninja/
 *.tar
 var/state/matches/

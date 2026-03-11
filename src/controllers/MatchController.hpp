@@ -36,6 +36,8 @@ private:
     Map<int, Map<int2, int> > floors; // roomId -> <channel, floorId> -> characterId
     Map<int, Map<int2, int> > doors; // roomId -> <channel, direction> -> characterId
     Map<int, TraitModifier::TraitComputation> traitsComputed; // characterId -> computed traits (always fresh, never persisted)
+    Map<int, Pointer<Chest>> chestContainerMap; // containerCharacterId -> Chest
+    Map<int, Pointer<Chest>> chestCritterMap;   // critterCharacterId -> Chest
 
     bool isLocationsSetup = false;
 public:
@@ -66,6 +68,8 @@ public:
     bool generate(int seed);
     const Map<int, Map<int2, int> >& getDoors();
     const Map<int, Map<int2, int> >& getFloors();
+    Pointer<Chest> getChestByContainerId(int characterId);
+    Pointer<Chest> getChestByCritterId(int characterId);
 
     bool giveInventoryItem(Inventory& inventory, const ItemEnum type, const bool isDryrun = false);
 

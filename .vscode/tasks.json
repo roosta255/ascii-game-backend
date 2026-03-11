@@ -14,7 +14,7 @@
         {
             "label": "Run Tests (Catch2)",
             "type": "shell",
-            "command": "mkdir -p build && cd build && cmake .. && make test_target && ./test_target",
+            "command": "cmake -B build_ninja -G Ninja -DCMAKE_BUILD_TYPE=Debug && cmake --build build_ninja -j$(nproc) --target test_target && ./build_ninja/test_target",
             "group": {
                 "kind": "test",
                 "isDefault": true
@@ -29,7 +29,7 @@
         {
             "label": "Run Server",
             "type": "shell",
-            "command": "./build/match_backend",
+            "command": "./build_ninja/match_backend",
             "dependsOn": "Build Game",
             "problemMatcher": []
         }

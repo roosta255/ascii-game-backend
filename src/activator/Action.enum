@@ -13,3 +13,4 @@ ACTION_DECL(MOVE_TO_FLOOR,           ActivatorMoveToFloor,      ACTION_TYPE_MOVE
 // misc
 ACTION_DECL(END_TURN,                ActivatorEndTurn,          ACTION_TYPE_MOVEMENT)
 ACTION_DECL(LOOT_CHEST,              ActivatorLootChest,        ACTION_TYPE_USAGE)
+ACTION_DECL(USE_CHEST_LOCK,          ActivatorUseChestLock,     ACTION_TYPE_USAGE)

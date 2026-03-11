@@ -1,6 +1,7 @@
 #include "ActionFlyweight.hpp"
 #include "ActivatorEndTurn.hpp"
 #include "ActivatorLootChest.hpp"
+#include "ActivatorUseChestLock.hpp"
 #include "ActivatorMoveToDoor.hpp"
 #include "ActivatorMoveToFloor.hpp"
 #include "ActivatorUseCharacter.hpp"

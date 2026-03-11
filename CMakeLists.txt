@@ -67,6 +67,7 @@ add_library(core_backend STATIC
     src/chest/ActivatorChestLockKey.cpp
     src/chest/ActivatorCritterBite.cpp
     src/chest/ActivatorLootChest.cpp
+    src/chest/ActivatorUseChestLock.cpp
     src/chest/Chest.cpp
     src/chest/LockEnum.cpp
     src/chest/LockFlyweight.cpp

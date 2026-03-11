@@ -5,6 +5,7 @@
 #include "CharacterDigest.hpp"
 #include "Codeset.hpp"
 #include "DoorFlyweight.hpp"
+#include "LockFlyweight.hpp"
 #include "GeneratorFlyweight.hpp"
 #include "iActivator.hpp"
 #include "iGenerator.hpp"
@@ -329,6 +330,16 @@ const Map<int, Map<int2, int> >& MatchController::getFloors() {
     return floors;
 }
 
+Pointer<Chest> MatchController::getChestByContainerId(int characterId) {
+    setupLocations(false);
+    return chestContainerMap.getOrDefault(characterId, Pointer<Chest>::empty());
+}
+
+Pointer<Chest> MatchController::getChestByCritterId(int characterId) {
+    setupLocations(false);
+    return chestCritterMap.getOrDefault(characterId, Pointer<Chest>::empty());
+}
+
 bool MatchController::giveInventoryItem(Inventory& inventory, const ItemEnum type, const bool isDryrun) {
     return !codeset.addFailure(!inventory.giveItem(type, codeset.error, isDryrun));
 }
@@ -486,6 +497,25 @@ bool MatchController::permuteCharacterActions(const std::string& playerId, int m
                     }
                 }
 
+                // chest lock activation
+                for (Chest& chest : match.dungeon.chests) {
+                    if (chest.containerCharacterId == -1) continue;
+                    bool isLocked = false;
+                    LockFlyweight::getFlyweights().accessConst(chest.lock, [&](const LockFlyweight& lf){
+                        isLocked = lf.isLocked;
+                    });
+                    if (!isLocked) continue;
+                    bool containerInRoom = false;
+                    isCharacterWithinRoom(chest.containerCharacterId, roomId, containerInRoom);
+                    if (!containerInRoom) continue;
+                    applyAction(false, CharacterAction{
+                        .type = ACTION_USE_CHEST_LOCK,
+                        .characterId = mainCharacterId,
+                        .roomId = roomId,
+                        .targetCharacterId = chest.containerCharacterId,
+                    });
+                }
+
                 // activations
                 // ACTION_DECL(ACTIVATE_INVENTORY_ITEM)
             }
@@ -522,12 +552,21 @@ void MatchController::setupLocations(bool isForced) {
 
     floors.clear();
     doors.clear();
+    chestContainerMap.clear();
+    chestCritterMap.clear();
 
     match.accessUsedCharacters([&](const Character& character){
         int characterId = -1;
         match.containsCharacter(character, characterId);
         character.location.apply(characterId, match.dungeon.rooms, floors, doors);
     });
+
+    for (Chest& chest : match.dungeon.chests) {
+        if (chest.containerCharacterId != -1)
+            chestContainerMap.set(chest.containerCharacterId, Pointer<Chest>(chest));
+        if (chest.critterCharacterId != -1)
+            chestCritterMap.set(chest.critterCharacterId, Pointer<Chest>(chest));
+    }
 
     isLocationsSetup = true;
 }
