@@ -3,6 +3,7 @@
 #include "int2.hpp"
 #include "int4_to_json.hpp"
 #include "JsonParameters.hpp"
+#include "Keyframe.hpp"
 #include "LayoutFlyweight.hpp"
 #include "DoorEnum.hpp"
 #include "RoleEnum.hpp"
@@ -71,22 +72,29 @@ bool Dungeon::accessWallNeighbor(const Room& source, Cardinal dir, std::function
     });
 }
 
-void Dungeon::toggleDoors() {
+void Dungeon::toggleDoors(const Timestamp& time, bool isSkippingAnimations) {
     isBlueOpen = !isBlueOpen;
-    
+
     // Iterate through all rooms and their walls
+    int roomId = 0;
     for (Room& room : rooms) {
         for (Cardinal dir : Cardinal::getAllCardinals()) {
             Wall& wall = room.getWall(dir);
-            
-            // Update door types based on isBlueOpen
+
+            DoorEnum newDoor = wall.door;
             if (wall.door == DOOR_TOGGLER_BLUE_OPEN || wall.door == DOOR_TOGGLER_BLUE_CLOSED) {
-                wall.door = isBlueOpen ? DOOR_TOGGLER_BLUE_OPEN : DOOR_TOGGLER_BLUE_CLOSED;
+                newDoor = isBlueOpen ? DOOR_TOGGLER_BLUE_OPEN : DOOR_TOGGLER_BLUE_CLOSED;
             }
             else if (wall.door == DOOR_TOGGLER_ORANGE_OPEN || wall.door == DOOR_TOGGLER_ORANGE_CLOSED) {
-                wall.door = isBlueOpen ? DOOR_TOGGLER_ORANGE_CLOSED : DOOR_TOGGLER_ORANGE_OPEN;
+                newDoor = isBlueOpen ? DOOR_TOGGLER_ORANGE_CLOSED : DOOR_TOGGLER_ORANGE_OPEN;
+            }
+
+            if (newDoor != wall.door) {
+                const AnimationEnum animation = (newDoor == DOOR_TOGGLER_BLUE_OPEN || newDoor == DOOR_TOGGLER_ORANGE_OPEN) ? ANIMATION_SLIDE : ANIMATION_CRUSH;
+                wall.setDoor(newDoor, time, isSkippingAnimations, roomId, animation);
             }
         }
+        roomId++;
     }
 }
 

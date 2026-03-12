@@ -3,6 +3,7 @@
 #include "Character.hpp"
 #include "Codeset.hpp"
 #include "Inventory.hpp"
+#include "Keyframe.hpp"
 #include "Match.hpp"
 #include "MatchController.hpp"
 #include "Player.hpp"
@@ -26,25 +27,26 @@ bool ActivatorTimeGateCube::activate(Activation& activation) const {
 
     Wall& sourceWall = activation.room.getWall(direction);
 
+    const int roomId = activation.room.roomId;
     switch (sourceWall.door) {
         case DOOR_TIME_GATE_AWAKENED:
             // give cube from gate
-            if (controller.takeCharacterAction(subject) && controller.giveInventoryItem(inventory, ITEM_CUBE_AWAKENED)) {
-                sourceWall.door = DOOR_TIME_GATE_EMPTY;
+            if (controller.takeCharacterAction(subject) && controller.giveInventoryItem(inventory, ITEM_CUBE_AWAKENED, activation.time, roomId, activation.isSkippingAnimations)) {
+                sourceWall.setDoor(DOOR_TIME_GATE_EMPTY, activation.time, activation.isSkippingAnimations, roomId, ANIMATION_SLIDE);
                 return true;
             }
             break;
         case DOOR_TIME_GATE_DORMANT:
             // give cube from gate
-            if (controller.takeCharacterAction(subject) && controller.giveInventoryItem(inventory, ITEM_CUBE_DORMANT)) {
-                sourceWall.door = DOOR_TIME_GATE_EMPTY;
+            if (controller.takeCharacterAction(subject) && controller.giveInventoryItem(inventory, ITEM_CUBE_DORMANT, activation.time, roomId, activation.isSkippingAnimations)) {
+                sourceWall.setDoor(DOOR_TIME_GATE_EMPTY, activation.time, activation.isSkippingAnimations, roomId, ANIMATION_SLIDE);
                 return true;
             }
             break;
         case DOOR_TIME_GATE_EMPTY:
             // take cube to gate
-            if (controller.takeCharacterAction(subject) && controller.takeInventoryItem(inventory, ITEM_CUBE_AWAKENED)) {
-                sourceWall.door = DOOR_TIME_GATE_AWAKENED;
+            if (controller.takeCharacterAction(subject) && controller.takeInventoryItem(inventory, ITEM_CUBE_AWAKENED, activation.time, roomId, activation.isSkippingAnimations)) {
+                sourceWall.setDoor(DOOR_TIME_GATE_AWAKENED, activation.time, activation.isSkippingAnimations, roomId, ANIMATION_CRUSH);
                 return true;
             }
             break;

@@ -37,8 +37,8 @@ bool ActivatorLootChest::activate(Activation& activation) const {
                 if (codeset.addFailure(isLocked, CODE_LOOT_CHEST_IS_LOCKED)) return;
 
                 const ItemEnum type = chestItem.type;
-                if (codeset.addFailure(!controller.takeInventoryItem(chest.inventory, type))) return;
-                if (codeset.addFailure(!controller.giveInventoryItem(player.inventory, type))) return;
+                if (codeset.addFailure(!controller.takeInventoryItem(chest.inventory, type, activation.time, room.roomId, activation.isSkippingAnimations))) return;
+                if (codeset.addFailure(!controller.giveInventoryItem(player.inventory, type, activation.time, room.roomId, activation.isSkippingAnimations))) return;
                 if (codeset.addFailure(!controller.takeCharacterAction(subject))) return;
                 isSuccess = true;
 

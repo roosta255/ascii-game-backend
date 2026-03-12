@@ -1,6 +1,8 @@
 #pragma once
 
 #include "adl_serializer.hpp"
+#include "Keyframe.hpp"
+#include "KeyframeView.hpp"
 #include "Wall.hpp"
 #include "Compass.hpp"
 #include "DoorFlyweight.hpp"
@@ -18,13 +20,15 @@ struct WallApiView
     bool isDoorActionable = false;
     bool isLockActionable = false;
     int adjacent = -1;
+    Array<KeyframeView, Wall::MAX_KEYFRAMES> keyframes;
 
     inline WallApiView() = default;
 
     static constexpr auto XY_COORDS = Compass<int2>(int2{1,1}, int2{2,2}, int2{3,3}, int2{4,4});
- 
+
     inline WallApiView(const Wall& model, const MatchApiParameters& params, const Room& room, const Cardinal& dir)
     : cell(params, XY_COORDS[dir][0], XY_COORDS[dir][1]), adjacent(model.adjacent)
+    , keyframes(model.keyframes.transform([&](const Keyframe& keyframe){return KeyframeView(keyframe);}))
     {
         DoorFlyweight::getFlyweights().accessConst(model.door, [&](const DoorFlyweight& flyweight) {
             this->door = flyweight.name;
@@ -39,4 +43,4 @@ struct WallApiView
 };
 
 // Reflection-based JSON serialization
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(WallApiView, door, cell, isDoorway, adjacent, isBlocking, isDoorActionable, isLockActionable)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(WallApiView, door, cell, isDoorway, adjacent, isBlocking, isDoorActionable, isLockActionable, keyframes)

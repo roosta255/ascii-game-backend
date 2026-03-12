@@ -9,6 +9,7 @@
   "customizations": {
     "vscode": {
       "extensions": [
+        "anthropic.claude-code",
         "ms-vscode.cpptools",
         "ms-vscode.cmake-tools"
       ],

@@ -162,6 +162,16 @@ Keyframe Keyframe::buildDying(const Timestamp& start, long duration, const int r
     };
 }
 
+Keyframe Keyframe::buildTransition(const Timestamp& start, long duration, const int room0, const AnimationEnum animation, const int fromType, const int toType) {
+    return Keyframe {
+        .t0 = start,
+        .t1 = start + duration,
+        .animation = animation,
+        .room0 = room0,
+        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{fromType, toType, 0, 0})
+    };
+}
+
 bool Keyframe::insertKeyframe(Rack<Keyframe> rack, const Keyframe& insertion) {
     for (auto& keyframe: rack) {
         if (keyframe.isAvailable()) {
@@ -172,6 +182,7 @@ bool Keyframe::insertKeyframe(Rack<Keyframe> rack, const Keyframe& insertion) {
     return false;
 }
 
+// TODO: put this as data in enum
 bool Keyframe::isMovement(int animation) {
     return animation == ANIMATION_WALKING_FROM_WALL_TO_WALL
         || animation == ANIMATION_WALKING_FROM_WALL_TO_FLOOR

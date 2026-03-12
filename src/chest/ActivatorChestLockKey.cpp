@@ -33,7 +33,7 @@ bool ActivatorChestLockKey::activate(Activation& activation) const {
                 }
                 case LOCK_KEY_CONSUMER_CLOSED: {
                     // Requires and consumes a key
-                    if (codeset.addFailure(!controller.takeInventoryItem(player.inventory, ITEM_KEY))) return;
+                    if (codeset.addFailure(!controller.takeInventoryItem(player.inventory, ITEM_KEY, activation.time, activation.room.roomId, activation.isSkippingAnimations))) return;
                     if (codeset.addFailure(!controller.takeCharacterAction(subject))) return;
                     chest.lock = LOCK_KEY_CONSUMER_OPEN;
                     isSuccess = true;

@@ -1,4 +1,5 @@
 build/
+build_ninja/
 bin/
 .git/
 .vscode/

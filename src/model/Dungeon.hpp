@@ -13,6 +13,7 @@
 #include "Character.hpp"
 #include "Pointer.hpp"
 #include "Cardinal.hpp"
+#include "Timestamp.hpp"
 #include "TraitBits.hpp"
 
 namespace Json {
@@ -35,7 +36,7 @@ struct Dungeon {
     int32_t isBlueOpen = false;  // When true, blue doors are open and orange doors are closed
 
     // Toggles all blue/orange doors in the dungeon based on isBlueOpen
-    void toggleDoors();
+    void toggleDoors(const Timestamp& time, bool isSkippingAnimations);
 
     // Helper functions for chest management
     Pointer<Chest> findChestByContainerId(int containerCharacterId, CodeEnum& error);

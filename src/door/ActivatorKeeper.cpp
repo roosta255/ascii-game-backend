@@ -3,6 +3,7 @@
 #include "Codeset.hpp"
 #include "DoorEnum.hpp"
 #include "Inventory.hpp"
+#include "Keyframe.hpp"
 #include "Match.hpp"
 #include "MatchController.hpp"
 #include "Player.hpp"
@@ -39,18 +40,18 @@ bool ActivatorKeeper::activate(Activation& activation) const {
             switch (sourceWall.door) {
                 case DOOR_KEEPER_INGRESS_KEYED:
                     if (controller.takeCharacterAction(subject)) {
-                        if (controller.giveInventoryItem(inventory, ITEM_KEY)) {
-                            sourceWall.door = DOOR_KEEPER_INGRESS_KEYLESS;
-                            neighborWall.door = DOOR_KEEPER_EGRESS_KEYLESS;
+                        if (controller.giveInventoryItem(inventory, ITEM_KEY, activation.time, room.roomId, activation.isSkippingAnimations)) {
+                            sourceWall.setDoor(DOOR_KEEPER_INGRESS_KEYLESS, activation.time, activation.isSkippingAnimations, room.roomId, ANIMATION_SLIDE);
+                            neighborWall.setDoor(DOOR_KEEPER_EGRESS_KEYLESS, activation.time, activation.isSkippingAnimations, neighborId, ANIMATION_SLIDE);
                             isSuccess = true;
                         }
                     }
                     return;
                 case DOOR_KEEPER_INGRESS_KEYLESS:
                     if (controller.takeCharacterAction(subject)) {
-                        if (controller.takeInventoryItem(inventory, ITEM_KEY)) {
-                            sourceWall.door = DOOR_KEEPER_INGRESS_KEYED;
-                            neighborWall.door = DOOR_KEEPER_EGRESS_KEYED;
+                        if (controller.takeInventoryItem(inventory, ITEM_KEY, activation.time, room.roomId, activation.isSkippingAnimations)) {
+                            sourceWall.setDoor(DOOR_KEEPER_INGRESS_KEYED, activation.time, activation.isSkippingAnimations, room.roomId, ANIMATION_CRUSH);
+                            neighborWall.setDoor(DOOR_KEEPER_EGRESS_KEYED, activation.time, activation.isSkippingAnimations, neighborId, ANIMATION_CRUSH);
                             isSuccess = true;
                         }
                     }

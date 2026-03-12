@@ -344,6 +344,19 @@ bool MatchController::giveInventoryItem(Inventory& inventory, const ItemEnum typ
     return !codeset.addFailure(!inventory.giveItem(type, codeset.error, isDryrun));
 }
 
+bool MatchController::giveInventoryItem(Inventory& inventory, const ItemEnum type, const Timestamp& time, const int roomId, const bool isSkippingAnimations) {
+    if (!giveInventoryItem(inventory, type)) return false;
+    if (!isSkippingAnimations) {
+        inventory.accessItem(type, [&](Item& item) {
+            Keyframe::insertKeyframe(
+                Rack<Keyframe>::buildFromArray<Item::MAX_KEYFRAMES>(item.keyframes),
+                Keyframe::buildTransition(time, 300, roomId, ANIMATION_FALL, ITEM_NIL, type)
+            );
+        });
+    }
+    return true;
+}
+
 bool MatchController::isCharacterActorValidation(const Character& character, const bool isCheckingCount) {
     return !codeset.addFailure(!character.isActor(codeset.error, getTraitsComputed(character.characterId).final, isCheckingCount));
 }
@@ -579,6 +592,18 @@ bool MatchController::takeCharacterMove(Character& character) {
 
 bool MatchController::takeInventoryItem(Inventory& inventory, const ItemEnum type, const bool isDryrun) {
     return !codeset.addFailure(!inventory.takeItem(type, codeset.error, isDryrun));
+}
+
+bool MatchController::takeInventoryItem(Inventory& inventory, const ItemEnum type, const Timestamp& time, const int roomId, const bool isSkippingAnimations) {
+    if (!isSkippingAnimations) {
+        inventory.accessItem(type, [&](Item& item) {
+            Keyframe::insertKeyframe(
+                Rack<Keyframe>::buildFromArray<Item::MAX_KEYFRAMES>(item.keyframes),
+                Keyframe::buildTransition(time, 300, roomId, ANIMATION_RISE, type, ITEM_NIL)
+            );
+        });
+    }
+    return takeInventoryItem(inventory, type);
 }
 
 bool MatchController::updateCharacterLocation(Character& character, const Location& newLocation, Location& oldLocation) {

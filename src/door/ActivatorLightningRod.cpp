@@ -3,6 +3,7 @@
 #include "Codeset.hpp"
 #include "DoorEnum.hpp"
 #include "Inventory.hpp"
+#include "Keyframe.hpp"
 #include "Match.hpp"
 #include "MatchController.hpp"
 #include "Player.hpp"
@@ -32,24 +33,24 @@ bool ActivatorLightningRod::activate(Activation& activation) const {
             // give cube from rod
             if (controller.takeCharacterAction(subject)) {
                 // it's fine to perform the inventory check last because failures arent saved
-                if (controller.giveInventoryItem(inventory, ITEM_CUBE_AWAKENED)) {
-                    sourceWall.door = DOOR_LIGHTNING_ROD_EMPTY;
+                if (controller.giveInventoryItem(inventory, ITEM_CUBE_AWAKENED, activation.time, room.roomId, activation.isSkippingAnimations)) {
+                    sourceWall.setDoor(DOOR_LIGHTNING_ROD_EMPTY, activation.time, activation.isSkippingAnimations, room.roomId, ANIMATION_SLIDE);
                     return true;
                 }
             }
             break;
         case DOOR_LIGHTNING_ROD_DORMANT:
             // give cube from rod
-            if (controller.takeCharacterAction(subject) && controller.giveInventoryItem(inventory, ITEM_CUBE_DORMANT)) {
-                sourceWall.door = DOOR_LIGHTNING_ROD_EMPTY;
+            if (controller.takeCharacterAction(subject) && controller.giveInventoryItem(inventory, ITEM_CUBE_DORMANT, activation.time, room.roomId, activation.isSkippingAnimations)) {
+                sourceWall.setDoor(DOOR_LIGHTNING_ROD_EMPTY, activation.time, activation.isSkippingAnimations, room.roomId, ANIMATION_SLIDE);
                 return true;
             }
             break;
         case DOOR_LIGHTNING_ROD_EMPTY:
             // take cube for rod
             if (controller.takeCharacterAction(subject)) {
-                if (controller.takeInventoryItem(inventory, ITEM_CUBE_DORMANT)) {
-                    sourceWall.door = DOOR_LIGHTNING_ROD_AWAKENED;
+                if (controller.takeInventoryItem(inventory, ITEM_CUBE_DORMANT, activation.time, room.roomId, activation.isSkippingAnimations)) {
+                    sourceWall.setDoor(DOOR_LIGHTNING_ROD_AWAKENED, activation.time, activation.isSkippingAnimations, room.roomId, ANIMATION_CRUSH);
                     return true;
                 }
             }

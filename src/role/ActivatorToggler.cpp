@@ -10,7 +10,7 @@ bool ActivatorToggler::activate(Activation& activation) const {
     bool isSuccess = false;
     activation.target.access([&](Character& target) {
         if (activation.controller.takeCharacterAction(target)) {
-            activation.match.dungeon.toggleDoors();
+            activation.match.dungeon.toggleDoors(activation.time, activation.isSkippingAnimations);
             isSuccess = true;
         }
     });

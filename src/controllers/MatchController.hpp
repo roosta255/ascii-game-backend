@@ -72,6 +72,7 @@ public:
     Pointer<Chest> getChestByCritterId(int characterId);
 
     bool giveInventoryItem(Inventory& inventory, const ItemEnum type, const bool isDryrun = false);
+    bool giveInventoryItem(Inventory& inventory, const ItemEnum type, const Timestamp& time, const int roomId, const bool isSkippingAnimations);
 
     bool isCharacterActorValidation(const Character& character, const bool isCheckingCount = true);
     bool isCharacterMoverValidation(const Character& character, const bool isCheckingCount = true);
@@ -90,6 +91,7 @@ public:
     bool takeCharacterAction(Character& character);
     bool takeCharacterMove(Character& character);
     bool takeInventoryItem(Inventory& inventory, const ItemEnum type, const bool isDryrun = false);
+    bool takeInventoryItem(Inventory& inventory, const ItemEnum type, const Timestamp& time, const int roomId, const bool isSkippingAnimations);
     bool updateCharacterLocation(Character& character, const Location& newLocation, Location& oldLocation);
 
     void updateTraits(Character& character);

@@ -3,6 +3,7 @@
 #include "Codeset.hpp"
 #include "DoorEnum.hpp"
 #include "Inventory.hpp"
+#include "Keyframe.hpp"
 #include "Match.hpp"
 #include "MatchController.hpp"
 #include "Player.hpp"
@@ -38,17 +39,17 @@ bool ActivatorShifter::activate(Activation& activation) const {
             switch (sourceWall.door) {
                 case DOOR_SHIFTER_INGRESS_KEYLESS:
                     // Only at ingress keyless can we take a key
-                    if (controller.takeCharacterAction(subject) && controller.takeInventoryItem(inventory, ITEM_KEY)) {
-                        sourceWall.door = DOOR_SHIFTER_INGRESS_KEYED;
-                        neighborWall.door = DOOR_SHIFTER_EGRESS_KEYED;
+                    if (controller.takeCharacterAction(subject) && controller.takeInventoryItem(inventory, ITEM_KEY, activation.time, room.roomId, activation.isSkippingAnimations)) {
+                        sourceWall.setDoor(DOOR_SHIFTER_INGRESS_KEYED, activation.time, activation.isSkippingAnimations, room.roomId, ANIMATION_CRUSH);
+                        neighborWall.setDoor(DOOR_SHIFTER_EGRESS_KEYED, activation.time, activation.isSkippingAnimations, neighborId, ANIMATION_CRUSH);
                         isSuccess = true;
                     }
                     return;
                 case DOOR_SHIFTER_EGRESS_KEYED:
                     // Only at egress keyed can we give a key
-                    if (controller.takeCharacterAction(subject) && controller.giveInventoryItem(inventory, ITEM_KEY)) {
-                        sourceWall.door = DOOR_SHIFTER_EGRESS_KEYLESS;
-                        neighborWall.door = DOOR_SHIFTER_INGRESS_KEYLESS;
+                    if (controller.takeCharacterAction(subject) && controller.giveInventoryItem(inventory, ITEM_KEY, activation.time, room.roomId, activation.isSkippingAnimations)) {
+                        sourceWall.setDoor(DOOR_SHIFTER_EGRESS_KEYLESS, activation.time, activation.isSkippingAnimations, room.roomId, ANIMATION_SLIDE);
+                        neighborWall.setDoor(DOOR_SHIFTER_INGRESS_KEYLESS, activation.time, activation.isSkippingAnimations, neighborId, ANIMATION_SLIDE);
                         isSuccess = true;
                     }
                     return;

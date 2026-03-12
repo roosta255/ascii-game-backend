@@ -30,6 +30,19 @@ bool Wall::isWalkable(CodeEnum& error) const {
     return result;
 }
 
+bool Wall::setDoor(const DoorEnum& setting, const Timestamp& time, const bool isSkippingAnimation, const int roomId, const AnimationEnum animation) {
+    const DoorEnum oldDoor = door;
+    door = setting;
+    if (!isSkippingAnimation) {
+        Keyframe::insertKeyframe(
+            Rack<Keyframe>::buildFromArray<MAX_KEYFRAMES>(keyframes),
+            Keyframe::buildTransition(time, 300, roomId, animation, oldDoor, door)
+        );
+    }
+    return true;
+}
+
+
 std::ostream& operator<<(std::ostream& os, const Wall& rhs) {
     return os << "Wall{}";
 }

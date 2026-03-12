@@ -57,6 +57,9 @@ struct Keyframe
 
     static Keyframe buildDying(const Timestamp& start, long duration, const int room0);
 
+    // TRANSITION: [fromType, toType, 0, 0]
+    static Keyframe buildTransition(const Timestamp& start, long duration, const int room0, const AnimationEnum animation, const int fromType, const int toType);
+
     static bool insertKeyframe(Rack<Keyframe> rack, const Keyframe& insertion);
 
     // Returns true if animation is a movement type (walking/hurtling/smacking).

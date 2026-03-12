@@ -2,6 +2,7 @@
 #include "Character.hpp"
 #include "Codeset.hpp"
 #include "DoorEnum.hpp"
+#include "Keyframe.hpp"
 #include "Location.hpp"
 #include "Match.hpp"
 #include "MatchController.hpp"
@@ -48,9 +49,9 @@ bool ActivatorTimeGate::activate(Activation& activation) const {
                 const bool isDeltaValid = activation.match.dungeon.rooms.access(activation.room.getDeltaTime(delta), [&](Room& room2) {                    
                     // first mutation, no going back
                     // update the time gates
-                    sourceWall.door = DOOR_TIME_GATE_DORMANT;
+                    sourceWall.setDoor(DOOR_TIME_GATE_DORMANT, activation.time, activation.isSkippingAnimations, roomId, ANIMATION_CRUSH);
                     auto& wall2 = room2.getWall(TIME_GATE_DIRECTION);
-                    wall2.door = DOOR_TIME_GATE_DORMANT;
+                    wall2.setDoor(DOOR_TIME_GATE_DORMANT, activation.time, activation.isSkippingAnimations, room2.roomId, ANIMATION_CRUSH);
                     
                     // clean and update locations
                     const auto newLocation = Location::makeDoor(room2.roomId, subject.location.channel, TIME_GATE_DIRECTION);

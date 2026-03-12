@@ -94,7 +94,7 @@ bool ActivatorElevator::activate(Activation& activation) const {
             return false;
         }
 
-        if (isPaying && codeset.addFailure(!controller.takeInventoryItem(inventory, ITEM_KEY_ELEVATOR), CODE_ELEVATOR_FAILED_TO_PAY_KEY)) {
+        if (isPaying && codeset.addFailure(!controller.takeInventoryItem(inventory, ITEM_KEY_ELEVATOR, activation.time, room.roomId, activation.isSkippingAnimations), CODE_ELEVATOR_FAILED_TO_PAY_KEY)) {
             return false;
         }
 
