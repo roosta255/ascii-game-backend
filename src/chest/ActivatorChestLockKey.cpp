@@ -28,6 +28,12 @@ bool ActivatorChestLockKey::activate(Activation& activation) const {
                     if (codeset.addFailure(!controller.takeInventoryItem(player.inventory, ITEM_KEY, true))) return;
                     if (codeset.addFailure(!controller.takeCharacterAction(subject))) return;
                     chest.lock = LOCK_KEY_CATALYST_OPEN;
+                    if (!activation.isSkippingAnimations) {
+                        Keyframe::insertKeyframe(
+                            Rack<Keyframe>::buildFromArray<Chest::MAX_KEYFRAMES>(chest.keyframes),
+                            Keyframe::buildTransition(activation.time, 300, activation.room.roomId, ANIMATION_FALL, LOCK_KEY_CATALYST_CLOSED, LOCK_KEY_CATALYST_OPEN)
+                        );
+                    }
                     isSuccess = true;
                     break;
                 }
@@ -36,6 +42,12 @@ bool ActivatorChestLockKey::activate(Activation& activation) const {
                     if (codeset.addFailure(!controller.takeInventoryItem(player.inventory, ITEM_KEY, activation.time, activation.room.roomId, activation.isSkippingAnimations))) return;
                     if (codeset.addFailure(!controller.takeCharacterAction(subject))) return;
                     chest.lock = LOCK_KEY_CONSUMER_OPEN;
+                    if (!activation.isSkippingAnimations) {
+                        Keyframe::insertKeyframe(
+                            Rack<Keyframe>::buildFromArray<Chest::MAX_KEYFRAMES>(chest.keyframes),
+                            Keyframe::buildTransition(activation.time, 300, activation.room.roomId, ANIMATION_FALL, LOCK_KEY_CONSUMER_CLOSED, LOCK_KEY_CONSUMER_OPEN)
+                        );
+                    }
                     isSuccess = true;
                     break;
                 }
