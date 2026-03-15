@@ -2,7 +2,7 @@
 
 #include <string>
 
-#define ANIMATION_DECL( name ) ANIMATION_##name,
+#define ANIMATION_DECL( name_, ... ) ANIMATION_##name_,
 enum AnimationEnum
 {
 #include "Animation.enum"

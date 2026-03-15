@@ -14,7 +14,7 @@ Keyframe Keyframe::buildWalking(const Timestamp& start, long duration, const int
         .t1 = start + duration,
         .animation = ANIMATION_WALKING_FROM_WALL_TO_WALL,
         .room0 = room0,
-        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{(int)wall0, 0, (int)wall1, 0})
+        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{(int)wall0, (int)wall1})
     };
 }
 
@@ -24,7 +24,7 @@ Keyframe Keyframe::buildWalking(const Timestamp& start, long duration, const int
         .t1 = start + duration,
         .animation = ANIMATION_WALKING_FROM_WALL_TO_FLOOR,
         .room0 = room0,
-        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{(int)wall0, 0, floorId1, 0})
+        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{(int)wall0, floorId1})
     };
 }
 
@@ -34,7 +34,7 @@ Keyframe Keyframe::buildWalking(const Timestamp& start, long duration, const int
         .t1 = start + duration,
         .animation = ANIMATION_WALKING_FROM_FLOOR_TO_WALL,
         .room0 = room0,
-        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{floorId0, 0, (int)wall1, 0})
+        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{floorId0, (int)wall1})
     };
 }
 
@@ -44,7 +44,7 @@ Keyframe Keyframe::buildWalking(const Timestamp& start, long duration, const int
         .t1 = start + duration,
         .animation = ANIMATION_WALKING_FROM_FLOOR_TO_FLOOR,
         .room0 = room0,
-        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{floorId0, 0, floorId1, 0})
+        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{floorId0, floorId1})
     };
 }
 
@@ -102,7 +102,7 @@ Keyframe Keyframe::buildWalking(const Timestamp& start, long duration, const int
         .t1 = start + duration,
         .animation = animation,
         .room0 = room0,
-        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{location0.data, 0, coalesced1.second, 0})
+        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{location0.data, coalesced1.second})
     };
 }
 
@@ -112,7 +112,7 @@ Keyframe Keyframe::buildHurtling(const Timestamp& start, long duration, const in
         .t1 = start + duration,
         .animation = ANIMATION_HURTLING,
         .room0 = room0,
-        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{xy0[0], xy0[1], xy1[0], xy1[1]})
+        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{xy0[0], xy0[1]})
     };
 }
 
@@ -122,7 +122,7 @@ Keyframe Keyframe::buildSmacking(const Timestamp& start, long duration, const in
         .t1 = start + duration,
         .animation = ANIMATION_SMACKING,
         .room0 = room0,
-        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{xy0[0], xy0[1], xy1[0], xy1[1]})
+        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{xy0[0], xy0[1]})
     };
 }
 
@@ -168,7 +168,7 @@ Keyframe Keyframe::buildTransition(const Timestamp& start, long duration, const 
         .t1 = start + duration,
         .animation = animation,
         .room0 = room0,
-        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{fromType, toType, 0, 0})
+        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{fromType, toType})
     };
 }
 

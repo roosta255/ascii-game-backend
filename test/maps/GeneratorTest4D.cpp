@@ -151,6 +151,9 @@ TEST_CASE("Test Time Gate", "[match][test4d]") {
     // REQUIRE(controller.codeset.describe("") == "");
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
     REQUIRE(controller.isSuccess);
+
+    const Match restored = controller.saveAndLoadMatch();
+    REQUIRE(restored == controller.match);
 }
 
 TEST_CASE("Check A* can complete match[test4d]", "[match][test4d]") {

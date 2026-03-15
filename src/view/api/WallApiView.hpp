@@ -21,6 +21,7 @@ struct WallApiView
     bool isLockActionable = false;
     int adjacent = -1;
     Array<KeyframeView, Wall::MAX_KEYFRAMES> keyframes;
+    Array<KeyframeView, Wall::MAX_KEYFRAMES> lockKeyframes;
 
     inline WallApiView() = default;
 
@@ -29,6 +30,7 @@ struct WallApiView
     inline WallApiView(const Wall& model, const MatchApiParameters& params, const Room& room, const Cardinal& dir)
     : cell(params, XY_COORDS[dir][0], XY_COORDS[dir][1]), adjacent(model.adjacent)
     , keyframes(model.keyframes.transform([&](const Keyframe& keyframe){return KeyframeView(keyframe);}))
+    , lockKeyframes(model.lockKeyframes.transform([&](const Keyframe& keyframe){return KeyframeView(keyframe);}))
     {
         DoorFlyweight::getFlyweights().accessConst(model.door, [&](const DoorFlyweight& flyweight) {
             this->door = flyweight.name;
@@ -43,4 +45,4 @@ struct WallApiView
 };
 
 // Reflection-based JSON serialization
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(WallApiView, door, cell, isDoorway, adjacent, isBlocking, isDoorActionable, isLockActionable, keyframes)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(WallApiView, door, cell, isDoorway, adjacent, isBlocking, isDoorActionable, isLockActionable, keyframes, lockKeyframes)

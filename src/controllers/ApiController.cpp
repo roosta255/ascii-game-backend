@@ -1,6 +1,11 @@
 #include <drogon/drogon.h>
 #include "ActionFlyweight.hpp"
+#include "AnimationFlyweight.hpp"
 #include "ApiController.hpp"
+#include "DoorFlyweight.hpp"
+#include "ItemFlyweight.hpp"
+#include "LockFlyweight.hpp"
+#include "RoleFlyweight.hpp"
 #include "AccountRepository.hpp"
 #include "CharacterSheetApiView.hpp"
 #include "CodeEnum.hpp"
@@ -562,6 +567,73 @@ void ApiController::getCharacterSheet
     nlohmann::json body(view);
     auto resp = drogon::HttpResponse::newHttpJsonResponse(body.dump());
     return callback(resp);
+}
+
+void ApiController::getFlyweights
+( const drogon::HttpRequestPtr&, std::function<void(const drogon::HttpResponsePtr &)> &&callback )
+{
+    Json::Value roles(Json::arrayValue);
+    int roleIndex = 0;
+    for (const auto& fw : RoleFlyweight::getFlyweights()) {
+        Json::Value entry;
+        entry["index"] = roleIndex++;
+        entry["name"] = fw.name;
+        roles.append(entry);
+    }
+
+    Json::Value doors(Json::arrayValue);
+    int doorIndex = 0;
+    for (const auto& fw : DoorFlyweight::getFlyweights()) {
+        Json::Value entry;
+        entry["index"] = doorIndex++;
+        entry["name"] = fw.name;
+        doors.append(entry);
+    }
+
+    Json::Value locks(Json::arrayValue);
+    int lockIndex = 0;
+    for (const auto& fw : LockFlyweight::getFlyweights()) {
+        Json::Value entry;
+        entry["index"] = lockIndex++;
+        entry["name"] = fw.name;
+        locks.append(entry);
+    }
+
+    Json::Value items(Json::arrayValue);
+    int itemIndex = 0;
+    for (const auto& fw : ItemFlyweight::getFlyweights()) {
+        Json::Value entry;
+        entry["index"] = itemIndex++;
+        entry["name"] = fw.name;
+        items.append(entry);
+    }
+
+    Json::Value animations(Json::arrayValue);
+    int animationIndex = 0;
+    for (const auto& fw : AnimationFlyweight::getFlyweights()) {
+        Json::Value entry;
+        bool isTranslating = false;
+        bool isTransition = false;
+        bool isGlyphing = false;
+        fw.types[ANIMATION_TYPE_IS_TRANSLATING].copy(isTranslating);
+        fw.types[ANIMATION_TYPE_IS_TRANSITIONING].copy(isTransition);
+        fw.types[ANIMATION_TYPE_IS_GLYPHING].copy(isGlyphing);
+        entry["index"] = animationIndex++;
+        entry["name"] = fw.name;
+        entry["isTranslating"] = isTranslating;
+        entry["isTransition"] = isTransition;
+        entry["isGlyphing"] = isGlyphing;
+        animations.append(entry);
+    }
+
+    Json::Value response;
+    response["roles"] = roles;
+    response["doors"] = doors;
+    response["locks"] = locks;
+    response["items"] = items;
+    response["animations"] = animations;
+
+    callback(drogon::HttpResponse::newHttpJsonResponse(response));
 }
 
 void ApiController::invokeResponse

@@ -38,6 +38,10 @@ bool Wall::setDoor(const DoorEnum& setting, const Timestamp& time, const bool is
             Rack<Keyframe>::buildFromArray<MAX_KEYFRAMES>(keyframes),
             Keyframe::buildTransition(time, 300, roomId, animation, oldDoor, door)
         );
+        Keyframe::insertKeyframe(
+            Rack<Keyframe>::buildFromArray<MAX_KEYFRAMES>(lockKeyframes),
+            Keyframe::buildTransition(time, 300, roomId, ANIMATION_SLIDE, oldDoor, door)
+        );
     }
     return true;
 }

@@ -105,6 +105,9 @@ TEST_CASE("Verify empty dungeon is navigable manually", "[match][GENERATOR_DOORW
 
     // climb down ladder
     controller.activateDoor(Cardinal::north());
+
+    const Match restored = controller.saveAndLoadMatch();
+    REQUIRE(restored == controller.match);
     /*
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
     REQUIRE(controller.isSuccess);

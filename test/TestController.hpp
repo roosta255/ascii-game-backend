@@ -6,6 +6,8 @@
 #include "InventoryDigest.hpp"
 #include "ItemEnum.hpp"
 #include "Match.hpp"
+#include "MatchApiParameters.hpp"
+#include "MatchApiView.hpp"
 #include "Remodel.hpp"
 
 class Inventory;
@@ -56,4 +58,7 @@ public:
     void updateEverything();
     void updateInventory();
     void updateTable();
+
+    Match saveAndLoadMatch();
+    MatchApiView getMatchApiView();
 };

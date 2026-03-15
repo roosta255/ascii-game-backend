@@ -12,7 +12,7 @@
 
 struct RoomStoreView
 {
-    int visibility = 0;
+    int visibility = ~0x0;
     Array<WallStoreView, 4> walls;
     std::string type = "UNPARSED_ROOM";
     int anterior = -1, posterior = -1, above = -1, below = -1;
@@ -49,5 +49,22 @@ struct RoomStoreView
     }
 };
 
-// Reflection-based JSON serialization
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RoomStoreView, walls, type, anterior, posterior, above, below, roomId)
+inline void to_json(nlohmann::json& j, const RoomStoreView& v) {
+    j = {
+        {"walls", v.walls}, {"type", v.type},
+        {"anterior", v.anterior}, {"posterior", v.posterior},
+        {"above", v.above}, {"below", v.below},
+        {"roomId", v.roomId}, {"visibility", v.visibility}
+    };
+}
+
+inline void from_json(const nlohmann::json& j, RoomStoreView& v) {
+    j.at("walls").get_to(v.walls);
+    j.at("type").get_to(v.type);
+    j.at("anterior").get_to(v.anterior);
+    j.at("posterior").get_to(v.posterior);
+    j.at("above").get_to(v.above);
+    j.at("below").get_to(v.below);
+    j.at("roomId").get_to(v.roomId);
+    v.visibility = j.value("visibility", ~0x0);
+}

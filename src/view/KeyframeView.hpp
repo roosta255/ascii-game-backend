@@ -2,7 +2,7 @@
 
 #include "adl_serializer.hpp"
 #include "Keyframe.hpp"
-#include "KeyframeFlyweight.hpp"
+#include "AnimationFlyweight.hpp"
 #include <nlohmann/json.hpp>
 #include <string>
 #include "Timestamp.hpp"
@@ -31,7 +31,7 @@ struct KeyframeView
         }
 
         // role
-        KeyframeFlyweight::getFlyweights().accessConst(model.animation, [&](const KeyframeFlyweight& flyweight) {
+        AnimationFlyweight::getFlyweights().accessConst(model.animation, [&](const AnimationFlyweight& flyweight) {
             this->animation = flyweight.name;
         });
     }
@@ -52,7 +52,9 @@ struct KeyframeView
             i++;
         }
 
-        KeyframeFlyweight::indexByString(this->animation, model.animation);
+        AnimationEnum animEnum = ANIMATION_NIL;
+        AnimationFlyweight::indexByString(this->animation, animEnum);
+        model.animation = animEnum;
         return model;
     }
 };

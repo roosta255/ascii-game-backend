@@ -40,16 +40,16 @@ bool ActivatorShifter::activate(Activation& activation) const {
                 case DOOR_SHIFTER_INGRESS_KEYLESS:
                     // Only at ingress keyless can we take a key
                     if (controller.takeCharacterAction(subject) && controller.takeInventoryItem(inventory, ITEM_KEY, activation.time, room.roomId, activation.isSkippingAnimations)) {
-                        sourceWall.setDoor(DOOR_SHIFTER_INGRESS_KEYED, activation.time, activation.isSkippingAnimations, room.roomId, ANIMATION_CRUSH);
-                        neighborWall.setDoor(DOOR_SHIFTER_EGRESS_KEYED, activation.time, activation.isSkippingAnimations, neighborId, ANIMATION_CRUSH);
+                        sourceWall.setDoor(DOOR_SHIFTER_INGRESS_KEYED, activation.time, activation.isSkippingAnimations, room.roomId, ANIMATION_SLIDE);
+                        neighborWall.setDoor(DOOR_SHIFTER_EGRESS_KEYED, activation.time, activation.isSkippingAnimations, neighborId, ANIMATION_SLIDE);
                         isSuccess = true;
                     }
                     return;
                 case DOOR_SHIFTER_EGRESS_KEYED:
                     // Only at egress keyed can we give a key
                     if (controller.takeCharacterAction(subject) && controller.giveInventoryItem(inventory, ITEM_KEY, activation.time, room.roomId, activation.isSkippingAnimations)) {
-                        sourceWall.setDoor(DOOR_SHIFTER_EGRESS_KEYLESS, activation.time, activation.isSkippingAnimations, room.roomId, ANIMATION_SLIDE);
-                        neighborWall.setDoor(DOOR_SHIFTER_INGRESS_KEYLESS, activation.time, activation.isSkippingAnimations, neighborId, ANIMATION_SLIDE);
+                        sourceWall.setDoor(DOOR_SHIFTER_EGRESS_KEYLESS, activation.time, activation.isSkippingAnimations, room.roomId, ANIMATION_CRUSH);
+                        neighborWall.setDoor(DOOR_SHIFTER_INGRESS_KEYLESS, activation.time, activation.isSkippingAnimations, neighborId, ANIMATION_CRUSH);
                         isSuccess = true;
                     }
                     return;

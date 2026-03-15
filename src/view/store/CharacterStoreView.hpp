@@ -4,7 +4,7 @@
 #include "Character.hpp"
 #include "Keyframe.hpp"
 #include "KeyframeView.hpp"
-#include "KeyframeFlyweight.hpp"
+#include "AnimationFlyweight.hpp"
 #include "LocationView.hpp"
 #include "RoleFlyweight.hpp"
 #include "TraitBits.hpp"

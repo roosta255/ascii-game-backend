@@ -36,8 +36,8 @@ bool ActivatorJailer::activate(Activation& activation) const {
             // Only at ingress keyless can we give a key
             if (controller.takeCharacterAction(subject)) {
                 if (controller.takeInventoryItem(inventory, ITEM_KEY, activation.time, room.roomId, activation.isSkippingAnimations)) {
-                    sourceWall.setDoor(DOOR_JAILER_INGRESS_KEYED, activation.time, activation.isSkippingAnimations, room.roomId, ANIMATION_CRUSH);
-                    neighborWall.setDoor(DOOR_JAILER_EGRESS_KEYED, activation.time, activation.isSkippingAnimations, neighborId, ANIMATION_CRUSH);
+                    sourceWall.setDoor(DOOR_JAILER_INGRESS_KEYED, activation.time, activation.isSkippingAnimations, room.roomId, ANIMATION_SLIDE);
+                    neighborWall.setDoor(DOOR_JAILER_EGRESS_KEYED, activation.time, activation.isSkippingAnimations, neighborId, ANIMATION_SLIDE);
                     isSuccess = true;
                 }
             }

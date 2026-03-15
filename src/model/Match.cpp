@@ -404,9 +404,9 @@ static_assert(sizeof(Match) > KILOBYTE, "size milestone passed");
 static_assert(sizeof(Match) > KILOBYTE * 2, "size milestone passed");
 static_assert(sizeof(Match) > KILOBYTE * 4, "size milestone passed");
 static_assert(sizeof(Match) > KILOBYTE * 8, "size milestone passed");
-static_assert(sizeof(Match) >= KILOBYTE * 16, "size milestone passed");
+static_assert(sizeof(Match) > KILOBYTE * 16, "size milestone passed");
 static_assert(sizeof(Match) >= KILOBYTE * 32, "size milestone passed");
-static_assert(sizeof(Match) < KILOBYTE * 64, "size milestone passed");
+static_assert(sizeof(Match) <= KILOBYTE * 64, "size milestone passed");
 static_assert(sizeof(Match) < KILOBYTE * 128, "size milestone passed");
 static_assert(sizeof(Match) < KILOBYTE * 256, "size milestone passed");
 static_assert(sizeof(Match) < KILOBYTE * KILOBYTE, "size milestone passed");
@@ -415,13 +415,13 @@ static_assert(sizeof(Array<Room, DUNGEON_ROOM_COUNT>) > KILOBYTE, "size mileston
 static_assert(sizeof(Array<Room, DUNGEON_ROOM_COUNT>) > KILOBYTE * 2, "size milestone passed");
 static_assert(sizeof(Array<Room, DUNGEON_ROOM_COUNT>) > KILOBYTE * 8, "size milestone passed");
 static_assert(sizeof(Array<Room, DUNGEON_ROOM_COUNT>) > KILOBYTE * 16, "size milestone passed");
-static_assert(sizeof(Array<Room, DUNGEON_ROOM_COUNT>) < KILOBYTE * 32, "size milestone passed");
-static_assert(sizeof(Array<Room, DUNGEON_ROOM_COUNT>) < KILOBYTE * 64, "size milestone passed");
+static_assert(sizeof(Array<Room, DUNGEON_ROOM_COUNT>) >= KILOBYTE * 32, "size milestone passed");
+static_assert(sizeof(Array<Room, DUNGEON_ROOM_COUNT>) <= KILOBYTE * 64, "size milestone passed");
 
 static_assert(sizeof(Array<Character, Dungeon::MAX_CHARACTERS>) > KILOBYTE, "size milestone passed");
 static_assert(sizeof(Array<Character, Dungeon::MAX_CHARACTERS>) > KILOBYTE * 2, "size milestone passed");
 static_assert(sizeof(Array<Character, Dungeon::MAX_CHARACTERS>) > KILOBYTE * 4, "size milestone passed");
-static_assert(sizeof(Array<Character, Dungeon::MAX_CHARACTERS>) > KILOBYTE * 8, "size milestone passed");
+static_assert(sizeof(Array<Character, Dungeon::MAX_CHARACTERS>) <= KILOBYTE * 8, "size milestone passed");
 static_assert(sizeof(Array<Character, Dungeon::MAX_CHARACTERS>) < KILOBYTE * 16, "size milestone passed");
 static_assert(sizeof(Array<Character, Dungeon::MAX_CHARACTERS>) < KILOBYTE * 32, "size milestone passed");
 static_assert(sizeof(Array<Character, Dungeon::MAX_CHARACTERS>) < KILOBYTE * 64, "size milestone passed");

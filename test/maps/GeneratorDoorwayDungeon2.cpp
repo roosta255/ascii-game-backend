@@ -273,4 +273,7 @@ TEST_CASE("Test elevator configuration", "[match][GENERATOR_DOORWAY_DUNGEON_2]")
     REQUIRE(controller.isSuccess);
 
     REQUIRE(controller.latestPosition == 52);
+
+    const Match restored = controller.saveAndLoadMatch();
+    REQUIRE(restored == controller.match);
 }

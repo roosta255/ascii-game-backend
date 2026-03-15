@@ -62,8 +62,9 @@ add_library(core_backend STATIC
     src/activator/ActivatorUseLock.cpp
     src/activator/CharacterAction.cpp
     src/animation/AnimationEnum.cpp
+    src/animation/AnimationFlyweight.cpp
+    src/animation/AnimationTypes.cpp
     src/animation/Keyframe.cpp
-    src/animation/KeyframeFlyweight.cpp
     src/chest/ActivatorChestLockKey.cpp
     src/chest/ActivatorCritterBite.cpp
     src/chest/ActivatorLootChest.cpp

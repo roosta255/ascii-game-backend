@@ -184,17 +184,65 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
     REQUIRE(controller.isSuccess);
 
-    // Give key to room11's north shifter to open it
+    // Give key to room11's north keeper to open it (keeper KEYLESS->KEYED = CRUSH)
     controller.activateLock(Cardinal::north());
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
     REQUIRE(controller.isSuccess);
     REQUIRE(controller.inventory.isEmpty == false);
     REQUIRE(controller.inventory.keys == 1);
 
+    // Verify activating the keeper produced a SLIDE keyframe on room 11's north wall
+    {
+        bool hasSlide = false;
+        controller.match.dungeon.rooms.accessConst(11, [&](const Room& room) {
+            hasSlide = room.getWall(Cardinal::north()).keyframes.isAny([](const Keyframe& kf) {
+                return kf.animation == ANIMATION_SLIDE;
+            });
+        });
+        REQUIRE(hasSlide);
+    }
+
     // Move to room11's north wall (between room11 & room19)
     controller.moveCharacterToWall(Cardinal::north());
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
     REQUIRE(controller.isSuccess);
+
+    // Verify SLIDE keyframe on room 11's north wall survives after moving north out of room 11
+    {
+        bool hasSlide = false;
+        controller.match.dungeon.rooms.accessConst(11, [&](const Room& room) {
+            hasSlide = room.getWall(Cardinal::north()).keyframes.isAny([](const Keyframe& kf) {
+                return kf.animation == ANIMATION_SLIDE;
+            });
+        });
+        REQUIRE(hasSlide);
+    }
+
+    // Verify SLIDE keyframe survives a StoreView persistence round-trip
+    {
+        const Match crushRestored = controller.saveAndLoadMatch();
+        bool hasSlide = false;
+        crushRestored.dungeon.rooms.accessConst(11, [&](const Room& room) {
+            hasSlide = room.getWall(Cardinal::north()).keyframes.isAny([](const Keyframe& kf) {
+                return kf.animation == ANIMATION_SLIDE;
+            });
+        });
+        REQUIRE(hasSlide);
+    }
+
+    // Verify SLIDE keyframe is present in the ApiView for room 11's north wall
+    {
+        const MatchApiView crushApiView = controller.getMatchApiView();
+        bool hasSlide = false;
+        crushApiView.dungeon.rooms.accessConst(11, [&](const RoomApiView& room) {
+            room.walls.accessConst(Cardinal::north().getIndex(), [&](const WallApiView& wall) {
+                hasSlide = wall.keyframes.isAny([](const KeyframeView& kf) {
+                    return kf.animation == "SLIDE";
+                });
+            });
+        });
+        REQUIRE(hasSlide);
+    }
 
     controller.endTurn();
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
@@ -264,16 +312,64 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
 
     // TODO: Need new API to move character to floor position in room 11
     // For now this will fail as character is blocking the keeper door
-    // Take key from room11's north keeper
+    // Take key from room11's north keeper (keeper KEYED->KEYLESS = SLIDE)
     controller.activateLock(Cardinal::north());
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
     REQUIRE(controller.isSuccess);
     REQUIRE(controller.inventory.isEmpty == false);
     REQUIRE(controller.inventory.keys == 1);
 
+    // Verify taking the key produced a SLIDE keyframe on room 11's north wall
+    {
+        bool hasSlide = false;
+        controller.match.dungeon.rooms.accessConst(controller.latestPosition, [&](const Room& room) {
+            hasSlide = room.getWall(Cardinal::north()).keyframes.isAny([](const Keyframe& kf) {
+                return kf.animation == ANIMATION_SLIDE;
+            });
+        });
+        REQUIRE(hasSlide);
+    }
+
     controller.moveCharacterToWall(Cardinal::west());
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
     REQUIRE(controller.isSuccess);
+
+    // Verify SLIDE keyframe on room 11's north wall survives after moving west
+    {
+        bool hasSlide = false;
+        controller.match.dungeon.rooms.accessConst(11, [&](const Room& room) {
+            hasSlide = room.getWall(Cardinal::north()).keyframes.isAny([](const Keyframe& kf) {
+                return kf.animation == ANIMATION_SLIDE;
+            });
+        });
+        REQUIRE(hasSlide);
+    }
+
+    // Verify SLIDE keyframe survives a StoreView persistence round-trip
+    {
+        const Match midRestored = controller.saveAndLoadMatch();
+        bool hasSlide = false;
+        midRestored.dungeon.rooms.accessConst(11, [&](const Room& room) {
+            hasSlide = room.getWall(Cardinal::north()).keyframes.isAny([](const Keyframe& kf) {
+                return kf.animation == ANIMATION_SLIDE;
+            });
+        });
+        REQUIRE(hasSlide);
+    }
+
+    // Verify SLIDE keyframe is present in the ApiView for room 11's north wall
+    {
+        const MatchApiView apiView = controller.getMatchApiView();
+        bool hasSlide = false;
+        apiView.dungeon.rooms.accessConst(11, [&](const RoomApiView& room) {
+            room.walls.accessConst(Cardinal::north().getIndex(), [&](const WallApiView& wall) {
+                hasSlide = wall.keyframes.isAny([](const KeyframeView& kf) {
+                    return kf.animation == "SLIDE";
+                });
+            });
+        });
+        REQUIRE(hasSlide);
+    }
 
     controller.endTurn();
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
@@ -341,6 +437,9 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     controller.moveCharacterToWall(Cardinal::north());
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
     REQUIRE(controller.isSuccess);
+
+    const Match restored = controller.saveAndLoadMatch();
+    REQUIRE(restored == controller.match);
 }
 
 TEST_CASE("Base Case A*", "[match][tutorial]") {

@@ -2,7 +2,7 @@
 
 const char* animation_to_text(int index) {
     static const char* names[] = {
-        #define ANIMATION_DECL( name_text ) #name_text,
+        #define ANIMATION_DECL( name_, ... ) #name_,
         #include "Animation.enum"
         #undef ANIMATION_DECL
     };

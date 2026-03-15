@@ -14,7 +14,7 @@ struct Keyframe
 {
     Timestamp t0 = Timestamp::nil();
     Timestamp t1 = Timestamp::nil();
-    static constexpr int DATA_ARRAY_SIZE = 4;
+    static constexpr int DATA_ARRAY_SIZE = 2;
     int animation = ANIMATION_NIL;
     int room0 = 0;
     Array<int, DATA_ARRAY_SIZE> data = {};

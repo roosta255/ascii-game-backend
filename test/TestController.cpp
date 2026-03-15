@@ -7,10 +7,14 @@
 #include "Inventory.hpp"
 #include "InventoryDigest.hpp"
 #include "Match.hpp"
+#include "MatchApiParameters.hpp"
+#include "MatchApiView.hpp"
 #include "MatchController.hpp"
+#include "MatchStoreView.hpp"
 #include "Preactivation.hpp"
 #include "Room.hpp"
 #include "TestController.hpp"
+#include <nlohmann/json.hpp>
 
 // constructors
 TestController::TestController(const GeneratorEnum& generator): controller(match, codeset) {
@@ -193,6 +197,26 @@ void TestController::updateEverything() {
 
 void TestController::updateInventory(){
     inventory = inventoryPtr->makeDigest();
+}
+
+Match TestController::saveAndLoadMatch() {
+    nlohmann::json j = MatchStoreView(match);
+    Match loaded = (Match)j.get<MatchStoreView>();
+    loaded.accessAllInventories([&](Inventory& inventory) {
+        loaded.containsInventory(inventory, inventory.inventoryId);
+    });
+    return loaded;
+}
+
+MatchApiView TestController::getMatchApiView() {
+    MatchApiParameters params{
+        .mask = ~0x0,
+        .match = match,
+        .doors = controller.getDoors(),
+        .floors = controller.getFloors(),
+        .traitsComputed = controller.getTraitsComputedMap()
+    };
+    return MatchApiView(params);
 }
 
 void TestController::updateTable() {

@@ -23,6 +23,7 @@ struct Wall {
     DoorEnum door = DOOR_WALL;
     int adjacent = -1;
     Array<Keyframe, MAX_KEYFRAMES> keyframes;
+    Array<Keyframe, MAX_KEYFRAMES> lockKeyframes;
 
     // functions
     bool accessDoor(CodeEnum& error, std::function<void(const DoorFlyweight&)>) const;

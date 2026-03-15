@@ -134,6 +134,9 @@ TEST_CASE("Catalyst key chest: key not consumed, action taken", "[match][chest][
 
     int openContainerId = findChestContainerByLock(tc, LOCK_KEY_CATALYST_OPEN);
     REQUIRE(openContainerId == containerId);                 // lock transitioned to open
+
+    const Match restored = tc.saveAndLoadMatch();
+    REQUIRE(restored == tc.match);
 }
 
 TEST_CASE("Consumer key chest: key consumed, action taken", "[match][chest][lock]") {

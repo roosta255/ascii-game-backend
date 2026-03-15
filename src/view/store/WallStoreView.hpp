@@ -12,12 +12,14 @@ struct WallStoreView
     std::string door = "UNPARSED_DOOR";
     int adjacent = -1;
     Array<KeyframeView, Wall::MAX_KEYFRAMES> keyframes;
- 
+    Array<KeyframeView, Wall::MAX_KEYFRAMES> lockKeyframes;
+
     inline WallStoreView() = default;
- 
+
     inline WallStoreView(const Wall& model)
     : adjacent(model.adjacent)
     , keyframes(model.keyframes.convert<KeyframeView>())
+    , lockKeyframes(model.lockKeyframes.convert<KeyframeView>())
     {
         DoorFlyweight::getFlyweights().accessConst(model.door, [&](const DoorFlyweight& flyweight) {
             this->door = flyweight.name;
@@ -27,7 +29,9 @@ struct WallStoreView
     inline operator Wall() const
     {
         Wall model{
-            .adjacent = this->adjacent
+            .adjacent = this->adjacent,
+            .keyframes = this->keyframes.convert<Keyframe>(),
+            .lockKeyframes = this->lockKeyframes.convert<Keyframe>()
         };
         DoorFlyweight::indexByString(this->door, model.door);
         return model;
@@ -36,7 +40,7 @@ struct WallStoreView
 
 inline void to_json(nlohmann::json& j, const WallStoreView& v) {
     j = {
-        {"door", v.door}, {"adjacent", v.adjacent}, {"keyframes", v.keyframes}
+        {"door", v.door}, {"adjacent", v.adjacent}, {"keyframes", v.keyframes}, {"lockKeyframes", v.lockKeyframes}
     };
 }
 
@@ -44,4 +48,5 @@ inline void from_json(const nlohmann::json& j, WallStoreView& v) {
     j.at("door").get_to(v.door);
     j.at("adjacent").get_to(v.adjacent);
     if (j.contains("keyframes")) j.at("keyframes").get_to(v.keyframes);
+    if (j.contains("lockKeyframes")) j.at("lockKeyframes").get_to(v.lockKeyframes);
 }
