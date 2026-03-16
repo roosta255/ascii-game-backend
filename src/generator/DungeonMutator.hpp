@@ -55,4 +55,6 @@ public:
     bool setupTogglerBlue(const int& roomId, Cardinal dir);
     bool setupTogglerOrange(const int& roomId, Cardinal dir);
     bool setupTogglerSwitch(const int& roomId, int& outCharacterId, int& outRoomId);
+    bool setupTogglerSwitchBlue(const int& roomId, int& outCharacterId, int& outRoomId);
+    bool setupTogglerSwitchOrange(const int& roomId, int& outCharacterId, int& outRoomId);
 };

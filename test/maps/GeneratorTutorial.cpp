@@ -920,6 +920,80 @@ TEST_CASE("Match collapsing from wall move to floor", "[match][tutorial]") {
         });
 }
 
+TEST_CASE("Toggler switches from legacy TOGGLER to TOGGLER_ORANGE", "[match][tutorial][toggler]") {
+    TestController controller(GENERATOR_TUTORIAL);
+    controller.isSkippingAnimations = true;
+    controller.generate(0);
+    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
+    REQUIRE(controller.match.start());
+
+    const auto isTogglerRole = [](RoleEnum role) {
+        return role == ROLE_TOGGLER || role == ROLE_TOGGLER_BLUE || role == ROLE_TOGGLER_ORANGE;
+    };
+
+    int togglerOffset = -1;
+    REQUIRE(controller.match.findCharacter(togglerOffset, [&](const Character& c) {
+        return isTogglerRole(c.role) && c.location.roomId == 1;
+    }));
+
+    controller.moveCharacterToWall(Cardinal::east());
+    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
+    controller.endTurn();
+    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
+
+    controller.activateObjectCharacter(togglerOffset);
+    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
+    REQUIRE(controller.isSuccess);
+
+    // All toggler switches must now be TOGGLER_ORANGE
+    controller.match.accessAllCharacters([&](const Character& c) {
+        if (isTogglerRole(c.role)) {
+            REQUIRE(c.role == ROLE_TOGGLER_ORANGE);
+        }
+    });
+}
+
+TEST_CASE("Toggler switches from TOGGLER_ORANGE to TOGGLER_BLUE", "[match][tutorial][toggler]") {
+    TestController controller(GENERATOR_TUTORIAL);
+    controller.isSkippingAnimations = true;
+    controller.generate(0);
+    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
+    REQUIRE(controller.match.start());
+
+    const auto isTogglerRole = [](RoleEnum role) {
+        return role == ROLE_TOGGLER || role == ROLE_TOGGLER_BLUE || role == ROLE_TOGGLER_ORANGE;
+    };
+
+    int togglerOffset = -1;
+    REQUIRE(controller.match.findCharacter(togglerOffset, [&](const Character& c) {
+        return isTogglerRole(c.role) && c.location.roomId == 1;
+    }));
+
+    controller.moveCharacterToWall(Cardinal::east());
+    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
+    controller.endTurn();
+    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
+
+    // First activation: legacy TOGGLER → TOGGLER_ORANGE
+    controller.activateObjectCharacter(togglerOffset);
+    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
+    REQUIRE(controller.isSuccess);
+    controller.endTurn();
+    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
+
+    // Second activation: TOGGLER_ORANGE → TOGGLER_BLUE
+    controller.activateObjectCharacter(togglerOffset);
+    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
+    REQUIRE(controller.isSuccess);
+
+    // All toggler switches must now be TOGGLER_BLUE
+    controller.match.accessAllCharacters([&](const Character& c) {
+        if (isTogglerRole(c.role)) {
+            REQUIRE(c.role == ROLE_TOGGLER_BLUE);
+        }
+    });
+}
+
 // TODO: sort character location roomIds
 // TODO: sort characters in floorIds
 // TODO: sort items in inventory

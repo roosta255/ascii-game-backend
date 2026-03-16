@@ -223,3 +223,17 @@ bool DungeonMutator::setupTogglerSwitch (const int& roomId, int& outCharacterId,
         character.visibility = ~0x0;
     }, outCharacterId, outFloorId), CODE_DUNGEON_MUTATOR_FAILED_TO_SETUP_TOGGLER_SWITCH);
 }
+
+bool DungeonMutator::setupTogglerSwitchBlue (const int& roomId, int& outCharacterId, int& outFloorId) {
+    return !codeset.addFailure(!controller.allocateCharacterToFloor(roomId, CHANNEL_CORPOREAL, [&](Character& character){
+        character.role = ROLE_TOGGLER_BLUE;
+        character.visibility = ~0x0;
+    }, outCharacterId, outFloorId), CODE_DUNGEON_MUTATOR_FAILED_TO_SETUP_TOGGLER_SWITCH);
+}
+
+bool DungeonMutator::setupTogglerSwitchOrange (const int& roomId, int& outCharacterId, int& outFloorId) {
+    return !codeset.addFailure(!controller.allocateCharacterToFloor(roomId, CHANNEL_CORPOREAL, [&](Character& character){
+        character.role = ROLE_TOGGLER_ORANGE;
+        character.visibility = ~0x0;
+    }, outCharacterId, outFloorId), CODE_DUNGEON_MUTATOR_FAILED_TO_SETUP_TOGGLER_SWITCH);
+}

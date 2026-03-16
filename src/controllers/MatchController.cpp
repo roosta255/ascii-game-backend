@@ -468,6 +468,8 @@ bool MatchController::permuteCharacterActions(const std::string& playerId, int m
                 targetCharacterPtr.accessConst([&](const Character& targetCharacter){
                     switch (targetCharacter.role) {
                         case ROLE_TOGGLER:
+                        case ROLE_TOGGLER_BLUE:
+                        case ROLE_TOGGLER_ORANGE:
                             action.characterId = targetCharacterId;
                             action.targetCharacterId = mainCharacterId;
                             return applyAction(false, action);
