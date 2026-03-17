@@ -1,8 +1,10 @@
 #include "ActivatorCritterBite.hpp"
 #include "Character.hpp"
 #include "Codeset.hpp"
+#include "Keyframe.hpp"
 #include "Match.hpp"
 #include "MatchController.hpp"
+#include "Rack.hpp"
 #include "RoleFlyweight.hpp"
 #include "TraitEnum.hpp"
 #include "TraitModifier.hpp"
@@ -30,6 +32,18 @@ bool ActivatorCritterBite::activate(Activation& activation) const {
                 isSuccess = true;
             });
         });
+
+        if (isSuccess && !activation.isSkippingAnimations) {
+            const int roomId = activation.room.roomId;
+            Keyframe::insertKeyframe(
+                Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(subject.keyframes),
+                Keyframe::buildJump(activation.time, 1800, roomId)
+            );
+            Keyframe::insertKeyframe(
+                Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(target.keyframes),
+                Keyframe::buildCritterBite(activation.time, 1800, roomId)
+            );
+        }
     });
 
     codeset.addFailure(!isTargetAccessed, CODE_CRITTER_BITE_MISSING_TARGET);

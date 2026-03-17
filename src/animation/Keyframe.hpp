@@ -57,6 +57,10 @@ struct Keyframe
 
     static Keyframe buildDying(const Timestamp& start, long duration, const int room0);
 
+    static Keyframe buildJump(const Timestamp& start, long duration, const int room0);
+
+    static Keyframe buildCritterBite(const Timestamp& start, long duration, const int room0);
+
     // TRANSITION: [fromType, toType, 0, 0]
     static Keyframe buildTransition(const Timestamp& start, long duration, const int room0, const AnimationEnum animation, const int fromType, const int toType);
 

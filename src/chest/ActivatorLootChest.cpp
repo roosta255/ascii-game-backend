@@ -1,3 +1,4 @@
+#include "ActionFlyweight.hpp"
 #include "ActivatorCritterBite.hpp"
 #include "ActivatorLootChest.hpp"
 #include "Activation.hpp"
@@ -5,6 +6,7 @@
 #include "Dungeon.hpp"
 #include "Item.hpp"
 #include "ItemEnum.hpp"
+#include "ItemFlyweight.hpp"
 #include "LockFlyweight.hpp"
 #include "Match.hpp"
 #include "MatchController.hpp"
@@ -38,6 +40,12 @@ bool ActivatorLootChest::activate(Activation& activation) const {
                 });
                 if (codeset.addFailure(isLocked, CODE_LOOT_CHEST_IS_LOCKED)) return;
 
+                bool isTransferable = false;
+                chestItem.accessFlyweight([&](const ItemFlyweight& flyweight) {
+                    isTransferable = flyweight.itemAttributes[TRAIT_ITEM_TRANSFERABLE].orElse(false);
+                });
+                if (codeset.addFailure(!isTransferable, CODE_LOOT_CHEST_ITEM_NOT_TRANSFERABLE)) return;
+
                 const ItemEnum type = chestItem.type;
                 if (codeset.addFailure(!controller.takeInventoryItem(chest.inventory, type, activation.time, room.roomId, activation.isSkippingAnimations))) return;
                 if (codeset.addFailure(!controller.giveInventoryItem(player.inventory, type, activation.time, room.roomId, activation.isSkippingAnimations))) return;
@@ -45,14 +53,12 @@ bool ActivatorLootChest::activate(Activation& activation) const {
                 isSuccess = true;
 
                 // Trigger critter bite if a critter guards this chest
-                int critterCharacterId = -1;
-                chest.inventory.accessItem(ITEM_CRITTER, [&](const Item& critterItem) {
-                    critterCharacterId = critterItem.stacks;
-                });
-                if (critterCharacterId != -1) {
-                    static ActivatorCritterBite critterBiteActivator;
+                chest.inventory.accessItems(ITEM_CRITTER, [&](const Item& critterItem) {
+                    // stacks encodes critter characterId
+                    const auto critterCharacterId = critterItem.stacks;
                     Preactivation critterPreactivation{
                         .action = {
+                            .type = ACTION_CRITTER_BITE,
                             .characterId = critterCharacterId,
                             .roomId = room.roomId,
                             .targetCharacterId = subject.characterId,
@@ -62,8 +68,8 @@ bool ActivatorLootChest::activate(Activation& activation) const {
                         .isSortingState = activation.isSortingState,
                         .time = activation.time
                     };
-                    controller.activate(critterBiteActivator, critterPreactivation);
-                }
+                    controller.activate(critterPreactivation);
+                });
             }));
         }), CODE_INACCESSIBLE_TARGET_CHARACTER_ID);
     }), CODE_LOOT_CHEST_ITEM_SLOT_NOT_SPECIFIED);

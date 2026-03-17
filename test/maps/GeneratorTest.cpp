@@ -2,6 +2,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include "ActivatorChestLockKey.hpp"
 #include "ActionEnum.hpp"
+#include "AnimationEnum.hpp"
 #include "Builder.hpp"
 #include "Cardinal.hpp"
 #include "Character.hpp"
@@ -13,6 +14,7 @@
 #include "GeneratorEnum.hpp"
 #include "GeneratorTutorial.hpp"
 #include "ItemEnum.hpp"
+#include "Keyframe.hpp"
 #include "LockEnum.hpp"
 #include "Match.hpp"
 #include "MatchController.hpp"
@@ -133,7 +135,6 @@ TEST_CASE("Catalyst key chest: key not consumed, action taken", "[match][chest][
     REQUIRE(tc.isSuccess);
     REQUIRE(tc.inventory.keys == 1);                        // key NOT consumed
     REQUIRE(tc.builderCharacterPtr->actions == 1);          // one action taken
-    REQUIRE(tc.builderCharacterPtr->traitsAfflicted[TRAIT_SNAKE_BITE].orElse(false)); // snake bit the builder
 
     int openContainerId = findChestContainerByLock(tc, LOCK_KEY_CATALYST_OPEN);
     REQUIRE(openContainerId == containerId);                 // lock transitioned to open
@@ -170,7 +171,6 @@ TEST_CASE("Consumer key chest: key consumed, action taken", "[match][chest][lock
     REQUIRE(tc.isSuccess);
     REQUIRE(tc.inventory.keys == 0);                        // key consumed
     REQUIRE(tc.builderCharacterPtr->actions == 1);          // one action taken
-    REQUIRE(tc.builderCharacterPtr->traitsAfflicted[TRAIT_SNAKE_BITE].orElse(false)); // snake bit the builder
 
     int openContainerId = findChestContainerByLock(tc, LOCK_KEY_CONSUMER_OPEN);
     REQUIRE(openContainerId == containerId);                 // lock transitioned to open
@@ -196,11 +196,7 @@ TEST_CASE("Pathfinding: catalyst key chest USE_CHEST_LOCK action is found", "[ma
         [&](const Match& match) {
             for (const Chest& chest : match.dungeon.chests) {
                 if (chest.containerCharacterId == containerId && chest.lock == LOCK_KEY_CATALYST_OPEN) {
-                    bool isSnakeBit = false;
-                    match.builders.accessConst(TestController::BUILDER_INDEX, [&](const Builder& b) {
-                        isSnakeBit = b.character.traitsAfflicted[TRAIT_SNAKE_BITE].orElse(false);
-                    });
-                    return isSnakeBit;
+                    return true;
                 }
             }
             return false;
@@ -239,11 +235,7 @@ TEST_CASE("Pathfinding: consumer key chest USE_CHEST_LOCK action is found", "[ma
         [&](const Match& match) {
             for (const Chest& chest : match.dungeon.chests) {
                 if (chest.containerCharacterId == containerId && chest.lock == LOCK_KEY_CONSUMER_OPEN) {
-                    bool isSnakeBit = false;
-                    match.builders.accessConst(TestController::BUILDER_INDEX, [&](const Builder& b) {
-                        isSnakeBit = b.character.traitsAfflicted[TRAIT_SNAKE_BITE].orElse(false);
-                    });
-                    return isSnakeBit;
+                    return true;
                 }
             }
             return false;
@@ -260,4 +252,51 @@ TEST_CASE("Pathfinding: consumer key chest USE_CHEST_LOCK action is found", "[ma
     REQUIRE(actionCount == 1);
     REQUIRE(foundAction.type == ACTION_USE_CHEST_LOCK);
     REQUIRE(foundAction.targetCharacterId == containerId);
+}
+
+TEST_CASE("ChestLockKey: lock transition animation survives storeView round-trip", "[match][chest][animation]") {
+    TestController tc(GENERATOR_TEST);
+    tc.generate(0);
+    REQUIRE(tc.codeset.getErrorTable() == Codeset::getEmptyTable());
+    REQUIRE(tc.match.start());
+
+    tc.giveItem(ITEM_KEY);
+    REQUIRE(tc.inventory.keys == 1);
+
+    int containerId = findChestContainerByLock(tc, LOCK_KEY_CATALYST_CLOSED);
+    REQUIRE(containerId != -1);
+
+    // Activate chest lock with animations enabled (isSkippingAnimations = false)
+    static ActivatorChestLockKey activator;
+    tc.isSuccess = tc.controller.activate(activator, Preactivation{
+        .action = {
+            .characterId = tc.builderOffset,
+            .roomId = tc.latestPosition,
+            .targetCharacterId = containerId,
+        },
+        .playerId = TestController::BUILDER_ID,
+        .isSkippingAnimations = false,
+    });
+    REQUIRE(tc.codeset.getErrorTable() == Codeset::getEmptyTable());
+    REQUIRE(tc.isSuccess);
+
+    // Verify ANIMATION_FALL transition was added to the chest
+    bool chestFallFound = false;
+    tc.match.dungeon.findChestByContainerId(containerId, tc.codeset.error).accessConst([&](const Chest& chest) {
+        for (const auto& kf : chest.keyframes) {
+            if (kf.animation == ANIMATION_FALL) chestFallFound = true;
+        }
+    });
+    REQUIRE(chestFallFound);
+
+    // Verify the animation survives a storeView serialization round-trip
+    Match restored = tc.saveAndLoadMatch();
+
+    bool restoredChestFallFound = false;
+    restored.dungeon.findChestByContainerId(containerId, tc.codeset.error).accessConst([&](const Chest& chest) {
+        for (const auto& kf : chest.keyframes) {
+            if (kf.animation == ANIMATION_FALL) restoredChestFallFound = true;
+        }
+    });
+    REQUIRE(restoredChestFallFound);
 }

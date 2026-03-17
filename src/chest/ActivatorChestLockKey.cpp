@@ -1,5 +1,4 @@
 #include "ActivatorChestLockKey.hpp"
-#include "ActivatorCritterBite.hpp"
 #include "Activation.hpp"
 #include "Chest.hpp"
 #include "Codeset.hpp"
@@ -57,28 +56,6 @@ bool ActivatorChestLockKey::activate(Activation& activation) const {
                 }
                 default:
                     break;
-            }
-
-            if (isSuccess) {
-                int critterCharacterId = -1;
-                chest.inventory.accessItem(ITEM_CRITTER, [&](const Item& item) {
-                    critterCharacterId = item.stacks;
-                });
-                if (critterCharacterId != -1) {
-                    static ActivatorCritterBite critterBiteActivator;
-                    Preactivation critterPreactivation{
-                        .action = {
-                            .characterId = critterCharacterId,
-                            .roomId = room.roomId,
-                            .targetCharacterId = subject.characterId,
-                        },
-                        .playerId = player.account.toString(),
-                        .isSkippingAnimations = activation.isSkippingAnimations,
-                        .isSortingState = activation.isSortingState,
-                        .time = activation.time
-                    };
-                    controller.activate(critterBiteActivator, critterPreactivation);
-                }
             }
         }));
     }), CODE_INACCESSIBLE_TARGET_CHARACTER_ID);

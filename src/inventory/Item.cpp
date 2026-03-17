@@ -8,3 +8,7 @@ bool Item::accessFlyweight(std::function<void(const ItemFlyweight&)> consumer)co
 bool Item::operator==(const Item& rhs)const {
     return stacks == rhs.stacks && type == rhs.type;
 }
+
+std::ostream& operator<<(std::ostream& os, const Item& rhs) {
+    return os << "Item{.type:" << item_to_text(rhs.type) << ", .stacks:" << rhs.stacks << " }";
+}

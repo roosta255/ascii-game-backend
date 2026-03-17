@@ -6,6 +6,8 @@ ACTION_DECL(ACTIVATE_DOOR,           ActivatorUseDoor,          ACTION_TYPE_USAG
 ACTION_DECL(ACTIVATE_INVENTORY_ITEM, ActivatorUseInventoryItem, ACTION_TYPE_USAGE)
 ACTION_DECL(ACTIVATE_LOCK,           ActivatorUseLock,          ACTION_TYPE_USAGE)
 
+ACTION_DECL(CRITTER_BITE,            ActivatorCritterBite,      ACTION_TYPE_USAGE)
+
 // movements
 ACTION_DECL(MOVE_TO_DOOR,            ActivatorMoveToDoor,       ACTION_TYPE_MOVEMENT)
 ACTION_DECL(MOVE_TO_FLOOR,           ActivatorMoveToFloor,      ACTION_TYPE_MOVEMENT)

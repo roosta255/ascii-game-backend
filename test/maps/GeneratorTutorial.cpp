@@ -33,7 +33,7 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
 
     const auto findTogglerOffset = [&](int roomId, int& characterId) {
         return controller.match.findCharacter(characterId, [&](const Character& character) {
-            return character.role == ROLE_TOGGLER && character.location.roomId == roomId;
+            return character.role == ROLE_TOGGLER_BLUE && character.location.roomId == roomId;
         });
     };
 
@@ -528,7 +528,7 @@ TEST_CASE("Check A* moves east then runs toggler", "[match][tutorial]") {
 
     const auto findTogglerOffset = [&](int roomId, int& characterId) {
         return controller.match.findCharacter(characterId, [&](const Character& character) {
-            return character.role == ROLE_TOGGLER && character.location.roomId == roomId;
+            return character.role == ROLE_TOGGLER_BLUE && character.location.roomId == roomId;
         });
     };
 
@@ -537,7 +537,7 @@ TEST_CASE("Check A* moves east then runs toggler", "[match][tutorial]") {
     REQUIRE(findTogglerOffset(1, toggler1Offset));
     REQUIRE(toggler1Offset != -1);
     controller.codeset.setTable(CODE_TOGGLER_CHARACTER_ID, toggler1Offset);
-    controller.codeset.setTable(CODE_TOGGLER_ROLE, ROLE_TOGGLER);
+    controller.codeset.setTable(CODE_TOGGLER_ROLE, ROLE_TOGGLER_BLUE);
 
     int toggler3Offset = -1;
     REQUIRE(findTogglerOffset(3, toggler3Offset));
@@ -586,7 +586,7 @@ TEST_CASE("Check A* moves east then runs toggler, then goes north, then runs tog
 
     const auto findTogglerOffset = [&](int roomId, int& characterId) {
         return controller.match.findCharacter(characterId, [&](const Character& character) {
-            return character.role == ROLE_TOGGLER && character.location.roomId == roomId;
+            return character.role == ROLE_TOGGLER_BLUE && character.location.roomId == roomId;
         });
     };
 
@@ -595,7 +595,7 @@ TEST_CASE("Check A* moves east then runs toggler, then goes north, then runs tog
     REQUIRE(findTogglerOffset(1, toggler1Offset));
     REQUIRE(toggler1Offset != -1);
     controller.codeset.setTable(CODE_TOGGLER_CHARACTER_ID, toggler1Offset);
-    controller.codeset.setTable(CODE_TOGGLER_ROLE, ROLE_TOGGLER);
+    controller.codeset.setTable(CODE_TOGGLER_ROLE, ROLE_TOGGLER_BLUE);
 
     int toggler3Offset = -1;
     REQUIRE(findTogglerOffset(3, toggler3Offset));
@@ -654,7 +654,7 @@ TEST_CASE("Check A* can grab key from keeper", "[match][tutorial]") {
 
     const auto findTogglerOffset = [&](int roomId, int& characterId) {
         return controller.match.findCharacter(characterId, [&](const Character& character) {
-            return character.role == ROLE_TOGGLER && character.location.roomId == roomId;
+            return character.role == ROLE_TOGGLER_BLUE && character.location.roomId == roomId;
         });
     };
 
@@ -667,7 +667,7 @@ TEST_CASE("Check A* can grab key from keeper", "[match][tutorial]") {
     REQUIRE(findTogglerOffset(1, toggler1Offset));
     REQUIRE(toggler1Offset != -1);
     controller.codeset.setTable(CODE_TOGGLER_CHARACTER_ID, toggler1Offset);
-    controller.codeset.setTable(CODE_TOGGLER_ROLE, ROLE_TOGGLER);
+    controller.codeset.setTable(CODE_TOGGLER_ROLE, ROLE_TOGGLER_BLUE);
 
     int toggler3Offset = -1;
     REQUIRE(findTogglerOffset(3, toggler3Offset));
@@ -728,7 +728,7 @@ TEST_CASE("Check A* can complete match", "[match][tutorial]") {
 
     const auto findTogglerOffset = [&](int roomId, int& characterId) {
         return controller.match.findCharacter(characterId, [&](const Character& character) {
-            return character.role == ROLE_TOGGLER && character.location.roomId == roomId;
+            return character.role == ROLE_TOGGLER_BLUE && character.location.roomId == roomId;
         });
     };
 
@@ -741,7 +741,7 @@ TEST_CASE("Check A* can complete match", "[match][tutorial]") {
     REQUIRE(findTogglerOffset(1, toggler1Offset));
     REQUIRE(toggler1Offset != -1);
     controller.codeset.setTable(CODE_TOGGLER_CHARACTER_ID, toggler1Offset);
-    controller.codeset.setTable(CODE_TOGGLER_ROLE, ROLE_TOGGLER);
+    controller.codeset.setTable(CODE_TOGGLER_ROLE, ROLE_TOGGLER_BLUE);
 
     int toggler3Offset = -1;
     REQUIRE(findTogglerOffset(3, toggler3Offset));

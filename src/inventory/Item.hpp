@@ -19,3 +19,5 @@ struct Item {
     bool accessFlyweight(std::function<void(const ItemFlyweight&)> consumer)const;
     bool operator==(const Item& rhs)const;
 };
+
+std::ostream& operator<<(std::ostream& os, const Item& rhs);

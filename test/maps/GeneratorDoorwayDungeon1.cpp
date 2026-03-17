@@ -157,7 +157,7 @@ TEST_CASE("Test keeper generation", "[match][GENERATOR_DOORWAY_DUNGEON_1]") {
         }
 
         auto actualRoleCounts = countCharactersByType(proposed);
-        if (actualRoleCounts[ROLE_TOGGLER].orElse(0) == 0) {
+        if (actualRoleCounts[ROLE_TOGGLER_BLUE].orElse(0) == 0) {
             return false;
         }
         return true;
@@ -182,7 +182,7 @@ TEST_CASE("Test keeper generation", "[match][GENERATOR_DOORWAY_DUNGEON_1]") {
 
         const auto actualRoleCounts = countCharactersByType(match);
         std::array<int, ROLE_COUNT> expectedRoleCounts{};
-        expectedRoleCounts[ROLE_TOGGLER] = 1;
+        expectedRoleCounts[ROLE_TOGGLER_BLUE] = 1;
         expectedRoleCounts[ROLE_BUILDER] = 1;
         REQUIRE(actualRoleCounts == expectedRoleCounts);
 

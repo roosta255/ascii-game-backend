@@ -509,7 +509,11 @@ bool MatchController::permuteCharacterActions(const std::string& playerId, int m
                     } else {
                         int slot = 0;
                         for (const Item& item : chest.inventory.items) {
-                            if (item.type != ITEM_NIL) {
+                            bool isTransferable = false;
+                            item.accessFlyweight([&](const ItemFlyweight& flyweight) {
+                                isTransferable = flyweight.itemAttributes[TRAIT_ITEM_TRANSFERABLE].orElse(false);
+                            });
+                            if (isTransferable) {
                                 applyAction(false, CharacterAction{
                                     .type = ACTION_LOOT_CHEST,
                                     .characterId = mainCharacterId,

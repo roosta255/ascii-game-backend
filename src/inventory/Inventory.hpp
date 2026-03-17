@@ -16,6 +16,7 @@ struct Inventory {
 
     bool accessItem(ItemEnum target, std::function<void(Item&)>);
     bool accessItem(ItemEnum target, std::function<void(const Item&)>)const;
+    bool accessItems(ItemEnum target, std::function<void(const Item&)>)const;
     bool giveItem(ItemEnum type, CodeEnum& result, const bool isDryRun = false);
     bool takeItem(ItemEnum type, CodeEnum& result, const bool isDryRun = false);
 

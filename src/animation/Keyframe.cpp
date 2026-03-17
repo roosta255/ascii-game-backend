@@ -162,6 +162,24 @@ Keyframe Keyframe::buildDying(const Timestamp& start, long duration, const int r
     };
 }
 
+Keyframe Keyframe::buildJump(const Timestamp& start, long duration, const int room0) {
+    return Keyframe {
+        .t0 = start,
+        .t1 = start + duration,
+        .animation = ANIMATION_JUMP,
+        .room0 = room0
+    };
+}
+
+Keyframe Keyframe::buildCritterBite(const Timestamp& start, long duration, const int room0) {
+    return Keyframe {
+        .t0 = start,
+        .t1 = start + duration,
+        .animation = ANIMATION_CRITTER_BITE,
+        .room0 = room0
+    };
+}
+
 Keyframe Keyframe::buildTransition(const Timestamp& start, long duration, const int room0, const AnimationEnum animation, const int fromType, const int toType) {
     return Keyframe {
         .t0 = start,

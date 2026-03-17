@@ -58,6 +58,19 @@ bool Inventory::accessItem(ItemEnum target, std::function<void(const Item&)> con
     return false;
 }
 
+bool Inventory::accessItems(ItemEnum target, std::function<void(const Item&)> consumer) const
+{
+    bool isFound = false;
+    for(const auto& item : this->items)
+    {
+        if (target == item.type) {
+            consumer(item);
+            isFound = true;
+        }
+    }
+    return isFound;
+}
+
 bool Inventory::giveItem(ItemEnum type, CodeEnum& result, const bool isDryRun)
 {
     if (type == ITEM_NIL) {

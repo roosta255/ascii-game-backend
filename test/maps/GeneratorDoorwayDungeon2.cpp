@@ -72,9 +72,15 @@ TEST_CASE("Test elevator configuration", "[match][GENERATOR_DOORWAY_DUNGEON_2]")
     REQUIRE(chestOnFloor7 != -1);
 
     const bool isChestAccessed = controller.match.dungeon.findChestByContainerId(chestOnFloor7, controller.codeset.error).access([&](Chest& chest) {
-        REQUIRE(chest.inventory.items == std::array<Item, Inventory::STANDARD_ITEM_SLOTS>
-            { Item{ .type = ITEM_KEY_ELEVATOR, .stacks = 1}
-            , Item{ .type = ITEM_NIL, .stacks = 0}
+        auto critterCollapsedChestInventory = chest.inventory.items;
+        critterCollapsedChestInventory.access(0, [&](Item& item){
+            if (item.type == ITEM_CRITTER) {
+                item.stacks = 1;
+            }
+        });
+        REQUIRE(critterCollapsedChestInventory == std::array<Item, Inventory::STANDARD_ITEM_SLOTS>
+            { Item{ .type = ITEM_CRITTER, .stacks = 1}
+            , Item{ .type = ITEM_KEY_ELEVATOR, .stacks = 1}
             , Item{ .type = ITEM_NIL, .stacks = 0}
             , Item{ .type = ITEM_NIL, .stacks = 0}
             , Item{ .type = ITEM_NIL, .stacks = 0}
@@ -88,9 +94,9 @@ TEST_CASE("Test elevator configuration", "[match][GENERATOR_DOORWAY_DUNGEON_2]")
         int itemSlot = -1;
         chest.inventory.accessItem(ITEM_KEY_ELEVATOR, [&](const Item& item){
             REQUIRE(chest.inventory.items.containsAddress(item, itemSlot));
-            REQUIRE(itemSlot == 0);
+            REQUIRE(itemSlot == 1);
         });
-        REQUIRE(itemSlot == 0);
+        REQUIRE(itemSlot == 1);
     });
     REQUIRE(isChestAccessed);
 
