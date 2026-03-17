@@ -82,13 +82,15 @@ bool GeneratorTest::generate (int seed, Match& dst, Codeset& codeset) const {
         });
     });
 
-    success &= controller.allocateChest(0, [&](Chest& chest, Character& container) {
+    success &= controller.allocateChest(0, [&](Chest& chest, Character& container, Character& critter) {
         container.role = ROLE_CHEST;
+        critter.role = ROLE_SNAKE;
         chest.lock = LOCK_KEY_CATALYST_CLOSED;
     });
 
-    success &= controller.allocateChest(0, [&](Chest& chest, Character& container) {
+    success &= controller.allocateChest(0, [&](Chest& chest, Character& container, Character& critter) {
         container.role = ROLE_CHEST;
+        critter.role = ROLE_SNAKE;
         chest.lock = LOCK_KEY_CONSUMER_CLOSED;
     });
 

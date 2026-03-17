@@ -1,12 +1,15 @@
 #include "ActivatorChestLockKey.hpp"
+#include "ActivatorCritterBite.hpp"
 #include "Activation.hpp"
 #include "Chest.hpp"
 #include "Codeset.hpp"
 #include "Dungeon.hpp"
+#include "Item.hpp"
 #include "ItemEnum.hpp"
 #include "LockEnum.hpp"
 #include "Match.hpp"
 #include "MatchController.hpp"
+#include "Preactivation.hpp"
 
 bool ActivatorChestLockKey::activate(Activation& activation) const {
     auto& controller = activation.controller;
@@ -14,6 +17,7 @@ bool ActivatorChestLockKey::activate(Activation& activation) const {
     auto& match      = activation.match;
     auto& player     = activation.player;
     auto& subject    = activation.character;
+    auto& room       = activation.room;
 
     const auto computed = controller.getTraitsComputed(subject.characterId).final;
     if (codeset.addFailure(!subject.isActor(codeset.error, computed))) return false;
@@ -53,6 +57,28 @@ bool ActivatorChestLockKey::activate(Activation& activation) const {
                 }
                 default:
                     break;
+            }
+
+            if (isSuccess) {
+                int critterCharacterId = -1;
+                chest.inventory.accessItem(ITEM_CRITTER, [&](const Item& item) {
+                    critterCharacterId = item.stacks;
+                });
+                if (critterCharacterId != -1) {
+                    static ActivatorCritterBite critterBiteActivator;
+                    Preactivation critterPreactivation{
+                        .action = {
+                            .characterId = critterCharacterId,
+                            .roomId = room.roomId,
+                            .targetCharacterId = subject.characterId,
+                        },
+                        .playerId = player.account.toString(),
+                        .isSkippingAnimations = activation.isSkippingAnimations,
+                        .isSortingState = activation.isSortingState,
+                        .time = activation.time
+                    };
+                    controller.activate(critterBiteActivator, critterPreactivation);
+                }
             }
         }));
     }), CODE_INACCESSIBLE_TARGET_CHARACTER_ID);

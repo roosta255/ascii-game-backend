@@ -16,11 +16,9 @@ struct Chest
     Inventory inventory;
     LockEnum lock = LOCK_NIL;
     int containerCharacterId = -1;
-    int critterCharacterId = -1;
     Array<Keyframe, MAX_KEYFRAMES> keyframes;
 
     Pointer<Character> getContainerCharacter(Dungeon& dungeon);
-    Pointer<Character> getCritterCharacter(Dungeon& dungeon);
 };
 
 std::ostream& operator<<(std::ostream& os, const Chest& rhs);

@@ -143,7 +143,10 @@ bool MatchController::allocateChest(int roomId, std::function<void(Chest&, Chara
             [&](Character& containerCharacter) {
                 codeset.addFailure(!match.allocateCharacter([&](Character& critterCharacter) {
                     chest.containerCharacterId = containerCharacter.characterId;
-                    chest.critterCharacterId = critterCharacter.characterId;
+                    codeset.addFailure(!chest.inventory.giveItem(ITEM_CRITTER, codeset.error));
+                    chest.inventory.accessItem(ITEM_CRITTER, [&](Item& item) {
+                        item.stacks = critterCharacter.characterId;
+                    });
                     consumer(chest, containerCharacter, critterCharacter);
                     critterCharacter.location = Location::makeChest(roomId, CHANNEL_CORPOREAL, containerCharacter.characterId);
                     updateTraits(critterCharacter);
@@ -335,10 +338,6 @@ Pointer<Chest> MatchController::getChestByContainerId(int characterId) {
     return chestContainerMap.getOrDefault(characterId, Pointer<Chest>::empty());
 }
 
-Pointer<Chest> MatchController::getChestByCritterId(int characterId) {
-    setupLocations(false);
-    return chestCritterMap.getOrDefault(characterId, Pointer<Chest>::empty());
-}
 
 bool MatchController::giveInventoryItem(Inventory& inventory, const ItemEnum type, const bool isDryrun) {
     return !codeset.addFailure(!inventory.giveItem(type, codeset.error, isDryrun));
@@ -562,8 +561,6 @@ void MatchController::setupLocations(bool isForced) {
     floors.clear();
     doors.clear();
     chestContainerMap.clear();
-    chestCritterMap.clear();
-
     match.accessUsedCharacters([&](const Character& character){
         int characterId = -1;
         match.containsCharacter(character, characterId);
@@ -573,8 +570,6 @@ void MatchController::setupLocations(bool isForced) {
     for (Chest& chest : match.dungeon.chests) {
         if (chest.containerCharacterId != -1)
             chestContainerMap.set(chest.containerCharacterId, Pointer<Chest>(chest));
-        if (chest.critterCharacterId != -1)
-            chestCritterMap.set(chest.critterCharacterId, Pointer<Chest>(chest));
     }
 
     isLocationsSetup = true;

@@ -3,6 +3,8 @@
 #include "Activation.hpp"
 #include "Codeset.hpp"
 #include "Dungeon.hpp"
+#include "Item.hpp"
+#include "ItemEnum.hpp"
 #include "LockFlyweight.hpp"
 #include "Match.hpp"
 #include "MatchController.hpp"
@@ -43,11 +45,15 @@ bool ActivatorLootChest::activate(Activation& activation) const {
                 isSuccess = true;
 
                 // Trigger critter bite if a critter guards this chest
-                if (chest.critterCharacterId != -1) {
+                int critterCharacterId = -1;
+                chest.inventory.accessItem(ITEM_CRITTER, [&](const Item& critterItem) {
+                    critterCharacterId = critterItem.stacks;
+                });
+                if (critterCharacterId != -1) {
                     static ActivatorCritterBite critterBiteActivator;
                     Preactivation critterPreactivation{
                         .action = {
-                            .characterId = chest.critterCharacterId,
+                            .characterId = critterCharacterId,
                             .roomId = room.roomId,
                             .targetCharacterId = subject.characterId,
                         },

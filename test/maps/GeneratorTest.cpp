@@ -2,6 +2,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include "ActivatorChestLockKey.hpp"
 #include "ActionEnum.hpp"
+#include "Builder.hpp"
 #include "Cardinal.hpp"
 #include "Character.hpp"
 #include "CharacterAction.hpp"
@@ -19,6 +20,7 @@
 #include "RoleEnum.hpp"
 #include "Room.hpp"
 #include "TestController.hpp"
+#include "TraitEnum.hpp"
 
 TEST_CASE("Test jailer", "[match][test]") {
     TestController controller(GENERATOR_TEST);
@@ -131,6 +133,7 @@ TEST_CASE("Catalyst key chest: key not consumed, action taken", "[match][chest][
     REQUIRE(tc.isSuccess);
     REQUIRE(tc.inventory.keys == 1);                        // key NOT consumed
     REQUIRE(tc.builderCharacterPtr->actions == 1);          // one action taken
+    REQUIRE(tc.builderCharacterPtr->traitsAfflicted[TRAIT_SNAKE_BITE].orElse(false)); // snake bit the builder
 
     int openContainerId = findChestContainerByLock(tc, LOCK_KEY_CATALYST_OPEN);
     REQUIRE(openContainerId == containerId);                 // lock transitioned to open
@@ -167,6 +170,7 @@ TEST_CASE("Consumer key chest: key consumed, action taken", "[match][chest][lock
     REQUIRE(tc.isSuccess);
     REQUIRE(tc.inventory.keys == 0);                        // key consumed
     REQUIRE(tc.builderCharacterPtr->actions == 1);          // one action taken
+    REQUIRE(tc.builderCharacterPtr->traitsAfflicted[TRAIT_SNAKE_BITE].orElse(false)); // snake bit the builder
 
     int openContainerId = findChestContainerByLock(tc, LOCK_KEY_CONSUMER_OPEN);
     REQUIRE(openContainerId == containerId);                 // lock transitioned to open
@@ -191,8 +195,13 @@ TEST_CASE("Pathfinding: catalyst key chest USE_CHEST_LOCK action is found", "[ma
         TestController::BUILDER_ID, tc.builderOffset, 10,
         [&](const Match& match) {
             for (const Chest& chest : match.dungeon.chests) {
-                if (chest.containerCharacterId == containerId && chest.lock == LOCK_KEY_CATALYST_OPEN)
-                    return true;
+                if (chest.containerCharacterId == containerId && chest.lock == LOCK_KEY_CATALYST_OPEN) {
+                    bool isSnakeBit = false;
+                    match.builders.accessConst(TestController::BUILDER_INDEX, [&](const Builder& b) {
+                        isSnakeBit = b.character.traitsAfflicted[TRAIT_SNAKE_BITE].orElse(false);
+                    });
+                    return isSnakeBit;
+                }
             }
             return false;
         },
@@ -229,8 +238,13 @@ TEST_CASE("Pathfinding: consumer key chest USE_CHEST_LOCK action is found", "[ma
         TestController::BUILDER_ID, tc.builderOffset, 10,
         [&](const Match& match) {
             for (const Chest& chest : match.dungeon.chests) {
-                if (chest.containerCharacterId == containerId && chest.lock == LOCK_KEY_CONSUMER_OPEN)
-                    return true;
+                if (chest.containerCharacterId == containerId && chest.lock == LOCK_KEY_CONSUMER_OPEN) {
+                    bool isSnakeBit = false;
+                    match.builders.accessConst(TestController::BUILDER_INDEX, [&](const Builder& b) {
+                        isSnakeBit = b.character.traitsAfflicted[TRAIT_SNAKE_BITE].orElse(false);
+                    });
+                    return isSnakeBit;
+                }
             }
             return false;
         },
