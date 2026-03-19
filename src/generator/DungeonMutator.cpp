@@ -124,12 +124,19 @@ bool DungeonMutator::setup4x1Room(const int& roomId) {
     return setRoom(roomId, ROOM_RECT_4_x_1);
 }
 
-bool DungeonMutator::setupElevatorLevel(const int elevatorRoomId, const ElevatorProperties& elevatorProperties, const bool isElevatorPresent, const bool isExistingHigher, const bool isExistingLower) {
+bool DungeonMutator::setupElevatorLevel(const int elevatorRoomId, const ElevatorProperties& elevatorProperties, const bool isElevatorPresent, const bool isExistingHigher, const bool isExistingLower, const bool isHigherPaid, const bool isLowerPaid) {
     bool isSuccess = true;
     for (const auto dir: Cardinal::getAllCardinals()) {
         const auto exteriorDoorType = ActivatorElevator::getExteriorType(isElevatorPresent, elevatorProperties.isPaid);
+        if (codeset.addFailure(exteriorDoorType == DOOR_ELEVATOR_OPEN_KEYED_BUTTON_CALLING, CODE_ELEVATOR_OPEN_KEYED_BUTTON_CALLING_CANNOT_BE_EXTERIOR)) {
+            return false;
+        }
         elevatorProperties.connectedRoomIds.accessConst(dir.getIndex(), [&](const Maybe<int>& maybeRoomId){
-            const auto interiorDoorType = ActivatorElevator::getInteriorType(dir, elevatorProperties.isPaid, maybeRoomId.isPresent(), isExistingHigher, isExistingLower);
+            const auto interiorDoorType = ActivatorElevator::getInteriorType(dir, elevatorProperties.isPaid, maybeRoomId.isPresent(), isExistingHigher, isExistingLower, isHigherPaid, isLowerPaid);
+            if (codeset.addFailure(interiorDoorType == DOOR_ELEVATOR_OPEN_KEYED_BUTTON_CALLING, CODE_ELEVATOR_OPEN_KEYED_BUTTON_CALLING_CANNOT_BE_INTERIOR)) {
+                isSuccess = false;
+                return;
+            }
             if (isElevatorPresent) {
                 isSuccess &= maybeRoomId.isPresent() ? setSharedDoor(elevatorRoomId, dir, interiorDoorType, exteriorDoorType, maybeRoomId) : setDoor(elevatorRoomId, dir, interiorDoorType, maybeRoomId);
             } else {
@@ -162,8 +169,11 @@ bool DungeonMutator::setupElevatorColumn(const int& elevatorRoomId, const Rack<E
 
         const bool isExistingHigher = i != elevatorPropertyList.size() - 1;
         const bool isExistingLower = i != 0;
+        const ElevatorProperties unpaidDefault = { .connectedRoomIds = {}, .isPaid = false };
+        const bool isHigherPaid = isExistingHigher && elevatorPropertyList.getOrDefault(i + 1, unpaidDefault).isPaid;
+        const bool isLowerPaid = isExistingLower && elevatorPropertyList.getOrDefault(i - 1, unpaidDefault).isPaid;
 
-        setupElevatorLevel(elevatorRoomId, elevatorProperties, isElevatorPresent, isExistingHigher, isExistingLower);
+        setupElevatorLevel(elevatorRoomId, elevatorProperties, isElevatorPresent, isExistingHigher, isExistingLower, isHigherPaid, isLowerPaid);
 
         i++;
     }

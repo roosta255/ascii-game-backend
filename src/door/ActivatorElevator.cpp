@@ -122,15 +122,22 @@ bool ActivatorElevator::activate(Activation& activation) const {
             };
 
         const auto subsequentAdjacentRooms = getAccessedRoomIdsFromAdjacentRoomIds(directUpdateElevatorProperties.connectedRoomIds, isDirectionHigh);
-        const auto isSubsequentLevelExisting = getKeyStatusOfLevel(subsequentAdjacentRooms).isPresent();
+        const auto subsequentKeyStatus = getKeyStatusOfLevel(subsequentAdjacentRooms);
+        const auto isSubsequentLevelExisting = subsequentKeyStatus.isPresent();
+        const auto isSubsequentLevelPaid = subsequentKeyStatus.orElse(false);
 
         // always mutate the direct
-        if (codeset.addFailure(!mutator.setupElevatorLevel(room.roomId, directUpdateElevatorProperties, isMoving, isDirectionHigh ? isSubsequentLevelExisting : true, isDirectionHigh ? true : isSubsequentLevelExisting), CODE_ELEVATOR_FAILED_TO_SETUP_ELEVATOR_DIRECT)) {
+        if (codeset.addFailure(!mutator.setupElevatorLevel(room.roomId, directUpdateElevatorProperties, isMoving, isDirectionHigh ? isSubsequentLevelExisting : true, isDirectionHigh ? true : isSubsequentLevelExisting, isDirectionHigh ? isSubsequentLevelPaid : true, isDirectionHigh ? true : isSubsequentLevelPaid), CODE_ELEVATOR_FAILED_TO_SETUP_ELEVATOR_DIRECT)) {
             return false;
         }
 
         // moving mutates the self to close it
-        if (isMoving && codeset.addFailure(!mutator.setupElevatorLevel(room.roomId, selfUpdateElevatorProperties, false, keyStatusAbove.isPresent(), keyStatusBelow.isPresent()), CODE_ELEVATOR_FAILED_TO_SETUP_ELEVATOR_SELF)) {
+        if (isMoving && codeset.addFailure(!mutator.setupElevatorLevel(room.roomId, selfUpdateElevatorProperties, false, keyStatusAbove.isPresent(), keyStatusBelow.isPresent(), false, false), CODE_ELEVATOR_FAILED_TO_SETUP_ELEVATOR_SELF)) {
+            return false;
+        }
+
+        // paying mutates the self to update the button from paying to moving
+        if (isPaying && codeset.addFailure(!mutator.setupElevatorLevel(room.roomId, selfUpdateElevatorProperties, true, keyStatusAbove.isPresent(), keyStatusBelow.isPresent(), isDirectionHigh ? true : keyStatusAbove.orElse(false), isDirectionHigh ? keyStatusBelow.orElse(false) : true), CODE_ELEVATOR_FAILED_TO_SETUP_ELEVATOR_SELF)) {
             return false;
         }
 

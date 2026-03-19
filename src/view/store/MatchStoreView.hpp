@@ -49,6 +49,9 @@ struct MatchStoreView
         model.username = this->username;
         model.titan = this->titan;
         GeneratorFlyweight::indexByString(this->generator, model.generator);
+        model.accessAllInventories([&](Inventory& inventory){
+            model.containsInventory(inventory, inventory.inventoryId);
+        });
         return model;
     }
 };

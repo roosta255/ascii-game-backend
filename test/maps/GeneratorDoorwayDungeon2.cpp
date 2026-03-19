@@ -125,7 +125,7 @@ TEST_CASE("Test elevator configuration", "[match][GENERATOR_DOORWAY_DUNGEON_2]")
     REQUIRE(getElevatorDoorEnums() == std::array<DoorEnum, 4>
         { DOOR_ELEVATOR_CLOSED_KEYED
         , DOOR_ELEVATOR_CLOSED_KEYED
-        , DOOR_ELEVATOR_OPEN_KEYED_BUTTON
+        , DOOR_ELEVATOR_OPEN_KEYED_PAYING_BUTTON
         , DOOR_ELEVATOR_CLOSED_KEYED });
     REQUIRE(getElevatorRoomId() == GeneratorDoorwayDungeon2::ELEVATOR_COLUMN_ROOM_IDS.getOrDefault(6, -1));
     REQUIRE(getElevatorDoorColumn() == std::array<DoorEnum, 7>
@@ -230,7 +230,7 @@ TEST_CASE("Test elevator configuration", "[match][GENERATOR_DOORWAY_DUNGEON_2]")
     REQUIRE(getElevatorDoorEnums() == std::array<DoorEnum, 4>
         { DOOR_ELEVATOR_CLOSED_KEYED
         , DOOR_ELEVATOR_CLOSED_KEYED
-        , DOOR_ELEVATOR_OPEN_KEYED_BUTTON
+        , DOOR_ELEVATOR_OPEN_KEYED_MOVING_BUTTON
         , DOOR_ELEVATOR_CLOSED_KEYED });
     REQUIRE(getElevatorRoomId() == GeneratorDoorwayDungeon2::ELEVATOR_COLUMN_ROOM_IDS.getOrDefault(6, -1));
     REQUIRE(getElevatorDoorColumn() == std::array<DoorEnum, 7>
@@ -252,9 +252,9 @@ TEST_CASE("Test elevator configuration", "[match][GENERATOR_DOORWAY_DUNGEON_2]")
     REQUIRE(controller.isSuccess);
     REQUIRE(controller.inventory.elevatorKeys == 0);
     REQUIRE(getElevatorDoorEnums() == std::array<DoorEnum, 4>
-        { DOOR_ELEVATOR_CLOSED_KEYED_BUTTON
+        { DOOR_ELEVATOR_CLOSED_KEYED_MOVING_BUTTON
         , DOOR_ELEVATOR_CLOSED_KEYED
-        , DOOR_ELEVATOR_OPEN_KEYED_BUTTON
+        , DOOR_ELEVATOR_OPEN_KEYED_PAYING_BUTTON
         , DOOR_ELEVATOR_CLOSED_KEYED });
     REQUIRE(getElevatorRoomId() == GeneratorDoorwayDungeon2::ELEVATOR_COLUMN_ROOM_IDS.getOrDefault(5, -1));
     REQUIRE(getElevatorDoorColumn() == std::array<DoorEnum, 7>

@@ -10,21 +10,27 @@ public:
     // functions
     static constexpr bool isElevator(const DoorEnum type) {
         return type == DOOR_ELEVATOR_CLOSED_KEYED
-        || type == DOOR_ELEVATOR_CLOSED_KEYED_BUTTON
+        || type == DOOR_ELEVATOR_CLOSED_KEYED_PAYING_BUTTON
+        || type == DOOR_ELEVATOR_CLOSED_KEYED_MOVING_BUTTON
         || type == DOOR_ELEVATOR_CLOSED_KEYLESS
         || type == DOOR_ELEVATOR_CLOSED_KEYLESS_BUTTON
         || type == DOOR_ELEVATOR_CLOSED_CALL_BUTTON
         || type == DOOR_ELEVATOR_OPEN_KEYED
-        || type == DOOR_ELEVATOR_OPEN_KEYED_BUTTON
+        || type == DOOR_ELEVATOR_OPEN_KEYED_PAYING_BUTTON
+        || type == DOOR_ELEVATOR_OPEN_KEYED_MOVING_BUTTON
+        || type == DOOR_ELEVATOR_OPEN_KEYED_BUTTON_CALLING
         || type == DOOR_ELEVATOR_OPEN_KEYLESS
         || type == DOOR_ELEVATOR_OPEN_KEYLESS_BUTTON;
     }
 
     static constexpr bool isKeyed(const DoorEnum type) {
         return type == DOOR_ELEVATOR_CLOSED_KEYED
-        || type == DOOR_ELEVATOR_CLOSED_KEYED_BUTTON
+        || type == DOOR_ELEVATOR_CLOSED_KEYED_PAYING_BUTTON
+        || type == DOOR_ELEVATOR_CLOSED_KEYED_MOVING_BUTTON
         || type == DOOR_ELEVATOR_OPEN_KEYED
-        || type == DOOR_ELEVATOR_OPEN_KEYED_BUTTON
+        || type == DOOR_ELEVATOR_OPEN_KEYED_PAYING_BUTTON
+        || type == DOOR_ELEVATOR_OPEN_KEYED_MOVING_BUTTON
+        || type == DOOR_ELEVATOR_OPEN_KEYED_BUTTON_CALLING
         || type == DOOR_ELEVATOR_CLOSED_CALL_BUTTON;
     }
 
@@ -36,27 +42,29 @@ public:
     }
 
     static constexpr bool isPayingButton(const DoorEnum type) {
-        return type == DOOR_ELEVATOR_CLOSED_KEYLESS_BUTTON
+        return type == DOOR_ELEVATOR_CLOSED_KEYED_PAYING_BUTTON
+        || type == DOOR_ELEVATOR_OPEN_KEYED_PAYING_BUTTON
+        || type == DOOR_ELEVATOR_CLOSED_KEYLESS_BUTTON
         || type == DOOR_ELEVATOR_OPEN_KEYLESS_BUTTON;
     }
 
     static constexpr bool isMovingButton(const DoorEnum type) {
-        return type == DOOR_ELEVATOR_CLOSED_KEYED_BUTTON
-        || type == DOOR_ELEVATOR_OPEN_KEYED_BUTTON;
+        return type == DOOR_ELEVATOR_CLOSED_KEYED_MOVING_BUTTON
+        || type == DOOR_ELEVATOR_OPEN_KEYED_MOVING_BUTTON;
     }
 
-    static constexpr DoorEnum getType(const bool isOpen, const bool isKeyed, const bool isButton) {
+    static constexpr DoorEnum getType(const bool isOpen, const bool isKeyed, const bool isButton, const bool isMoving = false) {
         return isOpen
         // open
         ? (isKeyed
             // open,keyed
-            ? (isButton ? (DOOR_ELEVATOR_OPEN_KEYED_BUTTON) : (DOOR_ELEVATOR_OPEN_KEYED))
+            ? (isButton ? (isMoving ? (DOOR_ELEVATOR_OPEN_KEYED_MOVING_BUTTON) : (DOOR_ELEVATOR_OPEN_KEYED_PAYING_BUTTON)) : (DOOR_ELEVATOR_OPEN_KEYED))
             // open,keyless
             : (isButton ? (DOOR_ELEVATOR_OPEN_KEYLESS_BUTTON) : (DOOR_ELEVATOR_OPEN_KEYLESS)))
         // closed
         : (isKeyed
             // closed,keyed
-            ? (isButton ? (DOOR_ELEVATOR_CLOSED_KEYED_BUTTON) : (DOOR_ELEVATOR_CLOSED_KEYED))
+            ? (isButton ? (isMoving ? (DOOR_ELEVATOR_CLOSED_KEYED_MOVING_BUTTON) : (DOOR_ELEVATOR_CLOSED_KEYED_PAYING_BUTTON)) : (DOOR_ELEVATOR_CLOSED_KEYED))
             // closed,keyless
             : (isButton ? (DOOR_ELEVATOR_CLOSED_KEYLESS_BUTTON) : (DOOR_ELEVATOR_CLOSED_KEYLESS)));
     }
@@ -78,16 +86,21 @@ public:
     , const bool isDoorway
     , const bool isExistingHigher
     , const bool isExistingLower
+    , const bool isHigherPaid = false
+    , const bool isLowerPaid = false
     ) {
         // north interior and higher exists in any direction, then button else not | (if adjacent is doorway & shared & not-blocking, then open else closed)
         // south interior and  lower exists in any direction, then button else not | (if adjacent is doorway & shared & not-blocking, then open else closed)
+        const bool isButton = (dir == Cardinal::north() && isExistingHigher) || (dir == Cardinal::south() && isExistingLower);
+        const bool isMoving = isButton && (dir == Cardinal::north() ? isHigherPaid : isLowerPaid);
         return getType
         ( isDoorway // isOpen
         , isPaid // isKeyed
-        , dir == Cardinal::north() && isExistingHigher || dir == Cardinal::south() && isExistingLower); // isButton
+        , isButton
+        , isMoving);
     }
 
     bool activate(Activation& activation) const override;
 
-    static bool setupElevatorLevel(const int elevatorRoomId, const bool isElevatorPresent, const bool isPaid, const bool isDoorway, const bool isExistingHigher, const bool isExistingLower);
+    static bool setupElevatorLevel(const int elevatorRoomId, const bool isElevatorPresent, const bool isPaid, const bool isDoorway, const bool isExistingHigher, const bool isExistingLower, const bool isHigherPaid = false, const bool isLowerPaid = false);
 };
