@@ -180,6 +180,41 @@ Keyframe Keyframe::buildCritterBite(const Timestamp& start, long duration, const
     };
 }
 
+static Keyframe buildTraitToggle(const Timestamp& start, long duration, const int room0, const AnimationEnum animation, bool begins) {
+    return Keyframe {
+        .t0 = start,
+        .t1 = start + duration,
+        .animation = animation,
+        .room0 = room0,
+        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,Keyframe::DATA_ARRAY_SIZE>{begins ? 1 : 0, 0})
+    };
+}
+
+Keyframe Keyframe::buildSleep(const Timestamp& start, long duration, const int room0, bool begins) {
+    return buildTraitToggle(start, duration, room0, ANIMATION_SLEEP, begins);
+}
+Keyframe Keyframe::buildEnchain(const Timestamp& start, long duration, const int room0, bool begins) {
+    return buildTraitToggle(start, duration, room0, ANIMATION_ENCHAIN, begins);
+}
+Keyframe Keyframe::buildEncage(const Timestamp& start, long duration, const int room0, bool begins) {
+    return buildTraitToggle(start, duration, room0, ANIMATION_ENCAGE, begins);
+}
+Keyframe Keyframe::buildConfuse(const Timestamp& start, long duration, const int room0, bool begins) {
+    return buildTraitToggle(start, duration, room0, ANIMATION_CONFUSE, begins);
+}
+Keyframe Keyframe::buildExcite(const Timestamp& start, long duration, const int room0, bool begins) {
+    return buildTraitToggle(start, duration, room0, ANIMATION_EXCITE, begins);
+}
+Keyframe Keyframe::buildEnrage(const Timestamp& start, long duration, const int room0, bool begins) {
+    return buildTraitToggle(start, duration, room0, ANIMATION_ENRAGE, begins);
+}
+Keyframe Keyframe::buildFrozen(const Timestamp& start, long duration, const int room0, bool begins) {
+    return buildTraitToggle(start, duration, room0, ANIMATION_FROZEN, begins);
+}
+Keyframe Keyframe::buildEnflame(const Timestamp& start, long duration, const int room0, bool begins) {
+    return buildTraitToggle(start, duration, room0, ANIMATION_ENFLAME, begins);
+}
+
 Keyframe Keyframe::buildTransition(const Timestamp& start, long duration, const int room0, const AnimationEnum animation, const int fromType, const int toType) {
     return Keyframe {
         .t0 = start,

@@ -8,7 +8,9 @@
 #include "AnimationFlyweight.hpp"
 #include "LocationView.hpp"
 #include "RoleFlyweight.hpp"
+#include "TraitFlyweight.hpp"
 #include <string>
+#include <vector>
 #include <nlohmann/json.hpp>
 
 struct CharacterApiView
@@ -28,6 +30,7 @@ struct CharacterApiView
     LocationView location;
     int characterId = -1;
     CharacterSheetApiView sheet;
+    std::vector<std::string> traitsComputed;
 
     inline CharacterApiView() = default;
 
@@ -51,6 +54,12 @@ struct CharacterApiView
         const auto computed = params.traitsComputed.getOrDefault(model.characterId, TraitModifier::TraitComputation{});
         this->isObject = model.isObject(computed.final);
         this->sheet = CharacterSheetApiView(model, computed);
+
+        for (const auto& flyweight : TraitFlyweight::getFlyweights()) {
+            if (computed.final[flyweight.index].orElse(false)) {
+                this->traitsComputed.push_back(flyweight.name);
+            }
+        }
 
         // role
         RoleFlyweight::getFlyweights().accessConst(model.role, [&](const RoleFlyweight& flyweight) {
@@ -90,7 +99,8 @@ inline void to_json(nlohmann::json& j, const CharacterApiView& view) {
         {"keyframes", view.keyframes},
         {"location", view.location},
         {"characterId", view.characterId},
-        {"sheet", view.sheet}
+        {"sheet", view.sheet},
+        {"traitsComputed", view.traitsComputed}
     };
 }
 

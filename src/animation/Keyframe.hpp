@@ -61,6 +61,16 @@ struct Keyframe
 
     static Keyframe buildCritterBite(const Timestamp& start, long duration, const int room0);
 
+    // Trait-toggle animations: begins=true sets data[0]=1 (effect starts), begins=false sets data[0]=0 (effect ends)
+    static Keyframe buildSleep(const Timestamp& start, long duration, const int room0, bool begins);
+    static Keyframe buildEnchain(const Timestamp& start, long duration, const int room0, bool begins);
+    static Keyframe buildEncage(const Timestamp& start, long duration, const int room0, bool begins);
+    static Keyframe buildConfuse(const Timestamp& start, long duration, const int room0, bool begins);
+    static Keyframe buildExcite(const Timestamp& start, long duration, const int room0, bool begins);
+    static Keyframe buildEnrage(const Timestamp& start, long duration, const int room0, bool begins);
+    static Keyframe buildFrozen(const Timestamp& start, long duration, const int room0, bool begins);
+    static Keyframe buildEnflame(const Timestamp& start, long duration, const int room0, bool begins);
+
     // TRANSITION: [fromType, toType, 0, 0]
     static Keyframe buildTransition(const Timestamp& start, long duration, const int room0, const AnimationEnum animation, const int fromType, const int toType);
 
