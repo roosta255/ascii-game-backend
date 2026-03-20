@@ -1,4 +1,5 @@
 #include "ActionFlyweight.hpp"
+#include "TraitEnum.hpp"
 #include "AssociatedPriorityMinQueue.hpp"
 #include "ChannelEnum.hpp"
 #include "CharacterAction.hpp"
@@ -584,11 +585,59 @@ void MatchController::sortFloorCharacters(int roomId) {
 }
 
 bool MatchController::takeCharacterAction(Character& character) {
-    return !codeset.addFailure(!character.takeAction(codeset.error));
+    if (!character.takeAction(codeset.error)) {
+        codeset.addError(codeset.error);
+        return false;
+    }
+    updateTraits(character);
+    return true;
 }
 
 bool MatchController::takeCharacterMove(Character& character) {
-    return !codeset.addFailure(!character.takeMove(codeset.error));
+    if (!character.takeMove(codeset.error)) {
+        codeset.addError(codeset.error);
+        return false;
+    }
+    updateTraits(character);
+    return true;
+}
+
+bool MatchController::giveCharacterAction(Character& character) {
+    character.actions = std::max(0, character.actions - 1);
+    updateTraits(character);
+    return true;
+}
+
+bool MatchController::giveCharacterMove(Character& character) {
+    character.moves = std::max(0, character.moves - 1);
+    updateTraits(character);
+    return true;
+}
+
+bool MatchController::breakArmorItem(Character& character) {
+    for (auto& builder : match.builders) {
+        if (builder.character.characterId != character.characterId) continue;
+        builder.player.inventory.takeItem(ITEM_ARMOR, codeset.error);
+        return true;
+    }
+    return true;
+}
+
+void MatchController::pushTrigger(const iActivator* activator, int characterId, int targetId) {
+    eventQueue.push_back(PendingTrigger{ activator, characterId, targetId });
+}
+
+void MatchController::processEventQueue() {
+    if (isProcessingEventQueue) return;
+    isProcessingEventQueue = true;
+    while (!eventQueue.empty()) {
+        auto trigger = eventQueue.front();
+        eventQueue.erase(eventQueue.begin());
+        if (!trigger.activator) continue;
+        // Triggers are fired via the main activate path using the stored character context
+        // For now, the trigger is a no-op placeholder until full integration
+    }
+    isProcessingEventQueue = false;
 }
 
 bool MatchController::takeInventoryItem(Inventory& inventory, const ItemEnum type, const bool isDryrun) {

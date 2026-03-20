@@ -11,7 +11,9 @@
 #include "int4.hpp"
 #include "Map.hpp"
 #include "Pointer.hpp"
+#include <functional>
 #include <string>
+#include <vector>
 #include "Timestamp.hpp"
 #include "TraitBits.hpp"
 #include "TraitModifier.hpp"
@@ -28,6 +30,13 @@ class Room;
 
 struct MatchController {
 public:
+    // Event trigger entry for deferred processing after activations
+    struct PendingTrigger {
+        const iActivator* activator = nullptr;
+        int characterId = -1;
+        int targetId = -1;
+    };
+
     // members
     Match& match;
     Codeset& codeset;
@@ -37,6 +46,8 @@ private:
     Map<int, Map<int2, int> > doors; // roomId -> <channel, direction> -> characterId
     Map<int, TraitModifier::TraitComputation> traitsComputed; // characterId -> computed traits (always fresh, never persisted)
     Map<int, Pointer<Chest>> chestContainerMap; // containerCharacterId -> Chest
+    std::vector<PendingTrigger> eventQueue; // deferred trigger activations
+    bool isProcessingEventQueue = false;
 
     bool isLocationsSetup = false;
 public:
@@ -88,6 +99,9 @@ public:
     void sortFloorCharacters(int roomId);
     bool takeCharacterAction(Character& character);
     bool takeCharacterMove(Character& character);
+    bool giveCharacterAction(Character& character);
+    bool giveCharacterMove(Character& character);
+    bool breakArmorItem(Character& character);
     bool takeInventoryItem(Inventory& inventory, const ItemEnum type, const bool isDryrun = false);
     bool takeInventoryItem(Inventory& inventory, const ItemEnum type, const Timestamp& time, const int roomId, const bool isSkippingAnimations);
     bool updateCharacterLocation(Character& character, const Location& newLocation, Location& oldLocation);
@@ -95,6 +109,9 @@ public:
     void updateTraits(Character& character);
     TraitModifier::TraitComputation getTraitsComputed(int characterId) const;
     const Map<int, TraitModifier::TraitComputation>& getTraitsComputedMap() const;
+
+    void pushTrigger(const iActivator* activator, int characterId, int targetId = -1);
+    void processEventQueue();
 
     bool validateCharacterWithinRoom(int characterId, int roomId);
     bool validateDoorNotOccupied(int roomId, ChannelEnum channel, Cardinal dir);

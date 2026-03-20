@@ -3,6 +3,7 @@
 #include <string>
 
 #include "Array.hpp"
+#include "DamageTypeBits.hpp"
 #include "Pointer.hpp"
 #include "TraitBits.hpp"
 #include "TraitModifier.hpp"
@@ -15,10 +16,10 @@ struct ItemFlyweight {
     int stacks = 1;
     bool isActionable = false;
     TraitBits itemAttributes;
+    DamageTypeBits damageTypes;
     static constexpr auto MAX_CARRY_MODIFIERS = 8;
     Array<TraitModifier, MAX_CARRY_MODIFIERS> carryModifierAllocation;
     Rack<TraitModifier> carryModifiers = Rack<TraitModifier>::buildEmptyStackFromArray<MAX_CARRY_MODIFIERS>(carryModifierAllocation);
-
 
     Pointer<const iActivator> useActivator;
 

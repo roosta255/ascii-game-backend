@@ -1,5 +1,6 @@
 #include "Inventory.hpp"
 #include "Character.hpp"
+#include "TraitEnum.hpp"
 #include "Dungeon.hpp"
 #include "ItemFlyweight.hpp"
 #include "Rack.hpp"
@@ -54,6 +55,12 @@ Maybe<TraitModifier::TraitComputation> TraitModifier::computeCharacterTraits
     CodeEnum error;
     character.accessRole(error, [&](const RoleFlyweight& flyweight){
         current = current | flyweight.traitsSourced;
+        // Derive ACTION_READY / MOVEMENT_READY from counts so they are never
+        // stored in traitsAfflicted (which is serialised / hashed state).
+        if (flyweight.actions > 0 && character.actions < flyweight.actions)
+            current.setIndexOn(TRAIT_ACTION_READY);
+        if (flyweight.moves > 0 && character.moves < flyweight.moves)
+            current.setIndexOn(TRAIT_MOVEMENT_READY);
     });
     current = current | character.traitsAfflicted;
 

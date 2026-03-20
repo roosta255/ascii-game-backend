@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Cardinal.hpp"
+#include "DamageTypeBits.hpp"
 #include "Maybe.hpp"
 #include "CodeEnum.hpp"
 #include "Item.hpp"
@@ -32,4 +33,5 @@ struct Activation {
     bool isSortingState = false;
     Pointer<Inventory> sourceInventory;
     Pointer<Inventory> targetInventory;
+    DamageTypeBits damageTypes;
 };

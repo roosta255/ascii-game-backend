@@ -3,10 +3,12 @@
 const char* item_to_text(int index) {
     static const char* names[] = {
         #define ITEM_DECL( name_, stacks_, activator_, traits_ ) #name_,
-        #define ITEM_CARRY_MODIFIER_DECL( modifier_ ) 
+        #define ITEM_CARRY_MODIFIER_DECL( modifier_ )
+        #define ITEM_DAMAGE_TYPES_DECL( damage_types_ )
         #include "Item.enum"
         #undef ITEM_DECL
         #undef ITEM_CARRY_MODIFIER_DECL
+        #undef ITEM_DAMAGE_TYPES_DECL
     };
     if (index < 0) {
         return "ITEM_INDEX_NEGATIVE";

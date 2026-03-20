@@ -3,6 +3,7 @@
 #include <string>
 
 #include "Array.hpp"
+#include "DamageTypeBits.hpp"
 #include "Maybe.hpp"
 #include "Pointer.hpp"
 #include "RoleEnum.hpp"
@@ -26,8 +27,12 @@ struct RoleFlyweight {
     const char* name;
     TraitBits traitsSourced;
     Maybe<TraitModifier> biteTraitModifier;
+    DamageTypeBits damageTypes;
 
     Pointer<const iActivator> activator;
+    Pointer<const iActivator> deathActivator;
+    Pointer<const iActivator> damageActivator;
+    Pointer<const iActivator> attackActivator;
 
     static const Array<RoleFlyweight, ROLE_COUNT>& getFlyweights();
     static bool indexByString(const std::string& name, RoleEnum& output);

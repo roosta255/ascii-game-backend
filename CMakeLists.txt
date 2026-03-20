@@ -22,6 +22,7 @@ set(PROJECT_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/animation
     ${CMAKE_CURRENT_SOURCE_DIR}/src/chest
     ${CMAKE_CURRENT_SOURCE_DIR}/src/controllers
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/damage
     ${CMAKE_CURRENT_SOURCE_DIR}/src/data
     ${CMAKE_CURRENT_SOURCE_DIR}/src/door
     ${CMAKE_CURRENT_SOURCE_DIR}/src/enum
@@ -73,6 +74,14 @@ add_library(core_backend STATIC
     src/chest/LockEnum.cpp
     src/chest/LockFlyweight.cpp
     src/controllers/MatchController.cpp
+    src/damage/ActivatorAttack.cpp
+    src/damage/ActivatorDamage.cpp
+    src/damage/ActivatorDamageBite.cpp
+    src/damage/ActivatorDamageCold.cpp
+    src/damage/ActivatorDamageCrush.cpp
+    src/damage/ActivatorDamageElectric.cpp
+    src/damage/ActivatorDamageFire.cpp
+    src/damage/ActivatorDamagePierce.cpp
     src/door/ActivatorElevator.cpp
     src/door/ActivatorInactiveDoor.cpp
     src/door/ActivatorKeeper.cpp
@@ -93,6 +102,9 @@ add_library(core_backend STATIC
     src/generator/GeneratorTest4D.cpp
     src/generator/GeneratorTutorial.cpp
     src/generator/iGenerator.cpp
+    src/damage/DamageAttrBits.cpp
+    src/damage/DamageTypeBits.cpp
+    src/damage/DamageFlyweight.cpp
     src/enum/Codeset.cpp
     src/enum/CodeEnum.cpp
     src/enum/TurnEnum.cpp
@@ -166,6 +178,7 @@ add_subdirectory(extern/Catch2)
 
 add_executable(test_target
     test/main.cpp
+    test/CombatTests.cpp
     test/MatchTests.cpp
     test/TestController.cpp
     test/maps/GeneratorDoorwayDungeon1.cpp

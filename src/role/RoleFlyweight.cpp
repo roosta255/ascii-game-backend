@@ -1,4 +1,5 @@
 #include "Array.hpp"
+#include "DamageTypeBits.hpp"
 #include "RoleEnum.hpp"
 #include "RoleFlyweight.hpp"
 #include "Match.hpp"
@@ -29,10 +30,33 @@ const Array<RoleFlyweight, ROLE_COUNT>& RoleFlyweight::getFlyweights()
             flyweights.getPointer( lastRole ).access([&](RoleFlyweight& flyweight){ \
                 flyweight.biteTraitModifier = TraitModifier bite_trait_modifier_ ; \
             });
+        #define ROLE_DAMAGE_TYPES_DECL( damage_types_ ) \
+            flyweights.getPointer( lastRole ).access([&](RoleFlyweight& flyweight){ \
+                flyweight.damageTypes = makeDamageTypeBits damage_types_ ; \
+            });
+        #define ROLE_DEATH_DECL( activator_ ) \
+            static activator_ GLOBAL_##activator_##death_; \
+            flyweights.getPointer( lastRole ).access([&](RoleFlyweight& flyweight){ \
+                flyweight.deathActivator = GLOBAL_##activator_##death_; \
+            });
+        #define ROLE_DAMAGE_DECL( activator_ ) \
+            static activator_ GLOBAL_##activator_##damage_; \
+            flyweights.getPointer( lastRole ).access([&](RoleFlyweight& flyweight){ \
+                flyweight.damageActivator = GLOBAL_##activator_##damage_; \
+            });
+        #define ROLE_ATTACK_DECL( activator_ ) \
+            static activator_ GLOBAL_##activator_##attack_; \
+            flyweights.getPointer( lastRole ).access([&](RoleFlyweight& flyweight){ \
+                flyweight.attackActivator = GLOBAL_##activator_##attack_; \
+            });
 
         #include "Role.enum"
         #undef ROLE_DECL
         #undef ROLE_BITE_MODIFIER_DECL
+        #undef ROLE_DAMAGE_TYPES_DECL
+        #undef ROLE_DEATH_DECL
+        #undef ROLE_DAMAGE_DECL
+        #undef ROLE_ATTACK_DECL
 
         return flyweights;
     }();

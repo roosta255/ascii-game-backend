@@ -1,5 +1,7 @@
 #include "ActionFlyweight.hpp"
+#include "ActivatorAttack.hpp"
 #include "ActivatorCritterBite.hpp"
+#include "ActivatorDamage.hpp"
 #include "ActivatorEndTurn.hpp"
 #include "ActivatorLootChest.hpp"
 #include "ActivatorUseChestLock.hpp"

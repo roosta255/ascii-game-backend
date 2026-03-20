@@ -11,7 +11,7 @@ private:
         T element;
 
         // Custom comparator for "Min-Queue" behavior
-        // std::priority_queue is a Max-Heap by default, 
+        // std::priority_queue is a Max-Heap by default,
         // so we use '>' to make the smallest value the "top".
         bool operator>(const Entry& other) const {
             return priority > other.priority;

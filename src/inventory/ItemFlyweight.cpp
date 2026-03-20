@@ -1,5 +1,6 @@
 #include "ActivatorInactiveItem.hpp"
 #include "Array.hpp"
+#include "DamageTypeBits.hpp"
 #include "ItemEnum.hpp"
 #include "ItemFlyweight.hpp"
 #include "iActivator.hpp"
@@ -22,13 +23,18 @@ const Array<ItemFlyweight, ITEM_COUNT>& ItemFlyweight::getFlyweights()
             });
 
         #define ITEM_CARRY_MODIFIER_DECL( modifier_ ) \
-            flyweights.getPointer( lastTrait ).access([&](ItemFlyweight& flyweight){ \
+            flyweights.getPointer( lastItem ).access([&](ItemFlyweight& flyweight){ \
                 flyweight.carryModifiers.push_back(TraitModifier modifier_); \
+            });
+        #define ITEM_DAMAGE_TYPES_DECL( damage_types_ ) \
+            flyweights.getPointer( lastItem ).access([&](ItemFlyweight& flyweight){ \
+                flyweight.damageTypes = makeDamageTypeBits damage_types_ ; \
             });
 
         #include "Item.enum"
         #undef ITEM_DECL
         #undef ITEM_CARRY_MODIFIER_DECL
+        #undef ITEM_DAMAGE_TYPES_DECL
 
         return flyweights;
     }();
