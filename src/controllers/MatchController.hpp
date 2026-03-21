@@ -2,6 +2,7 @@
 
 #include "ActionEnum.hpp"
 #include "Activation.hpp"
+#include "BehaviorEventEnum.hpp"
 #include "Cardinal.hpp"
 #include "Character.hpp"
 #include "CodeEnum.hpp"
@@ -10,6 +11,7 @@
 #include "int3.hpp"
 #include "int4.hpp"
 #include "Map.hpp"
+#include "Maybe.hpp"
 #include "Pointer.hpp"
 #include <functional>
 #include <string>
@@ -35,6 +37,10 @@ public:
         const iActivator* activator = nullptr;
         int characterId = -1;
         int targetId = -1;
+        // Set when this trigger is a behavioral AI response; identifies the acting agent.
+        Maybe<int> agentId;
+        // Event type used to dispatch AI behavior responses. BEHAVIOR_EVENT_NIL suppresses dispatch.
+        BehaviorEventEnum eventType = BEHAVIOR_EVENT_NIL;
     };
 
     // members
@@ -48,6 +54,7 @@ private:
     Map<int, Pointer<Chest>> chestContainerMap; // containerCharacterId -> Chest
     std::vector<PendingTrigger> eventQueue; // deferred trigger activations
     bool isProcessingEventQueue = false;
+    Timestamp animationTime; // latest animation end time across all active activations
 
     bool isLocationsSetup = false;
 public:
@@ -110,8 +117,11 @@ public:
     TraitModifier::TraitComputation getTraitsComputed(int characterId) const;
     const Map<int, TraitModifier::TraitComputation>& getTraitsComputedMap() const;
 
-    void pushTrigger(const iActivator* activator, int characterId, int targetId = -1);
+    void pushTrigger(const iActivator* activator, int characterId, int targetId = -1, BehaviorEventEnum eventType = BEHAVIOR_EVENT_NIL);
     void processEventQueue();
+
+    // Called by activators when they schedule an animation; advances the global animation clock.
+    void setAnimationTime(const Timestamp& t);
 
     bool validateCharacterWithinRoom(int characterId, int roomId);
     bool validateDoorNotOccupied(int roomId, ChannelEnum channel, Cardinal dir);

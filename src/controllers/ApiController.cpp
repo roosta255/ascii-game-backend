@@ -569,6 +569,10 @@ void ApiController::getCharacterSheet
     return callback(resp);
 }
 
+// TODO: split up per flyweight
+// TODO: flyweight provided serialization
+// TODO: flyweight api response as MAP
+// TODO: ensure all flyweights have stable id (INDEX)
 void ApiController::getFlyweights
 ( const drogon::HttpRequestPtr&, std::function<void(const drogon::HttpResponsePtr &)> &&callback )
 {

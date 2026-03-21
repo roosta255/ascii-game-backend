@@ -18,6 +18,7 @@ find_package(Drogon REQUIRED)
 set(PROJECT_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/src/activator
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/behavior
     ${CMAKE_CURRENT_SOURCE_DIR}/src/algorithm
     ${CMAKE_CURRENT_SOURCE_DIR}/src/animation
     ${CMAKE_CURRENT_SOURCE_DIR}/src/chest
@@ -51,6 +52,8 @@ set(PROJECT_INCLUDE_DIRS
 
 # ------------ Shared Library -------------
 add_library(core_backend STATIC
+    src/behavior/BehaviorEnum.cpp
+    src/behavior/BehaviorFlyweight.cpp
     src/activator/ActionEnum.cpp
     src/activator/ActionFlyweight.cpp
     src/activator/Activation.cpp

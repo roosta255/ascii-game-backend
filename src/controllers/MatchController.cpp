@@ -1,4 +1,5 @@
 #include "ActionFlyweight.hpp"
+#include "BehaviorFlyweight.hpp"
 #include "TraitEnum.hpp"
 #include "AssociatedPriorityMinQueue.hpp"
 #include "ChannelEnum.hpp"
@@ -623,8 +624,14 @@ bool MatchController::breakArmorItem(Character& character) {
     return true;
 }
 
-void MatchController::pushTrigger(const iActivator* activator, int characterId, int targetId) {
-    eventQueue.push_back(PendingTrigger{ activator, characterId, targetId });
+void MatchController::pushTrigger(const iActivator* activator, int characterId, int targetId, BehaviorEventEnum eventType) {
+    eventQueue.push_back(PendingTrigger{ activator, characterId, targetId, Maybe<int>::empty(), eventType });
+}
+
+void MatchController::setAnimationTime(const Timestamp& t) {
+    if (t > animationTime) {
+        animationTime = t;
+    }
 }
 
 void MatchController::processEventQueue() {
@@ -633,9 +640,39 @@ void MatchController::processEventQueue() {
     while (!eventQueue.empty()) {
         auto trigger = eventQueue.front();
         eventQueue.erase(eventQueue.begin());
-        if (!trigger.activator) continue;
-        // Triggers are fired via the main activate path using the stored character context
-        // For now, the trigger is a no-op placeholder until full integration
+
+        // TODO: run trigger.activator in a full Activation context with time = animationTime
+
+        // Dispatch behavioral responses to all AI agents in the same room as the event character.
+        // Behavior responses are not cascaded (BEHAVIOR_EVENT_NIL suppresses further dispatch).
+        if (trigger.eventType == BEHAVIOR_EVENT_NIL) continue;
+
+        int roomId = -1;
+        match.accessUsedCharacters([&](const Character& ch) {
+            if (ch.characterId == trigger.characterId) roomId = ch.location.roomId;
+        });
+        if (roomId < 0) continue;
+
+        setupLocations();
+        floors.accessConst(roomId, [&](const Map<int2, int>& floorMap) {
+            for (const auto& [key, agentId] : floorMap) {
+                if (agentId == trigger.characterId || agentId == trigger.targetId) continue;
+                match.getCharacter(agentId, codeset.error).accessConst([&](const Character& agent) {
+                    if (agent.behavior == BEHAVIOR_NIL) return;
+                    BehaviorFlyweight::getFlyweights().accessConst(agent.behavior, [&](const BehaviorFlyweight& fw) {
+                        fw.getActivatorForEvent(trigger.eventType).accessConst([&](const iActivator& behaviorActivator) {
+                            eventQueue.push_back(PendingTrigger{
+                                &behaviorActivator,
+                                agentId,
+                                trigger.characterId,
+                                Maybe<int>(agentId),
+                                BEHAVIOR_EVENT_NIL
+                            });
+                        });
+                    });
+                });
+            }
+        });
     }
     isProcessingEventQueue = false;
 }

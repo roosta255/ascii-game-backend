@@ -1,0 +1,9 @@
+// BEHAVIOR_DECL(name_)
+// Optional sub-declarations (follow immediately after BEHAVIOR_DECL):
+//   BEHAVIOR_ON_MOVE_DECL(activator_)
+//   BEHAVIOR_ON_ATTACK_DECL(activator_)
+//   BEHAVIOR_ON_DAMAGE_DECL(activator_)
+//   BEHAVIOR_ON_LOOT_DECL(activator_)
+//   BEHAVIOR_ON_DEATH_DECL(activator_)
+
+BEHAVIOR_DECL(NIL)

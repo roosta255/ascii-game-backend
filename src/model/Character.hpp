@@ -2,6 +2,7 @@
 
 #include <functional>
 #include "Array.hpp"
+#include "BehaviorEnum.hpp"
 #include "CodeEnum.hpp"
 #include "HASH_MACRO_DECL.hpp"
 #include "Keyframe.hpp"
@@ -22,6 +23,7 @@ struct Character
     Location location;
     int damage = 0;
     RoleEnum role = ROLE_EMPTY;
+    BehaviorEnum behavior = BEHAVIOR_NIL;
     int feats = 0;
     int actions = 0;
     int moves = 0;
