@@ -2,7 +2,26 @@
   "permissions": {
     "allow": [
       "Bash(dpkg -l)",
-      "Bash(apt-cache show nlohmann-json3-dev)"
+      "Bash(apt-cache show nlohmann-json3-dev)",
+      "Bash(find /workspaces/backend/src -name *DamageEnum* -o -name *DamageType*)",
+      "Bash(cmake -B build -DCMAKE_BUILD_TYPE=Debug)",
+      "Bash(cmake --build build --target test_target)",
+      "Bash(cmake --build build --target test_target -j4)",
+      "Bash(git -C /workspaces/backend stash)",
+      "Bash(cmake --build build --target core_backend)",
+      "Bash(cmake --build /workspaces/backend/build --target test_target)",
+      "Bash(while ps:*)",
+      "Bash(do sleep:*)",
+      "Bash(done)",
+      "Bash(ls /workspaces/backend/build/extern/Catch2/src/libCatch2*.a)",
+      "Bash(cmake --build /workspaces/backend/build --target test_target -- VERBOSE=1)",
+      "Bash(cmake ..)",
+      "Bash(./build/test_target \"[eventlog]\")",
+      "Bash(cmake .. -q)",
+      "Bash(cmake --build . --target test_target)",
+      "Bash(chmod +x /workspaces/backend/build/test_target)",
+      "Bash(/workspaces/backend/build/test_target \"[match][tutorial]\")",
+      "Bash(xxd /workspaces/backend/build/test_target)"
     ]
   }
 }

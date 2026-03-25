@@ -9,6 +9,7 @@
 class iActivator;
 
 struct DamageFlyweight {
+    const char* name = "";
     DamageAttrBits attrs;
     TraitEnum resistTrait = TRAIT_COUNT;    // TRAIT_COUNT = no resistance
     TraitEnum weaknessTrait = TRAIT_COUNT;  // TRAIT_COUNT = no weakness

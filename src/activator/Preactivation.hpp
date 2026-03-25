@@ -10,5 +10,6 @@ struct Preactivation {
     Maybe<int> sourceInventoryId;
     bool isSkippingAnimations = false;
     bool isSortingState = false;
+    bool isSkippingLogging = false;
     Timestamp time = Timestamp();
 };

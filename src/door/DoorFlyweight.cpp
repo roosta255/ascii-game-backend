@@ -6,6 +6,7 @@
 #include "ActivatorJailer.hpp"
 #include "ActivatorKeeper.hpp"
 #include "ActivatorInactiveDoor.hpp"
+#include "EventFlyweight.hpp"
 #include "ActivatorLadder.cpp"
 #include "ActivatorLightningRod.cpp"
 #include "ActivatorPole.cpp"

@@ -5,6 +5,13 @@
 #include "JsonParameters.hpp"
 #include <json/json.h>
 
+CyclicalRack<LoggedEvent> Room::getEventLog() const {
+    return CyclicalRack<LoggedEvent>(
+        const_cast<LoggedEvent*>(eventLog.begin()),
+        EVENT_LOG_SIZE, loggedHead, loggedSize
+    );
+}
+
 Wall& Room::getWall (Cardinal dir) {
     // shouldn't be possible
     static Wall nil;

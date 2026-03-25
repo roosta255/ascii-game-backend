@@ -11,8 +11,14 @@ class CyclicalRack {
 
 public:
     // Basic Constructor
-    CyclicalRack(T* start, size_t capacity) 
+    CyclicalRack(T* start, size_t capacity)
         : buffer_start(start), buffer_end(start + capacity), head(start), _size(0) {}
+
+    // Restore from saved head offset and size (e.g. when reconstructing from Room fields)
+    CyclicalRack(T* start, size_t capacity, size_t head_offset, size_t initial_size)
+        : buffer_start(start), buffer_end(start + capacity)
+        , head(start + (capacity > 0 ? head_offset % capacity : 0))
+        , _size(initial_size) {}
 
     // Maps a logical index (0 to size-1) to the actual memory address
     T& operator[](size_t index) {
@@ -26,6 +32,7 @@ public:
     size_t size() const { return _size; }
     size_t capacity() const { return buffer_end - buffer_start; }
     bool isFull() const { return _size == capacity(); }
+    size_t getHeadOffset() const { return head - buffer_start; }
 
     void push_back(const T& value) {
         if (isFull()) {

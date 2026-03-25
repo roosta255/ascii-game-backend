@@ -7,9 +7,11 @@
 #include "Character.hpp"
 #include "CodeEnum.hpp"
 #include "DUNGEON_ROOM_COUNT.hpp"
+#include "EventFlyweight.hpp"
 #include "int2.hpp"
 #include "int3.hpp"
 #include "int4.hpp"
+#include "LoggedEvent.hpp"
 #include "Map.hpp"
 #include "Maybe.hpp"
 #include "Pointer.hpp"
@@ -57,6 +59,8 @@ private:
     Timestamp animationTime; // latest animation end time across all active activations
 
     bool isLocationsSetup = false;
+    // True for the first appendEventLog() call per activate(); consumed on first use.
+    bool isSourced = false;
 public:
     // constants
     constexpr static long MOVE_ANIMATION_DURATION = 900;
@@ -116,6 +120,11 @@ public:
     void updateTraits(Character& character);
     TraitModifier::TraitComputation getTraitsComputed(int characterId) const;
     const Map<int, TraitModifier::TraitComputation>& getTraitsComputedMap() const;
+
+    // Appends a logged event to a room's event log.
+    // The caller always passes the SOURCE variant of the event (e.g. build_BITE_SOURCE(...)).
+    // The first call per activate() records it as SOURCE; all subsequent calls record it as RESULT.
+    void appendEventLog(Activation& activation, LoggedEvent event);
 
     void pushTrigger(const iActivator* activator, int characterId, int targetId = -1, BehaviorEventEnum eventType = BEHAVIOR_EVENT_NIL);
     void processEventQueue();

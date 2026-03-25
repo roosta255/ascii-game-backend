@@ -18,6 +18,7 @@ const Array<DamageFlyweight, DAMAGE_TYPE_COUNT>& DamageFlyweight::getFlyweights(
             static activator_ GLOBAL_DAMAGE_##name_##_activator_; \
             lastType = DAMAGE_TYPE_##name_; \
             flyweights.getPointer(lastType).access([&](DamageFlyweight& fw){ \
+                fw.name = #name_; \
                 fw.attrs = makeDamageAttrBits attrs_; \
                 fw.activator = GLOBAL_DAMAGE_##name_##_activator_; \
             });

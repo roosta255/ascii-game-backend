@@ -2,6 +2,7 @@
 #include "Codeset.hpp"
 #include "Character.hpp"
 #include "DoorEnum.hpp"
+#include "EventFlyweight.hpp"
 #include "Inventory.hpp"
 #include "Keyframe.hpp"
 #include "Match.hpp"
@@ -39,6 +40,7 @@ bool ActivatorJailer::activate(Activation& activation) const {
                     sourceWall.setDoor(DOOR_JAILER_INGRESS_KEYED, activation.time, activation.isSkippingAnimations, room.roomId, ANIMATION_SLIDE);
                     neighborWall.setDoor(DOOR_JAILER_EGRESS_KEYED, activation.time, activation.isSkippingAnimations, neighborId, ANIMATION_SLIDE);
                     isSuccess = true;
+                    controller.appendEventLog(activation, build_JAILER_LOCK_SOURCE(subject.role, direction, 0));
                 }
             }
         }

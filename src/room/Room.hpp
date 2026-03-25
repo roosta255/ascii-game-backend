@@ -3,7 +3,9 @@
 #include "Array.hpp"
 #include "CodeEnum.hpp"
 #include "Cardinal.hpp"
+#include "CyclicalRack.hpp"
 #include "int2.hpp"
+#include "LoggedEvent.hpp"
 #include "Pointer.hpp"
 #include "DUNGEON_ROOM_COUNT.hpp"
 #include "Rack.hpp"
@@ -18,11 +20,19 @@ struct Room {
     constexpr static int DUNGEON_ROOM_WIDTH = 4;
     constexpr static int DUNGEON_ROOM_HEIGHT = 5;
     constexpr static int DUNGEON_ROOM_CELL_COUNT = DUNGEON_ROOM_WIDTH * DUNGEON_ROOM_HEIGHT;
+    constexpr static int EVENT_LOG_SIZE = 32;
+
     int visibility = ~0x0;
     RoomEnum type = ROOM_RECT_4_x_5;
     Array<Wall, 4> walls;
     int anterior = -1, posterior = -1, above = -1, below = -1;
     int roomId = -1;
+
+    Array<LoggedEvent, EVENT_LOG_SIZE> eventLog;
+    int loggedHead = 0;
+    int loggedSize = 0;
+
+    CyclicalRack<LoggedEvent> getEventLog() const;
 
     void setType(const RoomEnum&);
 

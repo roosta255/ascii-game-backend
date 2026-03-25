@@ -851,6 +851,7 @@ TEST_CASE("Match collapsing end turn", "[match][tutorial]") {
 TEST_CASE("Match collapsing from floor move to wall", "[match][tutorial]") {
     TestController controller(GENERATOR_TUTORIAL);
     controller.isSkippingAnimations = true;
+    controller.isSkippingLogging = true;
 
     // Generate test layout
     controller.generate(0);
@@ -887,6 +888,7 @@ TEST_CASE("Match collapsing from floor move to wall", "[match][tutorial]") {
 TEST_CASE("Match collapsing from wall move to floor", "[match][tutorial]") {
     TestController controller(GENERATOR_TUTORIAL);
     controller.isSkippingAnimations = true;
+    controller.isSkippingLogging = true;
 
     // Generate test layout
     controller.generate(0);

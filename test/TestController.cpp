@@ -38,7 +38,8 @@ void TestController::activateCharacter(int subjectCharacterId, int objectCharact
             .targetCharacterId = objectCharacterId,
         },
         .playerId = BUILDER_ID,
-        .isSkippingAnimations = isSkippingAnimations
+        .isSkippingAnimations = isSkippingAnimations,
+        .isSkippingLogging = isSkippingLogging
     };
 
     isSuccess = controller.activate(preactivation);
@@ -54,7 +55,8 @@ void TestController::activateDoor(Cardinal dir){
             .direction = dir,
         },
         .playerId = BUILDER_ID,
-        .isSkippingAnimations = isSkippingAnimations
+        .isSkippingAnimations = isSkippingAnimations,
+        .isSkippingLogging = isSkippingLogging
     };
 
     isSuccess = controller.activate(preactivation);
@@ -70,7 +72,8 @@ void TestController::activateLock(Cardinal dir){
             .direction = dir,
         },
         .playerId = BUILDER_ID,
-        .isSkippingAnimations = isSkippingAnimations
+        .isSkippingAnimations = isSkippingAnimations,
+        .isSkippingLogging = isSkippingLogging
     };
     isSuccess = controller.activate(preactivation);
     updateEverything();
@@ -85,7 +88,8 @@ void TestController::activateObjectCharacter(int objectCharacterId){
             .targetCharacterId = builderOffset,
         },
         .playerId = BUILDER_ID,
-        .isSkippingAnimations = isSkippingAnimations
+        .isSkippingAnimations = isSkippingAnimations,
+        .isSkippingLogging = isSkippingLogging
     };
     isSuccess = controller.activate(preactivation);
     updateEverything();
@@ -125,7 +129,8 @@ void TestController::lootInventory(int containerCharacterId, const ItemEnum& tar
             .targetCharacterId = containerCharacterId,
         },
         .playerId = BUILDER_ID,
-        .isSkippingAnimations = isSkippingAnimations
+        .isSkippingAnimations = isSkippingAnimations,
+        .isSkippingLogging = isSkippingLogging
     };
     match.dungeon.findChestByContainerId(containerCharacterId, codeset.error).access([&](Chest& chest) {
         int targetInventoryId = -1;
@@ -153,7 +158,8 @@ void TestController::moveCharacterToFloor(int roomId, int floorId) {
             .floorId = floorId,
         },
         .playerId = BUILDER_ID,
-        .isSkippingAnimations = isSkippingAnimations
+        .isSkippingAnimations = isSkippingAnimations,
+        .isSkippingLogging = isSkippingLogging
     };
     isSuccess = controller.activate(preactivation);
     updateEverything();
@@ -172,7 +178,8 @@ void TestController::moveCharacterToWall(int roomId, const Cardinal& dir){
             .direction = dir,
         },
         .playerId = BUILDER_ID,
-        .isSkippingAnimations = isSkippingAnimations
+        .isSkippingAnimations = isSkippingAnimations,
+        .isSkippingLogging = isSkippingLogging
     };
     isSuccess = controller.activate(preactivation);
     // TODO: add test codes for this line

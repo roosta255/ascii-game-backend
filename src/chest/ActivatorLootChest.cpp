@@ -3,6 +3,7 @@
 #include "ActivatorLootChest.hpp"
 #include "Activation.hpp"
 #include "Codeset.hpp"
+#include "EventFlyweight.hpp"
 #include "Dungeon.hpp"
 #include "Item.hpp"
 #include "ItemEnum.hpp"
@@ -51,6 +52,7 @@ bool ActivatorLootChest::activate(Activation& activation) const {
                 if (codeset.addFailure(!controller.giveInventoryItem(player.inventory, type, activation.time, room.roomId, activation.isSkippingAnimations))) return;
                 if (codeset.addFailure(!controller.takeCharacterAction(subject))) return;
                 isSuccess = true;
+                controller.appendEventLog(activation, build_LOOT_CHEST_SOURCE(subject.role, type, 0));
 
                 // Trigger critter bite if a critter guards this chest
                 chest.inventory.accessItems(ITEM_CRITTER, [&](const Item& critterItem) {

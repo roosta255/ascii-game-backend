@@ -1,10 +1,11 @@
 #pragma once
 
+#include "Array.hpp"
 #include "Cardinal.hpp"
-#include "DamageTypeBits.hpp"
-#include "Maybe.hpp"
 #include "CodeEnum.hpp"
+#include "DamageTypeBits.hpp"
 #include "Item.hpp"
+#include "Maybe.hpp"
 #include "Pointer.hpp"
 #include "Timestamp.hpp"
 
@@ -34,4 +35,6 @@ struct Activation {
     Pointer<Inventory> sourceInventory;
     Pointer<Inventory> targetInventory;
     DamageTypeBits damageTypes;
+    bool isSkippingLogging = false;
+    Array<CodeEnum, 32> errorLog;
 };

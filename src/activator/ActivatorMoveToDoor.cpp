@@ -1,5 +1,6 @@
 #include "ActivatorMoveToDoor.hpp"
 #include "Codeset.hpp"
+#include "EventFlyweight.hpp"
 #include "Match.hpp"
 #include "MatchController.hpp"
 
@@ -44,6 +45,8 @@ bool ActivatorMoveToDoor::activate(Activation& activation) const {
 
     Location oldLocation;
     controller.updateCharacterLocation(subject, newLocation, oldLocation);
+
+    controller.appendEventLog(activation, build_MOVE_TO_DOOR_SOURCE(subject.role, direction, next.door));
 
     if (!activation.isSkippingAnimations) {
         auto rack = Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(subject.keyframes);

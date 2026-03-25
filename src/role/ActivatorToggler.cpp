@@ -1,6 +1,7 @@
 #include "ActivatorToggler.hpp"
 #include "Character.hpp"
 #include "Codeset.hpp"
+#include "EventFlyweight.hpp"
 #include "Keyframe.hpp"
 #include "Match.hpp"
 #include "MatchController.hpp"
@@ -32,6 +33,7 @@ bool ActivatorToggler::activate(Activation& activation) const {
 
             activation.match.dungeon.toggleDoors(activation.time, activation.isSkippingAnimations);
             isSuccess = true;
+            activation.controller.appendEventLog(activation, build_TOGGLE_SOURCE(activation.character.role, newRole, 0));
         }
     });
     return isSuccess;

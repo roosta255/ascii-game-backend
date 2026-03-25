@@ -32,6 +32,7 @@ public:
     int builderOffset = -1;
     int latestPosition = 0;
     bool isSkippingAnimations = false;
+    bool isSkippingLogging = false;
 
     // constructors
     TestController(const GeneratorEnum& generator);

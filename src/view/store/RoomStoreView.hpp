@@ -3,6 +3,7 @@
 #include "adl_serializer.hpp"
 #include "Array.hpp"
 #include "Dungeon.hpp"
+#include "LoggedEventStoreView.hpp"
 #include "Room.hpp"
 #include "RoomFlyweight.hpp"
 #include "Wall.hpp"
@@ -17,6 +18,9 @@ struct RoomStoreView
     std::string type = "UNPARSED_ROOM";
     int anterior = -1, posterior = -1, above = -1, below = -1;
     int roomId;
+    int loggedHead = 0;
+    int loggedSize = 0;
+    Array<LoggedEventStoreView, Room::EVENT_LOG_SIZE> eventLog;
 
     inline RoomStoreView() = default;
 
@@ -28,6 +32,9 @@ struct RoomStoreView
     , above(model.above)
     , below(model.below)
     , roomId(model.roomId)
+    , loggedHead(model.loggedHead)
+    , loggedSize(model.loggedSize)
+    , eventLog(model.eventLog.convert<LoggedEventStoreView>())
     {
         RoomFlyweight::getFlyweights().accessConst(model.type, [&](const RoomFlyweight& flyweight) {
             this->type = flyweight.name;
@@ -42,7 +49,10 @@ struct RoomStoreView
             .posterior = this->posterior,
             .above = this->above,
             .below = this->below,
-            .roomId = this->roomId
+            .roomId = this->roomId,
+            .eventLog = this->eventLog.convert<LoggedEvent>(),
+            .loggedHead = this->loggedHead,
+            .loggedSize = this->loggedSize
         };
         RoomFlyweight::indexByString(this->type, model.type);
         return model;
@@ -54,7 +64,9 @@ inline void to_json(nlohmann::json& j, const RoomStoreView& v) {
         {"walls", v.walls}, {"type", v.type},
         {"anterior", v.anterior}, {"posterior", v.posterior},
         {"above", v.above}, {"below", v.below},
-        {"roomId", v.roomId}, {"visibility", v.visibility}
+        {"roomId", v.roomId}, {"visibility", v.visibility},
+        {"loggedHead", v.loggedHead}, {"loggedSize", v.loggedSize},
+        {"eventLog", v.eventLog}
     };
 }
 
@@ -67,4 +79,7 @@ inline void from_json(const nlohmann::json& j, RoomStoreView& v) {
     j.at("below").get_to(v.below);
     j.at("roomId").get_to(v.roomId);
     v.visibility = j.value("visibility", ~0x0);
+    v.loggedHead = j.value("loggedHead", 0);
+    v.loggedSize = j.value("loggedSize", 0);
+    if (j.contains("eventLog")) j.at("eventLog").get_to(v.eventLog);
 }

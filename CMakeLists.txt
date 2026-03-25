@@ -27,6 +27,7 @@ set(PROJECT_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/data
     ${CMAKE_CURRENT_SOURCE_DIR}/src/door
     ${CMAKE_CURRENT_SOURCE_DIR}/src/enum
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/event
     ${CMAKE_CURRENT_SOURCE_DIR}/src/generator
     ${CMAKE_CURRENT_SOURCE_DIR}/src/inventory
     ${CMAKE_CURRENT_SOURCE_DIR}/src/layout
@@ -191,6 +192,7 @@ add_executable(test_target
     test/maps/GeneratorTutorial.cpp
     test/TraitModifierTests.cpp
     test/CharacterSheetApiViewTests.cpp
+    test/EventLogTests.cpp
 )
 
 target_include_directories(test_target PRIVATE ${PROJECT_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/test)

@@ -4,6 +4,7 @@
 #include "Array.hpp"
 #include "CellApiView.hpp"
 #include "Dungeon.hpp"
+#include "LoggedEventApiView.hpp"
 #include "Room.hpp"
 #include "RoomFlyweight.hpp"
 #include "Wall.hpp"
@@ -20,6 +21,7 @@ struct RoomApiView
     std::string type = "UNPARSED_ROOM";
     int width = 0, height = 0;
     int anterior = -1, posterior = -1, above = -1, below = -1;
+    std::vector<LoggedEventApiView> eventLog;
 
     inline RoomApiView() = default;
 
@@ -45,6 +47,11 @@ struct RoomApiView
             this->width = flyweight.width;
             this->height = flyweight.height;
         });
+
+        auto log = model.getEventLog();
+        for (size_t i = 0; i < log.size(); ++i) {
+            eventLog.push_back(LoggedEventApiView(log[i]));
+        }
     }
 };
 
@@ -62,7 +69,8 @@ inline void to_json(nlohmann::json& j, const RoomApiView& view) {
         {"anterior", view.anterior},
         {"posterior", view.posterior},
         {"above", view.above},
-        {"below", view.below}
+        {"below", view.below},
+        {"eventLog", view.eventLog}
     };
 }
 

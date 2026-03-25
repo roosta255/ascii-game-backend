@@ -30,12 +30,14 @@ MatchController::MatchController(Match& match, Codeset& codeset): match(match), 
 
 // functions
 bool MatchController::activate(const Preactivation& preactivation) {
+    isSourced = true;
     bool isSuccess = false;
     ActionFlyweight::getFlyweights().accessConst((int)preactivation.action.type, [&](const ActionFlyweight& flyweight){
         codeset.addFailure(!flyweight.activator.accessConst([&](const iActivator& activator){
             isSuccess = activate(activator, preactivation);
         }), CODE_ACTION_MISSING_ACTIVATION);
     });
+    isSourced = false;
     return isSuccess;
 }
 
@@ -67,7 +69,8 @@ bool MatchController::activate(const iActivator& activator, const Preactivation&
                     .isSkippingAnimations = preactivation.isSkippingAnimations,
                     .isSortingState = preactivation.isSortingState,
                     .sourceInventory = sourceInventory,
-                    .targetInventory = targetInventory
+                    .targetInventory = targetInventory,
+                    .isSkippingLogging = preactivation.isSortingState || preactivation.isSkippingLogging
                 };
                 sourceInventory.access([&](Inventory& inventory){
                     activation.sourceItem = inventory.items.getPointer(preactivation.sourceItemIndex.orElse(-1));
@@ -622,6 +625,21 @@ bool MatchController::breakArmorItem(Character& character) {
         return true;
     }
     return true;
+}
+
+void MatchController::appendEventLog(Activation& activation, LoggedEvent event) {
+    if (activation.isSkippingLogging) return;
+    if (isSourced) {
+        // First event of this action — emit as SOURCE, consume the flag
+        isSourced = false;
+    } else {
+        // Subsequent event — bump to RESULT (SOURCE is always the even member of the pair)
+        event.type = (EventEnum)(event.type + 1);
+    }
+    auto log = activation.room.getEventLog();
+    log.push_back(event);
+    activation.room.loggedHead = (int)log.getHeadOffset();
+    activation.room.loggedSize = (int)log.size();
 }
 
 void MatchController::pushTrigger(const iActivator* activator, int characterId, int targetId, BehaviorEventEnum eventType) {

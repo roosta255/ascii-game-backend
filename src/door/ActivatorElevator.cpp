@@ -5,6 +5,7 @@
 #include "Codeset.hpp"
 #include "DoorEnum.hpp"
 #include "DungeonMutator.hpp"
+#include "EventFlyweight.hpp"
 #include "Inventory.hpp"
 #include "Match.hpp"
 #include "MatchController.hpp"
@@ -141,6 +142,7 @@ bool ActivatorElevator::activate(Activation& activation) const {
             return false;
         }
 
+        controller.appendEventLog(activation, build_ELEVATOR_SOURCE(subject.role, direction, 0));
         return true;
     } else {
         // call elevator button

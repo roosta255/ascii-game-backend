@@ -2,6 +2,7 @@
 #include "Character.hpp"
 #include "Codeset.hpp"
 #include "DoorEnum.hpp"
+#include "EventFlyweight.hpp"
 #include "Inventory.hpp"
 #include "Keyframe.hpp"
 #include "Match.hpp"
@@ -44,6 +45,7 @@ bool ActivatorKeeper::activate(Activation& activation) const {
                             sourceWall.setDoor(DOOR_KEEPER_INGRESS_KEYLESS, activation.time, activation.isSkippingAnimations, room.roomId, ANIMATION_CRUSH);
                             neighborWall.setDoor(DOOR_KEEPER_EGRESS_KEYLESS, activation.time, activation.isSkippingAnimations, neighborId, ANIMATION_CRUSH);
                             isSuccess = true;
+                            controller.appendEventLog(activation, build_KEEPER_LOCK_SOURCE(subject.role, DOOR_KEEPER_INGRESS_KEYED, direction));
                         }
                     }
                     return;
@@ -53,6 +55,7 @@ bool ActivatorKeeper::activate(Activation& activation) const {
                             sourceWall.setDoor(DOOR_KEEPER_INGRESS_KEYED, activation.time, activation.isSkippingAnimations, room.roomId, ANIMATION_SLIDE);
                             neighborWall.setDoor(DOOR_KEEPER_EGRESS_KEYED, activation.time, activation.isSkippingAnimations, neighborId, ANIMATION_SLIDE);
                             isSuccess = true;
+                            controller.appendEventLog(activation, build_KEEPER_LOCK_SOURCE(subject.role, DOOR_KEEPER_INGRESS_KEYLESS, direction));
                         }
                     }
                     return;

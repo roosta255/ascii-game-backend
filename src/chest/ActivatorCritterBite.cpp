@@ -1,6 +1,7 @@
 #include "ActivatorCritterBite.hpp"
 #include "Character.hpp"
 #include "Codeset.hpp"
+#include "EventFlyweight.hpp"
 #include "Keyframe.hpp"
 #include "Match.hpp"
 #include "MatchController.hpp"
@@ -30,6 +31,7 @@ bool ActivatorCritterBite::activate(Activation& activation) const {
                 modifier.applyAffliction(target);
                 activation.controller.updateTraits(target);
                 isSuccess = true;
+                activation.controller.appendEventLog(activation, build_CRITTER_BITE_SOURCE(subject.role, target.role, 0));
             });
         });
 
