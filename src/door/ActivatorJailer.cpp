@@ -42,10 +42,10 @@ bool ActivatorJailer::activate(Activation& activation) const {
                     neighborWall.setDoor(DOOR_JAILER_EGRESS_KEYED, activation.time, activation.isSkippingAnimations, neighborId, ANIMATION_SLIDE);
                     isSuccess = true;
                     controller.appendEventLog(activation, LoggedEvent{
-                        EVENT_JAILER_LOCK,
+                        EVENT_UNLOCK,
                         { EventComponentKind::ROLE, (int)subject.role },
                         { EventComponentKind::ITEM, (int)ITEM_KEY },
-                        {},
+                        { EventComponentKind::DOOR, (int)DOOR_JAILER_INGRESS_KEYED },
                         (int)direction
                     });
                 }

@@ -46,10 +46,10 @@ bool ActivatorShifter::activate(Activation& activation) const {
                         neighborWall.setDoor(DOOR_SHIFTER_EGRESS_KEYED, activation.time, activation.isSkippingAnimations, neighborId, ANIMATION_SLIDE);
                         isSuccess = true;
                         controller.appendEventLog(activation, LoggedEvent{
-                            EVENT_SHIFTER_LOCK,
+                            EVENT_UNLOCK,
                             { EventComponentKind::ROLE, (int)subject.role },
                             { EventComponentKind::ITEM, (int)ITEM_KEY },
-                            { EventComponentKind::DOOR, (int)DOOR_SHIFTER_INGRESS_KEYLESS },
+                            { EventComponentKind::DOOR, (int)DOOR_SHIFTER_INGRESS_KEYED },
                             (int)direction
                         });
                     }
@@ -61,10 +61,10 @@ bool ActivatorShifter::activate(Activation& activation) const {
                         neighborWall.setDoor(DOOR_SHIFTER_INGRESS_KEYLESS, activation.time, activation.isSkippingAnimations, neighborId, ANIMATION_CRUSH);
                         isSuccess = true;
                         controller.appendEventLog(activation, LoggedEvent{
-                            EVENT_SHIFTER_LOCK,
+                            EVENT_LOCK,
                             { EventComponentKind::ROLE, (int)subject.role },
                             { EventComponentKind::ITEM, (int)ITEM_KEY },
-                            { EventComponentKind::DOOR, (int)DOOR_SHIFTER_EGRESS_KEYED },
+                            { EventComponentKind::DOOR, (int)DOOR_SHIFTER_EGRESS_KEYLESS },
                             (int)direction
                         });
                     }

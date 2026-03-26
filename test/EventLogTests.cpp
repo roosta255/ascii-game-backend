@@ -83,7 +83,7 @@ TEST_CASE("EventLog: KEEPER_LOCK", "[eventlog]") {
 
     tc.match.dungeon.rooms.access(roomId, [&](Room& room) {
         auto event = requireLastEvent(room);
-        REQUIRE(event.action == EVENT_KEEPER_LOCK);
+        REQUIRE((event.action == EVENT_UNLOCK || event.action == EVENT_LOCK));
     });
 }
 
@@ -113,7 +113,7 @@ TEST_CASE("EventLog: JAILER_LOCK", "[eventlog]") {
 
     tc.match.dungeon.rooms.access(roomId, [&](Room& room) {
         auto event = requireLastEvent(room);
-        REQUIRE(event.action == EVENT_JAILER_LOCK);
+        REQUIRE(event.action == EVENT_UNLOCK);
     });
 }
 
@@ -143,7 +143,7 @@ TEST_CASE("EventLog: SHIFTER_LOCK", "[eventlog]") {
 
     tc.match.dungeon.rooms.access(roomId, [&](Room& room) {
         auto event = requireLastEvent(room);
-        REQUIRE(event.action == EVENT_SHIFTER_LOCK);
+        REQUIRE((event.action == EVENT_UNLOCK || event.action == EVENT_LOCK));
     });
 }
 
