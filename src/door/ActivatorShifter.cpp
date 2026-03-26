@@ -3,6 +3,7 @@
 #include "Codeset.hpp"
 #include "DoorEnum.hpp"
 #include "EventFlyweight.hpp"
+#include "ItemEnum.hpp"
 #include "Inventory.hpp"
 #include "Keyframe.hpp"
 #include "Match.hpp"
@@ -44,7 +45,13 @@ bool ActivatorShifter::activate(Activation& activation) const {
                         sourceWall.setDoor(DOOR_SHIFTER_INGRESS_KEYED, activation.time, activation.isSkippingAnimations, room.roomId, ANIMATION_SLIDE);
                         neighborWall.setDoor(DOOR_SHIFTER_EGRESS_KEYED, activation.time, activation.isSkippingAnimations, neighborId, ANIMATION_SLIDE);
                         isSuccess = true;
-                        controller.appendEventLog(activation, build_SHIFTER_LOCK_SOURCE(subject.role, DOOR_SHIFTER_INGRESS_KEYLESS, direction));
+                        controller.appendEventLog(activation, LoggedEvent{
+                            EVENT_SHIFTER_LOCK,
+                            { EventComponentKind::ROLE, (int)subject.role },
+                            { EventComponentKind::ITEM, (int)ITEM_KEY },
+                            { EventComponentKind::DOOR, (int)DOOR_SHIFTER_INGRESS_KEYLESS },
+                            (int)direction
+                        });
                     }
                     return;
                 case DOOR_SHIFTER_EGRESS_KEYED:
@@ -53,7 +60,13 @@ bool ActivatorShifter::activate(Activation& activation) const {
                         sourceWall.setDoor(DOOR_SHIFTER_EGRESS_KEYLESS, activation.time, activation.isSkippingAnimations, room.roomId, ANIMATION_CRUSH);
                         neighborWall.setDoor(DOOR_SHIFTER_INGRESS_KEYLESS, activation.time, activation.isSkippingAnimations, neighborId, ANIMATION_CRUSH);
                         isSuccess = true;
-                        controller.appendEventLog(activation, build_SHIFTER_LOCK_SOURCE(subject.role, DOOR_SHIFTER_EGRESS_KEYED, direction));
+                        controller.appendEventLog(activation, LoggedEvent{
+                            EVENT_SHIFTER_LOCK,
+                            { EventComponentKind::ROLE, (int)subject.role },
+                            { EventComponentKind::ITEM, (int)ITEM_KEY },
+                            { EventComponentKind::DOOR, (int)DOOR_SHIFTER_EGRESS_KEYED },
+                            (int)direction
+                        });
                     }
                     return;
                 default:

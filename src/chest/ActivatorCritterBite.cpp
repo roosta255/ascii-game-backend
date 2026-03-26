@@ -31,7 +31,13 @@ bool ActivatorCritterBite::activate(Activation& activation) const {
                 modifier.applyAffliction(target);
                 activation.controller.updateTraits(target);
                 isSuccess = true;
-                activation.controller.appendEventLog(activation, build_CRITTER_BITE_SOURCE(subject.role, target.role, 0));
+                activation.controller.appendEventLog(activation, LoggedEvent{
+                    EVENT_CRITTER_BITE,
+                    { EventComponentKind::ROLE, (int)subject.role },
+                    {},
+                    { EventComponentKind::ROLE, (int)target.role },
+                    -1
+                });
             });
         });
 

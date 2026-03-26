@@ -59,8 +59,6 @@ private:
     Timestamp animationTime; // latest animation end time across all active activations
 
     bool isLocationsSetup = false;
-    // True for the first appendEventLog() call per activate(); consumed on first use.
-    bool isSourced = false;
 public:
     // constants
     constexpr static long MOVE_ANIMATION_DURATION = 900;

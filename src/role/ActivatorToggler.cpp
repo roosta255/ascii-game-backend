@@ -33,7 +33,13 @@ bool ActivatorToggler::activate(Activation& activation) const {
 
             activation.match.dungeon.toggleDoors(activation.time, activation.isSkippingAnimations);
             isSuccess = true;
-            activation.controller.appendEventLog(activation, build_TOGGLE_SOURCE(activation.character.role, newRole, 0));
+            activation.controller.appendEventLog(activation, LoggedEvent{
+                EVENT_TOGGLE,
+                { EventComponentKind::ROLE, (int)activation.character.role },
+                {},
+                { EventComponentKind::ROLE, (int)newRole },
+                -1
+            });
         }
     });
     return isSuccess;

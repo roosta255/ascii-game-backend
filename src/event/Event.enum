@@ -1,17 +1,9 @@
-// EVENT_DECL(name_, (SlotType0, SlotName0), (SlotType1, SlotName1), (SlotType2, SlotName2))
-//
-// Each entry generates EVENT_<name>_SOURCE and EVENT_<name>_RESULT (always SOURCE + 1).
-// SlotType options: ROLE, ITEM, DIRECTION, LOCK, DAMAGE, ROOM, ACTION, DOOR, NONE
-//
-// Call sites always build and pass the SOURCE variant;
-// MatchController::appendEventLog() decides whether to record SOURCE or RESULT.
-
-EVENT_DECL(BITE,        (ROLE,      SUBJECT),      (ITEM,      TOOL),         (DIRECTION, WALL_DOOR))
-EVENT_DECL(MOVE_TO_DOOR,(ROLE,      SUBJECT),      (DIRECTION, DIRECTION),    (DOOR,      DOOR))
-EVENT_DECL(KEEPER_LOCK, (ROLE,      SUBJECT),      (DOOR,      DOOR),         (DIRECTION, DIRECTION))
-EVENT_DECL(JAILER_LOCK, (ROLE,      SUBJECT),      (DIRECTION, DIRECTION),    (NONE,      _))
-EVENT_DECL(SHIFTER_LOCK,(ROLE,      SUBJECT),      (DOOR,      DOOR),         (DIRECTION, DIRECTION))
-EVENT_DECL(ELEVATOR,    (ROLE,      SUBJECT),      (DIRECTION, DIRECTION),    (NONE,      _))
-EVENT_DECL(TOGGLE,      (ROLE,      SUBJECT),      (ROLE,      TOGGLER_ROLE), (NONE,      _))
-EVENT_DECL(LOOT_CHEST,  (ROLE,      SUBJECT),      (ITEM,      ITEM),         (NONE,      _))
-EVENT_DECL(CRITTER_BITE,(ROLE,      SUBJECT),      (ROLE,      TARGET),       (NONE,      _))
+EVENT_DECL(BITE)
+EVENT_DECL(MOVE_TO_DOOR)
+EVENT_DECL(KEEPER_LOCK)
+EVENT_DECL(JAILER_LOCK)
+EVENT_DECL(SHIFTER_LOCK)
+EVENT_DECL(ELEVATOR)
+EVENT_DECL(TOGGLE)
+EVENT_DECL(LOOT_CHEST)
+EVENT_DECL(CRITTER_BITE)

@@ -46,7 +46,13 @@ bool ActivatorMoveToDoor::activate(Activation& activation) const {
     Location oldLocation;
     controller.updateCharacterLocation(subject, newLocation, oldLocation);
 
-    controller.appendEventLog(activation, build_MOVE_TO_DOOR_SOURCE(subject.role, direction, next.door));
+    controller.appendEventLog(activation, LoggedEvent{
+        EVENT_MOVE_TO_DOOR,
+        { EventComponentKind::ROLE, (int)subject.role },
+        {},
+        { EventComponentKind::DOOR, (int)next.door },
+        (int)direction
+    });
 
     if (!activation.isSkippingAnimations) {
         auto rack = Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(subject.keyframes);

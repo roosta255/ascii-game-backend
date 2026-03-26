@@ -1,44 +1,68 @@
 #pragma once
 
-#include "LoggedEvent.hpp"
 #include "EventEnum.hpp"
+#include "LoggedEvent.hpp"
 #include <nlohmann/json.hpp>
+
+struct EventComponentView
+{
+    int kind = 0;
+    int id   = 0;
+};
 
 struct LoggedEventStoreView
 {
-    int type = 0;
-    int data[3] = {0, 0, 0};
+    int                action    = 0;
+    EventComponentView actor;
+    EventComponentView tool;
+    EventComponentView target;
+    int                direction = -1;
 
     inline LoggedEventStoreView() = default;
 
     inline LoggedEventStoreView(const LoggedEvent& model)
-    : type((int)model.type)
-    {
-        data[0] = model.data[0];
-        data[1] = model.data[1];
-        data[2] = model.data[2];
-    }
+    : action((int)model.action)
+    , actor{ (int)model.actor.kind, model.actor.id }
+    , tool{ (int)model.tool.kind, model.tool.id }
+    , target{ (int)model.target.kind, model.target.id }
+    , direction(model.direction)
+    {}
 
     inline operator LoggedEvent() const
     {
-        return LoggedEvent{
-            (EventEnum)type,
-            {data[0], data[1], data[2]}
-        };
+        LoggedEvent e;
+        e.action    = (EventEnum)action;
+        e.actor     = { (EventComponentKind)actor.kind,  actor.id  };
+        e.tool      = { (EventComponentKind)tool.kind,   tool.id   };
+        e.target    = { (EventComponentKind)target.kind, target.id };
+        e.direction = direction;
+        return e;
     }
 };
 
+inline void to_json(nlohmann::json& j, const EventComponentView& c) {
+    j = {{"kind", c.kind}, {"id", c.id}};
+}
+
+inline void from_json(const nlohmann::json& j, EventComponentView& c) {
+    j.at("kind").get_to(c.kind);
+    j.at("id").get_to(c.id);
+}
+
 inline void to_json(nlohmann::json& j, const LoggedEventStoreView& v) {
     j = {
-        {"type", v.type},
-        {"data", {v.data[0], v.data[1], v.data[2]}}
+        {"action",    v.action},
+        {"actor",     v.actor},
+        {"tool",      v.tool},
+        {"target",    v.target},
+        {"direction", v.direction}
     };
 }
 
 inline void from_json(const nlohmann::json& j, LoggedEventStoreView& v) {
-    j.at("type").get_to(v.type);
-    const auto& arr = j.at("data");
-    v.data[0] = arr[0];
-    v.data[1] = arr[1];
-    v.data[2] = arr[2];
+    j.at("action").get_to(v.action);
+    j.at("actor").get_to(v.actor);
+    j.at("tool").get_to(v.tool);
+    j.at("target").get_to(v.target);
+    j.at("direction").get_to(v.direction);
 }

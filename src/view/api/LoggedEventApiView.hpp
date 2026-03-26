@@ -7,27 +7,31 @@
 
 struct LoggedEventApiView
 {
-    std::string    event;
+    std::string    action;
     nlohmann::json details;
 
     inline LoggedEventApiView() = default;
 
     inline LoggedEventApiView(const LoggedEvent& model)
     {
-        const EventFlyweight& fw = EventFlyweight::get(model.type);
-        this->event = fw.name;
+        this->action = event_action_name(model.action);
 
-        for (int i = 0; i < 3; ++i) {
-            const EventSlotMeta& slot = fw.slots[i];
-            if (slot.name[0] == '\0') continue;
-            const char* value = slot.resolve(model.data[i]);
-            if (value[0] != '\0') this->details[slot.name] = value;
-        }
+        auto encodeComponent = [](const EventComponent& c) -> nlohmann::json {
+            return nlohmann::json{
+                {"typename", event_component_typename(c.kind)},
+                {"name",     event_component_name(c)}
+            };
+        };
+
+        if (!model.actor.isEmpty())  this->details["actor"]     = encodeComponent(model.actor);
+        if (!model.tool.isEmpty())   this->details["tool"]      = encodeComponent(model.tool);
+        if (!model.target.isEmpty()) this->details["target"]    = encodeComponent(model.target);
+        if (model.direction >= 0)    this->details["direction"] = event_resolve_direction(model.direction);
     }
 };
 
 inline void to_json(nlohmann::json& j, const LoggedEventApiView& v) {
-    j = {{"event", v.event}};
+    j = {{"action", v.action}};
     for (auto& [key, val] : v.details.items()) {
         j[key] = val;
     }

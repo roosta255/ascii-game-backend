@@ -142,7 +142,13 @@ bool ActivatorElevator::activate(Activation& activation) const {
             return false;
         }
 
-        controller.appendEventLog(activation, build_ELEVATOR_SOURCE(subject.role, direction, 0));
+        controller.appendEventLog(activation, LoggedEvent{
+            EVENT_ELEVATOR,
+            { EventComponentKind::ROLE, (int)subject.role },
+            {},
+            {},
+            (int)direction
+        });
         return true;
     } else {
         // call elevator button

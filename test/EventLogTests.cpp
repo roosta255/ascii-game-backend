@@ -7,7 +7,6 @@
 #include "DoorEnum.hpp"
 #include "Dungeon.hpp"
 #include "EventEnum.hpp"
-#include "EventFlyweight.hpp"
 #include "GeneratorDoorwayDungeon2.hpp"
 #include "GeneratorEnum.hpp"
 #include "ItemEnum.hpp"
@@ -56,7 +55,7 @@ TEST_CASE("EventLog: MOVE_TO_DOOR", "[eventlog]") {
 
     tc.match.dungeon.rooms.access(startRoomId, [&](Room& room) {
         auto event = requireLastEvent(room);
-        REQUIRE(event.type == EVENT_MOVE_TO_DOOR_SOURCE);
+        REQUIRE(event.action == EVENT_MOVE_TO_DOOR);
     });
 }
 
@@ -84,7 +83,7 @@ TEST_CASE("EventLog: KEEPER_LOCK", "[eventlog]") {
 
     tc.match.dungeon.rooms.access(roomId, [&](Room& room) {
         auto event = requireLastEvent(room);
-        REQUIRE(event.type == EVENT_KEEPER_LOCK_SOURCE);
+        REQUIRE(event.action == EVENT_KEEPER_LOCK);
     });
 }
 
@@ -114,7 +113,7 @@ TEST_CASE("EventLog: JAILER_LOCK", "[eventlog]") {
 
     tc.match.dungeon.rooms.access(roomId, [&](Room& room) {
         auto event = requireLastEvent(room);
-        REQUIRE(event.type == EVENT_JAILER_LOCK_SOURCE);
+        REQUIRE(event.action == EVENT_JAILER_LOCK);
     });
 }
 
@@ -144,7 +143,7 @@ TEST_CASE("EventLog: SHIFTER_LOCK", "[eventlog]") {
 
     tc.match.dungeon.rooms.access(roomId, [&](Room& room) {
         auto event = requireLastEvent(room);
-        REQUIRE(event.type == EVENT_SHIFTER_LOCK_SOURCE);
+        REQUIRE(event.action == EVENT_SHIFTER_LOCK);
     });
 }
 
@@ -170,7 +169,7 @@ TEST_CASE("EventLog: ELEVATOR", "[eventlog]") {
 
     tc.match.dungeon.rooms.access(GeneratorDoorwayDungeon2::ELEVATOR_ROOM_ID, [&](Room& room) {
         auto event = requireLastEvent(room);
-        REQUIRE(event.type == EVENT_ELEVATOR_SOURCE);
+        REQUIRE(event.action == EVENT_ELEVATOR);
     });
 }
 
@@ -202,7 +201,7 @@ TEST_CASE("EventLog: TOGGLE", "[eventlog]") {
 
     tc.match.dungeon.rooms.access(currentRoomId, [&](Room& room) {
         auto event = requireLastEvent(room);
-        REQUIRE(event.type == EVENT_TOGGLE_SOURCE);
+        REQUIRE(event.action == EVENT_TOGGLE);
     });
 }
 
@@ -251,7 +250,7 @@ TEST_CASE("EventLog: LOOT_CHEST", "[eventlog]") {
         REQUIRE(log.size() > 0);
         bool found = false;
         for (int i = 0; i < (int)log.size(); i++) {
-            if (log[i].type == EVENT_LOOT_CHEST_SOURCE) { found = true; break; }
+            if (log[i].action == EVENT_LOOT_CHEST) { found = true; break; }
         }
         REQUIRE(found);
     });
@@ -288,6 +287,6 @@ TEST_CASE("EventLog: CRITTER_BITE", "[eventlog]") {
 
     tc.match.dungeon.rooms.access(startRoomId, [&](Room& room) {
         auto event = requireLastEvent(room);
-        REQUIRE(event.type == EVENT_CRITTER_BITE_SOURCE);
+        REQUIRE(event.action == EVENT_CRITTER_BITE);
     });
 }
