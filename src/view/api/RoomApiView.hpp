@@ -50,7 +50,7 @@ struct RoomApiView
 
         auto log = model.getEventLog();
         for (size_t i = 0; i < log.size(); ++i) {
-            eventLog.push_back(LoggedEventApiView(log[i]));
+            eventLog.push_back(LoggedEventApiView(log[i], (int)i));
         }
     }
 };

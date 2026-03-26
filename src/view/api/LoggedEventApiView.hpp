@@ -7,12 +7,14 @@
 
 struct LoggedEventApiView
 {
+    int            index = 0;
     std::string    action;
     nlohmann::json details;
 
     inline LoggedEventApiView() = default;
 
-    inline LoggedEventApiView(const LoggedEvent& model)
+    inline LoggedEventApiView(const LoggedEvent& model, int index)
+    : index(index)
     {
         this->action = event_action_name(model.action);
 
@@ -31,7 +33,7 @@ struct LoggedEventApiView
 };
 
 inline void to_json(nlohmann::json& j, const LoggedEventApiView& v) {
-    j = {{"action", v.action}};
+    j = {{"index", v.index}, {"action", v.action}};
     for (auto& [key, val] : v.details.items()) {
         j[key] = val;
     }

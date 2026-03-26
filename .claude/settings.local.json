@@ -21,7 +21,13 @@
       "Bash(cmake --build . --target test_target)",
       "Bash(chmod +x /workspaces/backend/build/test_target)",
       "Bash(/workspaces/backend/build/test_target \"[match][tutorial]\")",
-      "Bash(xxd /workspaces/backend/build/test_target)"
+      "Bash(xxd /workspaces/backend/build/test_target)",
+      "Bash(find /workspaces/backend -type f -name *.html -o -name *.js -o -name *.ts -o -name *.jsx -o -name *.tsx)",
+      "Bash(find /workspaces/backend -type f -name *.html -o -name index.html)",
+      "Bash(grep -r \"eventLog\\\\|LoggedEvent\\\\|relight\\\\|animate.*event\" /workspaces/backend/src --include=*.cpp --include=*.hpp)",
+      "Bash(find /workspaces/backend -type f \\\\\\(-name *.html -o -name *.css -o -name *.vue -o -name *.svelte -o -name package.json \\\\\\))",
+      "Read(//workspaces/**)",
+      "Bash(cat /workspaces/backend/.github/workflows/*.yml)"
     ]
   }
 }
