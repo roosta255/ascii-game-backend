@@ -31,6 +31,16 @@ bool ActivatorJailer::activate(Activation& activation) const {
 
     Wall& sourceWall = room.getWall(direction);
 
+    const Timestamp doorTime = activation.time + MatchController::BOUNCE_LOCK_ANIMATION_DURATION / 2;
+
+    if (!activation.isSkippingAnimations) {
+        if (subject.location.type == LOCATION_FLOOR) {
+            Keyframe::insertKeyframe(subject.keyframes, Keyframe::buildBounceLock(activation.time, MatchController::BOUNCE_LOCK_ANIMATION_DURATION, room.roomId, subject.location.data, direction));
+        } else if (subject.location.type == LOCATION_DOOR) {
+            Keyframe::insertKeyframe(subject.keyframes, Keyframe::buildBounceLock(activation.time, MatchController::BOUNCE_LOCK_ANIMATION_DURATION, room.roomId, (Cardinal)subject.location.data, direction));
+        }
+    }
+
     bool isSuccess = false;
     const bool isNeighborAccessed = activation.match.dungeon.accessWallNeighbor(room, direction,
         [&](Wall& neighborWall, Room& neighbor, int neighborId) {
@@ -38,8 +48,8 @@ bool ActivatorJailer::activate(Activation& activation) const {
             // Only at ingress keyless can we give a key
             if (controller.takeCharacterAction(subject)) {
                 if (controller.takeInventoryItem(inventory, ITEM_KEY, activation.time, room.roomId, activation.isSkippingAnimations)) {
-                    sourceWall.setDoor(DOOR_JAILER_INGRESS_KEYED, activation.time, activation.isSkippingAnimations, room.roomId, ANIMATION_SLIDE);
-                    neighborWall.setDoor(DOOR_JAILER_EGRESS_KEYED, activation.time, activation.isSkippingAnimations, neighborId, ANIMATION_SLIDE);
+                    sourceWall.setDoor(DOOR_JAILER_INGRESS_KEYED, doorTime, activation.isSkippingAnimations, room.roomId, ANIMATION_SLIDE);
+                    neighborWall.setDoor(DOOR_JAILER_EGRESS_KEYED, doorTime, activation.isSkippingAnimations, neighborId, ANIMATION_SLIDE);
                     isSuccess = true;
                     controller.appendEventLog(activation, LoggedEvent{
                         EVENT_UNLOCK,

@@ -30,6 +30,16 @@ bool ActivatorKeeper::activate(Activation& activation) const {
 
     Wall& sourceWall = room.getWall(direction);
 
+    const Timestamp doorTime = activation.time + MatchController::BOUNCE_LOCK_ANIMATION_DURATION / 2;
+
+    if (!activation.isSkippingAnimations) {
+        if (subject.location.type == LOCATION_FLOOR) {
+            Keyframe::insertKeyframe(subject.keyframes, Keyframe::buildBounceLock(activation.time, MatchController::BOUNCE_LOCK_ANIMATION_DURATION, room.roomId, subject.location.data, direction));
+        } else if (subject.location.type == LOCATION_DOOR) {
+            Keyframe::insertKeyframe(subject.keyframes, Keyframe::buildBounceLock(activation.time, MatchController::BOUNCE_LOCK_ANIMATION_DURATION, room.roomId, (Cardinal)subject.location.data, direction));
+        }
+    }
+
     // checking occupancy even if keyless because a closed door should be occupied
     if (!controller.validateSharedDoorNotOccupied(room.roomId, CHANNEL_CORPOREAL, direction)) {
         return false;
@@ -43,8 +53,8 @@ bool ActivatorKeeper::activate(Activation& activation) const {
                 case DOOR_KEEPER_INGRESS_KEYED:
                     if (controller.takeCharacterAction(subject)) {
                         if (controller.giveInventoryItem(inventory, ITEM_KEY, activation.time, room.roomId, activation.isSkippingAnimations)) {
-                            sourceWall.setDoor(DOOR_KEEPER_INGRESS_KEYLESS, activation.time, activation.isSkippingAnimations, room.roomId, ANIMATION_CRUSH);
-                            neighborWall.setDoor(DOOR_KEEPER_EGRESS_KEYLESS, activation.time, activation.isSkippingAnimations, neighborId, ANIMATION_CRUSH);
+                            sourceWall.setDoor(DOOR_KEEPER_INGRESS_KEYLESS, doorTime, activation.isSkippingAnimations, room.roomId, ANIMATION_CRUSH);
+                            neighborWall.setDoor(DOOR_KEEPER_EGRESS_KEYLESS, doorTime, activation.isSkippingAnimations, neighborId, ANIMATION_CRUSH);
                             isSuccess = true;
                             controller.appendEventLog(activation, LoggedEvent{
                                 EVENT_LOCK,
@@ -59,8 +69,8 @@ bool ActivatorKeeper::activate(Activation& activation) const {
                 case DOOR_KEEPER_INGRESS_KEYLESS:
                     if (controller.takeCharacterAction(subject)) {
                         if (controller.takeInventoryItem(inventory, ITEM_KEY, activation.time, room.roomId, activation.isSkippingAnimations)) {
-                            sourceWall.setDoor(DOOR_KEEPER_INGRESS_KEYED, activation.time, activation.isSkippingAnimations, room.roomId, ANIMATION_SLIDE);
-                            neighborWall.setDoor(DOOR_KEEPER_EGRESS_KEYED, activation.time, activation.isSkippingAnimations, neighborId, ANIMATION_SLIDE);
+                            sourceWall.setDoor(DOOR_KEEPER_INGRESS_KEYED, doorTime, activation.isSkippingAnimations, room.roomId, ANIMATION_SLIDE);
+                            neighborWall.setDoor(DOOR_KEEPER_EGRESS_KEYED, doorTime, activation.isSkippingAnimations, neighborId, ANIMATION_SLIDE);
                             isSuccess = true;
                             controller.appendEventLog(activation, LoggedEvent{
                                 EVENT_UNLOCK,

@@ -62,6 +62,7 @@ private:
 public:
     // constants
     constexpr static long MOVE_ANIMATION_DURATION = 900;
+    constexpr static long BOUNCE_LOCK_ANIMATION_DURATION = 2000;
     
     // constructors
     MatchController(Match& match, Codeset& codeset);

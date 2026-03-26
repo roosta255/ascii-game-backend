@@ -180,6 +180,26 @@ Keyframe Keyframe::buildCritterBite(const Timestamp& start, long duration, const
     };
 }
 
+Keyframe Keyframe::buildBounceLock(const Timestamp& start, long duration, const int room0, const int floorId, const Cardinal direction) {
+    return Keyframe {
+        .t0 = start,
+        .t1 = start + duration,
+        .animation = ANIMATION_DOOR_LOCK_BOUNCE_FROM_FLOOR,
+        .room0 = room0,
+        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{floorId, (int)direction})
+    };
+}
+
+Keyframe Keyframe::buildBounceLock(const Timestamp& start, long duration, const int room0, const Cardinal characterDoor, const Cardinal direction) {
+    return Keyframe {
+        .t0 = start,
+        .t1 = start + duration,
+        .animation = ANIMATION_DOOR_LOCK_BOUNCE_FROM_DOOR,
+        .room0 = room0,
+        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{(int)characterDoor, (int)direction})
+    };
+}
+
 static Keyframe buildTraitToggle(const Timestamp& start, long duration, const int room0, const AnimationEnum animation, bool begins) {
     return Keyframe {
         .t0 = start,
