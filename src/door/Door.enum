@@ -5,18 +5,46 @@ DOOR_DECL(DOORWAY,                         false,        iActivator,            
 // keeper
 DOOR_DECL(KEEPER_EGRESS_KEYED,             false,        iActivator,             iActivator,  true, true)
 DOOR_DECL(KEEPER_EGRESS_KEYLESS,            true,        iActivator,             iActivator,  true, true)
-DOOR_DECL(KEEPER_INGRESS_KEYED,            false,        iActivator,        ActivatorKeeper,  true, true)
-DOOR_DECL(KEEPER_INGRESS_KEYLESS,           true,        iActivator,        ActivatorKeeper,  true, true)
+DOOR_DECL(KEEPER_INGRESS_KEYED,            false,        iActivator,             iActivator,  true, true)
+    DOOR_LOCK_WRAPPER({
+        .effects = { ActivatorBounceLock{}, ActivatorValidateNotOccupied{}, ActivatorGiveItem{ITEM_KEY}, ActivatorSetSharedDoors{DOOR_KEEPER_INGRESS_KEYLESS, DOOR_KEEPER_EGRESS_KEYLESS, ANIMATION_CRUSH, {EVENT_LOCK, {}, {EventComponentKind::ITEM, ITEM_KEY}}} },
+        .required = makeTraitBits({TRAIT_ACTOR, TRAIT_KEYER, TRAIT_ACTION_READY}),
+        .actionCost = 1
+    })
+DOOR_DECL(KEEPER_INGRESS_KEYLESS,           true,        iActivator,             iActivator,  true, true)
+    DOOR_LOCK_WRAPPER({
+        .effects = { ActivatorBounceLock{}, ActivatorValidateNotOccupied{}, ActivatorSetSharedDoors{DOOR_KEEPER_INGRESS_KEYED, DOOR_KEEPER_EGRESS_KEYED, ANIMATION_SLIDE, {EVENT_UNLOCK, {}, {EventComponentKind::ITEM, ITEM_KEY}}} },
+        .required = makeTraitBits({TRAIT_ACTOR, TRAIT_KEYER, TRAIT_ACTION_READY}),
+        .itemCost = { ITEM_KEY },
+        .actionCost = 1
+    })
 // jailer
 DOOR_DECL(JAILER_EGRESS_KEYED,             false,        iActivator,             iActivator,  true, true)
 DOOR_DECL(JAILER_EGRESS_KEYLESS,            true,        iActivator,             iActivator,  true, true)
 DOOR_DECL(JAILER_INGRESS_KEYED,            false,        iActivator,             iActivator,  true, true)
-DOOR_DECL(JAILER_INGRESS_KEYLESS,           true,        iActivator,        ActivatorJailer,  true, true)
+DOOR_DECL(JAILER_INGRESS_KEYLESS,           true,        iActivator,             iActivator,  true, true)
+    DOOR_LOCK_WRAPPER({
+        .effects = { ActivatorBounceLock{}, ActivatorSetSharedDoors{DOOR_JAILER_INGRESS_KEYED, DOOR_JAILER_EGRESS_KEYED, ANIMATION_SLIDE, {EVENT_UNLOCK, {}, {EventComponentKind::ITEM, ITEM_KEY}}} },
+        .required = makeTraitBits({TRAIT_ACTOR, TRAIT_KEYER, TRAIT_ACTION_READY}),
+        .itemCost = { ITEM_KEY },
+        .actionCost = 1
+    })
 // shifter
-DOOR_DECL(SHIFTER_EGRESS_KEYED,             false,        iActivator,      ActivatorShifter,  true, true)
+DOOR_DECL(SHIFTER_EGRESS_KEYED,             false,        iActivator,             iActivator,  true, true)
+    DOOR_LOCK_WRAPPER({
+        .effects = { ActivatorBounceLock{}, ActivatorValidateNotOccupied{}, ActivatorGiveItem{ITEM_KEY}, ActivatorSetSharedDoors{DOOR_SHIFTER_EGRESS_KEYLESS, DOOR_SHIFTER_INGRESS_KEYLESS, ANIMATION_CRUSH, {EVENT_LOCK, {}, {EventComponentKind::ITEM, ITEM_KEY}}} },
+        .required = makeTraitBits({TRAIT_ACTOR, TRAIT_KEYER, TRAIT_ACTION_READY}),
+        .actionCost = 1
+    })
 DOOR_DECL(SHIFTER_EGRESS_KEYLESS,            true,        iActivator,            iActivator,  true, true)
 DOOR_DECL(SHIFTER_INGRESS_KEYED,            false,        iActivator,            iActivator,  true, true)
-DOOR_DECL(SHIFTER_INGRESS_KEYLESS,           true,        iActivator,      ActivatorShifter,  true, true)
+DOOR_DECL(SHIFTER_INGRESS_KEYLESS,           true,        iActivator,            iActivator,  true, true)
+    DOOR_LOCK_WRAPPER({
+        .effects = { ActivatorBounceLock{}, ActivatorValidateNotOccupied{}, ActivatorSetSharedDoors{DOOR_SHIFTER_INGRESS_KEYED, DOOR_SHIFTER_EGRESS_KEYED, ANIMATION_SLIDE, {EVENT_UNLOCK, {}, {EventComponentKind::ITEM, ITEM_KEY}}} },
+        .required = makeTraitBits({TRAIT_ACTOR, TRAIT_KEYER, TRAIT_ACTION_READY}),
+        .itemCost = { ITEM_KEY },
+        .actionCost = 1
+    })
 // dungeons start orange: open, blue: closed
 DOOR_DECL(TOGGLER_ORANGE_CLOSED,             true,        iActivator,            iActivator,  true, true)
 DOOR_DECL(TOGGLER_ORANGE_OPEN,              false,        iActivator,            iActivator,  true, true)

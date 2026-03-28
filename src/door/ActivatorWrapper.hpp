@@ -1,0 +1,14 @@
+#pragma once
+
+#include "iActivator.hpp"
+#include "WrapperConfig.hpp"
+
+class ActivatorWrapper : public iActivator {
+public:
+    ActivatorWrapper() = default;
+    void init(const WrapperConfig& config);
+    bool activate(Activation& activation) const override;
+
+private:
+    WrapperConfig _config;
+};
