@@ -36,5 +36,5 @@ struct Activation {
     Pointer<Inventory> targetInventory;
     DamageTypeBits damageTypes;
     bool isSkippingLogging = false;
-    Array<CodeEnum, 32> errorLog;
+    Array<LoggedEvent, 32> eventLog;
 };

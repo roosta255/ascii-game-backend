@@ -12,6 +12,9 @@ bool ActivatorBounceLock::activate(Activation& activation) const {
     auto& room = activation.room;
 
     Cardinal direction;
+    // TODO: make this return false, as this needs a direction
+    // TODO: "activation.codeset.addFailure()" needed here with an error code for missing direction
+    // TODO: 
     if (!activation.direction.copy(direction)) return true;
 
     if (subject.location.type == LOCATION_FLOOR) {

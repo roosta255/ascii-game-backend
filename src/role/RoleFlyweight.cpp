@@ -1,3 +1,4 @@
+#include "ActivatorWrapper.hpp"
 #include "Array.hpp"
 #include "DamageTypeBits.hpp"
 #include "RoleEnum.hpp"
@@ -11,6 +12,9 @@ const Array<RoleFlyweight, ROLE_COUNT>& RoleFlyweight::getFlyweights()
     static auto flyweights = [](){
         Array<RoleFlyweight, ROLE_COUNT> flyweights;
         RoleEnum lastRole = ROLE_EMPTY;
+
+        static Array<WrapperConfig, ROLE_COUNT> useWrapperConfigs;
+        static Array<ActivatorWrapper, ROLE_COUNT> useWrappers;
 
         #define ROLE_DECL( name_, health_, moves_, actions_, feats_, activator_, traits_sourced_ ) \
             static activator_ GLOBAL_##name_##activator_; \
@@ -49,6 +53,10 @@ const Array<RoleFlyweight, ROLE_COUNT>& RoleFlyweight::getFlyweights()
             flyweights.getPointer( lastRole ).access([&](RoleFlyweight& flyweight){ \
                 flyweight.attackActivator = GLOBAL_##activator_##attack_; \
             });
+        #define ROLE_USE_WRAPPER(...) \
+            useWrapperConfigs.access((int)lastRole, [](WrapperConfig& config) { \
+                config = WrapperConfig __VA_ARGS__; \
+            });
 
         #include "Role.enum"
         #undef ROLE_DECL
@@ -57,6 +65,23 @@ const Array<RoleFlyweight, ROLE_COUNT>& RoleFlyweight::getFlyweights()
         #undef ROLE_DEATH_DECL
         #undef ROLE_DAMAGE_DECL
         #undef ROLE_ATTACK_DECL
+        #undef ROLE_USE_WRAPPER
+
+        for (int i = 0; i < ROLE_COUNT; i++) {
+            useWrapperConfigs.access(i, [&](WrapperConfig& config) {
+                if (!config.isEmpty()) {
+                    useWrappers.access(i, [&](ActivatorWrapper& wrapper) {
+                        wrapper.init(config);
+                    });
+                    flyweights.access(i, [&](RoleFlyweight& flyweight) {
+                        useWrappers.access(i, [&](ActivatorWrapper& wrapper) {
+                            flyweight.activator = wrapper;
+                            flyweight.isActionable = true;
+                        });
+                    });
+                }
+            });
+        }
 
         return flyweights;
     }();

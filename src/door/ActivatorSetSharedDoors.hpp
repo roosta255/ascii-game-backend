@@ -16,5 +16,6 @@ public:
     AnimationEnum animation = ANIMATION_COUNT;
     LoggedEvent event = {};
 
+
     bool activate(Activation& activation) const override;
 };

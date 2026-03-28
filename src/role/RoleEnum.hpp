@@ -15,6 +15,7 @@
 #define ROLE_DEATH_DECL( activator_ )
 #define ROLE_DAMAGE_DECL( activator_ )
 #define ROLE_ATTACK_DECL( activator_ )
+#define ROLE_USE_WRAPPER(...)
 enum RoleEnum
 {
 #include "Role.enum"
@@ -26,3 +27,4 @@ ROLE_COUNT
 #undef ROLE_DEATH_DECL
 #undef ROLE_DAMAGE_DECL
 #undef ROLE_ATTACK_DECL
+#undef ROLE_USE_WRAPPER

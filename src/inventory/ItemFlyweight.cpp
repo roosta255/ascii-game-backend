@@ -1,4 +1,5 @@
 #include "ActivatorInactiveItem.hpp"
+#include "ActivatorWrapper.hpp"
 #include "Array.hpp"
 #include "DamageTypeBits.hpp"
 #include "ItemEnum.hpp"
@@ -10,6 +11,9 @@ const Array<ItemFlyweight, ITEM_COUNT>& ItemFlyweight::getFlyweights()
     static auto flyweights = [](){
         Array<ItemFlyweight, ITEM_COUNT> flyweights;
         ItemEnum lastItem = ITEM_NIL; // Tracker for the current "Parent" trait
+
+        static Array<WrapperConfig, ITEM_COUNT> useWrapperConfigs;
+        static Array<ActivatorWrapper, ITEM_COUNT> useWrappers;
 
         #define ITEM_DECL( name_, stacks_, activator_, traits_ ) \
             lastItem = ITEM_##name_; \
@@ -30,11 +34,32 @@ const Array<ItemFlyweight, ITEM_COUNT>& ItemFlyweight::getFlyweights()
             flyweights.getPointer( lastItem ).access([&](ItemFlyweight& flyweight){ \
                 flyweight.damageTypes = makeDamageTypeBits damage_types_ ; \
             });
+        #define ITEM_USE_WRAPPER(...) \
+            useWrapperConfigs.access((int)lastItem, [](WrapperConfig& config) { \
+                config = WrapperConfig __VA_ARGS__; \
+            });
 
         #include "Item.enum"
         #undef ITEM_DECL
         #undef ITEM_CARRY_MODIFIER_DECL
         #undef ITEM_DAMAGE_TYPES_DECL
+        #undef ITEM_USE_WRAPPER
+
+        for (int i = 0; i < ITEM_COUNT; i++) {
+            useWrapperConfigs.access(i, [&](WrapperConfig& config) {
+                if (!config.isEmpty()) {
+                    useWrappers.access(i, [&](ActivatorWrapper& wrapper) {
+                        wrapper.init(config);
+                    });
+                    flyweights.access(i, [&](ItemFlyweight& flyweight) {
+                        useWrappers.access(i, [&](ActivatorWrapper& wrapper) {
+                            flyweight.useActivator = wrapper;
+                            flyweight.isActionable = true;
+                        });
+                    });
+                }
+            });
+        }
 
         return flyweights;
     }();
