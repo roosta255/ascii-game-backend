@@ -61,7 +61,7 @@ static Activation makeActivation(
     DamageTypeBits damageTypes = {})
 {
     return Activation{
-        .request = &request,
+        .request = request,
         .character = attacker,
         .target = Pointer<Character>(target),
         .damageTypes = damageTypes,

@@ -6,71 +6,65 @@
 #include "DoorEnum.hpp"
 
 bool ActivatorLadder::activate(Activation& activation) const {
-    auto& controller = activation.request->controller;
-    auto& codeset = activation.request->codeset;
-    auto& subject = activation.character;
-    auto& inventory = activation.request->player.inventory;
-    auto& room = activation.request->room;
-    const auto roomId = room.roomId;
+    bool result = false;
+    activation.request.access([&](RequestContext& req) {
+        auto& controller = req.controller;
+        auto& codeset = req.codeset;
+        auto& subject = activation.character;
+        auto& room = req.room;
+        const auto roomId = room.roomId;
 
-    Cardinal direction;
-    if (codeset.addFailure(!activation.direction.copy(direction), CODE_ACTIVATION_DIRECTION_NOT_SPECIFIED)) {
-        return false;
-    }
-
-    // Check for occupied target cell
-    if (codeset.addFailure(!controller.validateDoorNotOccupied(roomId, CHANNEL_CORPOREAL, direction), CODE_OCCUPIED_TARGET_TIME_GATE_CELL)) {
-        return false;
-    }
-
-    Location newLocation;
-    int neighborRoomId = -1;
-    switch (room.getWall(direction).door) {
-        case DOOR_LADDER_1_TOP:
-            neighborRoomId = room.below;
-            newLocation = Location::makeShaftBottom(room.below, subject.location.channel, direction);
-            break;
-        case DOOR_LADDER_1_BOTTOM:
-            neighborRoomId = room.above;
-            newLocation = Location::makeShaftTop(room.above, subject.location.channel, direction);
-            break;
-        default:
-            codeset.addError(CODE_ACTIVATOR_LADDER_NEEDS_LADDER_DOOR_TYPE);
-            return false;
-    }
-
-    if (!controller.validateDoorNotOccupied(neighborRoomId, CHANNEL_CORPOREAL, direction)) {
-        return false;
-    }
-
-    bool isSuccess = false;
-    const bool isNeighborValid = activation.request->match.dungeon.rooms.access(neighborRoomId, [&](Room& room2) {
-        auto& wall2 = room2.getWall(direction);
-
-        // clean and update locations
-        Location oldLocation;
-        activation.request->controller.updateCharacterLocation(subject, newLocation, oldLocation);
-
-        // take character move
-        if (controller.takeCharacterMove(subject)) {
-
-            // animate
-            if (!activation.request->isSkippingAnimations) {
-                const Keyframe keyframe = Keyframe::buildWalking(activation.request->time, MatchController::MOVE_ANIMATION_DURATION, room.roomId, oldLocation, newLocation, codeset);
-                if(!Keyframe::insertKeyframe(Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(subject.keyframes), keyframe)) {
-                    codeset.addLog(CODE_ANIMATION_OVERFLOW_IN_ACTIVATE_LADDER);
-                }
-            }
-
-            // this is the end of the movement!!!
-            isSuccess = true;
+        Cardinal direction;
+        if (codeset.addFailure(!activation.direction.copy(direction), CODE_ACTIVATION_DIRECTION_NOT_SPECIFIED)) {
             return;
         }
+
+        if (codeset.addFailure(!controller.validateDoorNotOccupied(roomId, CHANNEL_CORPOREAL, direction), CODE_OCCUPIED_TARGET_TIME_GATE_CELL)) {
+            return;
+        }
+
+        Location newLocation;
+        int neighborRoomId = -1;
+        switch (room.getWall(direction).door) {
+            case DOOR_LADDER_1_TOP:
+                neighborRoomId = room.below;
+                newLocation = Location::makeShaftBottom(room.below, subject.location.channel, direction);
+                break;
+            case DOOR_LADDER_1_BOTTOM:
+                neighborRoomId = room.above;
+                newLocation = Location::makeShaftTop(room.above, subject.location.channel, direction);
+                break;
+            default:
+                codeset.addError(CODE_ACTIVATOR_LADDER_NEEDS_LADDER_DOOR_TYPE);
+                return;
+        }
+
+        if (!controller.validateDoorNotOccupied(neighborRoomId, CHANNEL_CORPOREAL, direction)) {
+            return;
+        }
+
+        bool isSuccess = false;
+        const bool isNeighborValid = req.match.dungeon.rooms.access(neighborRoomId, [&](Room& room2) {
+            Location oldLocation;
+            controller.updateCharacterLocation(subject, newLocation, oldLocation);
+
+            if (controller.takeCharacterMove(subject)) {
+                if (!req.isSkippingAnimations) {
+                    const Keyframe keyframe = Keyframe::buildWalking(req.time, MatchController::MOVE_ANIMATION_DURATION, room.roomId, oldLocation, newLocation, codeset);
+                    if(!Keyframe::insertKeyframe(Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(subject.keyframes), keyframe)) {
+                        codeset.addLog(CODE_ANIMATION_OVERFLOW_IN_ACTIVATE_LADDER);
+                    }
+                }
+                isSuccess = true;
+                return;
+            }
+        });
+
+        if (codeset.addFailure(!isNeighborValid, CODE_LADDER_MISSING_NEIGHBORING_ROOM)) {
+            codeset.setTable(CODE_MISSING_NEIGHBORING_ROOM, neighborRoomId);
+        }
+
+        result = isSuccess;
     });
-
-    if (codeset.addFailure(!isNeighborValid, CODE_LADDER_MISSING_NEIGHBORING_ROOM)) {
-        codeset.setTable(CODE_MISSING_NEIGHBORING_ROOM, neighborRoomId);
-    }
-
-    return isSuccess;
+    return result;
 }

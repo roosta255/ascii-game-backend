@@ -11,54 +11,53 @@
 #include "Preactivation.hpp"
 
 bool ActivatorChestLockKey::activate(Activation& activation) const {
-    auto& controller = activation.request->controller;
-    auto& codeset    = activation.request->codeset;
-    auto& match      = activation.request->match;
-    auto& player     = activation.request->player;
-    auto& subject    = activation.character;
-    auto& room       = activation.request->room;
-
-    const auto computed = controller.getTraitsComputed(subject.characterId).final;
-    if (codeset.addFailure(!subject.isActor(codeset.error, computed))) return false;
-    if (codeset.addFailure(!subject.isKeyer(codeset.error, computed))) return false;
-
     bool isSuccess = false;
-    codeset.addFailure(!activation.target.access([&](Character& containerChar) {
-        codeset.addFailure(!match.dungeon.findChestByContainerId(containerChar.characterId, codeset.error).access([&](Chest& chest) {
-            switch (chest.lock) {
-                case LOCK_KEY_CATALYST_CLOSED: {
-                    // Requires a key but does not consume it
-                    if (codeset.addFailure(!controller.takeInventoryItem(player.inventory, ITEM_KEY, true))) return;
-                    if (codeset.addFailure(!controller.takeCharacterAction(subject))) return;
-                    chest.lock = LOCK_KEY_CATALYST_OPEN;
-                    if (!activation.request->isSkippingAnimations) {
-                        Keyframe::insertKeyframe(
-                            Rack<Keyframe>::buildFromArray<Chest::MAX_KEYFRAMES>(chest.keyframes),
-                            Keyframe::buildTransition(activation.request->time, 300, activation.request->room.roomId, ANIMATION_FALL, LOCK_KEY_CATALYST_CLOSED, LOCK_KEY_CATALYST_OPEN)
-                        );
-                    }
-                    isSuccess = true;
-                    break;
-                }
-                case LOCK_KEY_CONSUMER_CLOSED: {
-                    // Requires and consumes a key
-                    if (codeset.addFailure(!controller.takeInventoryItem(player.inventory, ITEM_KEY, activation.request->time, activation.request->room.roomId, activation.request->isSkippingAnimations))) return;
-                    if (codeset.addFailure(!controller.takeCharacterAction(subject))) return;
-                    chest.lock = LOCK_KEY_CONSUMER_OPEN;
-                    if (!activation.request->isSkippingAnimations) {
-                        Keyframe::insertKeyframe(
-                            Rack<Keyframe>::buildFromArray<Chest::MAX_KEYFRAMES>(chest.keyframes),
-                            Keyframe::buildTransition(activation.request->time, 300, activation.request->room.roomId, ANIMATION_FALL, LOCK_KEY_CONSUMER_CLOSED, LOCK_KEY_CONSUMER_OPEN)
-                        );
-                    }
-                    isSuccess = true;
-                    break;
-                }
-                default:
-                    break;
-            }
-        }));
-    }), CODE_INACCESSIBLE_TARGET_CHARACTER_ID);
+    activation.request.access([&](RequestContext& req) {
+        auto& controller = req.controller;
+        auto& codeset    = req.codeset;
+        auto& match      = req.match;
+        auto& player     = req.player;
+        auto& subject    = activation.character;
+        auto& room       = req.room;
 
+        const auto computed = controller.getTraitsComputed(subject.characterId).final;
+        if (codeset.addFailure(!subject.isActor(codeset.error, computed))) return;
+        if (codeset.addFailure(!subject.isKeyer(codeset.error, computed))) return;
+
+        codeset.addFailure(!activation.target.access([&](Character& containerChar) {
+            codeset.addFailure(!match.dungeon.findChestByContainerId(containerChar.characterId, codeset.error).access([&](Chest& chest) {
+                switch (chest.lock) {
+                    case LOCK_KEY_CATALYST_CLOSED: {
+                        if (codeset.addFailure(!controller.takeInventoryItem(player.inventory, ITEM_KEY, true))) return;
+                        if (codeset.addFailure(!controller.takeCharacterAction(subject))) return;
+                        chest.lock = LOCK_KEY_CATALYST_OPEN;
+                        if (!req.isSkippingAnimations) {
+                            Keyframe::insertKeyframe(
+                                Rack<Keyframe>::buildFromArray<Chest::MAX_KEYFRAMES>(chest.keyframes),
+                                Keyframe::buildTransition(req.time, 300, room.roomId, ANIMATION_FALL, LOCK_KEY_CATALYST_CLOSED, LOCK_KEY_CATALYST_OPEN)
+                            );
+                        }
+                        isSuccess = true;
+                        break;
+                    }
+                    case LOCK_KEY_CONSUMER_CLOSED: {
+                        if (codeset.addFailure(!controller.takeInventoryItem(player.inventory, ITEM_KEY, req.time, room.roomId, req.isSkippingAnimations))) return;
+                        if (codeset.addFailure(!controller.takeCharacterAction(subject))) return;
+                        chest.lock = LOCK_KEY_CONSUMER_OPEN;
+                        if (!req.isSkippingAnimations) {
+                            Keyframe::insertKeyframe(
+                                Rack<Keyframe>::buildFromArray<Chest::MAX_KEYFRAMES>(chest.keyframes),
+                                Keyframe::buildTransition(req.time, 300, room.roomId, ANIMATION_FALL, LOCK_KEY_CONSUMER_CLOSED, LOCK_KEY_CONSUMER_OPEN)
+                            );
+                        }
+                        isSuccess = true;
+                        break;
+                    }
+                    default:
+                        break;
+                }
+            }));
+        }), CODE_INACCESSIBLE_TARGET_CHARACTER_ID);
+    });
     return isSuccess;
 }

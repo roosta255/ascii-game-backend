@@ -5,37 +5,35 @@
 #include "MatchController.hpp"
 
 bool ActivatorUseDoor::activate(Activation& activation) const {
-    auto& controller = activation.request->controller;
-    auto& codeset = activation.request->codeset;
-    auto& match = activation.request->match;
-    auto& player = activation.request->player;
-    auto& inventory = player.inventory;
-    auto& room = activation.request->room;
-    auto& subject = activation.character;
-
-    Cardinal direction;
-    if (codeset.addFailure(!activation.direction.copy(direction), CODE_ACTIVATION_DIRECTION_NOT_SPECIFIED)) {
-        return false;
-    }
-
-    // Get and validate the door
-    Wall& wall = room.getWall(direction);
-
     bool isSuccess = false;
-    codeset.addFailure(!wall.accessDoor(codeset.error, [&](const DoorFlyweight& door) {
-        if (door.isDoorActionable) {
-            if (!door.doorActivator.accessConst([&](const iActivator& activatorIntf) {
-                codeset.addFailure(!(isSuccess = activatorIntf.activate(activation)));
-            })) {
-                codeset.addError(CODE_DOOR_MISSING_ACTIVATOR);
+    activation.request.access([&](RequestContext& req) {
+        auto& controller = req.controller;
+        auto& codeset = req.codeset;
+        auto& room = req.room;
+        auto& subject = activation.character;
+
+        Cardinal direction;
+        if (codeset.addFailure(!activation.direction.copy(direction), CODE_ACTIVATION_DIRECTION_NOT_SPECIFIED)) {
+            return;
+        }
+
+        Wall& wall = room.getWall(direction);
+
+        codeset.addFailure(!wall.accessDoor(codeset.error, [&](const DoorFlyweight& door) {
+            if (door.isDoorActionable) {
+                if (!door.doorActivator.accessConst([&](const iActivator& activatorIntf) {
+                    codeset.addFailure(!(isSuccess = activatorIntf.activate(activation)));
+                })) {
+                    codeset.addError(CODE_DOOR_MISSING_ACTIVATOR);
+                    codeset.setTable(CODE_ACTIVATION_ROOM_ID, room.roomId);
+                    codeset.setTable(CODE_ACTIVATION_WALL_TYPE, wall.door);
+                }
+            } else {
+                codeset.addError(CODE_DOOR_ACTIVATOR_NOT_CONFIGURED);
                 codeset.setTable(CODE_ACTIVATION_ROOM_ID, room.roomId);
                 codeset.setTable(CODE_ACTIVATION_WALL_TYPE, wall.door);
             }
-        } else {
-            codeset.addError(CODE_DOOR_ACTIVATOR_NOT_CONFIGURED);
-            codeset.setTable(CODE_ACTIVATION_ROOM_ID, room.roomId);
-            codeset.setTable(CODE_ACTIVATION_WALL_TYPE, wall.door);
-        }
-    }));
+        }));
+    });
     return isSuccess;
 }

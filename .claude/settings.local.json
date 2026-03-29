@@ -27,7 +27,8 @@
       "Bash(grep -r \"eventLog\\\\|LoggedEvent\\\\|relight\\\\|animate.*event\" /workspaces/backend/src --include=*.cpp --include=*.hpp)",
       "Bash(find /workspaces/backend -type f \\\\\\(-name *.html -o -name *.css -o -name *.vue -o -name *.svelte -o -name package.json \\\\\\))",
       "Read(//workspaces/**)",
-      "Bash(cat /workspaces/backend/.github/workflows/*.yml)"
+      "Bash(cat /workspaces/backend/.github/workflows/*.yml)",
+      "Bash(grep -r \"#include.*json\" /workspaces/backend/src/*.cpp)"
     ]
   }
 }

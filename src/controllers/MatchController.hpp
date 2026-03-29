@@ -57,19 +57,18 @@ private:
     std::vector<PendingTrigger> eventQueue; // deferred trigger activations
     bool isProcessingEventQueue = false;
     Timestamp animationTime; // latest animation end time across all active activations
-
     bool isLocationsSetup = false;
 public:
     // constants
     constexpr static long MOVE_ANIMATION_DURATION = 900;
     constexpr static long BOUNCE_LOCK_ANIMATION_DURATION = 2000;
-    
+
     // constructors
     MatchController(Match& match, Codeset& codeset);
 
     // functions
-    bool activate(const Preactivation& preactivation);
-    bool activate(const iActivator& activator, const Preactivation& preactivation);
+    bool activate(const Preactivation& preactivation, std::vector<LoggedEvent>* outEventLog = nullptr);
+    bool activate(const iActivator& activator, const Preactivation& preactivation, std::vector<LoggedEvent>* outEventLog = nullptr);
     bool allocateChest(int roomId, std::function<void(Chest&, Character&)> consumer);
     bool allocateChest(int roomId, std::function<void(Chest&, Character&, Character&)> consumer);
     bool allocateCharacterToFloor(int roomId, ChannelEnum channel, std::function<void(Character&)> consumer, int& outCharacterId, int& outFloorId);
@@ -120,10 +119,8 @@ public:
     TraitModifier::TraitComputation getTraitsComputed(int characterId) const;
     const Map<int, TraitModifier::TraitComputation>& getTraitsComputedMap() const;
 
-    // Appends a logged event to a room's event log.
-    // The caller always passes the SOURCE variant of the event (e.g. build_BITE_SOURCE(...)).
-    // The first call per activate() records it as SOURCE; all subsequent calls record it as RESULT.
-    void appendEventLog(Activation& activation, LoggedEvent event);
+    // Appends a logged event to the specified room's event log and to activation.request.eventLog.
+    void addLoggedEvent(Activation& activation, int roomId, LoggedEvent event);
 
     void pushTrigger(const iActivator* activator, int characterId, int targetId = -1, BehaviorEventEnum eventType = BEHAVIOR_EVENT_NIL);
     void processEventQueue();

@@ -1,4 +1,5 @@
 #include "ActionFlyweight.hpp"
+#include "CyclicalRack.hpp"
 #include "BehaviorFlyweight.hpp"
 #include "TraitEnum.hpp"
 #include "AssociatedPriorityMinQueue.hpp"
@@ -30,17 +31,17 @@ MatchController::MatchController(Match& match, Codeset& codeset): match(match), 
 }
 
 // functions
-bool MatchController::activate(const Preactivation& preactivation) {
+bool MatchController::activate(const Preactivation& preactivation, std::vector<LoggedEvent>* outEventLog) {
     bool isSuccess = false;
     ActionFlyweight::getFlyweights().accessConst((int)preactivation.action.type, [&](const ActionFlyweight& flyweight){
         codeset.addFailure(!flyweight.activator.accessConst([&](const iActivator& activator){
-            isSuccess = activate(activator, preactivation);
+            isSuccess = activate(activator, preactivation, outEventLog);
         }), CODE_ACTION_MISSING_ACTIVATION);
     });
     return isSuccess;
 }
 
-bool MatchController::activate(const iActivator& activator, const Preactivation& preactivation) {
+bool MatchController::activate(const iActivator& activator, const Preactivation& preactivation, std::vector<LoggedEvent>* outEventLog) {
     setupLocations();
 
     // Check if match has started
@@ -66,7 +67,7 @@ bool MatchController::activate(const iActivator& activator, const Preactivation&
                     .isSkippingLogging = preactivation.isSortingState || preactivation.isSkippingLogging
                 };
                 ActivationContext activation{
-                    .request = &request,
+                    .request = request,
                     .character = character,
                     .target = match.getCharacter(preactivation.action.targetCharacterId.orElse(-1), codeset.error),
                     .sourceInventory = sourceInventory,
@@ -81,6 +82,15 @@ bool MatchController::activate(const iActivator& activator, const Preactivation&
                     activation.targetItem = inventory.items.getPointer(preactivation.action.targetItemIndex.orElse(-1));
                 });
                 codeset.addFailure(!(isSuccess = activator.activate(activation)));
+                if (outEventLog) {
+                    outEventLog->clear();
+                    activation.request.access([&](RequestContext& request) {
+                        CyclicalRack<LoggedEvent> log(request.eventLog.begin(), 32, (size_t)request.eventLogHead, (size_t)request.eventLogSize);
+                        for (size_t i = 0; i < log.size(); ++i) {
+                            outEventLog->push_back(log[i]);
+                        }
+                    });
+                }
             }));
         }));
     }));
@@ -629,12 +639,20 @@ bool MatchController::breakArmorItem(Character& character) {
     return true;
 }
 
-void MatchController::appendEventLog(Activation& activation, LoggedEvent event) {
-    if (activation.request->isSkippingLogging) return;
-    auto log = activation.request->room.getEventLog();
-    log.push_back(event);
-    activation.request->room.loggedHead = (int)log.getHeadOffset();
-    activation.request->room.loggedSize = (int)log.size();
+void MatchController::addLoggedEvent(Activation& activation, int roomId, LoggedEvent event) {
+    activation.request.access([&](RequestContext& request) {
+        if (request.isSkippingLogging) return;
+        request.match.dungeon.rooms.access(roomId, [&](Room& room) {
+            auto log = room.getEventLog();
+            log.push_back(event);
+            room.loggedHead = (int)log.getHeadOffset();
+            room.loggedSize = (int)log.size();
+        });
+        CyclicalRack<LoggedEvent> reqLog(request.eventLog.begin(), 32, (size_t)request.eventLogHead, (size_t)request.eventLogSize);
+        reqLog.push_back(event);
+        request.eventLogHead = (int)reqLog.getHeadOffset();
+        request.eventLogSize = (int)reqLog.size();
+    });
 }
 
 void MatchController::pushTrigger(const iActivator* activator, int characterId, int targetId, BehaviorEventEnum eventType) {

@@ -7,23 +7,27 @@
 #include "Room.hpp"
 
 bool ActivatorSetDoor::activate(Activation& activation) const {
-    auto& codeset = activation.request->codeset;
-    auto& room = activation.request->room;
+    bool result = false;
+    activation.request.access([&](RequestContext& req) {
+        auto& codeset = req.codeset;
+        auto& room = req.room;
 
-    Cardinal direction;
-    if (codeset.addFailure(!activation.direction.copy(direction), CODE_ACTIVATION_DIRECTION_NOT_SPECIFIED)) {
-        return false;
-    }
+        Cardinal direction;
+        if (codeset.addFailure(!activation.direction.copy(direction), CODE_ACTIVATION_DIRECTION_NOT_SPECIFIED)) {
+            return;
+        }
 
-    const Timestamp doorTime = activation.request->time + MatchController::BOUNCE_LOCK_ANIMATION_DURATION / 2;
-    room.getWall(direction).setDoor(door, doorTime, activation.request->isSkippingAnimations, room.roomId, animation);
+        const Timestamp doorTime = req.time + MatchController::BOUNCE_LOCK_ANIMATION_DURATION / 2;
+        room.getWall(direction).setDoor(door, doorTime, req.isSkippingAnimations, room.roomId, animation);
 
-    if (event.action != EVENT_NIL) {
-        LoggedEvent toLog = event;
-        toLog.actor     = { EventComponentKind::ROLE, (int)activation.character.role };
-        toLog.target    = { EventComponentKind::DOOR, (int)door };
-        toLog.direction = (int)direction;
-        activation.request->controller.appendEventLog(activation, toLog);
-    }
-    return true;
+        if (event.action != EVENT_NIL) {
+            LoggedEvent toLog = event;
+            toLog.actor     = { EventComponentKind::ROLE, (int)activation.character.role };
+            toLog.target    = { EventComponentKind::DOOR, (int)door };
+            toLog.direction = (int)direction;
+            req.controller.addLoggedEvent(activation, room.roomId, toLog);
+        }
+        result = true;
+    });
+    return result;
 }

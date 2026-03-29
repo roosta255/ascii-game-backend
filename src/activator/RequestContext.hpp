@@ -26,4 +26,6 @@ struct RequestContext {
     bool isSkippingLogging = false;
 
     Array<LoggedEvent, 32> eventLog;
+    int eventLogHead = 0;
+    int eventLogSize = 0;
 };

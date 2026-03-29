@@ -4,13 +4,9 @@
 #include "MatchController.hpp"
 
 bool ActivatorEndTurn::activate(Activation& activation) const {
-    auto& controller = activation.request->controller;
-    auto& codeset = activation.request->codeset;
-    auto& match = activation.request->match;
-    auto& player = activation.request->player;
-    auto& inventory = player.inventory;
-    auto& room = activation.request->room;
-    auto& subject = activation.character;
-
-    return !codeset.addFailure(!match.endTurn(player.account.toString(), codeset.error));
+    bool result = false;
+    activation.request.access([&](RequestContext& req) {
+        result = !req.codeset.addFailure(!req.match.endTurn(req.player.account.toString(), req.codeset.error));
+    });
+    return result;
 }

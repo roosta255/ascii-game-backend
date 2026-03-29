@@ -10,80 +10,76 @@
 #include "Room.hpp"
 
 bool ActivatorTimeGate::activate(Activation& activation) const {
-    auto& controller = activation.request->controller;
-    auto& room = activation.request->room;
-    const auto roomId = room.roomId;
-    auto& codeset = activation.request->codeset;
-    auto& subject = activation.character;
-    auto& inventory = activation.request->player.inventory;
+    bool result = false;
+    activation.request.access([&](RequestContext& req) {
+        auto& controller = req.controller;
+        auto& room = req.room;
+        const auto roomId = room.roomId;
+        auto& codeset = req.codeset;
+        auto& subject = activation.character;
+        auto& inventory = req.player.inventory;
 
-    Cardinal direction;
-    if (codeset.addFailure(!activation.direction.copy(direction), CODE_ACTIVATION_DIRECTION_NOT_SPECIFIED)) {
-        return false;
-    }
+        Cardinal direction;
+        if (codeset.addFailure(!activation.direction.copy(direction), CODE_ACTIVATION_DIRECTION_NOT_SPECIFIED)) {
+            return;
+        }
 
-    Wall& sourceWall = activation.request->room.getWall(direction);
+        Wall& sourceWall = room.getWall(direction);
 
-    // Check for occupied target cell
-    if (codeset.addFailure(!controller.validateDoorNotOccupied(room.roomId, CHANNEL_CORPOREAL, TIME_GATE_DIRECTION), CODE_OCCUPIED_TARGET_TIME_GATE_CELL)) {
-        return false;
-    }
+        if (codeset.addFailure(!controller.validateDoorNotOccupied(room.roomId, CHANNEL_CORPOREAL, TIME_GATE_DIRECTION), CODE_OCCUPIED_TARGET_TIME_GATE_CELL)) {
+            return;
+        }
 
-    int delta = 0;
-    switch (activation.request->room.type) {
-        case ROOM_TIME_GATE_TO_FUTURE:
-            delta = 1;
-            break;
-        case ROOM_TIME_GATE_TO_PAST:
-            delta = -1;
-            break;
-        default:
-            codeset.addError(CODE_TIME_GATE_ACTIVATED_BUT_ROOM_ISNT_TIME_GATE);
-            return false;
-    }
+        int delta = 0;
+        switch (room.type) {
+            case ROOM_TIME_GATE_TO_FUTURE:
+                delta = 1;
+                break;
+            case ROOM_TIME_GATE_TO_PAST:
+                delta = -1;
+                break;
+            default:
+                codeset.addError(CODE_TIME_GATE_ACTIVATED_BUT_ROOM_ISNT_TIME_GATE);
+                return;
+        }
 
-    bool isSuccess = false;
-    switch (sourceWall.door) {
-        case DOOR_TIME_GATE_AWAKENED:
-            {
-                const bool isDeltaValid = activation.request->match.dungeon.rooms.access(activation.request->room.getDeltaTime(delta), [&](Room& room2) {
-                    // first mutation, no going back
-                    // update the time gates
-                    sourceWall.setDoor(DOOR_TIME_GATE_DORMANT, activation.request->time, activation.request->isSkippingAnimations, roomId, ANIMATION_CRUSH);
-                    auto& wall2 = room2.getWall(TIME_GATE_DIRECTION);
-                    wall2.setDoor(DOOR_TIME_GATE_DORMANT, activation.request->time, activation.request->isSkippingAnimations, room2.roomId, ANIMATION_CRUSH);
+        bool isSuccess = false;
+        switch (sourceWall.door) {
+            case DOOR_TIME_GATE_AWAKENED:
+                {
+                    const bool isDeltaValid = req.match.dungeon.rooms.access(room.getDeltaTime(delta), [&](Room& room2) {
+                        sourceWall.setDoor(DOOR_TIME_GATE_DORMANT, req.time, req.isSkippingAnimations, roomId, ANIMATION_CRUSH);
+                        auto& wall2 = room2.getWall(TIME_GATE_DIRECTION);
+                        wall2.setDoor(DOOR_TIME_GATE_DORMANT, req.time, req.isSkippingAnimations, room2.roomId, ANIMATION_CRUSH);
 
-                    // clean and update locations
-                    const auto newLocation = Location::makeDoor(room2.roomId, subject.location.channel, TIME_GATE_DIRECTION);
-                    Location oldLocation;
-                    controller.updateCharacterLocation(subject, newLocation, oldLocation);
+                        const auto newLocation = Location::makeDoor(room2.roomId, subject.location.channel, TIME_GATE_DIRECTION);
+                        Location oldLocation;
+                        controller.updateCharacterLocation(subject, newLocation, oldLocation);
 
-                    // take subject move
-                    if (controller.takeCharacterMove(subject)) {
-
-                        // animate
-                        if (!activation.request->isSkippingAnimations) {
-                            const Keyframe keyframe = Keyframe::buildWalking(activation.request->time, MatchController::MOVE_ANIMATION_DURATION, room.roomId, oldLocation, newLocation, codeset);
-                            if(!Keyframe::insertKeyframe(Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(subject.keyframes), keyframe)) {
-                                codeset.addLog(CODE_ANIMATION_OVERFLOW_IN_ACTIVATE_TIME_GATE);
+                        if (controller.takeCharacterMove(subject)) {
+                            if (!req.isSkippingAnimations) {
+                                const Keyframe keyframe = Keyframe::buildWalking(req.time, MatchController::MOVE_ANIMATION_DURATION, room.roomId, oldLocation, newLocation, codeset);
+                                if(!Keyframe::insertKeyframe(Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(subject.keyframes), keyframe)) {
+                                    codeset.addLog(CODE_ANIMATION_OVERFLOW_IN_ACTIVATE_TIME_GATE);
+                                }
                             }
+                            isSuccess = true;
+                            return;
                         }
-                        // this is the end of the movement!!!
-                        isSuccess = true;
+                    });
+
+                    if (codeset.addFailure(!isDeltaValid, CODE_TIME_GATE_ACTIVATED_BUT_NEIGHBOR_DNE)) {
                         return;
                     }
-                });
-
-                if (codeset.addFailure(!isDeltaValid, CODE_TIME_GATE_ACTIVATED_BUT_NEIGHBOR_DNE)) {
-                    return false;
                 }
-            }
-            return isSuccess;
-        default:
-            codeset.addError(CODE_TIME_GATE_ACTIVATED_BUT_WALL_MISSING_AWAKENED_CUBE);
-            return false;
-    }
+                result = isSuccess;
+                return;
+            default:
+                codeset.addError(CODE_TIME_GATE_ACTIVATED_BUT_WALL_MISSING_AWAKENED_CUBE);
+                return;
+        }
 
-    codeset.addUnreachableError(__LINE__);
-    return false;
+        codeset.addUnreachableError(__LINE__);
+    });
+    return result;
 }

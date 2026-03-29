@@ -120,6 +120,22 @@ Array<int, CODE_COUNT> Codeset::getErrorTable()const {
     return result;
 }
 
+void Codeset::forEachTableEntry(const std::function<void(CodeEnum, int)>& fn) const {
+    auto i = 0;
+    for (const auto& value : table) {
+        if (value != 0) {
+            fn(static_cast<CodeEnum>(i), value);
+        }
+        i++;
+    }
+}
+
+void Codeset::forEachLog(const std::function<void(CodeEnum, int)>& fn) const {
+    for (const auto& entry : rackLogs) {
+        fn(entry.first, entry.second);
+    }
+}
+
 const Array<int, CODE_COUNT>& Codeset::getEmptyTable() {
     static Array<int, CODE_COUNT> table;
     return table;

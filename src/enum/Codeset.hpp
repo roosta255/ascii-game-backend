@@ -3,6 +3,7 @@
 #include "Array.hpp"
 #include "CodeEnum.hpp"
 #include "Rack.hpp"
+#include <functional>
 #include <utility>
 
 class Codeset
@@ -34,6 +35,9 @@ public:
     std::string describe()const;
     std::string describe(const std::string& prefix)const;
     Array<int, CODE_COUNT> getErrorTable()const;
+
+    void forEachTableEntry(const std::function<void(CodeEnum, int)>& fn) const;
+    void forEachLog(const std::function<void(CodeEnum, int)>& fn) const;
 };
 
 std::ostream& operator<<(std::ostream& os, const Array<int, CODE_COUNT>& table);

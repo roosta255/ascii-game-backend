@@ -6,69 +6,63 @@
 #include "DoorEnum.hpp"
 
 bool ActivatorPole::activate(Activation& activation) const {
-    auto& controller = activation.request->controller;
-    auto& codeset = activation.request->codeset;
-    auto& subject = activation.character;
-    auto& inventory = activation.request->player.inventory;
-    auto& room = activation.request->room;
-    const auto roomId = room.roomId;
+    bool result = false;
+    activation.request.access([&](RequestContext& req) {
+        auto& controller = req.controller;
+        auto& codeset = req.codeset;
+        auto& subject = activation.character;
+        auto& room = req.room;
+        const auto roomId = room.roomId;
 
-    Cardinal direction;
-    if (codeset.addFailure(!activation.direction.copy(direction), CODE_ACTIVATION_DIRECTION_NOT_SPECIFIED)) {
-        return false;
-    }
-
-    // Check for occupied target cell
-    if (!controller.validateDoorNotOccupied(roomId, CHANNEL_CORPOREAL, direction)) {
-        return false;
-    }
-
-    Location newLocation;
-    int neighborRoomId = -1;
-    switch (room.getWall(direction).door) {
-        case DOOR_POLE_1_TOP:
-            neighborRoomId = room.below;
-            newLocation = Location::makeShaftBottom(room.below, subject.location.channel, direction);
-            break;
-        case DOOR_POLE_1_BOTTOM:
-            neighborRoomId = room.above;
-            newLocation = Location::makeShaftTop(room.above, subject.location.channel, direction);
-            break;
-        default:
-            codeset.addError(CODE_POLE_NEEDS_POLE_DOOR_TYPE);
-            return false;
-    }
-
-    if (!controller.validateDoorNotOccupied(neighborRoomId, CHANNEL_CORPOREAL, direction)) {
-        return false;
-    }
-
-    bool isSuccess = false;
-    const bool isNeighborValid = activation.request->match.dungeon.rooms.access(neighborRoomId, [&](Room& room2) {
-        auto& wall2 = room2.getWall(direction);
-
-        // clean and update locations
-        Location oldLocation;
-        activation.request->controller.updateCharacterLocation(subject, newLocation, oldLocation);
-
-        // take character move
-        if (controller.takeCharacterMove(subject)) {
-
-            // animate
-            if (!activation.request->isSkippingAnimations) {
-                const Keyframe keyframe = Keyframe::buildWalking(activation.request->time, MatchController::MOVE_ANIMATION_DURATION, room.roomId, oldLocation, newLocation, codeset);
-                if(!Keyframe::insertKeyframe(Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(subject.keyframes), keyframe)) {
-                    codeset.addLog(CODE_ANIMATION_OVERFLOW_IN_ACTIVATE_POLE);
-                }
-            }
-
-            // this is the end of the movement!!!
-            isSuccess = true;
+        Cardinal direction;
+        if (codeset.addFailure(!activation.direction.copy(direction), CODE_ACTIVATION_DIRECTION_NOT_SPECIFIED)) {
             return;
         }
+
+        if (!controller.validateDoorNotOccupied(roomId, CHANNEL_CORPOREAL, direction)) {
+            return;
+        }
+
+        Location newLocation;
+        int neighborRoomId = -1;
+        switch (room.getWall(direction).door) {
+            case DOOR_POLE_1_TOP:
+                neighborRoomId = room.below;
+                newLocation = Location::makeShaftBottom(room.below, subject.location.channel, direction);
+                break;
+            case DOOR_POLE_1_BOTTOM:
+                neighborRoomId = room.above;
+                newLocation = Location::makeShaftTop(room.above, subject.location.channel, direction);
+                break;
+            default:
+                codeset.addError(CODE_POLE_NEEDS_POLE_DOOR_TYPE);
+                return;
+        }
+
+        if (!controller.validateDoorNotOccupied(neighborRoomId, CHANNEL_CORPOREAL, direction)) {
+            return;
+        }
+
+        bool isSuccess = false;
+        const bool isNeighborValid = req.match.dungeon.rooms.access(neighborRoomId, [&](Room& room2) {
+            Location oldLocation;
+            controller.updateCharacterLocation(subject, newLocation, oldLocation);
+
+            if (controller.takeCharacterMove(subject)) {
+                if (!req.isSkippingAnimations) {
+                    const Keyframe keyframe = Keyframe::buildWalking(req.time, MatchController::MOVE_ANIMATION_DURATION, room.roomId, oldLocation, newLocation, codeset);
+                    if(!Keyframe::insertKeyframe(Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(subject.keyframes), keyframe)) {
+                        codeset.addLog(CODE_ANIMATION_OVERFLOW_IN_ACTIVATE_POLE);
+                    }
+                }
+                isSuccess = true;
+                return;
+            }
+        });
+
+        codeset.addFailure(!isNeighborValid, CODE_POLE_MISSING_NEIGHBORING_ROOM);
+
+        result = isSuccess;
     });
-
-    codeset.addFailure(!isNeighborValid, CODE_POLE_MISSING_NEIGHBORING_ROOM);
-
-    return isSuccess;
+    return result;
 }

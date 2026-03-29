@@ -3,5 +3,9 @@
 #include "Match.hpp"
 
 CodeEnum ActivateNonPlayerCharacterNullTitan::activate(Activation& activation) const {
-    return activation.request->match.turner.endTitanTurn(activation.request->match);
-} 
+    CodeEnum result = CODE_UNKNOWN_ERROR;
+    activation.request.access([&](RequestContext& req) {
+        result = req.match.turner.endTitanTurn(req.match);
+    });
+    return result;
+}

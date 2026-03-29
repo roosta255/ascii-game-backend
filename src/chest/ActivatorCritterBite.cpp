@@ -11,50 +11,50 @@
 #include "TraitModifier.hpp"
 
 bool ActivatorCritterBite::activate(Activation& activation) const {
-    auto& codeset = activation.request->codeset;
-    auto& subject = activation.character;
-
-    bool isBiting = activation.request->controller.getTraitsComputed(subject.characterId).final[TRAIT_CRITTER_BITES].orElse(false);
-    codeset.addTable(CODE_CRITTER_BITE_ACTIVATED_WITH_BITES_TRAIT, isBiting);
-    codeset.addTable(CODE_CRITTER_BITE_ACTIVATED_WITHOUT_BITES_TRAIT, !isBiting);
-    if (!isBiting) {
-        return true;
-    }
-
-    // subject is the critter — look up its bite modifier from the role flyweight
-    // target is the character being bitten
     bool isSuccess = false;
-    const bool isTargetAccessed = activation.target.access([&](Character& target) {
-        CodeEnum roleError = CODE_UNKNOWN_ERROR;
-        subject.accessRole(roleError, [&](const RoleFlyweight& critterRole) {
-            critterRole.biteTraitModifier.accessConst([&](const TraitModifier& modifier) {
-                modifier.applyAffliction(target);
-                activation.request->controller.updateTraits(target);
-                isSuccess = true;
-                activation.request->controller.appendEventLog(activation, LoggedEvent{
-                    EVENT_CRITTER_BITE,
-                    { EventComponentKind::ROLE, (int)subject.role },
-                    {},
-                    { EventComponentKind::ROLE, (int)target.role },
-                    -1
+    activation.request.access([&](RequestContext& req) {
+        auto& codeset = req.codeset;
+        auto& subject = activation.character;
+
+        bool isBiting = req.controller.getTraitsComputed(subject.characterId).final[TRAIT_CRITTER_BITES].orElse(false);
+        codeset.addTable(CODE_CRITTER_BITE_ACTIVATED_WITH_BITES_TRAIT, isBiting);
+        codeset.addTable(CODE_CRITTER_BITE_ACTIVATED_WITHOUT_BITES_TRAIT, !isBiting);
+        if (!isBiting) {
+            isSuccess = true;
+            return;
+        }
+
+        const bool isTargetAccessed = activation.target.access([&](Character& target) {
+            CodeEnum roleError = CODE_UNKNOWN_ERROR;
+            subject.accessRole(roleError, [&](const RoleFlyweight& critterRole) {
+                critterRole.biteTraitModifier.accessConst([&](const TraitModifier& modifier) {
+                    modifier.applyAffliction(target);
+                    req.controller.updateTraits(target);
+                    isSuccess = true;
+                    req.controller.addLoggedEvent(activation, req.room.roomId, LoggedEvent{
+                        EVENT_CRITTER_BITE,
+                        { EventComponentKind::ROLE, (int)subject.role },
+                        {},
+                        { EventComponentKind::ROLE, (int)target.role },
+                        -1
+                    });
                 });
             });
+
+            if (isSuccess && !req.isSkippingAnimations) {
+                const int roomId = req.room.roomId;
+                Keyframe::insertKeyframe(
+                    Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(subject.keyframes),
+                    Keyframe::buildJump(req.time, 1800, roomId)
+                );
+                Keyframe::insertKeyframe(
+                    Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(target.keyframes),
+                    Keyframe::buildCritterBite(req.time, 1800, roomId)
+                );
+            }
         });
 
-        if (isSuccess && !activation.request->isSkippingAnimations) {
-            const int roomId = activation.request->room.roomId;
-            Keyframe::insertKeyframe(
-                Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(subject.keyframes),
-                Keyframe::buildJump(activation.request->time, 1800, roomId)
-            );
-            Keyframe::insertKeyframe(
-                Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(target.keyframes),
-                Keyframe::buildCritterBite(activation.request->time, 1800, roomId)
-            );
-        }
+        codeset.addFailure(!isTargetAccessed, CODE_CRITTER_BITE_MISSING_TARGET);
     });
-
-    codeset.addFailure(!isTargetAccessed, CODE_CRITTER_BITE_MISSING_TARGET);
-
     return isSuccess;
 }

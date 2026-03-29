@@ -10,55 +10,54 @@
 #include "Room.hpp"
 
 bool ActivatorLightningRod::activate(Activation& activation) const {
-    auto& controller = activation.request->controller;
-    auto& codeset = activation.request->codeset;
-    auto& subject = activation.character;
-    auto& inventory = activation.request->player.inventory;
-    auto& room = activation.request->room;
+    bool result = false;
+    activation.request.access([&](RequestContext& req) {
+        auto& controller = req.controller;
+        auto& codeset = req.codeset;
+        auto& subject = activation.character;
+        auto& inventory = req.player.inventory;
+        auto& room = req.room;
 
-    Cardinal direction;
-    if (codeset.addFailure(!activation.direction.copy(direction), CODE_ACTIVATION_DIRECTION_NOT_SPECIFIED)) {
-        return false;
-    }
+        Cardinal direction;
+        if (codeset.addFailure(!activation.direction.copy(direction), CODE_ACTIVATION_DIRECTION_NOT_SPECIFIED)) {
+            return;
+        }
 
-    // Check if character is actor
-    if (!activation.request->controller.isCharacterKeyerValidation(subject)) {
-        return false;
-    }
+        if (!req.controller.isCharacterKeyerValidation(subject)) {
+            return;
+        }
 
-    Wall& sourceWall = room.getWall(direction);
+        Wall& sourceWall = room.getWall(direction);
 
-    switch (sourceWall.door) {
-        case DOOR_LIGHTNING_ROD_AWAKENED:
-            // give cube from rod
-            if (controller.takeCharacterAction(subject)) {
-                // it's fine to perform the inventory check last because failures arent saved
-                if (controller.giveInventoryItem(inventory, ITEM_CUBE_AWAKENED, activation.request->time, room.roomId, activation.request->isSkippingAnimations)) {
-                    sourceWall.setDoor(DOOR_LIGHTNING_ROD_EMPTY, activation.request->time, activation.request->isSkippingAnimations, room.roomId, ANIMATION_SLIDE);
-                    return true;
+        switch (sourceWall.door) {
+            case DOOR_LIGHTNING_ROD_AWAKENED:
+                if (controller.takeCharacterAction(subject)) {
+                    if (controller.giveInventoryItem(inventory, ITEM_CUBE_AWAKENED, req.time, room.roomId, req.isSkippingAnimations)) {
+                        sourceWall.setDoor(DOOR_LIGHTNING_ROD_EMPTY, req.time, req.isSkippingAnimations, room.roomId, ANIMATION_SLIDE);
+                        result = true;
+                        return;
+                    }
                 }
-            }
-            break;
-        case DOOR_LIGHTNING_ROD_DORMANT:
-            // give cube from rod
-            if (controller.takeCharacterAction(subject) && controller.giveInventoryItem(inventory, ITEM_CUBE_DORMANT, activation.request->time, room.roomId, activation.request->isSkippingAnimations)) {
-                sourceWall.setDoor(DOOR_LIGHTNING_ROD_EMPTY, activation.request->time, activation.request->isSkippingAnimations, room.roomId, ANIMATION_SLIDE);
-                return true;
-            }
-            break;
-        case DOOR_LIGHTNING_ROD_EMPTY:
-            // take cube for rod
-            if (controller.takeCharacterAction(subject)) {
-                if (controller.takeInventoryItem(inventory, ITEM_CUBE_DORMANT, activation.request->time, room.roomId, activation.request->isSkippingAnimations)) {
-                    sourceWall.setDoor(DOOR_LIGHTNING_ROD_AWAKENED, activation.request->time, activation.request->isSkippingAnimations, room.roomId, ANIMATION_CRUSH);
-                    return true;
+                break;
+            case DOOR_LIGHTNING_ROD_DORMANT:
+                if (controller.takeCharacterAction(subject) && controller.giveInventoryItem(inventory, ITEM_CUBE_DORMANT, req.time, room.roomId, req.isSkippingAnimations)) {
+                    sourceWall.setDoor(DOOR_LIGHTNING_ROD_EMPTY, req.time, req.isSkippingAnimations, room.roomId, ANIMATION_SLIDE);
+                    result = true;
+                    return;
                 }
-            }
-            break;
-        default:
-            codeset.addError(CODE_LIGHTNING_ROD_ACTIVATION_ON_NON_LIGHTNING_ROD);
-    }
-
-    // switch never reaches this
-    return false;
+                break;
+            case DOOR_LIGHTNING_ROD_EMPTY:
+                if (controller.takeCharacterAction(subject)) {
+                    if (controller.takeInventoryItem(inventory, ITEM_CUBE_DORMANT, req.time, room.roomId, req.isSkippingAnimations)) {
+                        sourceWall.setDoor(DOOR_LIGHTNING_ROD_AWAKENED, req.time, req.isSkippingAnimations, room.roomId, ANIMATION_CRUSH);
+                        result = true;
+                        return;
+                    }
+                }
+                break;
+            default:
+                codeset.addError(CODE_LIGHTNING_ROD_ACTIVATION_ON_NON_LIGHTNING_ROD);
+        }
+    });
+    return result;
 }

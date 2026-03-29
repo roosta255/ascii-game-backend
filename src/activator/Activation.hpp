@@ -11,7 +11,7 @@ class Character;
 class Inventory;
 
 struct ActivationContext {
-    RequestContext* request;
+    Pointer<RequestContext> request;
 
     Character& character;
 

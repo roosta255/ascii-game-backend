@@ -5,10 +5,12 @@
 
 bool ActivatorDamagePierce::activate(Activation& activation) const {
     activation.target.access([&](Character& target) {
-        const auto traitsComputed = activation.request->controller.getTraitsComputed(target.characterId);
-        if (traitsComputed.final[TRAIT_DAMAGE_WEAKNESS_PIERCE].orElse(false)) {
-            target.damage += 1;
-        }
+        activation.request.access([&](RequestContext& req) {
+            const auto traitsComputed = req.controller.getTraitsComputed(target.characterId);
+            if (traitsComputed.final[TRAIT_DAMAGE_WEAKNESS_PIERCE].orElse(false)) {
+                target.damage += 1;
+            }
+        });
     });
     return true;
 }

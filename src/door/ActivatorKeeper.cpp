@@ -9,58 +9,56 @@
 #include "Room.hpp"
 
 bool ActivatorKeeper::activate(Activation& activation) const {
-    auto& controller = activation.request->controller;
-    auto& codeset = activation.request->codeset;
-    auto& subject = activation.character;
-    auto& room = activation.request->room;
-
-    Cardinal direction;
-    if (codeset.addFailure(!activation.direction.copy(direction), CODE_ACTIVATION_DIRECTION_NOT_SPECIFIED)) {
-        return false;
-    }
-
-    Wall& sourceWall = room.getWall(direction);
-
-    const Timestamp doorTime = activation.request->time + MatchController::BOUNCE_LOCK_ANIMATION_DURATION / 2;
-
     bool isSuccess = false;
-    const bool isNeighborAccessed = activation.request->match.dungeon.accessWallNeighbor(room, direction,
-        [&](Wall& neighborWall, Room& neighbor, int neighborId) {
-            switch (sourceWall.door) {
-                case DOOR_KEEPER_INGRESS_KEYED:
-                    // GiveItem effect already gave the key; transition door state.
-                    sourceWall.setDoor(DOOR_KEEPER_INGRESS_KEYLESS, doorTime, activation.request->isSkippingAnimations, room.roomId, ANIMATION_CRUSH);
-                    neighborWall.setDoor(DOOR_KEEPER_EGRESS_KEYLESS, doorTime, activation.request->isSkippingAnimations, neighborId, ANIMATION_CRUSH);
-                    isSuccess = true;
-                    controller.appendEventLog(activation, LoggedEvent{
-                        EVENT_LOCK,
-                        { EventComponentKind::ROLE, (int)subject.role },
-                        { EventComponentKind::ITEM, (int)ITEM_KEY },
-                        { EventComponentKind::DOOR, (int)DOOR_KEEPER_INGRESS_KEYLESS },
-                        (int)direction
-                    });
-                    return;
-                case DOOR_KEEPER_INGRESS_KEYLESS:
-                    // Wrapper spent the action and took the key; transition door state.
-                    sourceWall.setDoor(DOOR_KEEPER_INGRESS_KEYED, doorTime, activation.request->isSkippingAnimations, room.roomId, ANIMATION_SLIDE);
-                    neighborWall.setDoor(DOOR_KEEPER_EGRESS_KEYED, doorTime, activation.request->isSkippingAnimations, neighborId, ANIMATION_SLIDE);
-                    isSuccess = true;
-                    controller.appendEventLog(activation, LoggedEvent{
-                        EVENT_UNLOCK,
-                        { EventComponentKind::ROLE, (int)subject.role },
-                        { EventComponentKind::ITEM, (int)ITEM_KEY },
-                        { EventComponentKind::DOOR, (int)DOOR_KEEPER_INGRESS_KEYED },
-                        (int)direction
-                    });
-                    return;
-                default:
-                    codeset.addError(CODE_KEEPER_ACTIVATION_ON_NON_INGRESS_KEEPER);
-                    return;
-            }
+    activation.request.access([&](RequestContext& req) {
+        auto& controller = req.controller;
+        auto& codeset = req.codeset;
+        auto& subject = activation.character;
+        auto& room = req.room;
+
+        Cardinal direction;
+        if (codeset.addFailure(!activation.direction.copy(direction), CODE_ACTIVATION_DIRECTION_NOT_SPECIFIED)) {
+            return;
         }
-    );
 
-    codeset.addFailure(!isNeighborAccessed, CODE_INACCESSIBLE_NEIGHBORING_WALL);
+        Wall& sourceWall = room.getWall(direction);
+        const Timestamp doorTime = req.time + MatchController::BOUNCE_LOCK_ANIMATION_DURATION / 2;
 
+        const bool isNeighborAccessed = req.match.dungeon.accessWallNeighbor(room, direction,
+            [&](Wall& neighborWall, Room& neighbor, int neighborId) {
+                switch (sourceWall.door) {
+                    case DOOR_KEEPER_INGRESS_KEYED:
+                        sourceWall.setDoor(DOOR_KEEPER_INGRESS_KEYLESS, doorTime, req.isSkippingAnimations, room.roomId, ANIMATION_CRUSH);
+                        neighborWall.setDoor(DOOR_KEEPER_EGRESS_KEYLESS, doorTime, req.isSkippingAnimations, neighborId, ANIMATION_CRUSH);
+                        isSuccess = true;
+                        controller.addLoggedEvent(activation, room.roomId, LoggedEvent{
+                            EVENT_LOCK,
+                            { EventComponentKind::ROLE, (int)subject.role },
+                            { EventComponentKind::ITEM, (int)ITEM_KEY },
+                            { EventComponentKind::DOOR, (int)DOOR_KEEPER_INGRESS_KEYLESS },
+                            (int)direction
+                        });
+                        return;
+                    case DOOR_KEEPER_INGRESS_KEYLESS:
+                        sourceWall.setDoor(DOOR_KEEPER_INGRESS_KEYED, doorTime, req.isSkippingAnimations, room.roomId, ANIMATION_SLIDE);
+                        neighborWall.setDoor(DOOR_KEEPER_EGRESS_KEYED, doorTime, req.isSkippingAnimations, neighborId, ANIMATION_SLIDE);
+                        isSuccess = true;
+                        controller.addLoggedEvent(activation, room.roomId, LoggedEvent{
+                            EVENT_UNLOCK,
+                            { EventComponentKind::ROLE, (int)subject.role },
+                            { EventComponentKind::ITEM, (int)ITEM_KEY },
+                            { EventComponentKind::DOOR, (int)DOOR_KEEPER_INGRESS_KEYED },
+                            (int)direction
+                        });
+                        return;
+                    default:
+                        codeset.addError(CODE_KEEPER_ACTIVATION_ON_NON_INGRESS_KEEPER);
+                        return;
+                }
+            }
+        );
+
+        codeset.addFailure(!isNeighborAccessed, CODE_INACCESSIBLE_NEIGHBORING_WALL);
+    });
     return isSuccess;
 }

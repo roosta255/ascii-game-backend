@@ -17,6 +17,8 @@
 #include "MatchController.hpp"
 #include "MatchRepository.hpp"
 #include "MatchApiParameters.hpp"
+#include "CodesetApiView.hpp"
+#include "LoggedEventApiView.hpp"
 #include "MatchApiView.hpp"
 #include "Preactivation.hpp"
 #include "Timestamp.hpp"
@@ -525,14 +527,24 @@ void ApiController::performCharacterAction
     };
 
     // Attempt to perform the character action
-    if (!controller.activate(preactivation))
+    std::vector<LoggedEvent> eventLog;
+    if (!controller.activate(preactivation, &eventLog))
         return invokeResponse409(codeset.describe("Character activation rejected due to: "), std::move(callback));
 
     // Save the updated match state
     if (codeset.addFailure(!matchRepository.save(match, codeset.error)))
         return invokeResponse409(codeset.describe("Failed to save match due to: "), std::move(callback));
 
-    return invokeResponse200("Character performed action", std::move(callback));
+    nlohmann::json eventLogJson = nlohmann::json::array();
+    for (int i = 0; i < (int)eventLog.size(); ++i) {
+        eventLogJson.push_back(nlohmann::json(LoggedEventApiView(eventLog[i], i)));
+    }
+    nlohmann::json body = {
+        {"eventLog", eventLogJson},
+        {"codeset",  nlohmann::json(CodesetApiView(codeset))}
+    };
+    auto resp = drogon::HttpResponse::newHttpJsonResponse(body.dump());
+    return callback(resp);
 }
 
 void ApiController::getCharacterSheet
