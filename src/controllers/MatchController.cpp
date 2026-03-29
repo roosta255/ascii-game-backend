@@ -31,7 +31,7 @@ MatchController::MatchController(Match& match, Codeset& codeset): match(match), 
 }
 
 // functions
-bool MatchController::activate(const Preactivation& preactivation, std::vector<LoggedEvent>* outEventLog) {
+bool MatchController::activate(const Preactivation& preactivation, Pointer<std::vector<LoggedEvent>> outEventLog) {
     bool isSuccess = false;
     ActionFlyweight::getFlyweights().accessConst((int)preactivation.action.type, [&](const ActionFlyweight& flyweight){
         codeset.addFailure(!flyweight.activator.accessConst([&](const iActivator& activator){
@@ -41,11 +41,14 @@ bool MatchController::activate(const Preactivation& preactivation, std::vector<L
     return isSuccess;
 }
 
-bool MatchController::activate(const iActivator& activator, const Preactivation& preactivation, std::vector<LoggedEvent>* outEventLog) {
+bool MatchController::activate(const iActivator& activator, const Preactivation& preactivation, Pointer<std::vector<LoggedEvent>> outEventLog) {
     setupLocations();
 
     // Check if match has started
     if (codeset.addFailure(!match.isStarted(codeset.error))) return false;
+
+    std::vector<PendingTrigger> eventQueue;
+    eventQueuePtr = &eventQueue;
 
     bool isSuccess = false;
     codeset.addFailure(!match.getPlayer(preactivation.playerId, codeset.error).access([&](Player& player) {
@@ -82,19 +85,80 @@ bool MatchController::activate(const iActivator& activator, const Preactivation&
                     activation.targetItem = inventory.items.getPointer(preactivation.action.targetItemIndex.orElse(-1));
                 });
                 codeset.addFailure(!(isSuccess = activator.activate(activation)));
-                if (outEventLog) {
-                    outEventLog->clear();
+                outEventLog.access([&](std::vector<LoggedEvent>& eventLog) {
+                    eventLog.clear();
                     activation.request.access([&](RequestContext& request) {
                         CyclicalRack<LoggedEvent> log(request.eventLog.begin(), 32, (size_t)request.eventLogHead, (size_t)request.eventLogSize);
                         for (size_t i = 0; i < log.size(); ++i) {
-                            outEventLog->push_back(log[i]);
+                            eventLog.push_back(log[i]);
                         }
                     });
-                }
+                });
             }));
         }));
     }));
-    return isSuccess;
+
+    if (!isSuccess) {
+        eventQueuePtr = nullptr;
+        return false;
+    }
+
+    // Process pending triggers. Failures in the queue do not affect isSuccess.
+    std::vector<LoggedEvent> triggerEventLog;
+    outEventLog.access([&](std::vector<LoggedEvent>& eventLog) { triggerEventLog = eventLog; });
+    constexpr int MAX_QUEUE_SIZE = 200;
+    constexpr int MAX_PROCESSED  = 400;
+    int totalProcessed = 0;
+    while (!eventQueue.empty()) {
+        if ((int)eventQueue.size() > MAX_QUEUE_SIZE) {
+            codeset.addLog(CODE_EVENT_QUEUE_SIZE_LIMIT_EXCEEDED, (int)eventQueue.size());
+            break;
+        }
+        if (totalProcessed >= MAX_PROCESSED) {
+            codeset.addLog(CODE_EVENT_QUEUE_PROCESSED_LIMIT_EXCEEDED, totalProcessed);
+            break;
+        }
+
+        auto trigger = eventQueue.front();
+        eventQueue.erase(eventQueue.begin());
+        ++totalProcessed;
+
+        // TODO: run trigger.activator in a full Activation context with time = animationTime
+
+        // Dispatch behavioral responses to all AI agents in the same room as the event character.
+        // Behavior responses are not cascaded (BEHAVIOR_EVENT_NIL suppresses further dispatch).
+        if (trigger.eventType == BEHAVIOR_EVENT_NIL) continue;
+
+        int roomId = -1;
+        match.accessUsedCharacters([&](const Character& ch) {
+            if (ch.characterId == trigger.characterId) roomId = ch.location.roomId;
+        });
+        if (roomId < 0) continue;
+
+        setupLocations();
+        floors.accessConst(roomId, [&](const Map<int2, int>& floorMap) {
+            for (const auto& [key, agentId] : floorMap) {
+                if (agentId == trigger.characterId || agentId == trigger.targetId) continue;
+                match.getCharacter(agentId, codeset.error).accessConst([&](const Character& agent) {
+                    if (agent.behavior == BEHAVIOR_NIL) return;
+                    BehaviorFlyweight::getFlyweights().accessConst(agent.behavior, [&](const BehaviorFlyweight& fw) {
+                        fw.getActivatorForEvent(trigger.eventType).accessConst([&](const iActivator& behaviorActivator) {
+                            eventQueue.push_back(PendingTrigger{
+                                &behaviorActivator,
+                                agentId,
+                                trigger.characterId,
+                                Maybe<int>(agentId),
+                                BEHAVIOR_EVENT_NIL
+                            });
+                        });
+                    });
+                });
+            }
+        });
+    }
+
+    eventQueuePtr = nullptr;
+    return true;
 }
 
 bool MatchController::allocateCharacterToFloor(int roomId, ChannelEnum channel, std::function<void(Character&)> consumer, int& outCharacterId, int& outFloorId) {
@@ -655,8 +719,18 @@ void MatchController::addLoggedEvent(Activation& activation, int roomId, LoggedE
     });
 }
 
+void MatchController::addRequestLoggedEvent(Activation& activation, LoggedEvent event) {
+    activation.request.access([&](RequestContext& request) {
+        if (request.isSkippingLogging) return;
+        CyclicalRack<LoggedEvent> reqLog(request.eventLog.begin(), 32, (size_t)request.eventLogHead, (size_t)request.eventLogSize);
+        reqLog.push_back(event);
+        request.eventLogHead = (int)reqLog.getHeadOffset();
+        request.eventLogSize = (int)reqLog.size();
+    });
+}
+
 void MatchController::pushTrigger(const iActivator* activator, int characterId, int targetId, BehaviorEventEnum eventType) {
-    eventQueue.push_back(PendingTrigger{ activator, characterId, targetId, Maybe<int>::empty(), eventType });
+    if (eventQueuePtr) eventQueuePtr->push_back(PendingTrigger{ activator, characterId, targetId, Maybe<int>::empty(), eventType });
 }
 
 void MatchController::setAnimationTime(const Timestamp& t) {
@@ -665,48 +739,6 @@ void MatchController::setAnimationTime(const Timestamp& t) {
     }
 }
 
-void MatchController::processEventQueue() {
-    if (isProcessingEventQueue) return;
-    isProcessingEventQueue = true;
-    while (!eventQueue.empty()) {
-        auto trigger = eventQueue.front();
-        eventQueue.erase(eventQueue.begin());
-
-        // TODO: run trigger.activator in a full Activation context with time = animationTime
-
-        // Dispatch behavioral responses to all AI agents in the same room as the event character.
-        // Behavior responses are not cascaded (BEHAVIOR_EVENT_NIL suppresses further dispatch).
-        if (trigger.eventType == BEHAVIOR_EVENT_NIL) continue;
-
-        int roomId = -1;
-        match.accessUsedCharacters([&](const Character& ch) {
-            if (ch.characterId == trigger.characterId) roomId = ch.location.roomId;
-        });
-        if (roomId < 0) continue;
-
-        setupLocations();
-        floors.accessConst(roomId, [&](const Map<int2, int>& floorMap) {
-            for (const auto& [key, agentId] : floorMap) {
-                if (agentId == trigger.characterId || agentId == trigger.targetId) continue;
-                match.getCharacter(agentId, codeset.error).accessConst([&](const Character& agent) {
-                    if (agent.behavior == BEHAVIOR_NIL) return;
-                    BehaviorFlyweight::getFlyweights().accessConst(agent.behavior, [&](const BehaviorFlyweight& fw) {
-                        fw.getActivatorForEvent(trigger.eventType).accessConst([&](const iActivator& behaviorActivator) {
-                            eventQueue.push_back(PendingTrigger{
-                                &behaviorActivator,
-                                agentId,
-                                trigger.characterId,
-                                Maybe<int>(agentId),
-                                BEHAVIOR_EVENT_NIL
-                            });
-                        });
-                    });
-                });
-            }
-        });
-    }
-    isProcessingEventQueue = false;
-}
 
 bool MatchController::takeInventoryItem(Inventory& inventory, const ItemEnum type, const bool isDryrun) {
     return !codeset.addFailure(!inventory.takeItem(type, codeset.error, isDryrun));

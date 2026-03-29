@@ -84,6 +84,7 @@ public:
                        std::function<void(const drogon::HttpResponsePtr &)> &&callback);
 
     static void invokeResponse(const drogon::HttpStatusCode code, const std::string& body, std::function<void (const drogon::HttpResponsePtr &)> &&callback);
+    static void invokeResponseJson(const drogon::HttpStatusCode code, const std::string& body, std::function<void (const drogon::HttpResponsePtr &)> &&callback);
     static void invokeResponse200(const std::string& body, std::function<void (const drogon::HttpResponsePtr &)> &&callback);
     static void invokeResponse400(const std::string& body, std::function<void (const drogon::HttpResponsePtr &)> &&callback);
     static void invokeResponse404(const std::string& body, std::function<void (const drogon::HttpResponsePtr &)> &&callback);

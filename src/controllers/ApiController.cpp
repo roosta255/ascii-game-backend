@@ -528,11 +528,10 @@ void ApiController::performCharacterAction
 
     // Attempt to perform the character action
     std::vector<LoggedEvent> eventLog;
-    if (!controller.activate(preactivation, &eventLog))
-        return invokeResponse409(codeset.describe("Character activation rejected due to: "), std::move(callback));
+    const bool activated = controller.activate(preactivation, Pointer<std::vector<LoggedEvent>>(eventLog));
 
-    // Save the updated match state
-    if (codeset.addFailure(!matchRepository.save(match, codeset.error)))
+    // Save the updated match state (only on success)
+    if (activated && codeset.addFailure(!matchRepository.save(match, codeset.error)))
         return invokeResponse409(codeset.describe("Failed to save match due to: "), std::move(callback));
 
     nlohmann::json eventLogJson = nlohmann::json::array();
@@ -543,8 +542,8 @@ void ApiController::performCharacterAction
         {"eventLog", eventLogJson},
         {"codeset",  nlohmann::json(CodesetApiView(codeset))}
     };
-    auto resp = drogon::HttpResponse::newHttpJsonResponse(body.dump());
-    return callback(resp);
+    const auto status = activated ? drogon::k200OK : drogon::k409Conflict;
+    return invokeResponseJson(status, body.dump(), std::move(callback));
 }
 
 void ApiController::getCharacterSheet
@@ -664,6 +663,17 @@ void ApiController::invokeResponse
     auto resp = drogon::HttpResponse::newHttpResponse();
     resp->setStatusCode(code);
     resp->setBody(body);
+    resp->addHeader("Access-Control-Allow-Origin", "*");
+    resp->addHeader("Access-Control-Allow-Headers", "Content-Type");
+    resp->addHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    callback(resp);
+}
+
+void ApiController::invokeResponseJson
+( const drogon::HttpStatusCode code, const std::string& body, std::function<void (const drogon::HttpResponsePtr &)> &&callback
+) {
+    auto resp = drogon::HttpResponse::newHttpJsonResponse(body);
+    resp->setStatusCode(code);
     resp->addHeader("Access-Control-Allow-Origin", "*");
     resp->addHeader("Access-Control-Allow-Headers", "Content-Type");
     resp->addHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");

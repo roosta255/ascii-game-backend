@@ -32,19 +32,19 @@ class Player;
 struct Preactivation;
 class Room;
 
+// Event trigger entry for deferred processing after activations
+struct PendingTrigger {
+    const iActivator* activator = nullptr;
+    int characterId = -1;
+    int targetId = -1;
+    // Set when this trigger is a behavioral AI response; identifies the acting agent.
+    Maybe<int> agentId;
+    // Event type used to dispatch AI behavior responses. BEHAVIOR_EVENT_NIL suppresses dispatch.
+    BehaviorEventEnum eventType = BEHAVIOR_EVENT_NIL;
+};
+
 struct MatchController {
 public:
-    // Event trigger entry for deferred processing after activations
-    struct PendingTrigger {
-        const iActivator* activator = nullptr;
-        int characterId = -1;
-        int targetId = -1;
-        // Set when this trigger is a behavioral AI response; identifies the acting agent.
-        Maybe<int> agentId;
-        // Event type used to dispatch AI behavior responses. BEHAVIOR_EVENT_NIL suppresses dispatch.
-        BehaviorEventEnum eventType = BEHAVIOR_EVENT_NIL;
-    };
-
     // members
     Match& match;
     Codeset& codeset;
@@ -54,8 +54,7 @@ private:
     Map<int, Map<int2, int> > doors; // roomId -> <channel, direction> -> characterId
     Map<int, TraitModifier::TraitComputation> traitsComputed; // characterId -> computed traits (always fresh, never persisted)
     Map<int, Pointer<Chest>> chestContainerMap; // containerCharacterId -> Chest
-    std::vector<PendingTrigger> eventQueue; // deferred trigger activations
-    bool isProcessingEventQueue = false;
+    std::vector<PendingTrigger>* eventQueuePtr = nullptr; // set during activate(); used by pushTrigger()
     Timestamp animationTime; // latest animation end time across all active activations
     bool isLocationsSetup = false;
 public:
@@ -67,8 +66,8 @@ public:
     MatchController(Match& match, Codeset& codeset);
 
     // functions
-    bool activate(const Preactivation& preactivation, std::vector<LoggedEvent>* outEventLog = nullptr);
-    bool activate(const iActivator& activator, const Preactivation& preactivation, std::vector<LoggedEvent>* outEventLog = nullptr);
+    bool activate(const Preactivation& preactivation, Pointer<std::vector<LoggedEvent>> outEventLog = Pointer<std::vector<LoggedEvent>>::empty());
+    bool activate(const iActivator& activator, const Preactivation& preactivation, Pointer<std::vector<LoggedEvent>> outEventLog = Pointer<std::vector<LoggedEvent>>::empty());
     bool allocateChest(int roomId, std::function<void(Chest&, Character&)> consumer);
     bool allocateChest(int roomId, std::function<void(Chest&, Character&, Character&)> consumer);
     bool allocateCharacterToFloor(int roomId, ChannelEnum channel, std::function<void(Character&)> consumer, int& outCharacterId, int& outFloorId);
@@ -121,9 +120,10 @@ public:
 
     // Appends a logged event to the specified room's event log and to activation.request.eventLog.
     void addLoggedEvent(Activation& activation, int roomId, LoggedEvent event);
+    // Appends a logged event only to activation.request.eventLog (not the room log). Use for failure events.
+    void addRequestLoggedEvent(Activation& activation, LoggedEvent event);
 
     void pushTrigger(const iActivator* activator, int characterId, int targetId = -1, BehaviorEventEnum eventType = BEHAVIOR_EVENT_NIL);
-    void processEventQueue();
 
     // Called by activators when they schedule an animation; advances the global animation clock.
     void setAnimationTime(const Timestamp& t);
