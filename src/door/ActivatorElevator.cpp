@@ -14,15 +14,15 @@
 #include "Wall.hpp"
 
 bool ActivatorElevator::activate(Activation& activation) const {
-    auto& controller = activation.controller;
-    auto& codeset = activation.codeset;
-    auto& dungeon = activation.match.dungeon;
-    auto& match = activation.match;
-    auto mutator = DungeonMutator(activation.controller);
+    auto& controller = activation.request->controller;
+    auto& codeset = activation.request->codeset;
+    auto& dungeon = activation.request->match.dungeon;
+    auto& match = activation.request->match;
+    auto mutator = DungeonMutator(activation.request->controller);
     mutator.isElevatorOverride = true;
     auto& subject = activation.character;
-    auto& inventory = activation.player.inventory;
-    auto& room = activation.room;
+    auto& inventory = activation.request->player.inventory;
+    auto& room = activation.request->room;
 
     Cardinal outDirection;
     if (codeset.addFailure(!activation.direction.copy(outDirection), CODE_ACTIVATION_DIRECTION_NOT_SPECIFIED)) {
@@ -51,12 +51,6 @@ bool ActivatorElevator::activate(Activation& activation) const {
 
     const auto aboveAdjacentRoomIds = getAccessedRoomIdsFromAdjacentRoomIds(startingAdjacentRoomIds, true);
     const auto belowAdjacentRoomIds = getAccessedRoomIdsFromAdjacentRoomIds(startingAdjacentRoomIds, false);
-    // this button was clicked to do something
-    // this has to figure out what was done, then the next fsm state
-    // internal -> could be ascend/descend or pay-higher/pay-lower
-    // external -> could be to call the elevator
-    // ascend/descend vs pay-higher/pay-lower depends on 1: which direction was activated so that whether the next level is paid for can be determined
-    // isInternal vs isExternal
     const auto getKeyStatusOfLevel = [&](const Array<Maybe<int>, 4>& inputAdjacentRoomIds){
         const auto defau1t = Maybe<bool>::empty();
         return inputAdjacentRoomIds.transform([&](const int directionIndex, const Maybe<int>& accessedRoomId){
@@ -81,7 +75,6 @@ bool ActivatorElevator::activate(Activation& activation) const {
 
         const auto keyStatus = isDirectionHigh ? keyStatusAbove : keyStatusBelow;
         if (codeset.addFailure(keyStatus.isEmpty(), CODE_ELEVATOR_CANNOT_DETERMINE_KEY_STATUS)) {
-            // this button state requires another level to the elevator, but the next level's keyed/keyless status could not be determined
             return false;
         }
 
@@ -95,7 +88,7 @@ bool ActivatorElevator::activate(Activation& activation) const {
             return false;
         }
 
-        if (isPaying && codeset.addFailure(!controller.takeInventoryItem(inventory, ITEM_KEY_ELEVATOR, activation.time, room.roomId, activation.isSkippingAnimations), CODE_ELEVATOR_FAILED_TO_PAY_KEY)) {
+        if (isPaying && codeset.addFailure(!controller.takeInventoryItem(inventory, ITEM_KEY_ELEVATOR, activation.request->time, room.roomId, activation.request->isSkippingAnimations), CODE_ELEVATOR_FAILED_TO_PAY_KEY)) {
             return false;
         }
 
@@ -110,16 +103,14 @@ bool ActivatorElevator::activate(Activation& activation) const {
             }
         }
 
-        // this will be on the next level, whether directly above or below
-        // only moving will update the current level (to close it)
         const auto directUpdateElevatorProperties = DungeonMutator::ElevatorProperties
             { .connectedRoomIds = isDirectionHigh ? aboveAdjacentRoomIds : belowAdjacentRoomIds,
-              .isPaid = true // always true whether paying or was already paid
+              .isPaid = true
             };
 
         const auto selfUpdateElevatorProperties = DungeonMutator::ElevatorProperties
             { .connectedRoomIds = startingAdjacentRoomIds,
-              .isPaid = true // always true whether paying or was already paid
+              .isPaid = true
             };
 
         const auto subsequentAdjacentRooms = getAccessedRoomIdsFromAdjacentRoomIds(directUpdateElevatorProperties.connectedRoomIds, isDirectionHigh);
@@ -127,17 +118,14 @@ bool ActivatorElevator::activate(Activation& activation) const {
         const auto isSubsequentLevelExisting = subsequentKeyStatus.isPresent();
         const auto isSubsequentLevelPaid = subsequentKeyStatus.orElse(false);
 
-        // always mutate the direct
         if (codeset.addFailure(!mutator.setupElevatorLevel(room.roomId, directUpdateElevatorProperties, isMoving, isDirectionHigh ? isSubsequentLevelExisting : true, isDirectionHigh ? true : isSubsequentLevelExisting, isDirectionHigh ? isSubsequentLevelPaid : true, isDirectionHigh ? true : isSubsequentLevelPaid), CODE_ELEVATOR_FAILED_TO_SETUP_ELEVATOR_DIRECT)) {
             return false;
         }
 
-        // moving mutates the self to close it
         if (isMoving && codeset.addFailure(!mutator.setupElevatorLevel(room.roomId, selfUpdateElevatorProperties, false, keyStatusAbove.isPresent(), keyStatusBelow.isPresent(), false, false), CODE_ELEVATOR_FAILED_TO_SETUP_ELEVATOR_SELF)) {
             return false;
         }
 
-        // paying mutates the self to update the button from paying to moving
         if (isPaying && codeset.addFailure(!mutator.setupElevatorLevel(room.roomId, selfUpdateElevatorProperties, true, keyStatusAbove.isPresent(), keyStatusBelow.isPresent(), isDirectionHigh ? true : keyStatusAbove.orElse(false), isDirectionHigh ? keyStatusBelow.orElse(false) : true), CODE_ELEVATOR_FAILED_TO_SETUP_ELEVATOR_SELF)) {
             return false;
         }

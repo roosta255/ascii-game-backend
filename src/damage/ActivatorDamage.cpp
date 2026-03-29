@@ -9,8 +9,8 @@
 #include "TraitEnum.hpp"
 
 bool ActivatorDamage::activate(Activation& activation) const {
-    auto& codeset = activation.codeset;
-    auto& controller = activation.controller;
+    auto& codeset = activation.request->codeset;
+    auto& controller = activation.request->controller;
 
     bool isSuccess = false;
     const bool isTargetAccessed = activation.target.access([&](Character& target) {

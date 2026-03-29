@@ -10,19 +10,19 @@
 #include "Room.hpp"
 
 bool ActivatorTimeGate::activate(Activation& activation) const {
-    auto& controller = activation.controller;
-    auto& room = activation.room;
+    auto& controller = activation.request->controller;
+    auto& room = activation.request->room;
     const auto roomId = room.roomId;
-    auto& codeset = activation.codeset;
+    auto& codeset = activation.request->codeset;
     auto& subject = activation.character;
-    auto& inventory = activation.player.inventory;
+    auto& inventory = activation.request->player.inventory;
 
     Cardinal direction;
     if (codeset.addFailure(!activation.direction.copy(direction), CODE_ACTIVATION_DIRECTION_NOT_SPECIFIED)) {
         return false;
     }
 
-    Wall& sourceWall = activation.room.getWall(direction);
+    Wall& sourceWall = activation.request->room.getWall(direction);
 
     // Check for occupied target cell
     if (codeset.addFailure(!controller.validateDoorNotOccupied(room.roomId, CHANNEL_CORPOREAL, TIME_GATE_DIRECTION), CODE_OCCUPIED_TARGET_TIME_GATE_CELL)) {
@@ -30,7 +30,7 @@ bool ActivatorTimeGate::activate(Activation& activation) const {
     }
 
     int delta = 0;
-    switch (activation.room.type) {
+    switch (activation.request->room.type) {
         case ROOM_TIME_GATE_TO_FUTURE:
             delta = 1;
             break;
@@ -46,13 +46,13 @@ bool ActivatorTimeGate::activate(Activation& activation) const {
     switch (sourceWall.door) {
         case DOOR_TIME_GATE_AWAKENED:
             {
-                const bool isDeltaValid = activation.match.dungeon.rooms.access(activation.room.getDeltaTime(delta), [&](Room& room2) {                    
+                const bool isDeltaValid = activation.request->match.dungeon.rooms.access(activation.request->room.getDeltaTime(delta), [&](Room& room2) {
                     // first mutation, no going back
                     // update the time gates
-                    sourceWall.setDoor(DOOR_TIME_GATE_DORMANT, activation.time, activation.isSkippingAnimations, roomId, ANIMATION_CRUSH);
+                    sourceWall.setDoor(DOOR_TIME_GATE_DORMANT, activation.request->time, activation.request->isSkippingAnimations, roomId, ANIMATION_CRUSH);
                     auto& wall2 = room2.getWall(TIME_GATE_DIRECTION);
-                    wall2.setDoor(DOOR_TIME_GATE_DORMANT, activation.time, activation.isSkippingAnimations, room2.roomId, ANIMATION_CRUSH);
-                    
+                    wall2.setDoor(DOOR_TIME_GATE_DORMANT, activation.request->time, activation.request->isSkippingAnimations, room2.roomId, ANIMATION_CRUSH);
+
                     // clean and update locations
                     const auto newLocation = Location::makeDoor(room2.roomId, subject.location.channel, TIME_GATE_DIRECTION);
                     Location oldLocation;
@@ -62,8 +62,8 @@ bool ActivatorTimeGate::activate(Activation& activation) const {
                     if (controller.takeCharacterMove(subject)) {
 
                         // animate
-                        if (!activation.isSkippingAnimations) {
-                            const Keyframe keyframe = Keyframe::buildWalking(activation.time, MatchController::MOVE_ANIMATION_DURATION, room.roomId, oldLocation, newLocation, codeset);
+                        if (!activation.request->isSkippingAnimations) {
+                            const Keyframe keyframe = Keyframe::buildWalking(activation.request->time, MatchController::MOVE_ANIMATION_DURATION, room.roomId, oldLocation, newLocation, codeset);
                             if(!Keyframe::insertKeyframe(Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(subject.keyframes), keyframe)) {
                                 codeset.addLog(CODE_ANIMATION_OVERFLOW_IN_ACTIVATE_TIME_GATE);
                             }

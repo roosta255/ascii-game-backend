@@ -13,8 +13,8 @@
 #include "TraitEnum.hpp"
 
 bool ActivatorAttack::activate(Activation& activation) const {
-    auto& codeset = activation.codeset;
-    auto& controller = activation.controller;
+    auto& codeset = activation.request->codeset;
+    auto& controller = activation.request->controller;
     auto& attacker = activation.character;
 
     bool isSuccess = false;
@@ -36,24 +36,16 @@ bool ActivatorAttack::activate(Activation& activation) const {
                 return;
             }
             // Counter-attack: target attacks attacker (swap roles)
-            Activation counterActivation = {
-                activation.player,
-                target,
-                activation.room,
-                Pointer<Character>(attacker),
-                activation.sourceItem,
-                activation.targetItem,
-                activation.direction,
-                activation.match,
-                activation.codeset,
-                activation.time,
-                activation.controller,
-                activation.floorId,
-                activation.isSkippingAnimations,
-                activation.isSortingState,
-                activation.sourceInventory,
-                activation.targetInventory,
-                activation.damageTypes
+            ActivationContext counterActivation = {
+                .request = activation.request,
+                .character = target,
+                .target = Pointer<Character>(attacker),
+                .sourceItem = activation.sourceItem,
+                .targetItem = activation.targetItem,
+                .sourceInventory = activation.sourceInventory,
+                .targetInventory = activation.targetInventory,
+                .direction = activation.direction,
+                .damageTypes = activation.damageTypes
             };
             static ActivatorAttack innerAttack;
             innerAttack.activate(counterActivation);
@@ -87,24 +79,16 @@ bool ActivatorAttack::activate(Activation& activation) const {
         damageTypes.setIndexOn(DAMAGE_TYPE_MELEE);
 
         // --- Activate damage process on target ---
-        Activation damageActivation = {
-            activation.player,
-            attacker,
-            activation.room,
-            Pointer<Character>(target),
-            activation.sourceItem,
-            activation.targetItem,
-            activation.direction,
-            activation.match,
-            activation.codeset,
-            activation.time,
-            activation.controller,
-            activation.floorId,
-            activation.isSkippingAnimations,
-            activation.isSortingState,
-            activation.sourceInventory,
-            activation.targetInventory,
-            damageTypes
+        ActivationContext damageActivation = {
+            .request = activation.request,
+            .character = attacker,
+            .target = Pointer<Character>(target),
+            .sourceItem = activation.sourceItem,
+            .targetItem = activation.targetItem,
+            .sourceInventory = activation.sourceInventory,
+            .targetInventory = activation.targetInventory,
+            .direction = activation.direction,
+            .damageTypes = damageTypes
         };
 
         static ActivatorDamage damageActivator;

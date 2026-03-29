@@ -8,10 +8,10 @@
 
 bool ActivatorDamageElectric::activate(Activation& activation) const {
     activation.target.access([&](Character& target) {
-        const auto traitsComputed = activation.controller.getTraitsComputed(target.characterId);
+        const auto traitsComputed = activation.request->controller.getTraitsComputed(target.characterId);
         if (traitsComputed.final[TRAIT_ACTION_READY].orElse(false)) {
-            activation.codeset.addFailure(
-                !activation.controller.takeCharacterAction(target),
+            activation.request->codeset.addFailure(
+                !activation.request->controller.takeCharacterAction(target),
                 CODE_DAMAGE_FAILED_TO_APPLY_ELECTRIC_TAKE_ACTION
             );
         }

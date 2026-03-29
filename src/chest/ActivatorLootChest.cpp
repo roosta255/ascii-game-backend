@@ -14,12 +14,12 @@
 #include "Preactivation.hpp"
 
 bool ActivatorLootChest::activate(Activation& activation) const {
-    auto& controller = activation.controller;
-    auto& codeset = activation.codeset;
-    auto& match = activation.match;
-    auto& player = activation.player;
+    auto& controller = activation.request->controller;
+    auto& codeset = activation.request->codeset;
+    auto& match = activation.request->match;
+    auto& player = activation.request->player;
     auto& subject = activation.character;
-    auto& room = activation.room;
+    auto& room = activation.request->room;
     auto& item = activation.targetItem;
 
     if (codeset.addFailure(!subject.isActor(codeset.error, controller.getTraitsComputed(subject.characterId).final))) {
@@ -48,8 +48,8 @@ bool ActivatorLootChest::activate(Activation& activation) const {
                 if (codeset.addFailure(!isTransferable, CODE_LOOT_CHEST_ITEM_NOT_TRANSFERABLE)) return;
 
                 const ItemEnum type = chestItem.type;
-                if (codeset.addFailure(!controller.takeInventoryItem(chest.inventory, type, activation.time, room.roomId, activation.isSkippingAnimations))) return;
-                if (codeset.addFailure(!controller.giveInventoryItem(player.inventory, type, activation.time, room.roomId, activation.isSkippingAnimations))) return;
+                if (codeset.addFailure(!controller.takeInventoryItem(chest.inventory, type, activation.request->time, room.roomId, activation.request->isSkippingAnimations))) return;
+                if (codeset.addFailure(!controller.giveInventoryItem(player.inventory, type, activation.request->time, room.roomId, activation.request->isSkippingAnimations))) return;
                 if (codeset.addFailure(!controller.takeCharacterAction(subject))) return;
                 isSuccess = true;
                 controller.appendEventLog(activation, LoggedEvent{
@@ -72,9 +72,9 @@ bool ActivatorLootChest::activate(Activation& activation) const {
                             .targetCharacterId = subject.characterId,
                         },
                         .playerId = player.account.toString(),
-                        .isSkippingAnimations = activation.isSkippingAnimations,
+                        .isSkippingAnimations = activation.request->isSkippingAnimations,
                         .isSortingState = activation.isSortingState,
-                        .time = activation.time
+                        .time = activation.request->time
                     };
                     controller.activate(critterPreactivation);
                 });

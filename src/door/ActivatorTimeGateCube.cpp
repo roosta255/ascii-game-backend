@@ -10,10 +10,10 @@
 #include "DoorEnum.hpp"
 
 bool ActivatorTimeGateCube::activate(Activation& activation) const {
-    MatchController& controller = activation.controller;
-    Codeset& codeset = activation.codeset;
+    MatchController& controller = activation.request->controller;
+    Codeset& codeset = activation.request->codeset;
     Character& subject = activation.character;
-    auto& inventory = activation.player.inventory;
+    auto& inventory = activation.request->player.inventory;
 
     Cardinal direction;
     if (codeset.addFailure(!activation.direction.copy(direction), CODE_ACTIVATION_DIRECTION_NOT_SPECIFIED)) {
@@ -25,28 +25,28 @@ bool ActivatorTimeGateCube::activate(Activation& activation) const {
         return false;
     }
 
-    Wall& sourceWall = activation.room.getWall(direction);
+    Wall& sourceWall = activation.request->room.getWall(direction);
 
-    const int roomId = activation.room.roomId;
+    const int roomId = activation.request->room.roomId;
     switch (sourceWall.door) {
         case DOOR_TIME_GATE_AWAKENED:
             // give cube from gate
-            if (controller.takeCharacterAction(subject) && controller.giveInventoryItem(inventory, ITEM_CUBE_AWAKENED, activation.time, roomId, activation.isSkippingAnimations)) {
-                sourceWall.setDoor(DOOR_TIME_GATE_EMPTY, activation.time, activation.isSkippingAnimations, roomId, ANIMATION_SLIDE);
+            if (controller.takeCharacterAction(subject) && controller.giveInventoryItem(inventory, ITEM_CUBE_AWAKENED, activation.request->time, roomId, activation.request->isSkippingAnimations)) {
+                sourceWall.setDoor(DOOR_TIME_GATE_EMPTY, activation.request->time, activation.request->isSkippingAnimations, roomId, ANIMATION_SLIDE);
                 return true;
             }
             break;
         case DOOR_TIME_GATE_DORMANT:
             // give cube from gate
-            if (controller.takeCharacterAction(subject) && controller.giveInventoryItem(inventory, ITEM_CUBE_DORMANT, activation.time, roomId, activation.isSkippingAnimations)) {
-                sourceWall.setDoor(DOOR_TIME_GATE_EMPTY, activation.time, activation.isSkippingAnimations, roomId, ANIMATION_SLIDE);
+            if (controller.takeCharacterAction(subject) && controller.giveInventoryItem(inventory, ITEM_CUBE_DORMANT, activation.request->time, roomId, activation.request->isSkippingAnimations)) {
+                sourceWall.setDoor(DOOR_TIME_GATE_EMPTY, activation.request->time, activation.request->isSkippingAnimations, roomId, ANIMATION_SLIDE);
                 return true;
             }
             break;
         case DOOR_TIME_GATE_EMPTY:
             // take cube to gate
-            if (controller.takeCharacterAction(subject) && controller.takeInventoryItem(inventory, ITEM_CUBE_AWAKENED, activation.time, roomId, activation.isSkippingAnimations)) {
-                sourceWall.setDoor(DOOR_TIME_GATE_AWAKENED, activation.time, activation.isSkippingAnimations, roomId, ANIMATION_CRUSH);
+            if (controller.takeCharacterAction(subject) && controller.takeInventoryItem(inventory, ITEM_CUBE_AWAKENED, activation.request->time, roomId, activation.request->isSkippingAnimations)) {
+                sourceWall.setDoor(DOOR_TIME_GATE_AWAKENED, activation.request->time, activation.request->isSkippingAnimations, roomId, ANIMATION_CRUSH);
                 return true;
             }
             break;
@@ -57,4 +57,4 @@ bool ActivatorTimeGateCube::activate(Activation& activation) const {
 
     // switch makes this unreachable
     return false;
-} 
+}

@@ -3,5 +3,5 @@
 #include "Match.hpp"
 
 CodeEnum ActivateNonPlayerCharacterNullBuilder::activate(Activation& activation) const {
-    return activation.match.turner.endBuilderTurn(activation.match);
+    return activation.request->match.turner.endBuilderTurn(activation.request->match);
 } 

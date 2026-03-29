@@ -4,16 +4,16 @@
 #include "MatchController.hpp"
 
 bool ActivatorMoveToFloor::activate(Activation& activation) const {
-    auto& controller = activation.controller;
-    auto& codeset = activation.codeset;
-    auto& match = activation.match;
-    auto& player = activation.player;
+    auto& controller = activation.request->controller;
+    auto& codeset = activation.request->codeset;
+    auto& match = activation.request->match;
+    auto& player = activation.request->player;
     auto& inventory = player.inventory;
-    auto& room = activation.room;
+    auto& room = activation.request->room;
     auto& subject = activation.character;
 
     int floorId;
-    if (codeset.addFailure(!activation.floorId.copy(floorId), CODE_ACTIVATION_FLOOR_ID_NOT_SPECIFIED)) {
+    if (codeset.addFailure(!activation.request->floorId.copy(floorId), CODE_ACTIVATION_FLOOR_ID_NOT_SPECIFIED)) {
         return false;
     }
 
@@ -33,9 +33,9 @@ bool ActivatorMoveToFloor::activate(Activation& activation) const {
     Location oldLocation;
     codeset.addFailure(!controller.updateCharacterLocation(subject, newLocation, oldLocation), CODE_UPDATE_CHARACTER_LOCATION_FAILED);
 
-    if (!activation.isSkippingAnimations) {
+    if (!activation.request->isSkippingAnimations) {
         auto rack = Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(subject.keyframes);
-        const auto start = Keyframe::getLatestMovementEnd(rack, activation.time);
+        const auto start = Keyframe::getLatestMovementEnd(rack, activation.request->time);
         const auto keyframe = Keyframe::buildWalking(start, MatchController::MOVE_ANIMATION_DURATION, room.roomId, oldLocation, newLocation, codeset);
         if(!Keyframe::insertKeyframe(rack, keyframe)) {
             codeset.addLog(CODE_ANIMATION_OVERFLOW_IN_MOVE_CHARACTER_TO_FLOOR);

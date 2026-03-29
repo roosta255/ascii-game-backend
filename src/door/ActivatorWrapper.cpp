@@ -14,9 +14,9 @@ void ActivatorWrapper::init(const WrapperConfig& config) {
 
 bool ActivatorWrapper::activate(Activation& activation) const {
     auto& character = activation.character;
-    auto& codeset = activation.codeset;
-    auto& controller = activation.controller;
-    auto& inventory = activation.player.inventory;
+    auto& codeset = activation.request->codeset;
+    auto& controller = activation.request->controller;
+    auto& inventory = activation.request->player.inventory;
 
     // Check trait preconditions
     const auto computed = controller.getTraitsComputed(character.characterId).final;
@@ -32,7 +32,7 @@ bool ActivatorWrapper::activate(Activation& activation) const {
     // Commit item costs
     for (int i = 0; i < WrapperConfig::MAX_COSTS; i++) {
         if (_config.itemCost[i] == ITEM_NIL) break;
-        if (codeset.addFailure(!controller.takeInventoryItem(inventory, _config.itemCost[i], activation.time, activation.room.roomId, activation.isSkippingAnimations), CODE_WRAPPER_FAILED_TO_TAKE_ITEM)) return false;
+        if (codeset.addFailure(!controller.takeInventoryItem(inventory, _config.itemCost[i], activation.request->time, activation.request->room.roomId, activation.request->isSkippingAnimations), CODE_WRAPPER_FAILED_TO_TAKE_ITEM)) return false;
     }
 
     // Pay action costs

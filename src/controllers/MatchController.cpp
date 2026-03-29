@@ -19,6 +19,7 @@
 #include "Match.hpp"
 #include "MatchController.hpp"
 #include "Preactivation.hpp"
+#include "RequestContext.hpp"
 #include "RoleFlyweight.hpp"
 #include "TraitModifier.hpp"
 
@@ -53,22 +54,25 @@ bool MatchController::activate(const iActivator& activator, const Preactivation&
                     ? match.getInventory(preactivation.sourceInventoryId.orElse(-1), codeset.error)
                     : Pointer<Inventory>(player.inventory);
                 Pointer<Inventory> targetInventory = match.getInventory(preactivation.action.targetInventoryIndex.orElse(-1), codeset.error);
-                Activation activation{
+                RequestContext request{
                     .player = player,
-                    .character = character,
                     .room = room,
-                    .target = match.getCharacter(preactivation.action.targetCharacterId.orElse(-1), codeset.error),
-                    .direction = preactivation.action.direction,
                     .match = match,
                     .codeset = codeset,
-                    .time = preactivation.time,
                     .controller = *this,
+                    .time = preactivation.time,
                     .floorId = preactivation.action.floorId,
                     .isSkippingAnimations = preactivation.isSkippingAnimations,
-                    .isSortingState = preactivation.isSortingState,
+                    .isSkippingLogging = preactivation.isSortingState || preactivation.isSkippingLogging
+                };
+                ActivationContext activation{
+                    .request = &request,
+                    .character = character,
+                    .target = match.getCharacter(preactivation.action.targetCharacterId.orElse(-1), codeset.error),
                     .sourceInventory = sourceInventory,
                     .targetInventory = targetInventory,
-                    .isSkippingLogging = preactivation.isSortingState || preactivation.isSkippingLogging
+                    .direction = preactivation.action.direction,
+                    .isSortingState = preactivation.isSortingState
                 };
                 sourceInventory.access([&](Inventory& inventory){
                     activation.sourceItem = inventory.items.getPointer(preactivation.sourceItemIndex.orElse(-1));
@@ -626,11 +630,11 @@ bool MatchController::breakArmorItem(Character& character) {
 }
 
 void MatchController::appendEventLog(Activation& activation, LoggedEvent event) {
-    if (activation.isSkippingLogging) return;
-    auto log = activation.room.getEventLog();
+    if (activation.request->isSkippingLogging) return;
+    auto log = activation.request->room.getEventLog();
     log.push_back(event);
-    activation.room.loggedHead = (int)log.getHeadOffset();
-    activation.room.loggedSize = (int)log.size();
+    activation.request->room.loggedHead = (int)log.getHeadOffset();
+    activation.request->room.loggedSize = (int)log.size();
 }
 
 void MatchController::pushTrigger(const iActivator* activator, int characterId, int targetId, BehaviorEventEnum eventType) {

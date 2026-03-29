@@ -6,11 +6,11 @@
 #include "DoorEnum.hpp"
 
 bool ActivatorPole::activate(Activation& activation) const {
-    auto& controller = activation.controller;
-    auto& codeset = activation.codeset;
+    auto& controller = activation.request->controller;
+    auto& codeset = activation.request->codeset;
     auto& subject = activation.character;
-    auto& inventory = activation.player.inventory;
-    auto& room = activation.room;
+    auto& inventory = activation.request->player.inventory;
+    auto& room = activation.request->room;
     const auto roomId = room.roomId;
 
     Cardinal direction;
@@ -44,19 +44,19 @@ bool ActivatorPole::activate(Activation& activation) const {
     }
 
     bool isSuccess = false;
-    const bool isNeighborValid = activation.match.dungeon.rooms.access(neighborRoomId, [&](Room& room2) {     
-        auto& wall2 = room2.getWall(direction);               
+    const bool isNeighborValid = activation.request->match.dungeon.rooms.access(neighborRoomId, [&](Room& room2) {
+        auto& wall2 = room2.getWall(direction);
 
         // clean and update locations
         Location oldLocation;
-        activation.controller.updateCharacterLocation(subject, newLocation, oldLocation);
+        activation.request->controller.updateCharacterLocation(subject, newLocation, oldLocation);
 
         // take character move
         if (controller.takeCharacterMove(subject)) {
 
             // animate
-            if (!activation.isSkippingAnimations) {
-                const Keyframe keyframe = Keyframe::buildWalking(activation.time, MatchController::MOVE_ANIMATION_DURATION, room.roomId, oldLocation, newLocation, codeset);
+            if (!activation.request->isSkippingAnimations) {
+                const Keyframe keyframe = Keyframe::buildWalking(activation.request->time, MatchController::MOVE_ANIMATION_DURATION, room.roomId, oldLocation, newLocation, codeset);
                 if(!Keyframe::insertKeyframe(Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(subject.keyframes), keyframe)) {
                     codeset.addLog(CODE_ANIMATION_OVERFLOW_IN_ACTIVATE_POLE);
                 }
@@ -69,6 +69,6 @@ bool ActivatorPole::activate(Activation& activation) const {
     });
 
     codeset.addFailure(!isNeighborValid, CODE_POLE_MISSING_NEIGHBORING_ROOM);
-    
+
     return isSuccess;
 }

@@ -9,9 +9,9 @@
 #include "Room.hpp"
 
 bool ActivatorJailer::activate(Activation& activation) const {
-    auto& controller = activation.controller;
-    auto& codeset = activation.codeset;
-    auto& room = activation.room;
+    auto& controller = activation.request->controller;
+    auto& codeset = activation.request->codeset;
+    auto& room = activation.request->room;
     auto& subject = activation.character;
 
     Cardinal direction;
@@ -21,14 +21,14 @@ bool ActivatorJailer::activate(Activation& activation) const {
 
     Wall& sourceWall = room.getWall(direction);
 
-    const Timestamp doorTime = activation.time + MatchController::BOUNCE_LOCK_ANIMATION_DURATION / 2;
+    const Timestamp doorTime = activation.request->time + MatchController::BOUNCE_LOCK_ANIMATION_DURATION / 2;
 
     bool isSuccess = false;
-    const bool isNeighborAccessed = activation.match.dungeon.accessWallNeighbor(room, direction,
+    const bool isNeighborAccessed = activation.request->match.dungeon.accessWallNeighbor(room, direction,
         [&](Wall& neighborWall, Room& neighbor, int neighborId) {
             // Wrapper spent the action and took the key; transition door state.
-            sourceWall.setDoor(DOOR_JAILER_INGRESS_KEYED, doorTime, activation.isSkippingAnimations, room.roomId, ANIMATION_SLIDE);
-            neighborWall.setDoor(DOOR_JAILER_EGRESS_KEYED, doorTime, activation.isSkippingAnimations, neighborId, ANIMATION_SLIDE);
+            sourceWall.setDoor(DOOR_JAILER_INGRESS_KEYED, doorTime, activation.request->isSkippingAnimations, room.roomId, ANIMATION_SLIDE);
+            neighborWall.setDoor(DOOR_JAILER_EGRESS_KEYED, doorTime, activation.request->isSkippingAnimations, neighborId, ANIMATION_SLIDE);
             isSuccess = true;
             controller.appendEventLog(activation, LoggedEvent{
                 EVENT_UNLOCK,

@@ -4,7 +4,7 @@
 
 bool ActivatorDamageCrush::activate(Activation& activation) const {
     activation.target.access([&](Character& target) {
-        activation.controller.breakArmorItem(target);
+        activation.request->controller.breakArmorItem(target);
     });
     return true;
 }

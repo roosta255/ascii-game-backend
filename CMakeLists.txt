@@ -140,6 +140,7 @@ add_library(core_backend STATIC
     src/remodel/RemodelTogglerBlue.cpp
     src/remodel/RemodelTogglerOrange.cpp
     src/remodel/RemodelTogglerSwitch.cpp
+    src/role/ActivatorCleanseAfflictions.cpp
     src/role/ActivatorToggler.cpp
     src/role/RoleFlyweight.cpp
     src/room/ChannelEnum.cpp

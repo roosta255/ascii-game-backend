@@ -5,12 +5,12 @@
 #include "MatchController.hpp"
 
 bool ActivatorUseInventoryItem::activate(Activation& activation) const {
-    auto& controller = activation.controller;
-    auto& codeset = activation.codeset;
-    auto& match = activation.match;
-    auto& player = activation.player;
+    auto& controller = activation.request->controller;
+    auto& codeset = activation.request->codeset;
+    auto& match = activation.request->match;
+    auto& player = activation.request->player;
     auto& inventory = player.inventory;
-    auto& room = activation.room;
+    auto& room = activation.request->room;
     auto& subject = activation.character;
 
     if (codeset.addFailure(!controller.validateCharacterWithinRoom(subject.characterId, room.roomId), CODE_SUBJECT_CHARACTER_NOT_IN_ROOM)) {

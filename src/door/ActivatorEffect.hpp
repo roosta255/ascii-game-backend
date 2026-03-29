@@ -26,6 +26,7 @@
 #include "ActivatorDamagePierce.hpp"
 // door
 #include "ActivatorBounceLock.hpp"
+#include "ActivatorCleanseAfflictions.hpp"
 #include "ActivatorElevator.hpp"
 #include "ActivatorGiveItem.hpp"
 #include "ActivatorInactiveDoor.hpp"
@@ -77,6 +78,7 @@ using ActivatorEffect = std::variant<
     ActivatorDamagePierce,
     // door
     ActivatorBounceLock,
+    ActivatorCleanseAfflictions,
     ActivatorElevator,
     ActivatorGiveItem,
     ActivatorInactiveDoor,

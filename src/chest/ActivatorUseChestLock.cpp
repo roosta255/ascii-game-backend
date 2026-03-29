@@ -7,8 +7,8 @@
 #include "MatchController.hpp"
 
 bool ActivatorUseChestLock::activate(Activation& activation) const {
-    auto& controller = activation.controller;
-    auto& codeset    = activation.codeset;
+    auto& controller = activation.request->controller;
+    auto& codeset    = activation.request->codeset;
 
     bool isSuccess = false;
     codeset.addFailure(!activation.target.access([&](Character& containerChar) {

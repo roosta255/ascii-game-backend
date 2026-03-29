@@ -11,10 +11,10 @@
 #include "TraitModifier.hpp"
 
 bool ActivatorCritterBite::activate(Activation& activation) const {
-    auto& codeset = activation.codeset;
+    auto& codeset = activation.request->codeset;
     auto& subject = activation.character;
 
-    bool isBiting = activation.controller.getTraitsComputed(subject.characterId).final[TRAIT_CRITTER_BITES].orElse(false);
+    bool isBiting = activation.request->controller.getTraitsComputed(subject.characterId).final[TRAIT_CRITTER_BITES].orElse(false);
     codeset.addTable(CODE_CRITTER_BITE_ACTIVATED_WITH_BITES_TRAIT, isBiting);
     codeset.addTable(CODE_CRITTER_BITE_ACTIVATED_WITHOUT_BITES_TRAIT, !isBiting);
     if (!isBiting) {
@@ -29,9 +29,9 @@ bool ActivatorCritterBite::activate(Activation& activation) const {
         subject.accessRole(roleError, [&](const RoleFlyweight& critterRole) {
             critterRole.biteTraitModifier.accessConst([&](const TraitModifier& modifier) {
                 modifier.applyAffliction(target);
-                activation.controller.updateTraits(target);
+                activation.request->controller.updateTraits(target);
                 isSuccess = true;
-                activation.controller.appendEventLog(activation, LoggedEvent{
+                activation.request->controller.appendEventLog(activation, LoggedEvent{
                     EVENT_CRITTER_BITE,
                     { EventComponentKind::ROLE, (int)subject.role },
                     {},
@@ -41,15 +41,15 @@ bool ActivatorCritterBite::activate(Activation& activation) const {
             });
         });
 
-        if (isSuccess && !activation.isSkippingAnimations) {
-            const int roomId = activation.room.roomId;
+        if (isSuccess && !activation.request->isSkippingAnimations) {
+            const int roomId = activation.request->room.roomId;
             Keyframe::insertKeyframe(
                 Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(subject.keyframes),
-                Keyframe::buildJump(activation.time, 1800, roomId)
+                Keyframe::buildJump(activation.request->time, 1800, roomId)
             );
             Keyframe::insertKeyframe(
                 Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(target.keyframes),
-                Keyframe::buildCritterBite(activation.time, 1800, roomId)
+                Keyframe::buildCritterBite(activation.request->time, 1800, roomId)
             );
         }
     });

@@ -6,12 +6,12 @@
 #include "RoleFlyweight.hpp"
 
 bool ActivatorUseCharacter::activate(Activation& activation) const {
-    auto& controller = activation.controller;
-    auto& codeset = activation.codeset;
-    auto& match = activation.match;
-    auto& player = activation.player;
+    auto& controller = activation.request->controller;
+    auto& codeset = activation.request->codeset;
+    auto& match = activation.request->match;
+    auto& player = activation.request->player;
     auto& inventory = player.inventory;
-    auto& room = activation.room;
+    auto& room = activation.request->room;
     auto& subject = activation.character;
     auto& object = activation.target;
 

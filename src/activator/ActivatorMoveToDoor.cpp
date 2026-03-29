@@ -5,12 +5,12 @@
 #include "MatchController.hpp"
 
 bool ActivatorMoveToDoor::activate(Activation& activation) const {
-    auto& controller = activation.controller;
-    auto& codeset = activation.codeset;
-    auto& match = activation.match;
-    auto& player = activation.player;
+    auto& controller = activation.request->controller;
+    auto& codeset = activation.request->codeset;
+    auto& match = activation.request->match;
+    auto& player = activation.request->player;
     auto& inventory = player.inventory;
-    auto& room = activation.room;
+    auto& room = activation.request->room;
     auto& subject = activation.character;
 
     Cardinal direction;
@@ -54,9 +54,9 @@ bool ActivatorMoveToDoor::activate(Activation& activation) const {
         (int)direction
     });
 
-    if (!activation.isSkippingAnimations) {
+    if (!activation.request->isSkippingAnimations) {
         auto rack = Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(subject.keyframes);
-        const auto start = Keyframe::getLatestMovementEnd(rack, activation.time);
+        const auto start = Keyframe::getLatestMovementEnd(rack, activation.request->time);
         const auto keyframe = Keyframe::buildWalking(start, MatchController::MOVE_ANIMATION_DURATION, room.roomId, oldLocation, newLocation, codeset);
         if(!Keyframe::insertKeyframe(rack, keyframe)) {
             codeset.addLog(CODE_ANIMATION_OVERFLOW_IN_MOVE_CHARACTER_TO_FLOOR);

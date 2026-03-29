@@ -1,40 +1,33 @@
 #pragma once
 
-#include "Array.hpp"
 #include "Cardinal.hpp"
-#include "CodeEnum.hpp"
 #include "DamageTypeBits.hpp"
 #include "Item.hpp"
 #include "Maybe.hpp"
 #include "Pointer.hpp"
-#include "Timestamp.hpp"
+#include "RequestContext.hpp"
 
-class Player;
 class Character;
 class Inventory;
-class Room;
-class Match;
-class MatchController;
-class Codeset;
 
-struct Activation {
-    Player& player;
+struct ActivationContext {
+    RequestContext* request;
+
     Character& character;
-    Room& room;
+
     Pointer<Character> target;
     Pointer<Item> sourceItem;
     Pointer<Item> targetItem;
-    Maybe<Cardinal> direction;
-    Match& match;
-    Codeset& codeset;
-    Timestamp time;
-    MatchController& controller;
-    Maybe<int> floorId;
-    bool isSkippingAnimations = false;
-    bool isSortingState = false;
+
     Pointer<Inventory> sourceInventory;
     Pointer<Inventory> targetInventory;
+
+    Maybe<Cardinal> direction;
+
     DamageTypeBits damageTypes;
-    bool isSkippingLogging = false;
-    Array<LoggedEvent, 32> eventLog;
+
+    bool isSortingState = false;
 };
+
+// Backward-compatibility alias — remove once all sites migrated
+using Activation = ActivationContext;
