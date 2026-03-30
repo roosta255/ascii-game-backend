@@ -12,7 +12,16 @@ bool ActivatorGiveItem::activate(Activation& activation) const {
         auto& room = req.room;
         auto& inventory = req.player.inventory;
         const bool success = controller.giveInventoryItem(inventory, item, req.time, room.roomId, req.isSkippingAnimations);
-        if (req.codeset.addFailure(!success, CODE_INVENTORY_FAILED_TO_ACCEPT_ITEM)) return;
+        if (req.codeset.addFailure(!success, CODE_INVENTORY_FAILED_TO_ACCEPT_ITEM)) {
+            controller.addRequestLoggedEvent(activation, LoggedEvent{
+                EVENT_INVENTORY_FULL,
+                { EventComponentKind::ROLE, (int)activation.character.role },
+                {},
+                { EventComponentKind::ITEM, (int)item },
+                -1
+            });
+            return;
+        }
         result = true;
     });
     return result;

@@ -11,6 +11,11 @@ bool ActivatorToggler::activate(Activation& activation) const {
     bool isSuccess = false;
     activation.request.access([&](RequestContext& req) {
         if (req.codeset.addFailure(activation.target.isEmpty(), CODE_TARGET_CHARACTER_MISSING)) {
+            req.controller.addRequestLoggedEvent(activation, LoggedEvent{
+                EVENT_MISSING_TARGET,
+                { EventComponentKind::ROLE, (int)activation.character.role },
+                {}, {}, -1
+            });
             return;
         }
         activation.target.access([&](Character& target) {
@@ -39,6 +44,12 @@ bool ActivatorToggler::activate(Activation& activation) const {
                     {},
                     { EventComponentKind::ROLE, (int)newRole },
                     -1
+                });
+            } else {
+                req.controller.addRequestLoggedEvent(activation, LoggedEvent{
+                    EVENT_NO_ACTIONS,
+                    { EventComponentKind::ROLE, (int)target.role },
+                    {}, {}, -1
                 });
             }
         });

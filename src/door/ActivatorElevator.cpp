@@ -33,6 +33,11 @@ bool ActivatorElevator::activate(Activation& activation) const {
         const Cardinal direction = outDirection;
 
         if (!controller.isCharacterKeyerValidation(subject)) {
+            controller.addRequestLoggedEvent(activation, LoggedEvent{
+                EVENT_NOT_KEYER,
+                { EventComponentKind::ROLE, (int)subject.role },
+                {}, {}, -1
+            });
             return;
         }
 
@@ -86,18 +91,40 @@ bool ActivatorElevator::activate(Activation& activation) const {
             codeset.addTable(CODE_ELEVATOR_IS_PAYING, isPaying);
 
             if (codeset.addFailure(!controller.takeCharacterAction(subject), CODE_ELEVATOR_FAILED_TO_PAY_ACTION)) {
+                controller.addRequestLoggedEvent(activation, LoggedEvent{
+                    EVENT_NO_ACTIONS,
+                    { EventComponentKind::ROLE, (int)subject.role },
+                    {}, {}, -1
+                });
                 return;
             }
 
             if (isPaying && codeset.addFailure(!controller.takeInventoryItem(inventory, ITEM_KEY_ELEVATOR, req.time, room.roomId, req.isSkippingAnimations), CODE_ELEVATOR_FAILED_TO_PAY_KEY)) {
+                controller.addRequestLoggedEvent(activation, LoggedEvent{
+                    EVENT_MISSING_ITEM,
+                    { EventComponentKind::ROLE, (int)subject.role },
+                    {},
+                    { EventComponentKind::ITEM, (int)ITEM_KEY_ELEVATOR },
+                    -1
+                });
                 return;
             }
 
             if (isMoving) {
                 for (const auto dir: Cardinal::getAllCardinals()) {
                     int blockingCharacterId = -1;
-                    const auto isDoorOccupied = controller.isDoorOccupied(room.roomId, CHANNEL_CORPOREAL, dir, blockingCharacterId);
-                    if (codeset.addFailure(isDoorOccupied, CODE_ELEVATOR_DOOR_IS_OCCUPIED_BY_CHARACTER)){
+                    const auto doorOccupied = controller.isDoorOccupied(room.roomId, CHANNEL_CORPOREAL, dir, blockingCharacterId);
+                    if (codeset.addFailure(doorOccupied, CODE_ELEVATOR_DOOR_IS_OCCUPIED_BY_CHARACTER)){
+                        RoleEnum occRole = ROLE_EMPTY;
+                        CodeEnum charError = CODE_UNKNOWN_ERROR;
+                        match.getCharacter(blockingCharacterId, charError).access([&](Character& c) { occRole = c.role; });
+                        controller.addRequestLoggedEvent(activation, LoggedEvent{
+                            EVENT_OCCUPIED_DOORWAY,
+                            { EventComponentKind::ROLE, (int)occRole },
+                            {},
+                            { EventComponentKind::DOOR, (int)room.getWall(dir).door },
+                            dir.getIndex()
+                        });
                         return;
                     }
                 }

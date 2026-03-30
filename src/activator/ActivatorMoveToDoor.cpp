@@ -20,15 +20,37 @@ bool ActivatorMoveToDoor::activate(Activation& activation) const {
 
         int conflictingCharacterId;
         if (codeset.addFailure(controller.isDoorOccupied(room.roomId, subject.location.channel, direction, conflictingCharacterId), CODE_OCCUPIED_TARGET_WALL_CELL)) {
+            RoleEnum occRole = ROLE_EMPTY;
+            CodeEnum charError = CODE_UNKNOWN_ERROR;
+            match.getCharacter(conflictingCharacterId, charError).access([&](Character& c) { occRole = c.role; });
+            controller.addRequestLoggedEvent(activation, LoggedEvent{
+                EVENT_OCCUPIED_DOORWAY,
+                { EventComponentKind::ROLE, (int)occRole },
+                {},
+                { EventComponentKind::DOOR, (int)room.getWall(direction).door },
+                direction.getIndex()
+            });
             return;
         }
 
         Wall& next = room.getWall(direction);
         if (codeset.addFailure(!next.isWalkable(codeset.error), CODE_DOOR_FAILED_WALKABILITY)) {
+            controller.addRequestLoggedEvent(activation, LoggedEvent{
+                EVENT_NOT_WALKABLE,
+                { EventComponentKind::ROLE, (int)subject.role },
+                {},
+                { EventComponentKind::DOOR, (int)next.door },
+                direction.getIndex()
+            });
             return;
         }
 
         if (codeset.addFailure(!subject.takeMove(codeset.error))) {
+            controller.addRequestLoggedEvent(activation, LoggedEvent{
+                EVENT_NO_MOVES,
+                { EventComponentKind::ROLE, (int)subject.role },
+                {}, {}, -1
+            });
             return;
         }
 

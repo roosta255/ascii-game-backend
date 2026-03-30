@@ -23,6 +23,11 @@ bool ActivatorTimeGateCube::activate(Activation& activation) const {
         }
 
         if (!controller.isCharacterKeyerValidation(subject)) {
+            controller.addRequestLoggedEvent(activation, LoggedEvent{
+                EVENT_NOT_KEYER,
+                { EventComponentKind::ROLE, (int)subject.role },
+                {}, {}, -1
+            });
             return;
         }
 
@@ -31,26 +36,71 @@ bool ActivatorTimeGateCube::activate(Activation& activation) const {
 
         switch (sourceWall.door) {
             case DOOR_TIME_GATE_AWAKENED:
-                if (controller.takeCharacterAction(subject) && controller.giveInventoryItem(inventory, ITEM_CUBE_AWAKENED, req.time, roomId, req.isSkippingAnimations)) {
-                    sourceWall.setDoor(DOOR_TIME_GATE_EMPTY, req.time, req.isSkippingAnimations, roomId, ANIMATION_SLIDE);
-                    result = true;
-                    return;
+                if (!controller.takeCharacterAction(subject)) {
+                    controller.addRequestLoggedEvent(activation, LoggedEvent{
+                        EVENT_NO_ACTIONS,
+                        { EventComponentKind::ROLE, (int)subject.role },
+                        {}, {}, -1
+                    });
+                    break;
                 }
-                break;
+                if (!controller.giveInventoryItem(inventory, ITEM_CUBE_AWAKENED, req.time, roomId, req.isSkippingAnimations)) {
+                    controller.addRequestLoggedEvent(activation, LoggedEvent{
+                        EVENT_INVENTORY_FULL,
+                        { EventComponentKind::ROLE, (int)subject.role },
+                        {},
+                        { EventComponentKind::ITEM, (int)ITEM_CUBE_AWAKENED },
+                        -1
+                    });
+                    break;
+                }
+                sourceWall.setDoor(DOOR_TIME_GATE_EMPTY, req.time, req.isSkippingAnimations, roomId, ANIMATION_SLIDE);
+                result = true;
+                return;
             case DOOR_TIME_GATE_DORMANT:
-                if (controller.takeCharacterAction(subject) && controller.giveInventoryItem(inventory, ITEM_CUBE_DORMANT, req.time, roomId, req.isSkippingAnimations)) {
-                    sourceWall.setDoor(DOOR_TIME_GATE_EMPTY, req.time, req.isSkippingAnimations, roomId, ANIMATION_SLIDE);
-                    result = true;
-                    return;
+                if (!controller.takeCharacterAction(subject)) {
+                    controller.addRequestLoggedEvent(activation, LoggedEvent{
+                        EVENT_NO_ACTIONS,
+                        { EventComponentKind::ROLE, (int)subject.role },
+                        {}, {}, -1
+                    });
+                    break;
                 }
-                break;
+                if (!controller.giveInventoryItem(inventory, ITEM_CUBE_DORMANT, req.time, roomId, req.isSkippingAnimations)) {
+                    controller.addRequestLoggedEvent(activation, LoggedEvent{
+                        EVENT_INVENTORY_FULL,
+                        { EventComponentKind::ROLE, (int)subject.role },
+                        {},
+                        { EventComponentKind::ITEM, (int)ITEM_CUBE_DORMANT },
+                        -1
+                    });
+                    break;
+                }
+                sourceWall.setDoor(DOOR_TIME_GATE_EMPTY, req.time, req.isSkippingAnimations, roomId, ANIMATION_SLIDE);
+                result = true;
+                return;
             case DOOR_TIME_GATE_EMPTY:
-                if (controller.takeCharacterAction(subject) && controller.takeInventoryItem(inventory, ITEM_CUBE_AWAKENED, req.time, roomId, req.isSkippingAnimations)) {
-                    sourceWall.setDoor(DOOR_TIME_GATE_AWAKENED, req.time, req.isSkippingAnimations, roomId, ANIMATION_CRUSH);
-                    result = true;
-                    return;
+                if (!controller.takeCharacterAction(subject)) {
+                    controller.addRequestLoggedEvent(activation, LoggedEvent{
+                        EVENT_NO_ACTIONS,
+                        { EventComponentKind::ROLE, (int)subject.role },
+                        {}, {}, -1
+                    });
+                    break;
                 }
-                break;
+                if (!controller.takeInventoryItem(inventory, ITEM_CUBE_AWAKENED, req.time, roomId, req.isSkippingAnimations)) {
+                    controller.addRequestLoggedEvent(activation, LoggedEvent{
+                        EVENT_MISSING_ITEM,
+                        { EventComponentKind::ROLE, (int)subject.role },
+                        {},
+                        { EventComponentKind::ITEM, (int)ITEM_CUBE_AWAKENED },
+                        -1
+                    });
+                    break;
+                }
+                sourceWall.setDoor(DOOR_TIME_GATE_AWAKENED, req.time, req.isSkippingAnimations, roomId, ANIMATION_CRUSH);
+                result = true;
+                return;
             default:
                 codeset.addError(CODE_TIME_GATE_ACTIVATION_ON_NON_TIME_GATE);
                 return;

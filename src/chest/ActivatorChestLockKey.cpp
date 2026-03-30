@@ -22,14 +22,37 @@ bool ActivatorChestLockKey::activate(Activation& activation) const {
 
         const auto computed = controller.getTraitsComputed(subject.characterId).final;
         if (codeset.addFailure(!subject.isActor(codeset.error, computed))) return;
-        if (codeset.addFailure(!subject.isKeyer(codeset.error, computed))) return;
+        if (codeset.addFailure(!subject.isKeyer(codeset.error, computed))) {
+            controller.addRequestLoggedEvent(activation, LoggedEvent{
+                EVENT_NOT_KEYER,
+                { EventComponentKind::ROLE, (int)subject.role },
+                {}, {}, -1
+            });
+            return;
+        }
 
         codeset.addFailure(!activation.target.access([&](Character& containerChar) {
             codeset.addFailure(!match.dungeon.findChestByContainerId(containerChar.characterId, codeset.error).access([&](Chest& chest) {
                 switch (chest.lock) {
                     case LOCK_KEY_CATALYST_CLOSED: {
-                        if (codeset.addFailure(!controller.takeInventoryItem(player.inventory, ITEM_KEY, true))) return;
-                        if (codeset.addFailure(!controller.takeCharacterAction(subject))) return;
+                        if (codeset.addFailure(!controller.takeInventoryItem(player.inventory, ITEM_KEY, true))) {
+                            controller.addRequestLoggedEvent(activation, LoggedEvent{
+                                EVENT_MISSING_ITEM,
+                                { EventComponentKind::ROLE, (int)subject.role },
+                                {},
+                                { EventComponentKind::ITEM, (int)ITEM_KEY },
+                                -1
+                            });
+                            return;
+                        }
+                        if (codeset.addFailure(!controller.takeCharacterAction(subject))) {
+                            controller.addRequestLoggedEvent(activation, LoggedEvent{
+                                EVENT_NO_ACTIONS,
+                                { EventComponentKind::ROLE, (int)subject.role },
+                                {}, {}, -1
+                            });
+                            return;
+                        }
                         chest.lock = LOCK_KEY_CATALYST_OPEN;
                         if (!req.isSkippingAnimations) {
                             Keyframe::insertKeyframe(
@@ -41,8 +64,24 @@ bool ActivatorChestLockKey::activate(Activation& activation) const {
                         break;
                     }
                     case LOCK_KEY_CONSUMER_CLOSED: {
-                        if (codeset.addFailure(!controller.takeInventoryItem(player.inventory, ITEM_KEY, req.time, room.roomId, req.isSkippingAnimations))) return;
-                        if (codeset.addFailure(!controller.takeCharacterAction(subject))) return;
+                        if (codeset.addFailure(!controller.takeInventoryItem(player.inventory, ITEM_KEY, req.time, room.roomId, req.isSkippingAnimations))) {
+                            controller.addRequestLoggedEvent(activation, LoggedEvent{
+                                EVENT_MISSING_ITEM,
+                                { EventComponentKind::ROLE, (int)subject.role },
+                                {},
+                                { EventComponentKind::ITEM, (int)ITEM_KEY },
+                                -1
+                            });
+                            return;
+                        }
+                        if (codeset.addFailure(!controller.takeCharacterAction(subject))) {
+                            controller.addRequestLoggedEvent(activation, LoggedEvent{
+                                EVENT_NO_ACTIONS,
+                                { EventComponentKind::ROLE, (int)subject.role },
+                                {}, {}, -1
+                            });
+                            return;
+                        }
                         chest.lock = LOCK_KEY_CONSUMER_OPEN;
                         if (!req.isSkippingAnimations) {
                             Keyframe::insertKeyframe(

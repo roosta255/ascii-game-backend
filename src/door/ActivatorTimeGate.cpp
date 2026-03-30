@@ -27,6 +27,18 @@ bool ActivatorTimeGate::activate(Activation& activation) const {
         Wall& sourceWall = room.getWall(direction);
 
         if (codeset.addFailure(!controller.validateDoorNotOccupied(room.roomId, CHANNEL_CORPOREAL, TIME_GATE_DIRECTION), CODE_OCCUPIED_TARGET_TIME_GATE_CELL)) {
+            int occupyingId = -1;
+            controller.isDoorOccupied(room.roomId, CHANNEL_CORPOREAL, TIME_GATE_DIRECTION, occupyingId);
+            RoleEnum occRole = ROLE_EMPTY;
+            CodeEnum charError = CODE_UNKNOWN_ERROR;
+            req.match.getCharacter(occupyingId, charError).access([&](Character& c) { occRole = c.role; });
+            controller.addRequestLoggedEvent(activation, LoggedEvent{
+                EVENT_OCCUPIED_DOORWAY,
+                { EventComponentKind::ROLE, (int)occRole },
+                {},
+                { EventComponentKind::DOOR, (int)room.getWall(TIME_GATE_DIRECTION).door },
+                TIME_GATE_DIRECTION.getIndex()
+            });
             return;
         }
 
@@ -66,6 +78,11 @@ bool ActivatorTimeGate::activate(Activation& activation) const {
                             isSuccess = true;
                             return;
                         }
+                        controller.addRequestLoggedEvent(activation, LoggedEvent{
+                            EVENT_NO_MOVES,
+                            { EventComponentKind::ROLE, (int)subject.role },
+                            {}, {}, -1
+                        });
                     });
 
                     if (codeset.addFailure(!isDeltaValid, CODE_TIME_GATE_ACTIVATED_BUT_NEIGHBOR_DNE)) {

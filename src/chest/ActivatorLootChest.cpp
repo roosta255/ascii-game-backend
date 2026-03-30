@@ -39,7 +39,16 @@ bool ActivatorLootChest::activate(Activation& activation) const {
                     LockFlyweight::getFlyweights().accessConst(chest.lock, [&](const LockFlyweight& lf){
                         isLocked = lf.isLocked;
                     });
-                    if (codeset.addFailure(isLocked, CODE_LOOT_CHEST_IS_LOCKED)) return;
+                    if (codeset.addFailure(isLocked, CODE_LOOT_CHEST_IS_LOCKED)) {
+                        controller.addRequestLoggedEvent(activation, LoggedEvent{
+                            EVENT_CHEST_LOCKED,
+                            { EventComponentKind::ROLE, (int)subject.role },
+                            {},
+                            { EventComponentKind::CHEST_LOCK, (int)chest.lock },
+                            -1
+                        });
+                        return;
+                    }
 
                     bool isTransferable = false;
                     chestItem.accessFlyweight([&](const ItemFlyweight& flyweight) {
@@ -50,7 +59,14 @@ bool ActivatorLootChest::activate(Activation& activation) const {
                     const ItemEnum type = chestItem.type;
                     if (codeset.addFailure(!controller.takeInventoryItem(chest.inventory, type, req.time, room.roomId, req.isSkippingAnimations))) return;
                     if (codeset.addFailure(!controller.giveInventoryItem(player.inventory, type, req.time, room.roomId, req.isSkippingAnimations))) return;
-                    if (codeset.addFailure(!controller.takeCharacterAction(subject))) return;
+                    if (codeset.addFailure(!controller.takeCharacterAction(subject))) {
+                        controller.addRequestLoggedEvent(activation, LoggedEvent{
+                            EVENT_NO_ACTIONS,
+                            { EventComponentKind::ROLE, (int)subject.role },
+                            {}, {}, -1
+                        });
+                        return;
+                    }
                     isSuccess = true;
                     controller.addLoggedEvent(activation, room.roomId, LoggedEvent{
                         EVENT_LOOT_CHEST,

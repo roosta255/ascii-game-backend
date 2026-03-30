@@ -20,6 +20,18 @@ bool ActivatorPole::activate(Activation& activation) const {
         }
 
         if (!controller.validateDoorNotOccupied(roomId, CHANNEL_CORPOREAL, direction)) {
+            int occupyingId = -1;
+            controller.isDoorOccupied(roomId, CHANNEL_CORPOREAL, direction, occupyingId);
+            RoleEnum occRole = ROLE_EMPTY;
+            CodeEnum charError = CODE_UNKNOWN_ERROR;
+            req.match.getCharacter(occupyingId, charError).access([&](Character& c) { occRole = c.role; });
+            controller.addRequestLoggedEvent(activation, LoggedEvent{
+                EVENT_OCCUPIED_DOORWAY,
+                { EventComponentKind::ROLE, (int)occRole },
+                {},
+                { EventComponentKind::DOOR, (int)room.getWall(direction).door },
+                direction.getIndex()
+            });
             return;
         }
 
@@ -40,6 +52,20 @@ bool ActivatorPole::activate(Activation& activation) const {
         }
 
         if (!controller.validateDoorNotOccupied(neighborRoomId, CHANNEL_CORPOREAL, direction)) {
+            int occupyingId = -1;
+            controller.isDoorOccupied(neighborRoomId, CHANNEL_CORPOREAL, direction, occupyingId);
+            RoleEnum occRole = ROLE_EMPTY;
+            CodeEnum charError = CODE_UNKNOWN_ERROR;
+            req.match.getCharacter(occupyingId, charError).access([&](Character& c) { occRole = c.role; });
+            DoorEnum neighborDoor = room.getWall(direction).door;
+            req.match.dungeon.rooms.accessConst(neighborRoomId, [&](const Room& nr) { neighborDoor = nr.getWall(direction).door; });
+            controller.addRequestLoggedEvent(activation, LoggedEvent{
+                EVENT_OCCUPIED_DOORWAY,
+                { EventComponentKind::ROLE, (int)occRole },
+                {},
+                { EventComponentKind::DOOR, (int)neighborDoor },
+                direction.getIndex()
+            });
             return;
         }
 
@@ -58,6 +84,11 @@ bool ActivatorPole::activate(Activation& activation) const {
                 isSuccess = true;
                 return;
             }
+            controller.addRequestLoggedEvent(activation, LoggedEvent{
+                EVENT_NO_MOVES,
+                { EventComponentKind::ROLE, (int)subject.role },
+                {}, {}, -1
+            });
         });
 
         codeset.addFailure(!isNeighborValid, CODE_POLE_MISSING_NEIGHBORING_ROOM);

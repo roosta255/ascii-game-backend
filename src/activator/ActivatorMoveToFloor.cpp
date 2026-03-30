@@ -18,10 +18,23 @@ bool ActivatorMoveToFloor::activate(Activation& activation) const {
 
         int conflictingCharacterId;
         if (codeset.addFailure(controller.isFloorOccupied(room.roomId, subject.location.channel, floorId, conflictingCharacterId), CODE_OCCUPIED_TARGET_FLOOR_CELL)) {
+            RoleEnum occRole = ROLE_EMPTY;
+            CodeEnum charError = CODE_UNKNOWN_ERROR;
+            req.match.getCharacter(conflictingCharacterId, charError).access([&](Character& c) { occRole = c.role; });
+            controller.addRequestLoggedEvent(activation, LoggedEvent{
+                EVENT_OCCUPIED_FLOOR,
+                { EventComponentKind::ROLE, (int)occRole },
+                {}, {}, -1
+            });
             return;
         }
 
         if (codeset.addFailure(!subject.takeMove(codeset.error))) {
+            controller.addRequestLoggedEvent(activation, LoggedEvent{
+                EVENT_NO_MOVES,
+                { EventComponentKind::ROLE, (int)subject.role },
+                {}, {}, -1
+            });
             return;
         }
 

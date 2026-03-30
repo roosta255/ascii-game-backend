@@ -3,9 +3,11 @@
 #include "Character.hpp"
 #include "Codeset.hpp"
 #include "ItemEnum.hpp"
+#include "LoggedEvent.hpp"
 #include "MatchController.hpp"
 #include "Player.hpp"
 #include "Room.hpp"
+#include "TraitEnum.hpp"
 #include "TraitModifier.hpp"
 
 void ActivatorWrapper::init(const WrapperConfig& config) {
@@ -21,12 +23,51 @@ bool ActivatorWrapper::activate(Activation& activation) const {
         auto& inventory = req.player.inventory;
 
         const auto computed = controller.getTraitsComputed(character.characterId).final;
-        if (codeset.addFailure((_config.required & computed) != _config.required, CODE_WRAPPER_MISSING_REQUIRED_TRAITS)) return;
-        if (codeset.addFailure((_config.restricted & computed).isAny(), CODE_WRAPPER_HAS_RESTRICTED_TRAITS)) return;
+
+        const TraitBits missingTraits = _config.required - computed;
+        if (codeset.addFailure(missingTraits.isAny(), CODE_WRAPPER_MISSING_REQUIRED_TRAITS)) {
+            for (int i = 0; i < TRAIT_COUNT; i++) {
+                if (missingTraits[i].orElse(false)) {
+                    controller.addRequestLoggedEvent(activation, LoggedEvent{
+                        EVENT_MISSING_TRAIT,
+                        { EventComponentKind::ROLE, (int)character.role },
+                        {},
+                        { EventComponentKind::TRAIT, i },
+                        -1
+                    });
+                }
+            }
+            return;
+        }
+
+        const TraitBits restrictedTraits = _config.restricted & computed;
+        if (codeset.addFailure(restrictedTraits.isAny(), CODE_WRAPPER_HAS_RESTRICTED_TRAITS)) {
+            for (int i = 0; i < TRAIT_COUNT; i++) {
+                if (restrictedTraits[i].orElse(false)) {
+                    controller.addRequestLoggedEvent(activation, LoggedEvent{
+                        EVENT_RESTRICTED_TRAIT,
+                        { EventComponentKind::ROLE, (int)character.role },
+                        {},
+                        { EventComponentKind::TRAIT, i },
+                        -1
+                    });
+                }
+            }
+            return;
+        }
 
         for (int i = 0; i < WrapperConfig::MAX_COSTS; i++) {
             if (_config.itemCost[i] == ITEM_NIL) break;
-            if (codeset.addFailure(!controller.takeInventoryItem(inventory, _config.itemCost[i], true), CODE_WRAPPER_INSUFFICIENT_ITEM_COST)) return;
+            if (codeset.addFailure(!controller.takeInventoryItem(inventory, _config.itemCost[i], true), CODE_WRAPPER_INSUFFICIENT_ITEM_COST)) {
+                controller.addRequestLoggedEvent(activation, LoggedEvent{
+                    EVENT_MISSING_ITEM,
+                    { EventComponentKind::ROLE, (int)character.role },
+                    {},
+                    { EventComponentKind::ITEM, (int)_config.itemCost[i] },
+                    -1
+                });
+                return;
+            }
         }
 
         for (int i = 0; i < WrapperConfig::MAX_COSTS; i++) {
@@ -35,11 +76,29 @@ bool ActivatorWrapper::activate(Activation& activation) const {
         }
 
         for (int i = 0; i < _config.actionCost; i++) {
-            if (codeset.addFailure(!controller.takeCharacterAction(character), CODE_WRAPPER_INSUFFICIENT_ACTIONS)) return;
+            if (codeset.addFailure(!controller.takeCharacterAction(character), CODE_WRAPPER_INSUFFICIENT_ACTIONS)) {
+                controller.addRequestLoggedEvent(activation, LoggedEvent{
+                    EVENT_NO_ACTIONS,
+                    { EventComponentKind::ROLE, (int)character.role },
+                    {},
+                    {},
+                    -1
+                });
+                return;
+            }
         }
 
         for (int i = 0; i < _config.moveCost; i++) {
-            if (codeset.addFailure(!controller.takeCharacterMove(character), CODE_WRAPPER_INSUFFICIENT_MOVES)) return;
+            if (codeset.addFailure(!controller.takeCharacterMove(character), CODE_WRAPPER_INSUFFICIENT_MOVES)) {
+                controller.addRequestLoggedEvent(activation, LoggedEvent{
+                    EVENT_NO_MOVES,
+                    { EventComponentKind::ROLE, (int)character.role },
+                    {},
+                    {},
+                    -1
+                });
+                return;
+            }
         }
 
         for (int i = 0; i < WrapperConfig::MAX_EFFECTS; i++) {
