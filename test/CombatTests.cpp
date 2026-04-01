@@ -63,7 +63,7 @@ static Activation makeActivation(
     return Activation{
         .request = request,
         .character = attacker,
-        .target = Pointer<Character>(target),
+        .targetEntity = target,
         .damageTypes = damageTypes,
     };
 }

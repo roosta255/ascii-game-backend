@@ -3,7 +3,7 @@
 #include "MatchController.hpp"
 
 bool ActivatorDamageCrush::activate(Activation& activation) const {
-    activation.target.access([&](Character& target) {
+    activation.targetCharacter().access([&](Character& target) {
         activation.request.access([&](RequestContext& req) {
             req.controller.breakArmorItem(target);
         });

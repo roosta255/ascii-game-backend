@@ -15,7 +15,7 @@ bool ActivatorDamage::activate(Activation& activation) const {
         auto& codeset = req.codeset;
         auto& controller = req.controller;
 
-        isTargetAccessed = activation.target.access([&](Character& target) {
+        isTargetAccessed = activation.targetCharacter().access([&](Character& target) {
             const auto traitsComputed = controller.getTraitsComputed(target.characterId);
             const auto& flyweights = DamageFlyweight::getFlyweights();
             const auto& damageVectors = DamageFlyweight::getSingletonDamageVectors();

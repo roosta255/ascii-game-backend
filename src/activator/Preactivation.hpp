@@ -1,11 +1,13 @@
 #pragma once
 
 #include "CharacterAction.hpp"
+#include "TargetPreactivationEntity.hpp"
 #include "Timestamp.hpp"
 
 struct Preactivation {
     CharacterAction action;
     std::string playerId;
+    TargetPreactivationEntity targetPreactivationEntity;
     Maybe<int> sourceItemIndex;
     Maybe<int> sourceInventoryId;
     bool isSkippingAnimations = false;

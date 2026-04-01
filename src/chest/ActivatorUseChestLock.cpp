@@ -12,7 +12,7 @@ bool ActivatorUseChestLock::activate(Activation& activation) const {
         auto& controller = req.controller;
         auto& codeset    = req.codeset;
 
-        codeset.addFailure(!activation.target.access([&](Character& containerChar) {
+        codeset.addFailure(!activation.targetCharacter().access([&](Character& containerChar) {
             codeset.addFailure(!controller.getChestByContainerId(containerChar.characterId).access([&](Chest& chest) {
                 codeset.addFailure(!LockFlyweight::getFlyweights().accessConst(chest.lock, [&](const LockFlyweight& flyweight) {
                     if (!flyweight.activator.accessConst([&](const iActivator& lockActivator) {

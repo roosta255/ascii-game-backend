@@ -20,6 +20,7 @@ public:
     ADD_METHOD_TO(ApiController::endTurn, "/api/match/{1}/end_turn", drogon::Post, drogon::Options);
     ADD_METHOD_TO(ApiController::getCharacterSheet, "/api/match/{1}/character/{2}/sheet", drogon::Get);
     ADD_METHOD_TO(ApiController::getFlyweights, "/api/flyweights", drogon::Get);
+    ADD_METHOD_TO(ApiController::getFlyweight, "/api/flyweight/{1}", drogon::Get);
     METHOD_LIST_END
 
     void createMatch(const drogon::HttpRequestPtr &,
@@ -82,6 +83,10 @@ public:
 
     void getFlyweights(const drogon::HttpRequestPtr &,
                        std::function<void(const drogon::HttpResponsePtr &)> &&callback);
+
+    void getFlyweight(const drogon::HttpRequestPtr &,
+                      std::function<void(const drogon::HttpResponsePtr &)> &&callback,
+                      std::string name);
 
     static void invokeResponse(const drogon::HttpStatusCode code, const std::string& body, std::function<void (const drogon::HttpResponsePtr &)> &&callback);
     static void invokeResponseJson(const drogon::HttpStatusCode code, const std::string& body, std::function<void (const drogon::HttpResponsePtr &)> &&callback);

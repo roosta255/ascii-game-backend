@@ -3,7 +3,7 @@
 #include "Character.hpp"
 
 bool ActivatorDamageFire::activate(Activation& activation) const {
-    activation.target.access([&](Character& target) {
+    activation.targetCharacter().access([&](Character& target) {
         target.damage += 1;
     });
     return true;

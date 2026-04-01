@@ -12,28 +12,23 @@ bool ActivatorUseLock::activate(Activation& activation) const {
         auto& room = req.room;
         auto& subject = activation.character;
 
-        Cardinal direction;
-        if (codeset.addFailure(!activation.direction.copy(direction), CODE_ACTIVATION_DIRECTION_NOT_SPECIFIED)) {
-            return;
-        }
-
-        Wall& wall = room.getWall(direction);
-
-        codeset.addFailure(!wall.accessDoor(codeset.error, [&](const DoorFlyweight& door) {
-            if (door.isLockActionable) {
-                if (!door.lockActivator.accessConst([&](const iActivator& activatorIntf) {
-                    codeset.addFailure(!(isSuccess = activatorIntf.activate(activation)));
-                })) {
-                    codeset.addError(CODE_DOOR_MISSING_ACTIVATOR);
+        codeset.addFailure(!activation.targetLock().access([&](Wall& wall) {
+            codeset.addFailure(!wall.accessDoor(codeset.error, [&](const DoorFlyweight& door) {
+                if (door.isLockActionable) {
+                    if (!door.lockActivator.accessConst([&](const iActivator& activatorIntf) {
+                        codeset.addFailure(!(isSuccess = activatorIntf.activate(activation)));
+                    })) {
+                        codeset.addError(CODE_DOOR_MISSING_ACTIVATOR);
+                        codeset.setTable(CODE_ACTIVATION_ROOM_ID, room.roomId);
+                        codeset.setTable(CODE_ACTIVATION_WALL_TYPE, wall.door);
+                    }
+                } else {
+                    codeset.addError(CODE_LOCK_ACTIVATOR_NOT_CONFIGURED);
                     codeset.setTable(CODE_ACTIVATION_ROOM_ID, room.roomId);
                     codeset.setTable(CODE_ACTIVATION_WALL_TYPE, wall.door);
                 }
-            } else {
-                codeset.addError(CODE_LOCK_ACTIVATOR_NOT_CONFIGURED);
-                codeset.setTable(CODE_ACTIVATION_ROOM_ID, room.roomId);
-                codeset.setTable(CODE_ACTIVATION_WALL_TYPE, wall.door);
-            }
-        }));
+            }));
+        }), CODE_ACTIVATION_TARGET_NOT_SPECIFIED);
     });
     return isSuccess;
 }

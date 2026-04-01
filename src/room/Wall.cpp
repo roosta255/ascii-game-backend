@@ -15,7 +15,7 @@ bool Wall::accessDoor(CodeEnum& error, std::function<void(const DoorFlyweight&)>
 bool Wall::readIsSharedDoorway(CodeEnum& error, bool& isSharedDoorway) const {
     bool isSuccess = false;
     accessDoor(error, [&](const DoorFlyweight& flyweight){
-        isSharedDoorway = flyweight.isSharedDoorway;
+        isSharedDoorway = flyweight.doorAttributes[TRAIT_IS_SHARED_DOORWAY].orElse(false);
         isSuccess = true;
     });
     return isSuccess;
@@ -24,7 +24,7 @@ bool Wall::readIsSharedDoorway(CodeEnum& error, bool& isSharedDoorway) const {
 bool Wall::isWalkable(CodeEnum& error) const {
     bool result = false;
     accessDoor(error, [&](const DoorFlyweight& flyweight){
-        if (flyweight.blocking) error = CODE_BLOCKING_DOOR_TYPE;
+        if (flyweight.doorAttributes[TRAIT_IS_DOOR_BLOCKING].orElse(false)) error = CODE_BLOCKING_DOOR_TYPE;
         else result = true;
     });
     return result;

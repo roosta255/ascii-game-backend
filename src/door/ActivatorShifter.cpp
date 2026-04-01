@@ -21,7 +21,10 @@ bool ActivatorShifter::activate(Activation& activation) const {
             return;
         }
 
-        Wall& sourceWall = room.getWall(direction);
+        Wall* sourceWallPtr = nullptr;
+        activation.targetLock().access([&](Wall& w) { sourceWallPtr = &w; });
+        if (codeset.addFailure(!sourceWallPtr, CODE_ACTIVATION_TARGET_NOT_SPECIFIED)) return;
+        Wall& sourceWall = *sourceWallPtr;
         const Timestamp doorTime = req.time + MatchController::BOUNCE_LOCK_ANIMATION_DURATION / 2;
 
         const bool isNeighborAccessed = req.match.dungeon.accessWallNeighbor(room, direction,

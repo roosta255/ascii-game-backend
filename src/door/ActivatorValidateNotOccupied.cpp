@@ -18,12 +18,16 @@ bool ActivatorValidateNotOccupied::activate(Activation& activation) const {
             return;
         }
 
+        Wall* wallPtr = nullptr;
+        activation.targetWall().access([&](Wall& w) { wallPtr = &w; });
+        if (codeset.addFailure(!wallPtr, CODE_ACTIVATION_TARGET_NOT_SPECIFIED)) return;
+        Wall& wall = *wallPtr;
+
         result = req.controller.validateSharedDoorNotOccupied(room.roomId, CHANNEL_CORPOREAL, direction);
         if (!result) {
             int occupyingCharacterId = -1;
             if (!req.controller.isDoorOccupied(room.roomId, CHANNEL_CORPOREAL, direction, occupyingCharacterId)) {
-                const int adjacentRoomId = room.getWall(direction).adjacent;
-                req.controller.isDoorOccupied(adjacentRoomId, CHANNEL_CORPOREAL, direction.getFlip(), occupyingCharacterId);
+                req.controller.isDoorOccupied(wall.adjacent, CHANNEL_CORPOREAL, direction.getFlip(), occupyingCharacterId);
             }
             if (occupyingCharacterId != -1) {
                 RoleEnum occupyingRole = ROLE_EMPTY;
@@ -35,7 +39,7 @@ bool ActivatorValidateNotOccupied::activate(Activation& activation) const {
                     EVENT_OCCUPIED_DOORWAY,
                     { EventComponentKind::ROLE, (int)occupyingRole },
                     {},
-                    { EventComponentKind::DOOR, (int)room.getWall(direction).door },
+                    { EventComponentKind::DOOR, (int)wall.door },
                     direction.getIndex()
                 });
             }

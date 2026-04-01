@@ -17,11 +17,6 @@ bool ActivatorTimeGateCube::activate(Activation& activation) const {
         Character& subject = activation.character;
         auto& inventory = req.player.inventory;
 
-        Cardinal direction;
-        if (codeset.addFailure(!activation.direction.copy(direction), CODE_ACTIVATION_DIRECTION_NOT_SPECIFIED)) {
-            return;
-        }
-
         if (!controller.isCharacterKeyerValidation(subject)) {
             controller.addRequestLoggedEvent(activation, LoggedEvent{
                 EVENT_NOT_KEYER,
@@ -31,8 +26,9 @@ bool ActivatorTimeGateCube::activate(Activation& activation) const {
             return;
         }
 
-        Wall& sourceWall = req.room.getWall(direction);
         const int roomId = req.room.roomId;
+
+        codeset.addFailure(!activation.targetLock().access([&](Wall& sourceWall) {
 
         switch (sourceWall.door) {
             case DOOR_TIME_GATE_AWAKENED:
@@ -105,6 +101,7 @@ bool ActivatorTimeGateCube::activate(Activation& activation) const {
                 codeset.addError(CODE_TIME_GATE_ACTIVATION_ON_NON_TIME_GATE);
                 return;
         }
+        }), CODE_ACTIVATION_TARGET_NOT_SPECIFIED);
     });
     return result;
 }

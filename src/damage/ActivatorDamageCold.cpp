@@ -7,7 +7,7 @@
 #include "TraitEnum.hpp"
 
 bool ActivatorDamageCold::activate(Activation& activation) const {
-    activation.target.access([&](Character& target) {
+    activation.targetCharacter().access([&](Character& target) {
         activation.request.access([&](RequestContext& req) {
             const auto traitsComputed = req.controller.getTraitsComputed(target.characterId);
             if (traitsComputed.final[TRAIT_MOVEMENT_READY].orElse(false)) {

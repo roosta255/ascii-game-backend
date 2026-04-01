@@ -31,7 +31,7 @@ bool ActivatorChestLockKey::activate(Activation& activation) const {
             return;
         }
 
-        codeset.addFailure(!activation.target.access([&](Character& containerChar) {
+        codeset.addFailure(!activation.targetCharacter().access([&](Character& containerChar) {
             codeset.addFailure(!match.dungeon.findChestByContainerId(containerChar.characterId, codeset.error).access([&](Chest& chest) {
                 switch (chest.lock) {
                     case LOCK_KEY_CATALYST_CLOSED: {

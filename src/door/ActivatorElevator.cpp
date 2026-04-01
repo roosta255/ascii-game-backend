@@ -41,7 +41,6 @@ bool ActivatorElevator::activate(Activation& activation) const {
             return;
         }
 
-        auto& sourceWall = room.getWall(direction);
         const auto startingAdjacentRoomIds = room.walls.transform([&](const Wall& wall){
             return dungeon.rooms.containsIndex(wall.adjacent) ? Maybe<int>(wall.adjacent) : Maybe<int>::empty();
         });

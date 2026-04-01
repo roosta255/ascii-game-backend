@@ -20,6 +20,7 @@
 #include "CodesetApiView.hpp"
 #include "LoggedEventApiView.hpp"
 #include "MatchApiView.hpp"
+#include "RuleFlyweightApiView.hpp"
 #include "Preactivation.hpp"
 #include "Timestamp.hpp"
 #include <json/json.h>
@@ -526,6 +527,22 @@ void ApiController::performCharacterAction
         .time = Timestamp()
     };
 
+    // Resolve targetPreactivationEntity from the presence of JSON fields.
+    // actionEnum is only used to distinguish door vs lock when a direction is present.
+    if (json->isMember("direction")) {
+        Cardinal direction((*json)["direction"].asInt());
+        if (actionEnum == ACTION_ACTIVATE_LOCK)
+            preactivation.targetPreactivationEntity = PreactivationTargetLock{ direction };
+        else
+            preactivation.targetPreactivationEntity = PreactivationTargetDoor{ direction };
+    } else if (json->isMember("target")) {
+        preactivation.targetPreactivationEntity = PreactivationTargetCharacter{ (*json)["target"].asInt() };
+    } else if (json->isMember("target_item") || json->isMember("item")) {
+        const int itemIdx = json->isMember("target_item") ? (*json)["target_item"].asInt()
+                                                          : (*json)["item"].asInt();
+        preactivation.targetPreactivationEntity = PreactivationTargetItem{ itemIdx };
+    }
+
     // Attempt to perform the character action
     std::vector<LoggedEvent> eventLog;
     const bool activated = controller.activate(preactivation, Pointer<std::vector<LoggedEvent>>(eventLog));
@@ -583,7 +600,6 @@ void ApiController::getCharacterSheet
 // TODO: split up per flyweight
 // TODO: flyweight provided serialization
 // TODO: flyweight api response as MAP
-// TODO: ensure all flyweights have stable id (INDEX)
 void ApiController::getFlyweights
 ( const drogon::HttpRequestPtr&, std::function<void(const drogon::HttpResponsePtr &)> &&callback )
 {
@@ -655,6 +671,17 @@ void ApiController::getFlyweights
     response["animations"] = animations;
 
     callback(drogon::HttpResponse::newHttpJsonResponse(response));
+}
+
+void ApiController::getFlyweight
+( const drogon::HttpRequestPtr&, std::function<void(const drogon::HttpResponsePtr &)> &&callback, std::string name )
+{
+    if (name == "rules") {
+        nlohmann::json body = RuleFlyweightApiView::buildAll();
+        auto resp = drogon::HttpResponse::newHttpJsonResponse(body.dump());
+        return callback(resp);
+    }
+    return invokeResponse404("Unknown flyweight: " + name, std::move(callback));
 }
 
 void ApiController::invokeResponse

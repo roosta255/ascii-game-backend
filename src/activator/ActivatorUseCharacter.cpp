@@ -13,7 +13,7 @@ bool ActivatorUseCharacter::activate(Activation& activation) const {
         auto& match = req.match;
         auto& room = req.room;
         auto& subject = activation.character;
-        auto& object = activation.target;
+        auto object = activation.targetCharacter();
 
         codeset.setTable(CODE_IS_BLUE_OPEN_BEFORE, match.dungeon.isBlueOpen ? 1 : -1);
         codeset.setTable(CODE_SUBJECT_CHARACTER_ROLE, subject.role);

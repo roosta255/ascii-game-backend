@@ -1,79 +1,56 @@
-// name,                              isBlocking,        door,             lock, isDoorway
-DOOR_DECL(WALL,                             true,        iActivator,             iActivator, false, false)
-DOOR_DECL(WALL_ALLOCATED,                   true,        iActivator,             iActivator, false, false)
-DOOR_DECL(DOORWAY,                         false,        iActivator,             iActivator,  true,  true)
+// name,                              doorAttributes,                                                         door,             lock
+DOOR_DECL(WALL,                             ({TRAIT_IS_DOOR_BLOCKING}),                                             iActivator,             iActivator)
+DOOR_DECL(WALL_ALLOCATED,                   ({TRAIT_IS_DOOR_BLOCKING}),                                             iActivator,             iActivator)
+DOOR_DECL(DOORWAY,                          ({TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY}),                          iActivator,             iActivator)
 // keeper
-DOOR_DECL(KEEPER_EGRESS_KEYED,             false,        iActivator,             iActivator,  true, true)
-DOOR_DECL(KEEPER_EGRESS_KEYLESS,            true,        iActivator,             iActivator,  true, true)
-DOOR_DECL(KEEPER_INGRESS_KEYED,            false,        iActivator,             iActivator,  true, true)
-    DOOR_LOCK_WRAPPER({
-        .effects = { ActivatorBounceLock{}, ActivatorValidateNotOccupied{}, ActivatorGiveItem{ITEM_KEY}, ActivatorSetSharedDoors{DOOR_KEEPER_INGRESS_KEYLESS, DOOR_KEEPER_EGRESS_KEYLESS, ANIMATION_CRUSH, {EVENT_LOCK, {}, {EventComponentKind::ITEM, ITEM_KEY}}} },
-        .required = makeTraitBits({TRAIT_ACTOR, TRAIT_KEYER, TRAIT_ACTION_READY}),
-        .actionCost = 1
-    })
-DOOR_DECL(KEEPER_INGRESS_KEYLESS,           true,        iActivator,             iActivator,  true, true)
-    DOOR_LOCK_WRAPPER({
-        .effects = { ActivatorBounceLock{}, ActivatorValidateNotOccupied{}, ActivatorSetSharedDoors{DOOR_KEEPER_INGRESS_KEYED, DOOR_KEEPER_EGRESS_KEYED, ANIMATION_SLIDE, {EVENT_UNLOCK, {}, {EventComponentKind::ITEM, ITEM_KEY}}} },
-        .required = makeTraitBits({TRAIT_ACTOR, TRAIT_KEYER, TRAIT_ACTION_READY}),
-        .itemCost = { ITEM_KEY },
-        .actionCost = 1
-    })
+DOOR_DECL(KEEPER_EGRESS_KEYED,             ({TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY, TRAIT_DOOR_KEEPER, TRAIT_DOOR_KEYED, TRAIT_DOOR_EGRESS}),                           iActivator,             iActivator)
+DOOR_DECL(KEEPER_EGRESS_KEYLESS,            ({TRAIT_IS_DOOR_BLOCKING, TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY, TRAIT_DOOR_KEEPER, TRAIT_DOOR_EGRESS}),                     iActivator,             iActivator)
+DOOR_DECL(KEEPER_INGRESS_KEYED,            ({TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY, TRAIT_DOOR_KEEPER, TRAIT_DOOR_KEYED, TRAIT_DOOR_INGRESS}),                           iActivator,             ActivatorRuleExecution)
+DOOR_DECL(KEEPER_INGRESS_KEYLESS,           ({TRAIT_IS_DOOR_BLOCKING, TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY, TRAIT_DOOR_KEEPER, TRAIT_DOOR_INGRESS}),                    iActivator,             ActivatorRuleExecution)
+DOOR_DECL(KEEPER_INGRESS_KEYLESS_OPEN,      ({TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY, TRAIT_DOOR_KEEPER, TRAIT_DOOR_OPEN, TRAIT_DOOR_INGRESS}),                           iActivator,             iActivator)
+DOOR_DECL(KEEPER_EGRESS_KEYLESS_OPEN,       ({TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY, TRAIT_DOOR_KEEPER, TRAIT_DOOR_OPEN, TRAIT_DOOR_EGRESS}),                            iActivator,             iActivator)
 // jailer
-DOOR_DECL(JAILER_EGRESS_KEYED,             false,        iActivator,             iActivator,  true, true)
-DOOR_DECL(JAILER_EGRESS_KEYLESS,            true,        iActivator,             iActivator,  true, true)
-DOOR_DECL(JAILER_INGRESS_KEYED,            false,        iActivator,             iActivator,  true, true)
-DOOR_DECL(JAILER_INGRESS_KEYLESS,           true,        iActivator,             iActivator,  true, true)
-    DOOR_LOCK_WRAPPER({
-        .effects = { ActivatorBounceLock{}, ActivatorSetSharedDoors{DOOR_JAILER_INGRESS_KEYED, DOOR_JAILER_EGRESS_KEYED, ANIMATION_SLIDE, {EVENT_UNLOCK, {}, {EventComponentKind::ITEM, ITEM_KEY}}} },
-        .required = makeTraitBits({TRAIT_ACTOR, TRAIT_KEYER, TRAIT_ACTION_READY}),
-        .itemCost = { ITEM_KEY },
-        .actionCost = 1
-    })
+DOOR_DECL(JAILER_EGRESS_KEYED,             ({TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY, TRAIT_DOOR_JAILER, TRAIT_DOOR_KEYED, TRAIT_DOOR_EGRESS}),                            iActivator,             iActivator)
+DOOR_DECL(JAILER_EGRESS_KEYLESS,            ({TRAIT_IS_DOOR_BLOCKING, TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY, TRAIT_DOOR_JAILER, TRAIT_DOOR_EGRESS}),                     iActivator,             iActivator)
+DOOR_DECL(JAILER_INGRESS_KEYED,            ({TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY, TRAIT_DOOR_JAILER, TRAIT_DOOR_KEYED, TRAIT_DOOR_INGRESS}),                           iActivator,             iActivator)
+DOOR_DECL(JAILER_INGRESS_KEYLESS,           ({TRAIT_IS_DOOR_BLOCKING, TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY, TRAIT_DOOR_JAILER, TRAIT_DOOR_INGRESS}),                    iActivator,             ActivatorRuleExecution)
 // shifter
-DOOR_DECL(SHIFTER_EGRESS_KEYED,             false,        iActivator,             iActivator,  true, true)
-    DOOR_LOCK_WRAPPER({
-        .effects = { ActivatorBounceLock{}, ActivatorValidateNotOccupied{}, ActivatorGiveItem{ITEM_KEY}, ActivatorSetSharedDoors{DOOR_SHIFTER_EGRESS_KEYLESS, DOOR_SHIFTER_INGRESS_KEYLESS, ANIMATION_CRUSH, {EVENT_LOCK, {}, {EventComponentKind::ITEM, ITEM_KEY}}} },
-        .required = makeTraitBits({TRAIT_ACTOR, TRAIT_KEYER, TRAIT_ACTION_READY}),
-        .actionCost = 1
-    })
-DOOR_DECL(SHIFTER_EGRESS_KEYLESS,            true,        iActivator,            iActivator,  true, true)
-DOOR_DECL(SHIFTER_INGRESS_KEYED,            false,        iActivator,            iActivator,  true, true)
-DOOR_DECL(SHIFTER_INGRESS_KEYLESS,           true,        iActivator,            iActivator,  true, true)
-    DOOR_LOCK_WRAPPER({
-        .effects = { ActivatorBounceLock{}, ActivatorValidateNotOccupied{}, ActivatorSetSharedDoors{DOOR_SHIFTER_INGRESS_KEYED, DOOR_SHIFTER_EGRESS_KEYED, ANIMATION_SLIDE, {EVENT_UNLOCK, {}, {EventComponentKind::ITEM, ITEM_KEY}}} },
-        .required = makeTraitBits({TRAIT_ACTOR, TRAIT_KEYER, TRAIT_ACTION_READY}),
-        .itemCost = { ITEM_KEY },
-        .actionCost = 1
-    })
+DOOR_DECL(SHIFTER_EGRESS_KEYED,             ({TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY, TRAIT_DOOR_SHIFTER, TRAIT_DOOR_KEYED, TRAIT_DOOR_EGRESS}),                          iActivator,             ActivatorRuleExecution)
+DOOR_DECL(SHIFTER_EGRESS_KEYLESS,            ({TRAIT_IS_DOOR_BLOCKING, TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY, TRAIT_DOOR_SHIFTER, TRAIT_DOOR_EGRESS}),                   iActivator,            iActivator)
+DOOR_DECL(SHIFTER_INGRESS_KEYED,            ({TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY, TRAIT_DOOR_SHIFTER, TRAIT_DOOR_KEYED, TRAIT_DOOR_INGRESS}),                         iActivator,            iActivator)
+DOOR_DECL(SHIFTER_INGRESS_KEYLESS,           ({TRAIT_IS_DOOR_BLOCKING, TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY, TRAIT_DOOR_SHIFTER, TRAIT_DOOR_INGRESS}),                  iActivator,            ActivatorRuleExecution)
 // dungeons start orange: open, blue: closed
-DOOR_DECL(TOGGLER_ORANGE_CLOSED,             true,        iActivator,            iActivator,  true, true)
-DOOR_DECL(TOGGLER_ORANGE_OPEN,              false,        iActivator,            iActivator,  true, true)
-DOOR_DECL(TOGGLER_BLUE_CLOSED,               true,        iActivator,            iActivator,  true, true)
-DOOR_DECL(TOGGLER_BLUE_OPEN,                false,        iActivator,            iActivator,  true, true)
+DOOR_DECL(TOGGLER_ORANGE_CLOSED,             ({TRAIT_IS_DOOR_BLOCKING, TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY}), iActivator,            iActivator)
+DOOR_DECL(TOGGLER_ORANGE_OPEN,              ({TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY}),                          iActivator,            iActivator)
+DOOR_DECL(TOGGLER_BLUE_CLOSED,               ({TRAIT_IS_DOOR_BLOCKING, TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY}), iActivator,            iActivator)
+DOOR_DECL(TOGGLER_BLUE_OPEN,                ({TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY}),                          iActivator,            iActivator)
+// covenant
+DOOR_DECL(COVENANT_OPEN,   ({TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY, TRAIT_DOOR_COVENANT, TRAIT_DOOR_OPEN}),   iActivator, iActivator)
+DOOR_DECL(COVENANT_CLOSED, ({TRAIT_IS_DOOR_BLOCKING, TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY, TRAIT_DOOR_COVENANT}), iActivator, ActivatorRuleExecution)
 // lightning rod
-DOOR_DECL(LIGHTNING_ROD_AWAKENED,           false,        iActivator, ActivatorLightningRod, false, false)
-DOOR_DECL(LIGHTNING_ROD_DORMANT,            false,        iActivator, ActivatorLightningRod, false, false)
-DOOR_DECL(LIGHTNING_ROD_EMPTY,              false,        iActivator, ActivatorLightningRod, false, false)
+DOOR_DECL(LIGHTNING_ROD_AWAKENED,           ({}),                                                                   iActivator, ActivatorLightningRod)
+DOOR_DECL(LIGHTNING_ROD_DORMANT,            ({}),                                                                   iActivator, ActivatorLightningRod)
+DOOR_DECL(LIGHTNING_ROD_EMPTY,              ({}),                                                                   iActivator, ActivatorLightningRod)
 // time gate
-DOOR_DECL(TIME_GATE_AWAKENED,                true, ActivatorTimeGate, ActivatorTimeGateCube, false, false)
-DOOR_DECL(TIME_GATE_DORMANT,                 true,        iActivator, ActivatorTimeGateCube, false, false)
-DOOR_DECL(TIME_GATE_EMPTY,                   true,        iActivator, ActivatorTimeGateCube, false, false)
+DOOR_DECL(TIME_GATE_AWAKENED,                ({TRAIT_IS_DOOR_BLOCKING}),                                            ActivatorTimeGate, ActivatorTimeGateCube)
+DOOR_DECL(TIME_GATE_DORMANT,                 ({TRAIT_IS_DOOR_BLOCKING}),                                                    iActivator, ActivatorTimeGateCube)
+DOOR_DECL(TIME_GATE_EMPTY,                   ({TRAIT_IS_DOOR_BLOCKING}),                                                    iActivator, ActivatorTimeGateCube)
 // pole
-DOOR_DECL(POLE_1_BOTTOM,                     true,        iActivator,            iActivator,  true, false)
-DOOR_DECL(POLE_1_TOP,                       false,     ActivatorPole,            iActivator,  true, false)
+DOOR_DECL(POLE_1_BOTTOM,                     ({TRAIT_IS_DOOR_BLOCKING, TRAIT_IS_DOORWAY}),                                  iActivator,            iActivator)
+DOOR_DECL(POLE_1_TOP,                       ({TRAIT_IS_DOORWAY}),                                                       ActivatorPole,            iActivator)
 // ladder
-DOOR_DECL(LADDER_1_BOTTOM,                  false,   ActivatorLadder,            iActivator,  true, false)
-DOOR_DECL(LADDER_1_TOP,                     false,   ActivatorLadder,            iActivator,  true, false)
+DOOR_DECL(LADDER_1_BOTTOM,                  ({TRAIT_IS_DOORWAY}),                                                   ActivatorLadder,            iActivator)
+DOOR_DECL(LADDER_1_TOP,                     ({TRAIT_IS_DOORWAY}),                                                   ActivatorLadder,            iActivator)
 // elevator
-DOOR_DECL(ELEVATOR_CLOSED_KEYED,             true,        iActivator,            iActivator,  true, true)
-DOOR_DECL(ELEVATOR_CLOSED_KEYED_PAYING_BUTTON, true,      iActivator,     ActivatorElevator,  true, true)
-DOOR_DECL(ELEVATOR_CLOSED_KEYED_MOVING_BUTTON, true,      iActivator,     ActivatorElevator,  true, true)
-DOOR_DECL(ELEVATOR_CLOSED_KEYLESS,           true,        iActivator,            iActivator,  true, true)
-DOOR_DECL(ELEVATOR_CLOSED_KEYLESS_BUTTON,    true,        iActivator,     ActivatorElevator,  true, true)
-DOOR_DECL(ELEVATOR_CLOSED_CALL_BUTTON,       true,        iActivator,     ActivatorElevator,  true, true)
-DOOR_DECL(ELEVATOR_OPEN_KEYED,              false,        iActivator,            iActivator,  true, true)
-DOOR_DECL(ELEVATOR_OPEN_KEYED_PAYING_BUTTON, false,       iActivator,     ActivatorElevator,  true, true)
-DOOR_DECL(ELEVATOR_OPEN_KEYED_MOVING_BUTTON, false,       iActivator,     ActivatorElevator,  true, true)
-DOOR_DECL(ELEVATOR_OPEN_KEYED_BUTTON_CALLING, false,      iActivator,     ActivatorElevator,  true, true)
-DOOR_DECL(ELEVATOR_OPEN_KEYLESS,            false,        iActivator,            iActivator,  true, true)
-DOOR_DECL(ELEVATOR_OPEN_KEYLESS_BUTTON,     false,        iActivator,     ActivatorElevator,  true, true)
+DOOR_DECL(ELEVATOR_CLOSED_KEYED,             ({TRAIT_IS_DOOR_BLOCKING, TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY}),         iActivator,            iActivator)
+DOOR_DECL(ELEVATOR_CLOSED_KEYED_PAYING_BUTTON, ({TRAIT_IS_DOOR_BLOCKING, TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY}),       iActivator,     ActivatorElevator)
+DOOR_DECL(ELEVATOR_CLOSED_KEYED_MOVING_BUTTON, ({TRAIT_IS_DOOR_BLOCKING, TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY}),       iActivator,     ActivatorElevator)
+DOOR_DECL(ELEVATOR_CLOSED_KEYLESS,           ({TRAIT_IS_DOOR_BLOCKING, TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY}),         iActivator,            iActivator)
+DOOR_DECL(ELEVATOR_CLOSED_KEYLESS_BUTTON,    ({TRAIT_IS_DOOR_BLOCKING, TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY}),         iActivator,     ActivatorElevator)
+DOOR_DECL(ELEVATOR_CLOSED_CALL_BUTTON,       ({TRAIT_IS_DOOR_BLOCKING, TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY}),         iActivator,     ActivatorElevator)
+DOOR_DECL(ELEVATOR_OPEN_KEYED,              ({TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY}),                                  iActivator,            iActivator)
+DOOR_DECL(ELEVATOR_OPEN_KEYED_PAYING_BUTTON, ({TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY}),                                 iActivator,     ActivatorElevator)
+DOOR_DECL(ELEVATOR_OPEN_KEYED_MOVING_BUTTON, ({TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY}),                                 iActivator,     ActivatorElevator)
+DOOR_DECL(ELEVATOR_OPEN_KEYED_BUTTON_CALLING, ({TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY}),                                iActivator,     ActivatorElevator)
+DOOR_DECL(ELEVATOR_OPEN_KEYLESS,            ({TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY}),                                  iActivator,            iActivator)
+DOOR_DECL(ELEVATOR_OPEN_KEYLESS_BUTTON,     ({TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY}),                                  iActivator,     ActivatorElevator)

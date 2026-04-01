@@ -34,8 +34,8 @@ struct WallApiView
     {
         DoorFlyweight::getFlyweights().accessConst(model.door, [&](const DoorFlyweight& flyweight) {
             this->door = flyweight.name;
-            this->isDoorway = flyweight.isDoorway;
-            this->isBlocking = flyweight.blocking;
+            this->isDoorway = flyweight.doorAttributes[TRAIT_IS_DOORWAY].orElse(false);
+            this->isBlocking = flyweight.doorAttributes[TRAIT_IS_DOOR_BLOCKING].orElse(false);
             this->isDoorActionable = flyweight.isDoorActionable;
             this->isLockActionable = flyweight.isLockActionable;
         });

@@ -2,7 +2,7 @@
 
 #include <ostream>
 
-#define DOOR_DECL( name, blocks, doorActivator, lockActivator, doorway_, is_shared_doorway_ ) DOOR_##name,
+#define DOOR_DECL( name, doorAttributes_, doorActivator, lockActivator ) DOOR_##name,
 #define DOOR_LOCK_WRAPPER(...)
 #define DOOR_DOOR_WRAPPER(...)
 enum DoorEnum

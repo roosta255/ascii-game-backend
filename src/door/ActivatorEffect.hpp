@@ -6,6 +6,7 @@
 #include "ActivatorEndTurn.hpp"
 #include "ActivatorMoveToDoor.hpp"
 #include "ActivatorMoveToFloor.hpp"
+#include "ActivatorRuleExecution.hpp"
 #include "ActivatorUseCharacter.hpp"
 #include "ActivatorUseDoor.hpp"
 #include "ActivatorUseInventoryItem.hpp"
@@ -26,6 +27,7 @@
 #include "ActivatorDamagePierce.hpp"
 // door
 #include "ActivatorBounceLock.hpp"
+#include "ActivatorSetAllDoorsByTrait.hpp"
 #include "ActivatorCleanseAfflictions.hpp"
 #include "ActivatorElevator.hpp"
 #include "ActivatorGiveItem.hpp"
@@ -37,6 +39,7 @@
 #include "ActivatorPole.hpp"
 #include "ActivatorSetDoor.hpp"
 #include "ActivatorSetSharedDoors.hpp"
+#include "ActivatorSetSharedDoorsByTrait.hpp"
 #include "ActivatorShifter.hpp"
 #include "ActivatorTimeGate.hpp"
 #include "ActivatorTimeGateCube.hpp"
@@ -58,6 +61,7 @@ using ActivatorEffect = std::variant<
     ActivatorEndTurn,
     ActivatorMoveToDoor,
     ActivatorMoveToFloor,
+    ActivatorRuleExecution,
     ActivatorUseCharacter,
     ActivatorUseDoor,
     ActivatorUseInventoryItem,
@@ -78,6 +82,7 @@ using ActivatorEffect = std::variant<
     ActivatorDamagePierce,
     // door
     ActivatorBounceLock,
+    ActivatorSetAllDoorsByTrait,
     ActivatorCleanseAfflictions,
     ActivatorElevator,
     ActivatorGiveItem,
@@ -89,6 +94,7 @@ using ActivatorEffect = std::variant<
     ActivatorPole,
     ActivatorSetDoor,
     ActivatorSetSharedDoors,
+    ActivatorSetSharedDoorsByTrait,
     ActivatorShifter,
     ActivatorTimeGate,
     ActivatorTimeGateCube,

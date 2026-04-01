@@ -10,7 +10,7 @@
 bool ActivatorToggler::activate(Activation& activation) const {
     bool isSuccess = false;
     activation.request.access([&](RequestContext& req) {
-        if (req.codeset.addFailure(activation.target.isEmpty(), CODE_TARGET_CHARACTER_MISSING)) {
+        if (req.codeset.addFailure(activation.targetCharacter().isEmpty(), CODE_TARGET_CHARACTER_MISSING)) {
             req.controller.addRequestLoggedEvent(activation, LoggedEvent{
                 EVENT_MISSING_TARGET,
                 { EventComponentKind::ROLE, (int)activation.character.role },
@@ -18,7 +18,7 @@ bool ActivatorToggler::activate(Activation& activation) const {
             });
             return;
         }
-        activation.target.access([&](Character& target) {
+        activation.targetCharacter().access([&](Character& target) {
             if (req.controller.takeCharacterAction(target)) {
                 const RoleEnum newRole = (activation.character.role == ROLE_TOGGLER_ORANGE) ? ROLE_TOGGLER_BLUE : ROLE_TOGGLER_ORANGE;
                 const auto newAnimation = newRole == ROLE_TOGGLER_BLUE ? ANIMATION_TOGGLER_SWITCH_BLUE : ANIMATION_TOGGLER_SWITCH_ORANGE;

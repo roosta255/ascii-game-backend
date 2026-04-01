@@ -18,6 +18,11 @@ bool ActivatorMoveToDoor::activate(Activation& activation) const {
             return;
         }
 
+        Wall* nextPtr = nullptr;
+        activation.targetDoor().access([&](Wall& w) { nextPtr = &w; });
+        if (codeset.addFailure(!nextPtr, CODE_ACTIVATION_TARGET_NOT_SPECIFIED)) return;
+        Wall& next = *nextPtr;
+
         int conflictingCharacterId;
         if (codeset.addFailure(controller.isDoorOccupied(room.roomId, subject.location.channel, direction, conflictingCharacterId), CODE_OCCUPIED_TARGET_WALL_CELL)) {
             RoleEnum occRole = ROLE_EMPTY;
@@ -27,13 +32,12 @@ bool ActivatorMoveToDoor::activate(Activation& activation) const {
                 EVENT_OCCUPIED_DOORWAY,
                 { EventComponentKind::ROLE, (int)occRole },
                 {},
-                { EventComponentKind::DOOR, (int)room.getWall(direction).door },
+                { EventComponentKind::DOOR, (int)next.door },
                 direction.getIndex()
             });
             return;
         }
 
-        Wall& next = room.getWall(direction);
         if (codeset.addFailure(!next.isWalkable(codeset.error), CODE_DOOR_FAILED_WALKABILITY)) {
             controller.addRequestLoggedEvent(activation, LoggedEvent{
                 EVENT_NOT_WALKABLE,

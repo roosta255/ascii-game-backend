@@ -24,7 +24,7 @@ bool ActivatorCritterBite::activate(Activation& activation) const {
             return;
         }
 
-        const bool isTargetAccessed = activation.target.access([&](Character& target) {
+        const bool isTargetAccessed = activation.targetCharacter().access([&](Character& target) {
             CodeEnum roleError = CODE_UNKNOWN_ERROR;
             subject.accessRole(roleError, [&](const RoleFlyweight& critterRole) {
                 critterRole.biteTraitModifier.accessConst([&](const TraitModifier& modifier) {

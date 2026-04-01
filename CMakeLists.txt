@@ -64,8 +64,10 @@ add_library(core_backend STATIC
     src/activator/ActivatorUseCharacter.cpp
     src/activator/ActivatorUseDoor.cpp
     src/activator/ActivatorUseInventoryItem.cpp
+    src/activator/ActivatorRuleExecution.cpp
     src/activator/ActivatorUseLock.cpp
     src/activator/CharacterAction.cpp
+    src/activator/RuleFlyweight.cpp
     src/animation/AnimationEnum.cpp
     src/animation/AnimationFlyweight.cpp
     src/animation/AnimationTypes.cpp
@@ -94,6 +96,8 @@ add_library(core_backend STATIC
     src/door/ActivatorShifter.cpp
     src/door/ActivatorTimeGate.cpp
     src/door/ActivatorTimeGateCube.cpp
+    src/door/ActivatorSetAllDoorsByTrait.cpp
+    src/door/ActivatorSetSharedDoorsByTrait.cpp
     src/door/DoorFlyweight.cpp
     src/generator/DungeonAuthor.cpp
     src/generator/DungeonGenerator.cpp

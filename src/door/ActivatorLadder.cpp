@@ -19,6 +19,11 @@ bool ActivatorLadder::activate(Activation& activation) const {
             return;
         }
 
+        Wall* wallPtr = nullptr;
+        activation.targetDoor().access([&](Wall& w) { wallPtr = &w; });
+        if (codeset.addFailure(!wallPtr, CODE_ACTIVATION_TARGET_NOT_SPECIFIED)) return;
+        Wall& sourceWall = *wallPtr;
+
         if (codeset.addFailure(!controller.validateDoorNotOccupied(roomId, CHANNEL_CORPOREAL, direction), CODE_OCCUPIED_TARGET_TIME_GATE_CELL)) {
             int occupyingId = -1;
             controller.isDoorOccupied(roomId, CHANNEL_CORPOREAL, direction, occupyingId);
@@ -29,7 +34,7 @@ bool ActivatorLadder::activate(Activation& activation) const {
                 EVENT_OCCUPIED_DOORWAY,
                 { EventComponentKind::ROLE, (int)occRole },
                 {},
-                { EventComponentKind::DOOR, (int)room.getWall(direction).door },
+                { EventComponentKind::DOOR, (int)sourceWall.door },
                 direction.getIndex()
             });
             return;
@@ -37,7 +42,7 @@ bool ActivatorLadder::activate(Activation& activation) const {
 
         Location newLocation;
         int neighborRoomId = -1;
-        switch (room.getWall(direction).door) {
+        switch (sourceWall.door) {
             case DOOR_LADDER_1_TOP:
                 neighborRoomId = room.below;
                 newLocation = Location::makeShaftBottom(room.below, subject.location.channel, direction);
@@ -57,7 +62,7 @@ bool ActivatorLadder::activate(Activation& activation) const {
             RoleEnum occRole = ROLE_EMPTY;
             CodeEnum charError = CODE_UNKNOWN_ERROR;
             req.match.getCharacter(occupyingId, charError).access([&](Character& c) { occRole = c.role; });
-            DoorEnum neighborDoor = room.getWall(direction).door;
+            DoorEnum neighborDoor = sourceWall.door;
             req.match.dungeon.rooms.accessConst(neighborRoomId, [&](const Room& nr) { neighborDoor = nr.getWall(direction).door; });
             controller.addRequestLoggedEvent(activation, LoggedEvent{
                 EVENT_OCCUPIED_DOORWAY,

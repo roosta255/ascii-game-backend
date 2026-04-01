@@ -18,11 +18,6 @@ bool ActivatorLightningRod::activate(Activation& activation) const {
         auto& inventory = req.player.inventory;
         auto& room = req.room;
 
-        Cardinal direction;
-        if (codeset.addFailure(!activation.direction.copy(direction), CODE_ACTIVATION_DIRECTION_NOT_SPECIFIED)) {
-            return;
-        }
-
         if (!req.controller.isCharacterKeyerValidation(subject)) {
             controller.addRequestLoggedEvent(activation, LoggedEvent{
                 EVENT_NOT_KEYER,
@@ -32,7 +27,7 @@ bool ActivatorLightningRod::activate(Activation& activation) const {
             return;
         }
 
-        Wall& sourceWall = room.getWall(direction);
+        codeset.addFailure(!activation.targetLock().access([&](Wall& sourceWall) {
 
         switch (sourceWall.door) {
             case DOOR_LIGHTNING_ROD_AWAKENED:
@@ -104,6 +99,7 @@ bool ActivatorLightningRod::activate(Activation& activation) const {
             default:
                 codeset.addError(CODE_LIGHTNING_ROD_ACTIVATION_ON_NON_LIGHTNING_ROD);
         }
+        }), CODE_ACTIVATION_TARGET_NOT_SPECIFIED);
     });
     return result;
 }

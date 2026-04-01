@@ -22,7 +22,6 @@ bool ActivatorLootChest::activate(Activation& activation) const {
         auto& player = req.player;
         auto& subject = activation.character;
         auto& room = req.room;
-        auto& item = activation.targetItem;
 
         if (codeset.addFailure(!subject.isActor(codeset.error, controller.getTraitsComputed(subject.characterId).final))) {
             return;
@@ -32,9 +31,10 @@ bool ActivatorLootChest::activate(Activation& activation) const {
             return;
         }
 
-        codeset.addFailure(!item.access([&](Item& chestItem) {
-            codeset.addFailure(!activation.target.access([&](Character& containerChar) {
-                codeset.addFailure(!match.dungeon.findChestByContainerId(containerChar.characterId, codeset.error).access([&](Chest& chest) {
+        codeset.addFailure(!activation.targetCharacter().access([&](Character& containerChar) {
+            codeset.addFailure(!match.dungeon.findChestByContainerId(containerChar.characterId, codeset.error).access([&](Chest& chest) {
+                auto item = chest.inventory.items.getPointer(activation.targetItemSlot.orElse(-1));
+                codeset.addFailure(!item.access([&](Item& chestItem) {
                     bool isLocked = false;
                     LockFlyweight::getFlyweights().accessConst(chest.lock, [&](const LockFlyweight& lf){
                         isLocked = lf.isLocked;
@@ -92,9 +92,9 @@ bool ActivatorLootChest::activate(Activation& activation) const {
                         };
                         controller.activate(critterPreactivation);
                     });
-                }));
-            }), CODE_INACCESSIBLE_TARGET_CHARACTER_ID);
-        }), CODE_LOOT_CHEST_ITEM_SLOT_NOT_SPECIFIED);
+                }), CODE_LOOT_CHEST_ITEM_SLOT_NOT_SPECIFIED);
+            }));
+        }), CODE_INACCESSIBLE_TARGET_CHARACTER_ID);
     });
     return isSuccess;
 }

@@ -21,6 +21,8 @@
 #include "MatchController.hpp"
 #include "Preactivation.hpp"
 #include "RequestContext.hpp"
+#include "TargetEntity.hpp"
+#include "TargetPreactivationEntity.hpp"
 #include "RoleFlyweight.hpp"
 #include "TraitModifier.hpp"
 
@@ -57,7 +59,11 @@ bool MatchController::activate(const iActivator& activator, const Preactivation&
                 Pointer<Inventory> sourceInventory = preactivation.sourceInventoryId.isPresent()
                     ? match.getInventory(preactivation.sourceInventoryId.orElse(-1), codeset.error)
                     : Pointer<Inventory>(player.inventory);
-                Pointer<Inventory> targetInventory = match.getInventory(preactivation.action.targetInventoryIndex.orElse(-1), codeset.error);
+                Pointer<Inventory> targetInventory;
+                int targetInventoryIdx;
+                if (preactivation.action.targetInventoryIndex.copy(targetInventoryIdx)) {
+                    targetInventory = match.getInventory(targetInventoryIdx, codeset.error);
+                }
                 RequestContext request{
                     .player = player,
                     .room = room,
@@ -72,18 +78,48 @@ bool MatchController::activate(const iActivator& activator, const Preactivation&
                 ActivationContext activation{
                     .request = request,
                     .character = character,
-                    .target = match.getCharacter(preactivation.action.targetCharacterId.orElse(-1), codeset.error),
                     .sourceInventory = sourceInventory,
                     .targetInventory = targetInventory,
+                    .targetItemSlot = preactivation.action.targetItemIndex,
                     .direction = preactivation.action.direction,
                     .isSortingState = preactivation.isSortingState
                 };
                 sourceInventory.access([&](Inventory& inventory){
                     activation.sourceItem = inventory.items.getPointer(preactivation.sourceItemIndex.orElse(-1));
                 });
-                targetInventory.access([&](Inventory& inventory){
-                    activation.targetItem = inventory.items.getPointer(preactivation.action.targetItemIndex.orElse(-1));
-                });
+
+                // Resolve TargetPreactivationEntity → TargetEntity
+                std::visit([&](auto& t) {
+                    using T = std::decay_t<decltype(t)>;
+                    if constexpr (std::is_same_v<T, PreactivationTargetCharacter>) {
+                        activation.targetEntity = match.getCharacter(t.characterId, codeset.error);
+                    } else if constexpr (std::is_same_v<T, PreactivationTargetItem>) {
+                        targetInventory.access([&](Inventory& inventory) {
+                            activation.targetEntity = inventory.items.getPointer(t.itemIndex);
+                        });
+                    } else if constexpr (std::is_same_v<T, PreactivationTargetDoor>) {
+                        activation.targetEntity = DoorTarget{ Pointer<Wall>(room.getWall(t.direction)) };
+                    } else if constexpr (std::is_same_v<T, PreactivationTargetLock>) {
+                        activation.targetEntity = LockTarget{ Pointer<Wall>(room.getWall(t.direction)) };
+                    } else if constexpr (std::is_same_v<T, NoPreactivationTarget>) {
+                        // Fall back to legacy action fields for backward compatibility
+                        Cardinal dir;
+                        if (preactivation.action.direction.copy(dir)) {
+                            if (preactivation.action.type == ACTION_ACTIVATE_LOCK) {
+                                activation.targetEntity = LockTarget{ Pointer<Wall>(room.getWall(dir)) };
+                            } else if (preactivation.action.type == ACTION_ACTIVATE_DOOR
+                                    || preactivation.action.type == ACTION_MOVE_TO_DOOR) {
+                                activation.targetEntity = DoorTarget{ Pointer<Wall>(room.getWall(dir)) };
+                            }
+                        }
+                        if (std::holds_alternative<NoTarget>(activation.targetEntity)) {
+                            int charId;
+                            if (preactivation.action.targetCharacterId.copy(charId)) {
+                                activation.targetEntity = match.getCharacter(charId, codeset.error);
+                            }
+                        }
+                    }
+                }, preactivation.targetPreactivationEntity);
                 codeset.addFailure(!(isSuccess = activator.activate(activation)));
                 outEventLog.access([&](std::vector<LoggedEvent>& eventLog) {
                     eventLog.clear();

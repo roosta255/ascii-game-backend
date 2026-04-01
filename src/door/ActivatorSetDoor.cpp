@@ -18,7 +18,9 @@ bool ActivatorSetDoor::activate(Activation& activation) const {
         }
 
         const Timestamp doorTime = req.time + MatchController::BOUNCE_LOCK_ANIMATION_DURATION / 2;
-        room.getWall(direction).setDoor(door, doorTime, req.isSkippingAnimations, room.roomId, animation);
+        if (codeset.addFailure(!activation.targetWall().access([&](Wall& wall) {
+            wall.setDoor(door, doorTime, req.isSkippingAnimations, room.roomId, animation);
+        }), CODE_ACTIVATION_TARGET_NOT_SPECIFIED)) return;
 
         if (event.action != EVENT_NIL) {
             LoggedEvent toLog = event;

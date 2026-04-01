@@ -1,0 +1,122 @@
+// RULE_DECL( NAME, WrapperConfig{ ... } )
+//
+// Rules are evaluated highest-priority first.
+// The first rule that matches AND succeeds ends the search.
+// If a rule matches but fails (missing traits, costs, etc.), the search stops
+// and the failure is reported — no further rules are tried.
+
+// --- Covenant ---
+// Open: COVENANT_CLOSED -> COVENANT_OPEN
+//   Closes all other covenant doors, then opens the target.
+//   Requires PIETY. No key.
+RULE_DECL(COVENANT_OPEN,
+({
+    .matches = { .target = makeTraitBits({TRAIT_DOOR_COVENANT, TRAIT_IS_DOOR_BLOCKING}) },
+    .conditions = { .actor = { .required = makeTraitBits({TRAIT_ACTOR, TRAIT_PIETY, TRAIT_ACTION_READY}) } },
+    .costs = { .action = 1 },
+    .effects = { .onSuccess = {
+        ActivatorBounceLock{},
+        ActivatorSetAllDoorsByTrait{ makeTraitBits({TRAIT_DOOR_COVENANT}),
+                                     makeTraitBits({TRAIT_IS_DOOR_BLOCKING}),
+                                     makeTraitBits({TRAIT_DOOR_OPEN}),
+                                     ANIMATION_CRUSH },
+        ActivatorSetSharedDoorsByTrait{ makeTraitBits({TRAIT_DOOR_OPEN}),
+                                        makeTraitBits({TRAIT_IS_DOOR_BLOCKING}),
+                                        ANIMATION_SLIDE,
+                                        {EVENT_UNLOCK, {}, {}} } } }
+}))
+
+// Close: COVENANT_OPEN -> COVENANT_CLOSED
+RULE_DECL(COVENANT_CLOSE,
+({
+    .matches = { .target = makeTraitBits({TRAIT_DOOR_COVENANT, TRAIT_DOOR_OPEN}) },
+    .conditions = { .actor = { .required = makeTraitBits({TRAIT_ACTOR, TRAIT_PIETY, TRAIT_ACTION_READY}) } },
+    .costs = { .action = 1 },
+    .effects = { .onSuccess = {
+        ActivatorBounceLock{},
+        ActivatorSetSharedDoorsByTrait{ makeTraitBits({TRAIT_IS_DOOR_BLOCKING}),
+                                        makeTraitBits({TRAIT_DOOR_OPEN}),
+                                        ANIMATION_CRUSH,
+                                        {EVENT_LOCK, {}, {}} } } }
+}))
+
+// --- Keeper ---
+// Lock (key-in): KEEPER_INGRESS_KEYED   -> KEEPER_INGRESS_KEYLESS
+//                KEEPER_EGRESS_KEYED    -> KEEPER_EGRESS_KEYLESS
+//   delta: clear DOOR_KEYED, set IS_DOOR_BLOCKING
+RULE_DECL(KEEPER_LOCK,
+({
+    .matches = { .target = makeTraitBits({TRAIT_DOOR_KEEPER, TRAIT_DOOR_KEYED, TRAIT_DOOR_INGRESS}) },
+    .conditions = { .actor = { .required = makeTraitBits({TRAIT_ACTOR, TRAIT_KEYER, TRAIT_ACTION_READY}) } },
+    .costs = { .action = 1 },
+    .effects = { .onSuccess = { ActivatorBounceLock{}, ActivatorValidateNotOccupied{}, ActivatorGiveItem{ITEM_KEY},
+                                ActivatorSetSharedDoorsByTrait{ makeTraitBits({TRAIT_IS_DOOR_BLOCKING}),
+                                                                makeTraitBits({TRAIT_DOOR_KEYED}),
+                                                                ANIMATION_CRUSH,
+                                                                {EVENT_LOCK, {}, {EventComponentKind::ITEM, ITEM_KEY}} } } }
+}))
+
+// Unlock (key-out): KEEPER_INGRESS_KEYLESS -> KEEPER_INGRESS_KEYED
+//                   KEEPER_EGRESS_KEYLESS  -> KEEPER_EGRESS_KEYED
+//   delta: set DOOR_KEYED, clear IS_DOOR_BLOCKING
+RULE_DECL(KEEPER_UNLOCK,
+({
+    .matches = { .target = makeTraitBits({TRAIT_DOOR_KEEPER, TRAIT_DOOR_INGRESS}) },
+    .conditions = { .actor = { .required = makeTraitBits({TRAIT_ACTOR, TRAIT_KEYER, TRAIT_ACTION_READY}) },
+                    .target = { .restricted = makeTraitBits({TRAIT_DOOR_KEYED}) } },
+    .costs = { .item = { ITEM_KEY }, .action = 1 },
+    .effects = { .onSuccess = { ActivatorBounceLock{}, ActivatorValidateNotOccupied{},
+                                ActivatorSetSharedDoorsByTrait{ makeTraitBits({TRAIT_DOOR_KEYED}),
+                                                                makeTraitBits({TRAIT_IS_DOOR_BLOCKING}),
+                                                                ANIMATION_SLIDE,
+                                                                {EVENT_UNLOCK, {}, {EventComponentKind::ITEM, ITEM_KEY}} } } }
+}))
+
+// --- Jailer ---
+// Unlock (key-out): JAILER_INGRESS_KEYLESS -> JAILER_INGRESS_KEYED
+//                   JAILER_EGRESS_KEYLESS  -> JAILER_EGRESS_KEYED
+//   delta: set DOOR_KEYED, clear IS_DOOR_BLOCKING
+RULE_DECL(JAILER_UNLOCK,
+({
+    .matches = { .target = makeTraitBits({TRAIT_DOOR_JAILER, TRAIT_DOOR_INGRESS}) },
+    .conditions = { .actor = { .required = makeTraitBits({TRAIT_ACTOR, TRAIT_KEYER, TRAIT_ACTION_READY}) },
+                    .target = { .restricted = makeTraitBits({TRAIT_DOOR_KEYED}) } },
+    .costs = { .item = { ITEM_KEY }, .action = 1 },
+    .effects = { .onSuccess = { ActivatorBounceLock{},
+                                ActivatorSetSharedDoorsByTrait{ makeTraitBits({TRAIT_DOOR_KEYED}),
+                                                                makeTraitBits({TRAIT_IS_DOOR_BLOCKING}),
+                                                                ANIMATION_SLIDE,
+                                                                {EVENT_UNLOCK, {}, {EventComponentKind::ITEM, ITEM_KEY}} } } }
+}))
+
+// --- Shifter ---
+// Lock (key-in): SHIFTER_EGRESS_KEYED    -> SHIFTER_EGRESS_KEYLESS
+//                SHIFTER_INGRESS_KEYLESS -> SHIFTER_INGRESS_KEYED   (neighbor is ingress when activating egress)
+//   delta: clear DOOR_KEYED, set IS_DOOR_BLOCKING
+RULE_DECL(SHIFTER_LOCK,
+({
+    .matches = { .target = makeTraitBits({TRAIT_DOOR_SHIFTER, TRAIT_DOOR_KEYED, TRAIT_DOOR_EGRESS}) },
+    .conditions = { .actor = { .required = makeTraitBits({TRAIT_ACTOR, TRAIT_KEYER, TRAIT_ACTION_READY}) } },
+    .costs = { .action = 1 },
+    .effects = { .onSuccess = { ActivatorBounceLock{}, ActivatorValidateNotOccupied{}, ActivatorGiveItem{ITEM_KEY},
+                                ActivatorSetSharedDoorsByTrait{ makeTraitBits({TRAIT_IS_DOOR_BLOCKING}),
+                                                                makeTraitBits({TRAIT_DOOR_KEYED}),
+                                                                ANIMATION_CRUSH,
+                                                                {EVENT_LOCK, {}, {EventComponentKind::ITEM, ITEM_KEY}} } } }
+}))
+
+// Unlock (key-out): SHIFTER_INGRESS_KEYLESS -> SHIFTER_INGRESS_KEYED
+//                   SHIFTER_EGRESS_KEYLESS  -> SHIFTER_EGRESS_KEYED (neighbor is egress when activating ingress)
+//   delta: set DOOR_KEYED, clear IS_DOOR_BLOCKING
+RULE_DECL(SHIFTER_UNLOCK,
+({
+    .matches = { .target = makeTraitBits({TRAIT_DOOR_SHIFTER, TRAIT_DOOR_INGRESS}) },
+    .conditions = { .actor = { .required = makeTraitBits({TRAIT_ACTOR, TRAIT_KEYER, TRAIT_ACTION_READY}) },
+                    .target = { .restricted = makeTraitBits({TRAIT_DOOR_KEYED}) } },
+    .costs = { .item = { ITEM_KEY }, .action = 1 },
+    .effects = { .onSuccess = { ActivatorBounceLock{}, ActivatorValidateNotOccupied{},
+                                ActivatorSetSharedDoorsByTrait{ makeTraitBits({TRAIT_DOOR_KEYED}),
+                                                                makeTraitBits({TRAIT_IS_DOOR_BLOCKING}),
+                                                                ANIMATION_SLIDE,
+                                                                {EVENT_UNLOCK, {}, {EventComponentKind::ITEM, ITEM_KEY}} } } }
+}))

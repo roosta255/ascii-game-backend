@@ -19,12 +19,10 @@ bool ActivatorTimeGate::activate(Activation& activation) const {
         auto& subject = activation.character;
         auto& inventory = req.player.inventory;
 
-        Cardinal direction;
-        if (codeset.addFailure(!activation.direction.copy(direction), CODE_ACTIVATION_DIRECTION_NOT_SPECIFIED)) {
-            return;
-        }
-
-        Wall& sourceWall = room.getWall(direction);
+        Wall* sourceWallPtr = nullptr;
+        activation.targetDoor().access([&](Wall& w) { sourceWallPtr = &w; });
+        if (codeset.addFailure(!sourceWallPtr, CODE_ACTIVATION_TARGET_NOT_SPECIFIED)) return;
+        Wall& sourceWall = *sourceWallPtr;
 
         if (codeset.addFailure(!controller.validateDoorNotOccupied(room.roomId, CHANNEL_CORPOREAL, TIME_GATE_DIRECTION), CODE_OCCUPIED_TARGET_TIME_GATE_CELL)) {
             int occupyingId = -1;

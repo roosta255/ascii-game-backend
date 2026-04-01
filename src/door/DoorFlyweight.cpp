@@ -1,24 +1,22 @@
 #include "Array.hpp"
 #include "DoorEnum.hpp"
 #include "DoorFlyweight.hpp"
+#include "TraitBits.hpp"
 #include "iActivator.hpp"
 #include "ActivatorElevator.hpp"
 #include "ActivatorJailer.hpp"
 #include "ActivatorKeeper.hpp"
 #include "ActivatorInactiveDoor.hpp"
+#include "ActivatorRuleExecution.hpp"
 #include "ActivatorWrapper.hpp"
 #include "EventFlyweight.hpp"
 #include "ActivatorBounceLock.cpp"
 #include "ActivatorLadder.cpp"
-#include "ActivatorLightningRod.cpp"
 #include "ActivatorPole.cpp"
 #include "ActivatorGiveItem.cpp"
 #include "ActivatorSetDoor.cpp"
 #include "ActivatorValidateNotOccupied.cpp"
 #include "ActivatorSetSharedDoors.cpp"
-#include "ActivatorShifter.cpp"
-#include "ActivatorTimeGate.cpp"
-#include "ActivatorTimeGateCube.cpp"
 #include "ActivatorWrapper.cpp"
 
 const Array<DoorFlyweight, DOOR_COUNT>& DoorFlyweight::getFlyweights() {
@@ -31,15 +29,13 @@ const Array<DoorFlyweight, DOOR_COUNT>& DoorFlyweight::getFlyweights() {
         static Array<ActivatorWrapper, DOOR_COUNT> doorWrappers;
         static Array<ActivatorWrapper, DOOR_COUNT> lockWrappers;
 
-        #define DOOR_DECL( name_text, blockingness, doorActivator_, lockActivator_, doorway_, is_shared_doorway_ ) \
+        #define DOOR_DECL( name_text, doorAttributes_, doorActivator_, lockActivator_ ) \
             lastDoor = DOOR_##name_text; \
             static doorActivator_ GLOBAL_DOOR_##name_text##doorActivator_; \
             static lockActivator_ GLOBAL_LOCK_##name_text##lockActivator_; \
             flyweights.getPointer( DOOR_##name_text ).access([](DoorFlyweight& flyweight){ \
-                flyweight.blocking = blockingness; \
                 flyweight.name = #name_text; \
-                flyweight.isDoorway = doorway_; \
-                flyweight.isSharedDoorway = is_shared_doorway_; \
+                flyweight.doorAttributes = makeTraitBits doorAttributes_; \
                 flyweight.isDoorActionable = !std::is_same_v<doorActivator_, iActivator>; \
                 flyweight.isLockActionable = !std::is_same_v<lockActivator_, iActivator>; \
                 flyweight.doorActivator = GLOBAL_DOOR_##name_text##doorActivator_; \
@@ -92,6 +88,21 @@ const Array<DoorFlyweight, DOOR_COUNT>& DoorFlyweight::getFlyweights() {
         return flyweights;
     }();
     return flyweights;
+}
+
+bool DoorFlyweight::findByTraits(const TraitBits& traits, DoorEnum& output) {
+    const auto& flyweights = getFlyweights();
+    for (int i = 0; i < DOOR_COUNT; i++) {
+        bool found = false;
+        flyweights.accessConst(i, [&](const DoorFlyweight& flyweight) {
+            if (flyweight.doorAttributes == traits) {
+                output = (DoorEnum)i;
+                found = true;
+            }
+        });
+        if (found) return true;
+    }
+    return false;
 }
 
 bool DoorFlyweight::indexByString (const std::string& name, DoorEnum& output) {

@@ -20,7 +20,7 @@ bool ActivatorAttack::activate(Activation& activation) const {
         auto& controller = req.controller;
         auto& attacker = activation.character;
 
-        isTargetAccessed = activation.target.access([&](Character& target) {
+        isTargetAccessed = activation.targetCharacter().access([&](Character& target) {
             const auto targetTraits = controller.getTraitsComputed(target.characterId);
 
             // --- PARRY check ---
@@ -41,11 +41,10 @@ bool ActivatorAttack::activate(Activation& activation) const {
                 ActivationContext counterActivation = {
                     .request = activation.request,
                     .character = target,
-                    .target = Pointer<Character>(attacker),
                     .sourceItem = activation.sourceItem,
-                    .targetItem = activation.targetItem,
                     .sourceInventory = activation.sourceInventory,
                     .targetInventory = activation.targetInventory,
+                    .targetEntity = Pointer<Character>(attacker),
                     .direction = activation.direction,
                     .damageTypes = activation.damageTypes
                 };
@@ -84,11 +83,10 @@ bool ActivatorAttack::activate(Activation& activation) const {
             ActivationContext damageActivation = {
                 .request = activation.request,
                 .character = attacker,
-                .target = Pointer<Character>(target),
                 .sourceItem = activation.sourceItem,
-                .targetItem = activation.targetItem,
                 .sourceInventory = activation.sourceInventory,
                 .targetInventory = activation.targetInventory,
+                .targetEntity = Pointer<Character>(target),
                 .direction = activation.direction,
                 .damageTypes = damageTypes
             };
