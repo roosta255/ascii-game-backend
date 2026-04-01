@@ -3,6 +3,7 @@
 #include "CodeEnum.hpp"
 #include "iStore.hpp"
 #include "Match.hpp"
+#include "LRUMap.hpp"
 #include <functional>
 #include <string>
 
@@ -20,4 +21,5 @@ public:
 
 private:
     iStore& store_;
+    LRUMap<std::string, Match> cache_{200};
 };
