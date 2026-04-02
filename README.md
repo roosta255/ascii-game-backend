@@ -49,20 +49,35 @@ Both environments use `docker-compose` to run two containers: the Drogon backend
 
 ### Dev server setup
 
-1. Open the repo in VS Code and reopen in the devcontainer when prompted.
-2. In [Cloudflare Zero Trust](https://one.dash.cloudflare.com) → Networks → Tunnels → Create a tunnel:
+1. Install the [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension in VS Code on your local machine. VS Code will also prompt you automatically when you open this repo since it is listed in `.vscode/extensions.json`.
+
+2. Create the Docker network that the devcontainer and `docker-compose.yml` both expect. Run this once per machine — you only need to do it again if you reset Docker:
+   ```bash
+   docker network create backend_default
+   ```
+
+3. Create a `.env` file in the repo root (never commit this file):
+   ```
+   CLOUDFLARE_TUNNEL_TOKEN=        # Your dev tunnel token for this machine (see step 5)
+   ORACLE_HOST=163.192.60.240
+   GHCR_TOKEN=                     # GitHub PAT with read:packages scope
+   ORACLE_USER=opc
+   CLOUDFLARE_TUNNEL_TOKEN_PROD=   # The production tunnel token (shared across all dev machines)
+   ```
+   > Each dev machine (e.g. macbook, windows PC) needs its **own** `CLOUDFLARE_TUNNEL_TOKEN` — create a separate tunnel per machine in the Cloudflare dashboard. `CLOUDFLARE_TUNNEL_TOKEN_PROD` is the same value on every machine.
+
+4. Open the repo in VS Code and reopen in the devcontainer when prompted.
+5. In [Cloudflare Zero Trust](https://one.dash.cloudflare.com) → Networks → Tunnels → Create a tunnel:
    - Connector: Docker
-   - Copy the tunnel token
-   - Public Hostname: your chosen subdomain (e.g. `game-backend.yourdomain.com`) → Service: `HTTP` → `drogon_backend:8080`
-3. Create a `.env` file in the repo root:
-   ```
-   CLOUDFLARE_TUNNEL_TOKEN=your-token-here
-   ```
-4. Start the containers:
+   - Copy the tunnel token → paste it as `CLOUDFLARE_TUNNEL_TOKEN` in your `.env`
+   - Public Hostname: your chosen subdomain (e.g. `game-backend-mac.yourdomain.com`) → Service: `HTTP` → `drogon_backend:8080`
+
+6. Start the containers:
    ```bash
    docker compose up
    ```
-5. The backend is now reachable at your Cloudflare tunnel URL.
+
+7. The backend is now reachable at your Cloudflare tunnel URL.
 
 ---
 
