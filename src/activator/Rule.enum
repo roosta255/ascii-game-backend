@@ -11,7 +11,7 @@
 //   Requires PIETY. No key.
 RULE_DECL(COVENANT_OPEN,
 ({
-    .matches = { .target = makeTraitBits({TRAIT_DOOR_COVENANT, TRAIT_IS_DOOR_BLOCKING}) },
+    .matches = { .target = { .traits = makeTraitBits({TRAIT_DOOR_COVENANT, TRAIT_IS_DOOR_BLOCKING}) } },
     .conditions = { .actor = { .required = makeTraitBits({TRAIT_ACTOR, TRAIT_PIETY, TRAIT_ACTION_READY}) } },
     .costs = { .action = 1 },
     .effects = { .onSuccess = {
@@ -29,7 +29,7 @@ RULE_DECL(COVENANT_OPEN,
 // Close: COVENANT_OPEN -> COVENANT_CLOSED
 RULE_DECL(COVENANT_CLOSE,
 ({
-    .matches = { .target = makeTraitBits({TRAIT_DOOR_COVENANT, TRAIT_DOOR_OPEN}) },
+    .matches = { .target = { .traits = makeTraitBits({TRAIT_DOOR_COVENANT, TRAIT_DOOR_OPEN}) } },
     .conditions = { .actor = { .required = makeTraitBits({TRAIT_ACTOR, TRAIT_PIETY, TRAIT_ACTION_READY}) } },
     .costs = { .action = 1 },
     .effects = { .onSuccess = {
@@ -46,7 +46,7 @@ RULE_DECL(COVENANT_CLOSE,
 //   delta: clear DOOR_KEYED, set IS_DOOR_BLOCKING
 RULE_DECL(KEEPER_LOCK,
 ({
-    .matches = { .target = makeTraitBits({TRAIT_DOOR_KEEPER, TRAIT_DOOR_KEYED, TRAIT_DOOR_INGRESS}) },
+    .matches = { .target = { .traits = makeTraitBits({TRAIT_DOOR_KEEPER, TRAIT_DOOR_KEYED, TRAIT_DOOR_INGRESS}) } },
     .conditions = { .actor = { .required = makeTraitBits({TRAIT_ACTOR, TRAIT_KEYER, TRAIT_ACTION_READY}) } },
     .costs = { .action = 1 },
     .effects = { .onSuccess = { ActivatorBounceLock{}, ActivatorValidateNotOccupied{}, ActivatorGiveItem{ITEM_KEY},
@@ -61,7 +61,7 @@ RULE_DECL(KEEPER_LOCK,
 //   delta: set DOOR_KEYED, clear IS_DOOR_BLOCKING
 RULE_DECL(KEEPER_UNLOCK,
 ({
-    .matches = { .target = makeTraitBits({TRAIT_DOOR_KEEPER, TRAIT_DOOR_INGRESS}) },
+    .matches = { .target = { .traits = makeTraitBits({TRAIT_DOOR_KEEPER, TRAIT_DOOR_INGRESS}) } },
     .conditions = { .actor = { .required = makeTraitBits({TRAIT_ACTOR, TRAIT_KEYER, TRAIT_ACTION_READY}) },
                     .target = { .restricted = makeTraitBits({TRAIT_DOOR_KEYED}) } },
     .costs = { .item = { ITEM_KEY }, .action = 1 },
@@ -78,7 +78,7 @@ RULE_DECL(KEEPER_UNLOCK,
 //   delta: set DOOR_KEYED, clear IS_DOOR_BLOCKING
 RULE_DECL(JAILER_UNLOCK,
 ({
-    .matches = { .target = makeTraitBits({TRAIT_DOOR_JAILER, TRAIT_DOOR_INGRESS}) },
+    .matches = { .target = { .traits = makeTraitBits({TRAIT_DOOR_JAILER, TRAIT_DOOR_INGRESS}) } },
     .conditions = { .actor = { .required = makeTraitBits({TRAIT_ACTOR, TRAIT_KEYER, TRAIT_ACTION_READY}) },
                     .target = { .restricted = makeTraitBits({TRAIT_DOOR_KEYED}) } },
     .costs = { .item = { ITEM_KEY }, .action = 1 },
@@ -95,7 +95,7 @@ RULE_DECL(JAILER_UNLOCK,
 //   delta: clear DOOR_KEYED, set IS_DOOR_BLOCKING
 RULE_DECL(SHIFTER_LOCK,
 ({
-    .matches = { .target = makeTraitBits({TRAIT_DOOR_SHIFTER, TRAIT_DOOR_KEYED, TRAIT_DOOR_EGRESS}) },
+    .matches = { .target = { .traits = makeTraitBits({TRAIT_DOOR_SHIFTER, TRAIT_DOOR_KEYED, TRAIT_DOOR_EGRESS}) } },
     .conditions = { .actor = { .required = makeTraitBits({TRAIT_ACTOR, TRAIT_KEYER, TRAIT_ACTION_READY}) } },
     .costs = { .action = 1 },
     .effects = { .onSuccess = { ActivatorBounceLock{}, ActivatorValidateNotOccupied{}, ActivatorGiveItem{ITEM_KEY},
@@ -110,7 +110,7 @@ RULE_DECL(SHIFTER_LOCK,
 //   delta: set DOOR_KEYED, clear IS_DOOR_BLOCKING
 RULE_DECL(SHIFTER_UNLOCK,
 ({
-    .matches = { .target = makeTraitBits({TRAIT_DOOR_SHIFTER, TRAIT_DOOR_INGRESS}) },
+    .matches = { .target = { .traits = makeTraitBits({TRAIT_DOOR_SHIFTER, TRAIT_DOOR_INGRESS}) } },
     .conditions = { .actor = { .required = makeTraitBits({TRAIT_ACTOR, TRAIT_KEYER, TRAIT_ACTION_READY}) },
                     .target = { .restricted = makeTraitBits({TRAIT_DOOR_KEYED}) } },
     .costs = { .item = { ITEM_KEY }, .action = 1 },
@@ -119,4 +119,18 @@ RULE_DECL(SHIFTER_UNLOCK,
                                                                 makeTraitBits({TRAIT_IS_DOOR_BLOCKING}),
                                                                 ANIMATION_SLIDE,
                                                                 {EVENT_UNLOCK, {}, {EventComponentKind::ITEM, ITEM_KEY}} } } }
+}))
+
+// --- Sacrament of Forgiveness ---
+// Grants PIETY to any non-undead actor character that uses the sacrament.
+// Action cost is redirected to the target (actor has TRAIT_OBJECT).
+RULE_DECL(SACRAMENT_FORGIVENESS_SET_PIETY,
+({
+    .matches = { .target = { .traits = makeTraitBits({TRAIT_ACTOR}) } },
+    .conditions = { .target = { .restricted = makeTraitBits({TRAIT_UNDEAD}) } },
+    .costs = { .action = 1 },
+    .effects = { .onSuccess = {
+        ActivatorBounceFloor(false),
+        ActivatorAlterTraitAffliction({ .target = { .set = makeTraitBits({TRAIT_PIETY}), .clear = makeTraitBits({TRAIT_CAT_BITE}) } })
+    } }
 }))

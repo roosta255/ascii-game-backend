@@ -74,6 +74,12 @@ bool DungeonAuthor::setupPoleUp(const int4& coord, const Cardinal dir) {
         }).orElse(false);
 }
 
+bool DungeonAuthor::setupCovenantDoor (const int4& coord, const Cardinal dir) {
+    return getRoomId(coord).map<bool>([&](const int& roomId){
+            return mutator.setupCovenantDoor(roomId, dir);
+        }).orElse(false);
+}
+
 bool DungeonAuthor::setupShifter (const int4& coord, const Cardinal dir, const bool isKeyed) {
     return getRoomId(coord).map<bool>([&](const int& roomId){
             return mutator.setupShifter(roomId, dir, isKeyed);
@@ -101,6 +107,12 @@ bool DungeonAuthor::setupTogglerOrange (const int4& coord, const Cardinal dir) {
 bool DungeonAuthor::setupTogglerSwitch (const int4& coord, int& outCharacterId, int& outFloorId) {
     return getRoomId(coord).map<bool>([&](const int& roomId){
             return mutator.setupTogglerSwitch(roomId, outCharacterId, outFloorId);
+        }).orElse(false);
+}
+
+bool DungeonAuthor::setupSacramentForgiveness (const int4& coord, int& outCharacterId, int& outFloorId) {
+    return getRoomId(coord).map<bool>([&](const int& roomId){
+            return mutator.setupSacramentForgiveness(roomId, outCharacterId, outFloorId);
         }).orElse(false);
 }
 

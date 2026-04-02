@@ -1,7 +1,9 @@
 #pragma once
 
 #include <nlohmann/json.hpp>
+#include "DoorEnum.hpp"
 #include "ItemEnum.hpp"
+#include "RoleEnum.hpp"
 #include "RuleFlyweight.hpp"
 #include "TraitEnum.hpp"
 #include "WrapperConfig.hpp"
@@ -39,11 +41,29 @@ private:
         };
     }
 
+    static nlohmann::json serializeMatch(const WrapperConfig::Match& m) {
+        nlohmann::json doorsArr = nlohmann::json::array();
+        for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && m.doors[i] != DOOR_COUNT; i++)
+            doorsArr.push_back((int)m.doors[i]);
+        nlohmann::json rolesArr = nlohmann::json::array();
+        for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && m.roles[i] != ROLE_COUNT; i++)
+            rolesArr.push_back((int)m.roles[i]);
+        nlohmann::json itemsArr = nlohmann::json::array();
+        for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && m.items[i] != ITEM_NIL; i++)
+            itemsArr.push_back(item_to_text(m.items[i]));
+        return {
+            {"traits", traitsToJson(m.traits)},
+            {"doors",  doorsArr},
+            {"roles",  rolesArr},
+            {"items",  itemsArr}
+        };
+    }
+
     static nlohmann::json serializeMatches(const WrapperConfig::Matches& m) {
         return {
-            {"actor",  traitsToJson(m.actor)},
-            {"tool",   traitsToJson(m.tool)},
-            {"target", traitsToJson(m.target)}
+            {"actor",  serializeMatch(m.actor)},
+            {"tool",   serializeMatch(m.tool)},
+            {"target", serializeMatch(m.target)}
         };
     }
 

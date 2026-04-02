@@ -31,3 +31,5 @@ ROLE_DECL(SCORPION,  1,       1,      1,        0,      iActivator,       ( { TR
     ROLE_DAMAGE_TYPES_DECL( ({ DAMAGE_TYPE_PIERCE }) )
 
 ROLE_DECL(CHEST,     1,       0,      0,        0,      iActivator,       ( { TRAIT_OBJECT } )                                                                  )
+
+ROLE_DECL(SACRAMENT_FORGIVENESS,     1,       0,      0,        0,      ActivatorRuleExecution,       ( { TRAIT_OBJECT } ) )

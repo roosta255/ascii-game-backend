@@ -3,6 +3,7 @@
 #include <variant>
 
 // activator
+#include "ActivatorAlterTraitAffliction.hpp"
 #include "ActivatorEndTurn.hpp"
 #include "ActivatorMoveToDoor.hpp"
 #include "ActivatorMoveToFloor.hpp"
@@ -27,6 +28,7 @@
 #include "ActivatorDamagePierce.hpp"
 // door
 #include "ActivatorBounceLock.hpp"
+#include "ActivatorBounceFloor.hpp"
 #include "ActivatorSetAllDoorsByTrait.hpp"
 #include "ActivatorCleanseAfflictions.hpp"
 #include "ActivatorElevator.hpp"
@@ -58,6 +60,7 @@ struct NoEffect {
 using ActivatorEffect = std::variant<
     NoEffect,
     // activator
+    ActivatorAlterTraitAffliction,
     ActivatorEndTurn,
     ActivatorMoveToDoor,
     ActivatorMoveToFloor,
@@ -82,6 +85,7 @@ using ActivatorEffect = std::variant<
     ActivatorDamagePierce,
     // door
     ActivatorBounceLock,
+    ActivatorBounceFloor,
     ActivatorSetAllDoorsByTrait,
     ActivatorCleanseAfflictions,
     ActivatorElevator,

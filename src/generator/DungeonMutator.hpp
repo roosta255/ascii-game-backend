@@ -50,6 +50,7 @@ public:
     bool setupLightningRodRoom(const int& roomId, bool isCubed, bool isAwakened);
     bool setupPoleUp(const int& bottomRoom, Cardinal dir);
     bool setupPowerGeneratorRoom(const int& roomId);
+    bool setupCovenantDoor(const int& roomId, Cardinal dir);
     bool setupShifter(const int& roomId, Cardinal dir, bool isKeyed);
     bool setupTimeGateRoomToFuture(const int& presentRoom, bool isCubed, bool isAwakened);
     bool setupTogglerBlue(const int& roomId, Cardinal dir);
@@ -57,4 +58,5 @@ public:
     bool setupTogglerSwitch(const int& roomId, int& outCharacterId, int& outRoomId);
     bool setupTogglerSwitchBlue(const int& roomId, int& outCharacterId, int& outRoomId);
     bool setupTogglerSwitchOrange(const int& roomId, int& outCharacterId, int& outRoomId);
+    bool setupSacramentForgiveness(const int& roomId, int& outCharacterId, int& outFloorId);
 };

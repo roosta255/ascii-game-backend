@@ -66,6 +66,11 @@ struct Keyframe
     // DOOR_LOCK_BOUNCE_FROM_DOOR: data[0] = character's door direction, data[1] = target direction
     static Keyframe buildBounceLock(const Timestamp& start, long duration, const int room0, const Cardinal characterDoor, const Cardinal direction);
 
+    // DOOR_FLOOR_BOUNCE_FROM_FLOOR: data[0] = origin floorId, data[1] = target floorId (cellId)
+    static Keyframe buildBounceFloor(const Timestamp& start, long duration, const int room0, const int floorId, const int targetFloorId);
+    // DOOR_FLOOR_BOUNCE_FROM_DOOR: data[0] = character's door direction, data[1] = target floorId (cellId)
+    static Keyframe buildBounceFloor(const Timestamp& start, long duration, const int room0, const Cardinal characterDoor, const int targetFloorId);
+
     // Trait-toggle animations: begins=true sets data[0]=1 (effect starts), begins=false sets data[0]=0 (effect ends)
     static Keyframe buildSleep(const Timestamp& start, long duration, const int room0, bool begins);
     static Keyframe buildEnchain(const Timestamp& start, long duration, const int room0, bool begins);

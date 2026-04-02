@@ -42,11 +42,13 @@ public:
     bool setupLightningRodRoom(const int4&, const bool isCubed, const bool isAwakened);
     bool setupPoleUp(const int4&, const Cardinal);
     bool setupPowerGeneratorRoom(const int4&);
+    bool setupCovenantDoor(const int4&, const Cardinal);
     bool setupShifter(const int4&, const Cardinal, const bool);
     bool setupTimeGateRoomToFuture(const int4&, const bool isCubed, const bool isAwakened);
     bool setupTogglerBlue(const int4&, const Cardinal);
     bool setupTogglerOrange(const int4&, const Cardinal);
     bool setupTogglerSwitch(const int4&, int& outCharacterId, int& outFloorId);
+    bool setupSacramentForgiveness(const int4&, int& outCharacterId, int& outFloorId);
 
     bool setupHorizontalWalls (std::initializer_list<DoorEnum> row, int y, int z);
     bool setupVerticalWalls (std::initializer_list<DoorEnum> row, int y, int z);

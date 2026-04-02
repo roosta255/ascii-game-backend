@@ -2,12 +2,14 @@
 #include <variant>
 #include "Character.hpp"
 #include "Codeset.hpp"
+#include "DoorEnum.hpp"
 #include "DoorFlyweight.hpp"
 #include "ItemEnum.hpp"
 #include "ItemFlyweight.hpp"
 #include "LoggedEvent.hpp"
 #include "MatchController.hpp"
 #include "Player.hpp"
+#include "RoleEnum.hpp"
 #include "Room.hpp"
 #include "TraitEnum.hpp"
 #include "TraitModifier.hpp"
@@ -28,40 +30,96 @@ bool ActivatorWrapper::activate(Activation& activation) const {
 
         // === Match phase (rule selection — no failure logged on mismatch) ===
 
+        // Actor is always a character — only traits and roles lists are checked.
         if (_config.matches.actor.isAny()) {
-            if ((_config.matches.actor - computed).isAny()) return;
+            const auto& m = _config.matches.actor;
+            bool matched = true;
+            if (m.traits.isAny())
+                matched = !(m.traits - computed).isAny();
+            if (matched && m.roles[0] != ROLE_COUNT) {
+                bool found = false;
+                for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && m.roles[i] != ROLE_COUNT; i++) {
+                    if (character.role == m.roles[i]) { found = true; break; }
+                }
+                matched = found;
+            }
+            if (!matched) return;
         }
 
+        // Tool is always an item — only traits and items lists are checked.
         if (_config.matches.tool.isAny()) {
             bool toolMatched = false;
             activation.sourceItem.access([&](Item& item) {
                 item.accessFlyweight([&](const ItemFlyweight& fw) {
-                    toolMatched = !(_config.matches.tool - fw.itemAttributes).isAny();
+                    const auto& m = _config.matches.tool;
+                    bool matched = true;
+                    if (m.traits.isAny())
+                        matched = !(m.traits - fw.itemAttributes).isAny();
+                    if (matched && m.items[0] != ITEM_NIL) {
+                        bool found = false;
+                        for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && m.items[i] != ITEM_NIL; i++) {
+                            if (item.type == m.items[i]) { found = true; break; }
+                        }
+                        matched = found;
+                    }
+                    toolMatched = matched;
                 });
             });
             if (!toolMatched) return;
         }
 
+        // Target can be a character, item, or wall — list type checked against actual target type.
         if (_config.matches.target.isAny()) {
+            const auto& m = _config.matches.target;
             bool targetMatched = false;
             bool targetFound = false;
             activation.targetCharacter().access([&](Character& target) {
                 targetFound = true;
                 const auto targetComputed = controller.getTraitsComputed(target.characterId).final;
-                targetMatched = !(_config.matches.target - targetComputed).isAny();
+                bool matched = true;
+                if (m.traits.isAny())
+                    matched = !(m.traits - targetComputed).isAny();
+                if (matched && m.roles[0] != ROLE_COUNT) {
+                    bool found = false;
+                    for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && m.roles[i] != ROLE_COUNT; i++) {
+                        if (target.role == m.roles[i]) { found = true; break; }
+                    }
+                    matched = found;
+                }
+                targetMatched = matched;
             });
             if (!targetFound) {
                 activation.targetItem().access([&](Item& item) {
                     targetFound = true;
                     item.accessFlyweight([&](const ItemFlyweight& fw) {
-                        targetMatched = !(_config.matches.target - fw.itemAttributes).isAny();
+                        bool matched = true;
+                        if (m.traits.isAny())
+                            matched = !(m.traits - fw.itemAttributes).isAny();
+                        if (matched && m.items[0] != ITEM_NIL) {
+                            bool found = false;
+                            for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && m.items[i] != ITEM_NIL; i++) {
+                                if (item.type == m.items[i]) { found = true; break; }
+                            }
+                            matched = found;
+                        }
+                        targetMatched = matched;
                     });
                 });
             }
             if (!targetFound) {
                 activation.targetWall().access([&](Wall& w) {
                     DoorFlyweight::getFlyweights().accessConst((int)w.door, [&](const DoorFlyweight& fw) {
-                        targetMatched = !(_config.matches.target - fw.doorAttributes).isAny();
+                        bool matched = true;
+                        if (m.traits.isAny())
+                            matched = !(m.traits - fw.doorAttributes).isAny();
+                        if (matched && m.doors[0] != DOOR_COUNT) {
+                            bool found = false;
+                            for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && m.doors[i] != DOOR_COUNT; i++) {
+                                if (w.door == m.doors[i]) { found = true; break; }
+                            }
+                            matched = found;
+                        }
+                        targetMatched = matched;
                     });
                 });
             }
@@ -277,6 +335,15 @@ bool ActivatorWrapper::activate(Activation& activation) const {
 
         // === Cost phase ===
 
+        // If the actor has TRAIT_OBJECT (e.g. a sacrament or interactive object), redirect
+        // action/move costs to the target character instead of the actor.
+        Character* costPayer = &character;
+        if (computed[(int)TRAIT_OBJECT].orElse(false)) {
+            activation.targetCharacter().access([&](Character& target) {
+                costPayer = &target;
+            });
+        }
+
         for (int i = 0; i < WrapperConfig::MAX_COSTS; i++) {
             if (_config.costs.item[i] == ITEM_NIL) break;
             if (codeset.addFailure(!controller.takeInventoryItem(inventory, _config.costs.item[i], true), CODE_WRAPPER_INSUFFICIENT_ITEM_COST)) {
@@ -297,10 +364,10 @@ bool ActivatorWrapper::activate(Activation& activation) const {
         }
 
         for (int i = 0; i < _config.costs.action; i++) {
-            if (codeset.addFailure(!controller.takeCharacterAction(character), CODE_WRAPPER_INSUFFICIENT_ACTIONS)) {
+            if (codeset.addFailure(!controller.takeCharacterAction(*costPayer), CODE_WRAPPER_INSUFFICIENT_ACTIONS)) {
                 controller.addRequestLoggedEvent(activation, LoggedEvent{
                     EVENT_NO_ACTIONS,
-                    { EventComponentKind::ROLE, (int)character.role },
+                    { EventComponentKind::ROLE, (int)costPayer->role },
                     {},
                     {},
                     -1
@@ -310,10 +377,10 @@ bool ActivatorWrapper::activate(Activation& activation) const {
         }
 
         for (int i = 0; i < _config.costs.move; i++) {
-            if (codeset.addFailure(!controller.takeCharacterMove(character), CODE_WRAPPER_INSUFFICIENT_MOVES)) {
+            if (codeset.addFailure(!controller.takeCharacterMove(*costPayer), CODE_WRAPPER_INSUFFICIENT_MOVES)) {
                 controller.addRequestLoggedEvent(activation, LoggedEvent{
                     EVENT_NO_MOVES,
-                    { EventComponentKind::ROLE, (int)character.role },
+                    { EventComponentKind::ROLE, (int)costPayer->role },
                     {},
                     {},
                     -1

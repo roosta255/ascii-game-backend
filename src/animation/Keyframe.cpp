@@ -200,6 +200,26 @@ Keyframe Keyframe::buildBounceLock(const Timestamp& start, long duration, const 
     };
 }
 
+Keyframe Keyframe::buildBounceFloor(const Timestamp& start, long duration, const int room0, const int floorId, const int targetFloorId) {
+    return Keyframe {
+        .t0 = start,
+        .t1 = start + duration,
+        .animation = ANIMATION_DOOR_FLOOR_BOUNCE_FROM_FLOOR,
+        .room0 = room0,
+        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{floorId, targetFloorId})
+    };
+}
+
+Keyframe Keyframe::buildBounceFloor(const Timestamp& start, long duration, const int room0, const Cardinal characterDoor, const int targetFloorId) {
+    return Keyframe {
+        .t0 = start,
+        .t1 = start + duration,
+        .animation = ANIMATION_DOOR_FLOOR_BOUNCE_FROM_DOOR,
+        .room0 = room0,
+        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{(int)characterDoor, targetFloorId})
+    };
+}
+
 static Keyframe buildTraitToggle(const Timestamp& start, long duration, const int room0, const AnimationEnum animation, bool begins) {
     return Keyframe {
         .t0 = start,

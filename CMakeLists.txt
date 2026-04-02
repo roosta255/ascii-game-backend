@@ -58,6 +58,7 @@ add_library(core_backend STATIC
     src/activator/ActionEnum.cpp
     src/activator/ActionFlyweight.cpp
     src/activator/Activation.cpp
+    src/activator/ActivatorAlterTraitAffliction.cpp
     src/activator/ActivatorEndTurn.cpp
     src/activator/ActivatorMoveToDoor.cpp
     src/activator/ActivatorMoveToFloor.cpp
@@ -88,6 +89,7 @@ add_library(core_backend STATIC
     src/damage/ActivatorDamageElectric.cpp
     src/damage/ActivatorDamageFire.cpp
     src/damage/ActivatorDamagePierce.cpp
+    src/door/ActivatorBounceFloor.cpp
     src/door/ActivatorElevator.cpp
     src/door/ActivatorInactiveDoor.cpp
     src/door/ActivatorKeeper.cpp
@@ -104,6 +106,7 @@ add_library(core_backend STATIC
     src/generator/DungeonMutator.cpp
     src/generator/GeneratorDoorwayDungeon1.cpp
     src/generator/GeneratorDoorwayDungeon2.cpp
+    src/generator/GeneratorDoorwayDungeon3Traits.cpp
     src/generator/GeneratorFlyweight.cpp
     src/generator/GeneratorPuzzle2.cpp
     src/generator/GeneratorTest.cpp

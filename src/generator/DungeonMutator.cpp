@@ -206,6 +206,10 @@ bool DungeonMutator::setupPowerGeneratorRoom(const int& roomId) {
     return setRoom(roomId, ROOM_POWER_GENERATOR);
 }
 
+bool DungeonMutator::setupCovenantDoor (const int& roomId, const Cardinal dir) {
+    return !codeset.addFailure(!setSharedDoor(roomId, dir, DOOR_COVENANT_CLOSED, DOOR_COVENANT_CLOSED), CODE_GENERATOR_UTILITY_FAILED_TO_SETUP_COVENANT);
+}
+
 bool DungeonMutator::setupShifter (const int& roomId, const Cardinal dir, const bool isKeyed) {
     return !codeset.addFailure(!setSharedDoor(roomId, dir, isKeyed ? DOOR_SHIFTER_INGRESS_KEYED : DOOR_SHIFTER_INGRESS_KEYLESS, isKeyed ? DOOR_SHIFTER_EGRESS_KEYED : DOOR_SHIFTER_EGRESS_KEYLESS), CODE_GENERATOR_UTILITY_FAILED_TO_SETUP_SHIFTER);
 }
@@ -246,4 +250,11 @@ bool DungeonMutator::setupTogglerSwitchOrange (const int& roomId, int& outCharac
         character.role = ROLE_TOGGLER_ORANGE;
         character.visibility = ~0x0;
     }, outCharacterId, outFloorId), CODE_DUNGEON_MUTATOR_FAILED_TO_SETUP_TOGGLER_SWITCH);
+}
+
+bool DungeonMutator::setupSacramentForgiveness (const int& roomId, int& outCharacterId, int& outFloorId) {
+    return !codeset.addFailure(!controller.allocateCharacterToFloor(roomId, CHANNEL_CORPOREAL, [&](Character& character){
+        character.role = ROLE_SACRAMENT_FORGIVENESS;
+        character.visibility = ~0x0;
+    }, outCharacterId, outFloorId), CODE_DUNGEON_MUTATOR_FAILED_TO_SETUP_SACRAMENT_FORGIVENESS);
 }
