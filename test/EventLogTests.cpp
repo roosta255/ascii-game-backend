@@ -188,7 +188,7 @@ TEST_CASE("EventLog: TOGGLE", "[eventlog]") {
     // Find a toggler in the current room
     int togglerId = -1;
     for (Character& c : tc.match.dungeon.characters) {
-        if ((c.role == ROLE_TOGGLER || c.role == ROLE_TOGGLER_BLUE || c.role == ROLE_TOGGLER_ORANGE)
+        if ((c.role == ROLE_TOGGLER_BLUE || c.role == ROLE_TOGGLER_ORANGE)
                 && c.location.roomId == currentRoomId) {
             togglerId = c.characterId;
             break;

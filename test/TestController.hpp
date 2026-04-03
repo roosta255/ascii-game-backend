@@ -9,6 +9,7 @@
 #include "MatchApiParameters.hpp"
 #include "MatchApiView.hpp"
 #include "Remodel.hpp"
+#include "RoleEnum.hpp"
 
 class Inventory;
 
@@ -42,6 +43,7 @@ public:
     void activateLock(Cardinal dir);
     void activateDoor(Cardinal dir);
     void activateObjectCharacter(int objectCharacterId);
+    void activateObjectCharacter(RoleEnum role);
 
     Remodel buildRemodel(int bossRoomId, std::function<bool(const Match&, const PathfindingCounter&)> acceptance);
 
@@ -50,6 +52,7 @@ public:
     void generate(int seed);
     void giveItem(ItemEnum type);
     void lootInventory(int characterId, const ItemEnum& targetItemType);
+    void lootInventory(RoleEnum role, const ItemEnum& targetItemType);
 
     void moveCharacterToFloor(int roomId, int floorId);
     void moveCharacterToFloor(int floorId);

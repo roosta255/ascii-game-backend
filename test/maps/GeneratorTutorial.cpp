@@ -443,7 +443,6 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
 }
 
 TEST_CASE("Base Case A*", "[match][tutorial]") {
-    return;
     TestController controller(GENERATOR_TUTORIAL);
 
     // Generate test layout
@@ -930,7 +929,7 @@ TEST_CASE("Toggler switches from legacy TOGGLER to TOGGLER_ORANGE", "[match][tut
     REQUIRE(controller.match.start());
 
     const auto isTogglerRole = [](RoleEnum role) {
-        return role == ROLE_TOGGLER || role == ROLE_TOGGLER_BLUE || role == ROLE_TOGGLER_ORANGE;
+        return role == ROLE_TOGGLER_BLUE || role == ROLE_TOGGLER_ORANGE;
     };
 
     int togglerOffset = -1;
@@ -963,7 +962,7 @@ TEST_CASE("Toggler switches from TOGGLER_ORANGE to TOGGLER_BLUE", "[match][tutor
     REQUIRE(controller.match.start());
 
     const auto isTogglerRole = [](RoleEnum role) {
-        return role == ROLE_TOGGLER || role == ROLE_TOGGLER_BLUE || role == ROLE_TOGGLER_ORANGE;
+        return role == ROLE_TOGGLER_BLUE || role == ROLE_TOGGLER_ORANGE;
     };
 
     int togglerOffset = -1;

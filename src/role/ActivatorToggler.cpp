@@ -24,7 +24,7 @@ bool ActivatorToggler::activate(Activation& activation) const {
                 const auto newAnimation = newRole == ROLE_TOGGLER_BLUE ? ANIMATION_TOGGLER_SWITCH_BLUE : ANIMATION_TOGGLER_SWITCH_ORANGE;
 
                 for (Character& character : req.match.dungeon.characters) {
-                    if (character.role == ROLE_TOGGLER || character.role == ROLE_TOGGLER_BLUE || character.role == ROLE_TOGGLER_ORANGE) {
+                    if (character.role == ROLE_TOGGLER_BLUE || character.role == ROLE_TOGGLER_ORANGE) {
                         const RoleEnum oldRole = character.role;
                         character.role = newRole;
                         if (!req.isSkippingAnimations) {

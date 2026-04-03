@@ -79,6 +79,12 @@ void TestController::activateLock(Cardinal dir){
     updateEverything();
 }
 
+void TestController::activateObjectCharacter(RoleEnum role){
+    int objectCharacterId = -1;
+    match.findCharacter(objectCharacterId, [&](const Character& c){ return c.location.roomId == latestPosition && c.role == role; });
+    activateObjectCharacter(objectCharacterId);
+}
+
 void TestController::activateObjectCharacter(int objectCharacterId){
     Preactivation preactivation{
         .action = {
@@ -118,6 +124,12 @@ void TestController::generate(int seed) {
 void TestController::giveItem(ItemEnum type) {
     isSuccess = inventoryPtr->giveItem(type, codeset.error);
     updateInventory();
+}
+
+void TestController::lootInventory(RoleEnum role, const ItemEnum& targetItemType) {
+    int containerCharacterId = -1;
+    match.findCharacter(containerCharacterId, [&](const Character& c){ return c.location.roomId == latestPosition && c.role == role; });
+    lootInventory(containerCharacterId, targetItemType);
 }
 
 void TestController::lootInventory(int containerCharacterId, const ItemEnum& targetItemType) {

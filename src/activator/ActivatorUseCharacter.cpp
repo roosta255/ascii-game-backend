@@ -17,13 +17,13 @@ bool ActivatorUseCharacter::activate(Activation& activation) const {
 
         codeset.setTable(CODE_IS_BLUE_OPEN_BEFORE, match.dungeon.isBlueOpen ? 1 : -1);
         codeset.setTable(CODE_SUBJECT_CHARACTER_ROLE, subject.role);
-        if (subject.role == ROLE_TOGGLER || subject.role == ROLE_TOGGLER_BLUE || subject.role == ROLE_TOGGLER_ORANGE) {
+        if (subject.role == ROLE_TOGGLER_BLUE || subject.role == ROLE_TOGGLER_ORANGE) {
             codeset.setTable(CODE_SUBJECT_TOGGLER_CHARACTER_ID, subject.characterId);
         }
         codeset.setTable(CODE_ACTIVATION_SUBJECT_CHARACTER_ID, subject.characterId);
         object.accessConst([&](const Character& targetCharacter){
             codeset.setTable(CODE_ACTIVATION_OBJECT_CHARACTER_ID, targetCharacter.characterId);
-            if (targetCharacter.role == ROLE_TOGGLER || targetCharacter.role == ROLE_TOGGLER_BLUE || targetCharacter.role == ROLE_TOGGLER_ORANGE) {
+            if (targetCharacter.role == ROLE_TOGGLER_BLUE || targetCharacter.role == ROLE_TOGGLER_ORANGE) {
                 codeset.setTable(CODE_OBJECT_TOGGLER_CHARACTER_ID, targetCharacter.characterId);
             }
             if (targetCharacter.role == ROLE_BUILDER) {

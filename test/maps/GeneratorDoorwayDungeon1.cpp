@@ -70,7 +70,7 @@ TEST_CASE("Test default generation", "[match][GENERATOR_DOORWAY_DUNGEON_1]") {
 
     const auto actualRoleCounts = countCharactersByType(controller.match);
     std::array<int, ROLE_COUNT> expectedRoleCounts{};
-    expectedRoleCounts[ROLE_TOGGLER] = 1;
+    expectedRoleCounts[ROLE_TOGGLER_BLUE] = 1;
     expectedRoleCounts[ROLE_BUILDER] = 1;
     REQUIRE(actualRoleCounts == expectedRoleCounts);
     REQUIRE(controller.codeset.describe() == "");

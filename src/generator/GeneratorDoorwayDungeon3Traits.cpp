@@ -45,16 +45,16 @@ bool GeneratorDoorwayDungeon3Traits::generate (int seed, Match& dst, Codeset& co
             constexpr DoorEnum w = DOOR_WALL;
             constexpr DoorEnum d = DOOR_DOORWAY;
             constexpr DoorEnum c = DOOR_COVENANT_CLOSED;
-            constexpr DoorEnum o = DOOR_TOGGLER_ORANGE_CLOSED;
-            constexpr DoorEnum b = DOOR_TOGGLER_BLUE_OPEN;
+            constexpr DoorEnum o = DOOR_TOGGLER_ORANGE_OPEN;
+            constexpr DoorEnum b = DOOR_TOGGLER_BLUE_CLOSED;
 
             z = 6;
-            util.setupHorizontalWalls({o, w, w}, 1, z);
-            util.setupHorizontalWalls({c, b, c}, 0, z);
+            util.setupHorizontalWalls({b, w, w}, 1, z);
+            util.setupHorizontalWalls({c, o, c}, 0, z);
 
             z = 6;
             util.setupVerticalWalls({d, w}, 2, z);
-            util.setupVerticalWalls({c, o}, 1, z);
+            util.setupVerticalWalls({c, b}, 1, z);
             util.setupVerticalWalls({c, d}, 0 , z);
 
             success &= util.setupShifter(int4{0,2,6,0}, Cardinal::east(), false);
@@ -75,6 +75,7 @@ bool GeneratorDoorwayDungeon3Traits::generate (int seed, Match& dst, Codeset& co
 
             int outCharacterId = -1, outFloorId = -1;
             codeset.addFailure(!(success &= util.setupSacramentForgiveness(int4{1,1,6,0}, outCharacterId, outFloorId)));
+            codeset.addFailure(!(success &= util.setupSacramentForgiveness(int4{0,0,6,0}, outCharacterId, outFloorId)));
         });
     });
 

@@ -583,7 +583,6 @@ bool MatchController::permuteCharacterActions(const std::string& playerId, int m
                 auto targetCharacterPtr = match.getCharacter(targetCharacterId, codeset.error);
                 targetCharacterPtr.accessConst([&](const Character& targetCharacter){
                     switch (targetCharacter.role) {
-                        case ROLE_TOGGLER:
                         case ROLE_TOGGLER_BLUE:
                         case ROLE_TOGGLER_ORANGE:
                             action.characterId = targetCharacterId;
