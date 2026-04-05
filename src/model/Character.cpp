@@ -18,14 +18,16 @@ bool Character::getDigest(CodeEnum& error, CharacterDigest& digest, const TraitB
     });
 }
 
-bool Character::isMovable(CodeEnum& error, const bool isCheckingCount) const
+bool Character::isMovable(CodeEnum& error, const TraitBits& traitsComputed, const bool isCheckingCount) const
 {
     bool result = false;
     int movesTaken = moves;
     accessRole(error, [&](const RoleFlyweight& flyweight){
         if (!flyweight.isMovable)
             error = CODE_CHARACTER_NOT_MOVABLE;
-        else if (isCheckingCount && flyweight.moves - movesTaken <= 0) 
+        else if (!traitsComputed[TRAIT_MOBILE].orElse(false))
+            error = CODE_CHARACTER_NOT_MOVABLE;
+        else if (isCheckingCount && flyweight.moves - movesTaken <= 0)
             error = CODE_CHARACTER_OUT_OF_MOVES;
         else result = true;
     });

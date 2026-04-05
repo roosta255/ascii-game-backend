@@ -4,21 +4,35 @@
     "dockerfile": "../Dockerfile",
     "context": ".."
   },
+
   "workspaceFolder": "/workspaces/backend",
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/backend,type=bind",
+
+  "remoteEnv": {
+    "SHELL": "/bin/bash",
+    "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  },
+
   "customizations": {
     "vscode": {
       "extensions": [
         "anthropic.claude-code",
+        "continue.continue",
         "ms-vscode.cpptools",
         "ms-vscode.cmake-tools"
       ],
       "settings": {
-        "terminal.integrated.defaultProfile.linux": "bash"
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "remote.extensionKind": {
+          "continue.continue": ["workspace"]
+        }
       }
     }
   },
+
   "runArgs": [
     "--network=backend_default"
-  ]
+  ],
+
+  "postCreateCommand": "mkdir -p /root/.continue && printf '{\n  \"models\": [{\n    \"title\": \"Claude\",\n    \"provider\": \"anthropic\",\n    \"model\": \"claude-3-5-sonnet\",\n    \"apiKey\": \"'$ANTHROPIC_API_KEY'\"\n  }]\n}\n' > /root/.continue/config.json"
 }

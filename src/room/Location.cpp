@@ -56,6 +56,15 @@ Location Location::makeSharedDoor(int roomId, ChannelEnum channel, Cardinal dir)
     };
 }
 
+Location Location::makeExitedDungeon(){
+    return Location{
+        .type = LOCATION_EXITED_DUNGEON,
+        .roomId = 0,
+        .channel = ChannelEnum(0),
+        .data = 0
+    };
+}
+
 Location Location::makeNone(){
     return Location{
         .type = LOCATION_NONE,

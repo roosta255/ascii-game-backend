@@ -139,5 +139,34 @@ The production backend will be live at your prod Cloudflare tunnel URL.
 
 ---
 
+## AI Code Assistant (Continue Extension)
+
+The dev container includes the [Continue](https://marketplace.visualstudio.com/items?itemName=Continue.continue) extension configured to use a local Ollama server.
+
+Continue reads its config from `/root/.continue/config.json`. The current setup:
+
+```json
+{
+  "models": [
+    {
+      "title": "Remote Ollama",
+      "provider": "ollama",
+      "model": "deepseek-coder:latest",
+      "apiBase": "http://192.168.0.22:11434",
+      "capabilities": {
+        "tools": false
+      }
+    }
+  ]
+}
+```
+
+**Notes:**
+- `apiBase` should point to your Ollama server's IP. Update it if your server is on a different address.
+- `"tools": false` is required — `deepseek-coder` does not support tool calling and will error without it.
+- To see what models are available on your server: `curl http://<ollama-ip>:11434/api/tags`
+
+---
+
 ## 👤 Author
 Developed by [Roosta255](https://github.com/Roosta255).

@@ -29,6 +29,7 @@
 // door
 #include "ActivatorBounceLock.hpp"
 #include "ActivatorBounceFloor.hpp"
+#include "ActivatorExitDungeon.hpp"
 #include "ActivatorSetAllDoorsByTrait.hpp"
 #include "ActivatorCleanseAfflictions.hpp"
 #include "ActivatorElevator.hpp"
@@ -86,6 +87,7 @@ using ActivatorEffect = std::variant<
     // door
     ActivatorBounceLock,
     ActivatorBounceFloor,
+    ActivatorExitDungeon,
     ActivatorSetAllDoorsByTrait,
     ActivatorCleanseAfflictions,
     ActivatorElevator,

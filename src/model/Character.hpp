@@ -54,7 +54,7 @@ struct Character
 
     bool accessRole(CodeEnum &error, std::function<void(const RoleFlyweight &)>) const;
 
-    bool isMovable(CodeEnum &error, const bool isCheckingCount = false) const;
+    bool isMovable(CodeEnum &error, const TraitBits &traitsComputed, const bool isCheckingCount = false) const;
     bool isActor(CodeEnum &error, const TraitBits &traitsComputed, const bool isCheckingCount = false) const;
     bool isActionable(CodeEnum &error, const bool isCheckingCount = false) const;
     bool isKeyer(CodeEnum &error, const TraitBits &traitsComputed) const;

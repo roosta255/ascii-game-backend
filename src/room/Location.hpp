@@ -28,6 +28,7 @@ public:
     static Location makeShaftBottom(int roomId, ChannelEnum channel, Cardinal dir);
     static Location makeShaftTop(int roomId, ChannelEnum channel, Cardinal dir);
     static Location makeSharedDoor(int roomId, ChannelEnum channel, Cardinal dir);
+    static Location makeExitedDungeon();
     static Location makeNone();
 
     // functions

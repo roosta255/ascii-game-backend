@@ -3,5 +3,8 @@
         "*.macro": "cpp",
         "*.enum": "cpp"
     },
+    "remote.extensionKind": {
+        "continue.continue": ["workspace"]
+    },
     "C_Cpp.default.compileCommands": "${workspaceFolder}/build_ninja/compile_commands.json"
 }

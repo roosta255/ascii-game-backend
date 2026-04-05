@@ -36,6 +36,7 @@ public:
     bool setup2x5Room(const int4&);
     bool setup3x3Room(const int4&);
     bool setupDoorway(const int4&, const Cardinal);
+    bool setupExitDoor(const int4&, const Cardinal);
     bool setupJailer(const int4&, const Cardinal, const bool);
     bool setupKeeper(const int4&, const Cardinal, const bool);
     bool setupLadderUp(const int4&, const Cardinal);

@@ -50,6 +50,12 @@ bool DungeonAuthor::setupDoorway (const int4& coord, const Cardinal dir) {
         }).orElse(false);
 }
 
+bool DungeonAuthor::setupExitDoor (const int4& coord, const Cardinal dir) {
+    return getRoomId(coord).map<bool>([&](const int& roomId){
+            return mutator.setupExitDoor(roomId, dir);
+        }).orElse(false);
+}
+
 bool DungeonAuthor::setupJailer (const int4& coord, const Cardinal dir, const bool isKeyed) {
     return getRoomId(coord).map<bool>([&](const int& roomId){
             return mutator.setupJailer(roomId, dir, isKeyed);

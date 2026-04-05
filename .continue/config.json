@@ -1,0 +1,10 @@
+{
+  "models": [
+    {
+      "title": "Ollama",
+      "provider": "ollama",
+      "model": "deepseek-coder:latest",
+      "apiBase": "http://192.168.0.22:11434"
+    }
+  ]
+}

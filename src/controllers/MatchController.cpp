@@ -478,7 +478,7 @@ bool MatchController::isCharacterActorValidation(const Character& character, con
 }
 
 bool MatchController::isCharacterMoverValidation(const Character& character, const bool isCheckingCount) {
-    return !codeset.addFailure(!character.isMovable(codeset.error, isCheckingCount));
+    return !codeset.addFailure(!character.isMovable(codeset.error, getTraitsComputed(character.characterId).final, isCheckingCount));
 }
 
 bool MatchController::isCharacterKeyerValidation(const Character& character) {

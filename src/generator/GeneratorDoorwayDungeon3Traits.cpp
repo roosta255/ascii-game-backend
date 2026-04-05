@@ -59,6 +59,7 @@ bool GeneratorDoorwayDungeon3Traits::generate (int seed, Match& dst, Codeset& co
 
             success &= util.setupShifter(int4{0,2,6,0}, Cardinal::east(), false);
             success &= util.setupShifter(int4{1,0,6,0}, Cardinal::east(), false);
+            success &= util.setupExitDoor(int4{1,2,6,0}, Cardinal::north());
 
             const auto createToggler = [&](const int4& coord){
                 int outCharacterId = -1, outFloorId = -1;

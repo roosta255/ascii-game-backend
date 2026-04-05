@@ -112,6 +112,10 @@ bool DungeonMutator::setupDoorway (const int& roomId, const Cardinal dir) {
     return !codeset.addFailure(!setSharedDoor(roomId, dir, DOOR_DOORWAY, DOOR_DOORWAY), CODE_GENERATOR_UTILITY_FAILED_TO_SETUP_DOORWAY);
 }
 
+bool DungeonMutator::setupExitDoor (const int& roomId, const Cardinal dir) {
+    return !codeset.addFailure(!setDoor(roomId, dir, DOOR_EXIT), CODE_GENERATOR_UTILITY_FAILED_TO_SETUP_EXIT_DOOR);
+}
+
 bool DungeonMutator::setup2x5Room(const int& roomId) {
     return setRoom(roomId, ROOM_RECT_2_x_5);
 }

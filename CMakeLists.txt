@@ -90,6 +90,7 @@ add_library(core_backend STATIC
     src/damage/ActivatorDamageFire.cpp
     src/damage/ActivatorDamagePierce.cpp
     src/door/ActivatorBounceFloor.cpp
+    src/door/ActivatorExitDungeon.cpp
     src/door/ActivatorElevator.cpp
     src/door/ActivatorInactiveDoor.cpp
     src/door/ActivatorKeeper.cpp
