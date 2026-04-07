@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cmake --build build_ninja --target test_target)",
+      "Bash(build_ninja/test_target \"[tutorial]\")",
+      "Bash(cmake --build build --target test_runner)"
+    ]
+  }
+}

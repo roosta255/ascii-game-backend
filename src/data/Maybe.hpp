@@ -1,5 +1,7 @@
 #pragma once
 
+#include <ostream>
+
 template<typename T>
 class Maybe
 {
@@ -84,4 +86,12 @@ T _data;
 bool _exists;
 
 };
+
+template<typename T>
+std::ostream& operator<<(std::ostream& os, const Maybe<T>& m) {
+    if (m.isEmpty()) return os << "Maybe::empty()";
+    os << "Maybe(";
+    m.accessConst([&](const T& val){ os << val; });
+    return os << ")";
+}
 

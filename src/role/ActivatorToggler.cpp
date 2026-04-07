@@ -37,6 +37,7 @@ bool ActivatorToggler::activate(Activation& activation) const {
                 }
 
                 req.match.dungeon.toggleDoors(req.time, req.isSkippingAnimations);
+
                 isSuccess = true;
                 req.controller.addLoggedEvent(activation, req.room.roomId, LoggedEvent{
                     EVENT_TOGGLE,

@@ -13,7 +13,21 @@
 #include "MatchController.hpp"
 #include "RoleEnum.hpp"
 #include "Room.hpp"
+#include "AnimationEnum.hpp"
+#include "Item.hpp"
+#include "ItemEnum.hpp"
+#include "Keyframe.hpp"
+#include "Rack.hpp"
 #include "TestController.hpp"
+
+static Maybe<Keyframe> queryKeyframes(Rack<Keyframe> keyframes, AnimationEnum animation) {
+    for (const auto& kf : keyframes) {
+        if (kf.animation == animation) {
+            return Maybe<Keyframe>(kf);
+        }
+    }
+    return Maybe<Keyframe>::empty();
+}
 
 TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     TestController controller(GENERATOR_TUTORIAL);
@@ -69,6 +83,19 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     REQUIRE(controller.isSuccess);
 
     controller.activateObjectCharacter(toggler1Offset);
+    // TODO: Reintroduce test
+    // REQUIRE(queryKeyframes(controller.builderCharacterPtr->keyframes, ANIMATION_BOUNCE_FROM_DOOR_TO_FLOOR).orElse(Keyframe{}).removeOffset() == Keyframe{.animation=ANIMATION_BOUNCE_FROM_DOOR_TO_FLOOR});
+    {
+        CodeEnum toggler1Err = CODE_SUCCESS;
+        controller.match.getCharacter(toggler1Offset, toggler1Err).access([&](Character& character) {
+            REQUIRE(queryKeyframes(character.keyframes, ANIMATION_TOGGLER_SWITCH_ORANGE).orElse(Keyframe{}).removeOffset() == (Keyframe{
+                .t1 = Timestamp::buildTimestamp(800),
+                .animation = ANIMATION_TOGGLER_SWITCH_ORANGE,
+                .room0 = 1,
+                .data = Array<int, Keyframe::DATA_ARRAY_SIZE>({4, 5})
+            }));
+        });
+    }
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
     REQUIRE(controller.isSuccess);
 
@@ -111,9 +138,15 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
     REQUIRE(controller.isSuccess);
 
-    controller.activateObjectCharacter(toggler3Offset);
+    controller.moveCharacterToFloor(3);
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess); 
+    REQUIRE(controller.isSuccess);
+
+    controller.activateObjectCharacter(toggler3Offset);
+    // TODO: Reintroduce test
+    // REQUIRE(queryKeyframes(controller.builderCharacterPtr->keyframes, ANIMATION_BOUNCE_FROM_FLOOR_TO_FLOOR).orElse(Keyframe{}).removeOffset() == Keyframe{.animation=ANIMATION_BOUNCE_FROM_FLOOR_TO_FLOOR});
+    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
+    REQUIRE(controller.isSuccess);
 
     controller.endTurn();
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
@@ -148,6 +181,21 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
 
     // Take keeper's key between rooms 2 and 3
     controller.activateLock(Cardinal::east());
+    REQUIRE(queryKeyframes(controller.builderCharacterPtr->keyframes, ANIMATION_BOUNCE_FROM_FLOOR_TO_LOCK).orElse(Keyframe{}).removeOffset() == Keyframe{.animation=ANIMATION_BOUNCE_FROM_FLOOR_TO_LOCK});
+    {
+        Maybe<Keyframe> fallKeyframe = Maybe<Keyframe>::empty();
+        controller.inventoryPtr->accessItem(ITEM_KEY, [&](const Item& item) {
+            fallKeyframe = queryKeyframes(item.keyframes, ANIMATION_FALL);
+        });
+        REQUIRE(fallKeyframe.orElse(Keyframe{}).removeOffset() ==
+            Keyframe{
+                .t1 = Timestamp::buildTimestamp(800),
+                .animation = ANIMATION_FALL,
+                .room0 = 1,
+                .data = Array<int, Keyframe::DATA_ARRAY_SIZE>({5, 6})});
+    }
+    REQUIRE(queryKeyframes(controller.getLatestRoom()->getWall(controller.latestDirection).keyframes, ANIMATION_CRUSH).orElse(Keyframe{}).removeOffset() == Keyframe{.animation=ANIMATION_CRUSH});
+    REQUIRE(queryKeyframes(controller.getLatestRoom()->getWall(controller.latestDirection).lockKeyframes, ANIMATION_SLIDE).orElse(Keyframe{}).removeOffset() == Keyframe{.animation=ANIMATION_SLIDE});
     // REQUIRE(controller.codeset.describe() == "");
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
     REQUIRE(controller.isSuccess);
@@ -186,6 +234,14 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
 
     // Give key to room11's north keeper to open it (keeper KEYLESS->KEYED = CRUSH)
     controller.activateLock(Cardinal::north());
+    REQUIRE(queryKeyframes(controller.builderCharacterPtr->keyframes, ANIMATION_BOUNCE_FROM_DOOR_TO_LOCK).orElse(Keyframe{}).removeOffset() == Keyframe{.animation=ANIMATION_BOUNCE_FROM_DOOR_TO_LOCK});
+    {
+        Maybe<Keyframe> riseKeyframe = Maybe<Keyframe>::empty();
+        controller.inventoryPtr->accessItem(ITEM_KEY, [&](const Item& item) {
+            riseKeyframe = queryKeyframes(item.keyframes, ANIMATION_RISE);
+        });
+        REQUIRE(riseKeyframe.orElse(Keyframe{}).removeOffset() == Keyframe{.animation=ANIMATION_RISE});
+    }
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
     REQUIRE(controller.isSuccess);
     REQUIRE(controller.inventory.isEmpty == false);

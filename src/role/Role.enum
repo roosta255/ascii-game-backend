@@ -3,7 +3,6 @@ ROLE_DECL(EMPTY,     1,       0,      0,        0,      iActivator,       ( { TR
 ROLE_DECL(BUILDER,   1,       2,      2,        1,      iActivator,       ( { TRAIT_ACTOR, TRAIT_KEYER, TRAIT_FOGGY, TRAIT_MOBILE, TRAIT_ORGANIC } )                     )
 ROLE_DECL(TINKER,    1,       2,      2,        1,      iActivator,       ( { TRAIT_ACTOR, TRAIT_KEYER, TRAIT_FOGGY, TRAIT_MOBILE, TRAIT_ORGANIC } )                     )
 ROLE_DECL(MINION,    1,       3,      3,        4,      iActivator,       ( { TRAIT_ACTOR, TRAIT_FOGGY, TRAIT_MOBILE, TRAIT_ORGANIC } )                                            )
-ROLE_DECL(TOGGLER,        1,       0,      0,        0,      ActivatorToggler, ( { TRAIT_OBJECT } )                                                                  )
 ROLE_DECL(TOGGLER_BLUE,   1,       0,      0,        0,      ActivatorToggler, ( { TRAIT_OBJECT } )                                                                  )
 ROLE_DECL(TOGGLER_ORANGE, 1,       0,      0,        0,      ActivatorToggler, ( { TRAIT_OBJECT } )                                                                  )
 ROLE_DECL(GENERATOR, 1,       0,      0,        0,      iActivator,       ( { TRAIT_OBJECT } )                                                                  )

@@ -32,6 +32,7 @@ public:
     bool isSuccess = false;
     int builderOffset = -1;
     int latestPosition = 0;
+    Cardinal latestDirection = Cardinal::north();
     bool isSkippingAnimations = false;
     bool isSkippingLogging = false;
 
@@ -50,6 +51,7 @@ public:
     void endTurn();
 
     void generate(int seed);
+    Room* getLatestRoom();
     void giveItem(ItemEnum type);
     void lootInventory(int characterId, const ItemEnum& targetItemType);
     void lootInventory(RoleEnum role, const ItemEnum& targetItemType);

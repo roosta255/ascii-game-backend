@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ostream>
 #include "AnimationEnum.hpp"
 #include "Array.hpp"
 #include "Cardinal.hpp"
@@ -30,6 +31,14 @@ struct Keyframe
     // sleeping: []
     // hurting: []
     // dying: []
+
+    bool operator==(const Keyframe& rhs) const {
+        return t0 == rhs.t0 && t1 == rhs.t1 && animation == rhs.animation && room0 == rhs.room0
+            && is_equal(data.begin(), data.end(), rhs.data.begin());
+    }
+
+    // Returns a copy with t0 zeroed and t1 set to the duration (t1 - t0).
+    Keyframe removeOffset() const;
 
     bool isAvailable()const;
 
@@ -93,3 +102,5 @@ struct Keyframe
     // or fallback if no active movement keyframes exist.
     static Timestamp getLatestMovementEnd(Rack<Keyframe> rack, const Timestamp& fallback);
 };
+
+std::ostream& operator<<(std::ostream& os, const Keyframe& kf);

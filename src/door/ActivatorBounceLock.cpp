@@ -19,7 +19,7 @@ bool ActivatorBounceLock::activate(Activation& activation) const {
 
         if (subject.location.type == LOCATION_FLOOR) {
             Keyframe::insertKeyframe(subject.keyframes, Keyframe::buildBounceLock(req.time, MatchController::BOUNCE_LOCK_ANIMATION_DURATION, room.roomId, subject.location.data, direction));
-        } else if (subject.location.type == LOCATION_DOOR) {
+        } else if (subject.location.type == LOCATION_DOOR || subject.location.type == LOCATION_DOOR_SHARED) {
             Keyframe::insertKeyframe(subject.keyframes, Keyframe::buildBounceLock(req.time, MatchController::BOUNCE_LOCK_ANIMATION_DURATION, room.roomId, (Cardinal)subject.location.data, direction));
         }
 

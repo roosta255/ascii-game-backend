@@ -60,6 +60,7 @@ void TestController::activateDoor(Cardinal dir){
     };
 
     isSuccess = controller.activate(preactivation);
+    if (isSuccess) latestDirection = dir;
     updateEverything();
 }
 
@@ -76,6 +77,7 @@ void TestController::activateLock(Cardinal dir){
         .isSkippingLogging = isSkippingLogging
     };
     isSuccess = controller.activate(preactivation);
+    if (isSuccess) latestDirection = dir;
     updateEverything();
 }
 
@@ -114,6 +116,14 @@ Remodel TestController::buildRemodel(int bossRoomId, std::function<bool(const Ma
 void TestController::endTurn(){
     codeset.addFailure(!(isSuccess = match.endTurn(BUILDER_ID, codeset.error)));
     updateEverything();
+}
+
+Room* TestController::getLatestRoom() {
+    Room* output = nullptr;
+    match.dungeon.rooms.access(latestPosition, [&](Room& room){
+        output = &room;
+    });
+    return output;
 }
 
 void TestController::generate(int seed) {

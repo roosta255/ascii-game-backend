@@ -1,7 +1,15 @@
+#include "AnimationFlyweight.hpp"
 #include "Codeset.hpp"
 #include "Keyframe.hpp"
 #include "Location.hpp"
 #include "Maybe.hpp"
+
+Keyframe Keyframe::removeOffset() const {
+    Keyframe result = *this;
+    result.t1 = Timestamp::buildTimestamp((int64_t)t1 - (int64_t)t0);
+    result.t0 = Timestamp::nil();
+    return result;
+}
 
 bool Keyframe::isAvailable()const{
     Timestamp now;
@@ -184,7 +192,7 @@ Keyframe Keyframe::buildBounceLock(const Timestamp& start, long duration, const 
     return Keyframe {
         .t0 = start,
         .t1 = start + duration,
-        .animation = ANIMATION_DOOR_LOCK_BOUNCE_FROM_FLOOR,
+        .animation = ANIMATION_BOUNCE_FROM_FLOOR_TO_LOCK,
         .room0 = room0,
         .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{floorId, (int)direction})
     };
@@ -194,7 +202,7 @@ Keyframe Keyframe::buildBounceLock(const Timestamp& start, long duration, const 
     return Keyframe {
         .t0 = start,
         .t1 = start + duration,
-        .animation = ANIMATION_DOOR_LOCK_BOUNCE_FROM_DOOR,
+        .animation = ANIMATION_BOUNCE_FROM_DOOR_TO_LOCK,
         .room0 = room0,
         .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{(int)characterDoor, (int)direction})
     };
@@ -204,7 +212,7 @@ Keyframe Keyframe::buildBounceFloor(const Timestamp& start, long duration, const
     return Keyframe {
         .t0 = start,
         .t1 = start + duration,
-        .animation = ANIMATION_DOOR_FLOOR_BOUNCE_FROM_FLOOR,
+        .animation = ANIMATION_BOUNCE_FROM_FLOOR_TO_FLOOR,
         .room0 = room0,
         .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{floorId, targetFloorId})
     };
@@ -214,7 +222,7 @@ Keyframe Keyframe::buildBounceFloor(const Timestamp& start, long duration, const
     return Keyframe {
         .t0 = start,
         .t1 = start + duration,
-        .animation = ANIMATION_DOOR_FLOOR_BOUNCE_FROM_DOOR,
+        .animation = ANIMATION_BOUNCE_FROM_DOOR_TO_FLOOR,
         .room0 = room0,
         .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{(int)characterDoor, targetFloorId})
     };
@@ -265,14 +273,47 @@ Keyframe Keyframe::buildTransition(const Timestamp& start, long duration, const 
     };
 }
 
-bool Keyframe::insertKeyframe(Rack<Keyframe> rack, const Keyframe& insertion) {
+bool Keyframe::insertKeyframe(Rack<Keyframe> rack, const Keyframe& input) {
+    Keyframe insertion = input;
+
+    // find oldest translation
+    Maybe<Timestamp> foundTranslationTime;
+    for (const auto& keyframe: rack) {
+        AnimationFlyweight::getFlyweights().accessConst(keyframe.animation, [&](const AnimationFlyweight& flyweight){
+            if (flyweight.types[ANIMATION_TYPE_IS_TRANSLATING].orElse(false)) {
+                foundTranslationTime = keyframe.t1 > foundTranslationTime.orElse(Timestamp::nil()) ? keyframe.t1 : foundTranslationTime;
+            }
+        });
+    }
+
+    // use the oldest translation to sequence the start time of input translations
+    foundTranslationTime.accessConst([&](const Timestamp& translationTime){
+        AnimationFlyweight::getFlyweights().accessConst(insertion.animation, [&](const AnimationFlyweight& flyweight){
+            if (flyweight.types[ANIMATION_TYPE_IS_TRANSLATING].orElse(false) && translationTime > insertion.t0) {
+                const auto duration = insertion.t1 - insertion.t0;
+                insertion.t0 = translationTime;
+                insertion.t1 = translationTime + duration;
+            }
+        });
+    });
+
+    Pointer<Keyframe> evict;
     for (auto& keyframe: rack) {
         if (keyframe.isAvailable()) {
             keyframe = insertion;
             return true;
         }
+        const auto evictionTime = evict.map<Timestamp>([&](const Keyframe& keyframeEviction){return keyframeEviction.t0;});
+        if (keyframe.t0 < evictionTime.orElse(Timestamp::max())) {
+            evict = keyframe;
+        }
     }
-    return false;
+
+    evict.access([&](Keyframe& keyframe){
+        keyframe = insertion;
+    });
+
+    return evict.isPresent();
 }
 
 // TODO: put this as data in enum
@@ -293,4 +334,18 @@ Timestamp Keyframe::getLatestMovementEnd(Rack<Keyframe> rack, const Timestamp& f
         }
     }
     return latest;
+}
+
+std::ostream& operator<<(std::ostream& os, const Keyframe& kf) {
+    os << "Keyframe{ animation=" << (AnimationEnum)kf.animation
+       << ", room0=" << kf.room0
+       << ", t0=" << (int64_t)kf.t0
+       << ", t1=" << (int64_t)kf.t1
+       << ", data=[";
+    for (int i = 0; i < Keyframe::DATA_ARRAY_SIZE; i++) {
+        if (i > 0) os << ", ";
+        os << kf.data.begin()[i];
+    }
+    os << "] }";
+    return os;
 }
