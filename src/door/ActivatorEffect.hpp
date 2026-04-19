@@ -26,9 +26,9 @@
 #include "ActivatorDamageElectric.hpp"
 #include "ActivatorDamageFire.hpp"
 #include "ActivatorDamagePierce.hpp"
+// activator (additional)
+#include "ActivationAddTargetKeyframe.hpp"
 // door
-#include "ActivatorBounceLock.hpp"
-#include "ActivatorBounceFloor.hpp"
 #include "ActivatorExitDungeon.hpp"
 #include "ActivatorSetAllDoorsByTrait.hpp"
 #include "ActivatorCleanseAfflictions.hpp"
@@ -52,10 +52,10 @@
 // role
 #include "ActivatorToggler.hpp"
 
-#include "Activation.hpp"
+#include "ActivationContext.hpp"
 
 struct NoEffect {
-    bool activate(Activation&) const { return true; }
+    bool activate(ActivationContext&) const { return true; }
 };
 
 using ActivatorEffect = std::variant<
@@ -84,9 +84,9 @@ using ActivatorEffect = std::variant<
     ActivatorDamageElectric,
     ActivatorDamageFire,
     ActivatorDamagePierce,
+    // activator (additional)
+    ActivationAddTargetKeyframe,
     // door
-    ActivatorBounceLock,
-    ActivatorBounceFloor,
     ActivatorExitDungeon,
     ActivatorSetAllDoorsByTrait,
     ActivatorCleanseAfflictions,

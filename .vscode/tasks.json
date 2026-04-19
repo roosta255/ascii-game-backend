@@ -29,8 +29,13 @@
         {
             "label": "Run Server",
             "type": "shell",
-            "command": "./build_ninja/match_backend",
-            "dependsOn": "Build Game",
+            "command": "docker stop cloudflare_tunnel drogon_backend drogon_backend_dev 2>/dev/null || true && docker rm cloudflare_tunnel drogon_backend drogon_backend_dev 2>/dev/null || true && docker compose -f docker-compose.dev.yml up -d --force-recreate --remove-orphans",
+            "problemMatcher": []
+        },
+        {
+            "label": "Stop Server",
+            "type": "shell",
+            "command": "docker compose -f docker-compose.dev.yml down",
             "problemMatcher": []
         }
     ]

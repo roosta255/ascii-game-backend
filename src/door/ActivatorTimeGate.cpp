@@ -9,11 +9,11 @@
 #include "Player.hpp"
 #include "Room.hpp"
 
-bool ActivatorTimeGate::activate(Activation& activation) const {
+bool ActivatorTimeGate::activate(ActivationContext& activation) const {
     bool result = false;
     activation.request.access([&](RequestContext& req) {
         auto& controller = req.controller;
-        auto& room = req.room;
+        auto& room = activation.room;
         const auto roomId = room.roomId;
         auto& codeset = req.codeset;
         auto& subject = activation.character;

@@ -1,5 +1,5 @@
 #include "ActivatorAttack.hpp"
-#include "Activation.hpp"
+#include "ActivationContext.hpp"
 #include "ActivatorDamage.hpp"
 #include "Character.hpp"
 #include "Codeset.hpp"
@@ -12,7 +12,7 @@
 #include "RoleFlyweight.hpp"
 #include "TraitEnum.hpp"
 
-bool ActivatorAttack::activate(Activation& activation) const {
+bool ActivatorAttack::activate(ActivationContext& activation) const {
     bool isSuccess = false;
     bool isTargetAccessed = false;
     activation.request.access([&](RequestContext& req) {
@@ -39,14 +39,17 @@ bool ActivatorAttack::activate(Activation& activation) const {
                 }
                 // Counter-attack: target attacks attacker (swap roles)
                 ActivationContext counterActivation = {
+                    .codeset = activation.codeset,
                     .request = activation.request,
+                    .room = activation.room,
                     .character = target,
                     .sourceItem = activation.sourceItem,
                     .sourceInventory = activation.sourceInventory,
                     .targetInventory = activation.targetInventory,
                     .targetEntity = Pointer<Character>(attacker),
                     .direction = activation.direction,
-                    .damageTypes = activation.damageTypes
+                    .damageTypes = activation.damageTypes,
+                    .time = activation.time
                 };
                 static ActivatorAttack innerAttack;
                 innerAttack.activate(counterActivation);
@@ -81,14 +84,17 @@ bool ActivatorAttack::activate(Activation& activation) const {
 
             // --- Activate damage process on target ---
             ActivationContext damageActivation = {
+                .codeset = activation.codeset,
                 .request = activation.request,
+                .room = activation.room,
                 .character = attacker,
                 .sourceItem = activation.sourceItem,
                 .sourceInventory = activation.sourceInventory,
                 .targetInventory = activation.targetInventory,
                 .targetEntity = Pointer<Character>(target),
                 .direction = activation.direction,
-                .damageTypes = damageTypes
+                .damageTypes = damageTypes,
+                .time = activation.time
             };
 
             static ActivatorDamage damageActivator;

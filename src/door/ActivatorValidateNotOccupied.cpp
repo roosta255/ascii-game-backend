@@ -7,11 +7,11 @@
 #include "MatchController.hpp"
 #include "Room.hpp"
 
-bool ActivatorValidateNotOccupied::activate(Activation& activation) const {
+bool ActivatorValidateNotOccupied::activate(ActivationContext& activation) const {
     bool result = false;
     activation.request.access([&](RequestContext& req) {
         auto& codeset = req.codeset;
-        auto& room = req.room;
+        auto& room = activation.room;
 
         Cardinal direction;
         if (codeset.addFailure(!activation.direction.copy(direction), CODE_ACTIVATION_DIRECTION_NOT_SPECIFIED)) {
@@ -24,7 +24,7 @@ bool ActivatorValidateNotOccupied::activate(Activation& activation) const {
         Wall& wall = *wallPtr;
 
         result = req.controller.validateSharedDoorNotOccupied(room.roomId, CHANNEL_CORPOREAL, direction);
-        if (!result) {
+        if (codeset.addFailure(!result, CODE_SHARED_DOORWAY_OCCUPIED_BY_CHARACTER)) {
             int occupyingCharacterId = -1;
             if (!req.controller.isDoorOccupied(room.roomId, CHANNEL_CORPOREAL, direction, occupyingCharacterId)) {
                 req.controller.isDoorOccupied(wall.adjacent, CHANNEL_CORPOREAL, direction.getFlip(), occupyingCharacterId);

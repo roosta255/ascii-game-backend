@@ -1,7 +1,6 @@
 #pragma once
 
 #include "ActionEnum.hpp"
-#include "Activation.hpp"
 #include "BehaviorEventEnum.hpp"
 #include "Cardinal.hpp"
 #include "Character.hpp"
@@ -22,6 +21,7 @@
 #include "TraitBits.hpp"
 #include "TraitModifier.hpp"
 
+struct ActivationContext;
 class CharacterAction;
 class Codeset;
 struct Chest;
@@ -72,6 +72,7 @@ public:
     bool allocateChest(int roomId, std::function<void(Chest&, Character&, Character&)> consumer);
     bool allocateCharacterToFloor(int roomId, ChannelEnum channel, std::function<void(Character&)> consumer, int& outCharacterId, int& outFloorId);
     bool assignCharacterToFloor(int characterId, int roomId, ChannelEnum channel, int floorId);
+    bool buildActivationContext(const Preactivation& preactivation, std::function<void(ActivationContext&)>);
 
     bool findFreeFloor(int roomId, ChannelEnum channel, int& output);
     bool findCharacterPath
@@ -119,9 +120,9 @@ public:
     const Map<int, TraitModifier::TraitComputation>& getTraitsComputedMap() const;
 
     // Appends a logged event to the specified room's event log and to activation.request.eventLog.
-    void addLoggedEvent(Activation& activation, int roomId, LoggedEvent event);
+    void addLoggedEvent(ActivationContext& activation, int roomId, LoggedEvent event);
     // Appends a logged event only to activation.request.eventLog (not the room log). Use for failure events.
-    void addRequestLoggedEvent(Activation& activation, LoggedEvent event);
+    void addRequestLoggedEvent(ActivationContext& activation, LoggedEvent event);
 
     void pushTrigger(const iActivator* activator, int characterId, int targetId = -1, BehaviorEventEnum eventType = BEHAVIOR_EVENT_NIL);
 

@@ -9,14 +9,14 @@
 #include "Player.hpp"
 #include "Room.hpp"
 
-bool ActivatorLightningRod::activate(Activation& activation) const {
+bool ActivatorLightningRod::activate(ActivationContext& activation) const {
     bool result = false;
     activation.request.access([&](RequestContext& req) {
         auto& controller = req.controller;
         auto& codeset = req.codeset;
         auto& subject = activation.character;
         auto& inventory = req.player.inventory;
-        auto& room = req.room;
+        auto& room = activation.room;
 
         if (!req.controller.isCharacterKeyerValidation(subject)) {
             controller.addRequestLoggedEvent(activation, LoggedEvent{

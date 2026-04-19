@@ -8,13 +8,13 @@
 #include "MatchController.hpp"
 #include "Room.hpp"
 
-bool ActivatorKeeper::activate(Activation& activation) const {
+bool ActivatorKeeper::activate(ActivationContext& activation) const {
     bool isSuccess = false;
     activation.request.access([&](RequestContext& req) {
         auto& controller = req.controller;
         auto& codeset = req.codeset;
         auto& subject = activation.character;
-        auto& room = req.room;
+        auto& room = activation.room;
 
         Cardinal direction;
         if (codeset.addFailure(!activation.direction.copy(direction), CODE_ACTIVATION_DIRECTION_NOT_SPECIFIED)) {

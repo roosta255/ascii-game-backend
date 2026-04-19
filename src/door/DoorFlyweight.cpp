@@ -10,7 +10,6 @@
 #include "ActivatorRuleExecution.hpp"
 #include "ActivatorWrapper.hpp"
 #include "EventFlyweight.hpp"
-#include "ActivatorBounceLock.cpp"
 #include "ActivatorLadder.cpp"
 #include "ActivatorPole.cpp"
 #include "ActivatorGiveItem.cpp"

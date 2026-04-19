@@ -4,12 +4,12 @@
 #include "Match.hpp"
 #include "MatchController.hpp"
 
-bool ActivatorUseInventoryItem::activate(Activation& activation) const {
+bool ActivatorUseInventoryItem::activate(ActivationContext& activation) const {
     bool isSuccess = false;
     activation.request.access([&](RequestContext& req) {
         auto& controller = req.controller;
         auto& codeset = req.codeset;
-        auto& room = req.room;
+        auto& room = activation.room;
         auto& subject = activation.character;
 
         if (codeset.addFailure(!controller.validateCharacterWithinRoom(subject.characterId, room.roomId), CODE_SUBJECT_CHARACTER_NOT_IN_ROOM)) {

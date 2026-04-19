@@ -1,12 +1,12 @@
 #include "ActivatorUseChestLock.hpp"
-#include "Activation.hpp"
+#include "ActivationContext.hpp"
 #include "Chest.hpp"
 #include "Codeset.hpp"
 #include "LockFlyweight.hpp"
 #include "Match.hpp"
 #include "MatchController.hpp"
 
-bool ActivatorUseChestLock::activate(Activation& activation) const {
+bool ActivatorUseChestLock::activate(ActivationContext& activation) const {
     bool isSuccess = false;
     activation.request.access([&](RequestContext& req) {
         auto& controller = req.controller;

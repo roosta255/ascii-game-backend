@@ -5,13 +5,13 @@
 #include "RoleEnum.hpp"
 #include "RoleFlyweight.hpp"
 
-bool ActivatorUseCharacter::activate(Activation& activation) const {
+bool ActivatorUseCharacter::activate(ActivationContext& activation) const {
     bool isSuccess = false;
     activation.request.access([&](RequestContext& req) {
         auto& controller = req.controller;
         auto& codeset = req.codeset;
         auto& match = req.match;
-        auto& room = req.room;
+        auto& room = activation.room;
         auto& subject = activation.character;
         auto object = activation.targetCharacter();
 

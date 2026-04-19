@@ -3,11 +3,13 @@
 #include "Cardinal.hpp"
 #include "Codeset.hpp"
 #include "GeneratorEnum.hpp"
+#include "Keyframe.hpp"
 #include "InventoryDigest.hpp"
 #include "ItemEnum.hpp"
 #include "Match.hpp"
 #include "MatchApiParameters.hpp"
 #include "MatchApiView.hpp"
+#include "Maybe.hpp"
 #include "Remodel.hpp"
 #include "RoleEnum.hpp"
 
@@ -28,6 +30,7 @@ public:
     Inventory* inventoryPtr = nullptr;
     Character* builderCharacterPtr = nullptr;
     InventoryDigest inventory;
+    Maybe<Keyframe> testKeyframe;
 
     bool isSuccess = false;
     int builderOffset = -1;

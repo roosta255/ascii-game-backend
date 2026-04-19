@@ -18,7 +18,7 @@ void ActivatorWrapper::init(const WrapperConfig& config) {
     _config = config;
 }
 
-bool ActivatorWrapper::activate(Activation& activation) const {
+bool ActivatorWrapper::activate(ActivationContext& activation) const {
     bool result = false;
     activation.request.access([&](RequestContext& req) {
         auto& character = activation.character;
@@ -130,7 +130,13 @@ bool ActivatorWrapper::activate(Activation& activation) const {
         auto runOnFail = [&]() {
             for (int i = 0; i < WrapperConfig::MAX_EFFECTS; i++) {
                 if (std::holds_alternative<NoEffect>(_config.effects.onFail[i])) break;
-                std::visit([&](auto& effect) { effect.activate(activation); }, _config.effects.onFail[i]);
+                bool effectResult = std::visit([&](auto& effect) { return effect.activate(activation); }, _config.effects.onFail[i]);
+                if (codeset.addFailure(!effectResult, CODE_WRAPPER_EFFECT_FAILED)) {
+                    codeset.addError(CODE_WRAPPER_EFFECT_FAILED_LIST_INDEX, i);
+                    codeset.addError(CODE_WRAPPER_EFFECT_FAILED_TYPE_INDEX, (int)_config.effects.onFail[i].index());
+                    codeset.addError(CODE_WRAPPER_FAIL_EFFECT_FAILED, 1);
+                    return;
+                }
             }
         };
 
@@ -360,7 +366,7 @@ bool ActivatorWrapper::activate(Activation& activation) const {
 
         for (int i = 0; i < WrapperConfig::MAX_COSTS; i++) {
             if (_config.costs.item[i] == ITEM_NIL) break;
-            if (codeset.addFailure(!controller.takeInventoryItem(inventory, _config.costs.item[i], req.time, req.room.roomId, req.isSkippingAnimations), CODE_WRAPPER_FAILED_TO_TAKE_ITEM)) return;
+            if (codeset.addFailure(!controller.takeInventoryItem(inventory, _config.costs.item[i], req.time, activation.room.roomId, req.isSkippingAnimations), CODE_WRAPPER_FAILED_TO_TAKE_ITEM)) return;
         }
 
         for (int i = 0; i < _config.costs.action; i++) {
@@ -396,7 +402,12 @@ bool ActivatorWrapper::activate(Activation& activation) const {
             bool effectResult = std::visit([&](auto& effect) {
                 return effect.activate(activation);
             }, _config.effects.onSuccess[i]);
-            if (codeset.addFailure(!effectResult, CODE_WRAPPER_EFFECT_FAILED)) return;
+            if (codeset.addFailure(!effectResult, CODE_WRAPPER_EFFECT_FAILED)) {
+                codeset.addError(CODE_WRAPPER_EFFECT_FAILED_LIST_INDEX, i);
+                codeset.addError(CODE_WRAPPER_EFFECT_FAILED_TYPE_INDEX, (int)_config.effects.onSuccess[i].index());
+                codeset.addError(CODE_WRAPPER_SUCCESS_EFFECT_FAILED, 1);
+                return;
+            }
         }
         result = true;
     });

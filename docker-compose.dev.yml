@@ -1,0 +1,27 @@
+name: backend-dev
+
+services:
+  agame-backend-dev:
+    build: .
+    container_name: drogon_backend_dev
+    env_file: .env
+    ports:
+      - "8080:8080"
+    volumes:
+      - ${HOST_PROJECT_PATH}:/app
+      - dev_build:/app/build_ninja
+    command: >
+      bash -c "cmake -B build_ninja -G Ninja -DCMAKE_BUILD_TYPE=Debug &&
+               cmake --build build_ninja -j$(nproc) &&
+               ./build_ninja/match_backend"
+
+  cloudflare_tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflare_tunnel
+    restart: always
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+
+volumes:
+  dev_build:

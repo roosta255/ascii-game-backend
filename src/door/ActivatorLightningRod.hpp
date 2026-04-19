@@ -6,5 +6,5 @@
 class ActivatorLightningRod : public iActivator {
 public:
     static constexpr auto  LIGHTNING_ROD_WALL = Cardinal::north();
-    bool activate(Activation& activation) const override;
+    bool activate(ActivationContext& activation) const override;
 };

@@ -12,7 +12,6 @@
 #include "TestController.hpp"
 #include "TraitEnum.hpp"
 
-
 TEST_CASE("DoorwayDungeon3Traits sequence completion", "[match][GENERATOR_DOORWAY_DUNGEON_3_TRAITS]") {
     TestController controller(GENERATOR_DOORWAY_DUNGEON_3_TRAITS);
 
@@ -208,34 +207,4 @@ TEST_CASE("DoorwayDungeon3Traits sequence completion", "[match][GENERATOR_DOORWA
     // REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
     // REQUIRE(controller.isSuccess);
     // REQUIRE(controller.builderCharacterPtr->location.type == LOCATION_EXITED_DUNGEON);
-}
-
-TEST_CASE("Check A* can exit DoorwayDungeon3Traits", "[match][GENERATOR_DOORWAY_DUNGEON_3_TRAITS]") {
-    TestController controller(GENERATOR_DOORWAY_DUNGEON_3_TRAITS);
-    return;
-
-    controller.generate(0);
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
-
-    REQUIRE(controller.match.start());
-
-    const auto builderOffset = controller.builderOffset;
-
-    int moves = 0;
-    const bool isFound = controller.controller.findCharacterPath(controller.BUILDER_ID, builderOffset, 500,
-        [&](const Match& match){
-            bool isSuccess = false;
-            match.builders.getPointer(0).accessConst([&](const Builder& builder){
-                isSuccess = builder.character.location.type == LOCATION_EXITED_DUNGEON;
-            });
-            return isSuccess;
-        }, [&](const CharacterAction& action, const Match& match){
-            return 0; // no heuristic
-        },
-        [&](const CharacterAction& action, const Match& match){
-            moves++;
-        });
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(isFound);
 }

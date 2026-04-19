@@ -9,7 +9,7 @@
 #include "Player.hpp"
 #include "DoorEnum.hpp"
 
-bool ActivatorTimeGateCube::activate(Activation& activation) const {
+bool ActivatorTimeGateCube::activate(ActivationContext& activation) const {
     bool result = false;
     activation.request.access([&](RequestContext& req) {
         MatchController& controller = req.controller;
@@ -26,7 +26,7 @@ bool ActivatorTimeGateCube::activate(Activation& activation) const {
             return;
         }
 
-        const int roomId = req.room.roomId;
+        const int roomId = activation.room.roomId;
 
         codeset.addFailure(!activation.targetLock().access([&](Wall& sourceWall) {
 

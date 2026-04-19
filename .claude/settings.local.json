@@ -29,7 +29,9 @@
       "Read(//workspaces/**)",
       "Bash(cat /workspaces/backend/.github/workflows/*.yml)",
       "Bash(grep -r \"#include.*json\" /workspaces/backend/src/*.cpp)",
-      "Bash(/workspaces/backend/src/enum/Code.enum:*)"
+      "Bash(/workspaces/backend/src/enum/Code.enum:*)",
+      "Bash(build/test_target \"[generator_tutorial]\")",
+      "Bash(docker network *)"
     ]
   }
 }

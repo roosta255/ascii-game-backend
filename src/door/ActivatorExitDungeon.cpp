@@ -4,13 +4,13 @@
 #include "Match.hpp"
 #include "MatchController.hpp"
 
-bool ActivatorExitDungeon::activate(Activation& activation) const {
+bool ActivatorExitDungeon::activate(ActivationContext& activation) const {
     bool result = false;
     activation.request.access([&](RequestContext& req) {
         auto& controller = req.controller;
         auto& codeset = req.codeset;
         auto& match = req.match;
-        auto& room = req.room;
+        auto& room = activation.room;
         auto& subject = activation.character;
 
         Cardinal direction;
@@ -73,8 +73,7 @@ bool ActivatorExitDungeon::activate(Activation& activation) const {
         if (!req.isSkippingAnimations) {
             const auto doorLoc = Location::makeDoor(room.roomId, oldLocation.channel, direction);
             auto rack = Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(subject.keyframes);
-            const auto start = Keyframe::getLatestMovementEnd(rack, req.time);
-            const auto keyframe = Keyframe::buildWalking(start, MatchController::MOVE_ANIMATION_DURATION, room.roomId, oldLocation, doorLoc, codeset);
+            const auto keyframe = Keyframe::buildWalking(req.time, MatchController::MOVE_ANIMATION_DURATION, room.roomId, oldLocation, doorLoc, codeset);
             if (!Keyframe::insertKeyframe(rack, keyframe)) {
                 codeset.addLog(CODE_ANIMATION_OVERFLOW_IN_MOVE_CHARACTER_TO_FLOOR);
             }

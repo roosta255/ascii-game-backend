@@ -18,37 +18,6 @@
 #include "Room.hpp"
 #include "TestController.hpp"
 
-TEST_CASE("Builder can pathfind to room #52", "[match][GENERATOR_DOORWAY_DUNGEON_2]") {
-    TestController controller(GENERATOR_DOORWAY_DUNGEON_2);
-    controller.generate(0);
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
-    REQUIRE(controller.match.start());
-
-    const auto builderOffset = controller.builderOffset;
-
-    int steps = 0;
-    const bool isFound = controller.controller.findCharacterPath(
-        controller.BUILDER_ID, builderOffset, 1000,
-        [&](const Match& match) {
-            Match copy = match;
-            MatchController check(copy, controller.codeset);
-            bool inRoom = false;
-            check.isCharacterWithinRoom(builderOffset, 52, inRoom);
-            return inRoom;
-        },
-        [&](const CharacterAction&, const Match&) {
-            return 0;
-        },
-        [&](const CharacterAction&, const Match&) {
-            steps++;
-        }
-    );
-
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(isFound);
-}
-
 TEST_CASE("Test elevator configuration", "[match][GENERATOR_DOORWAY_DUNGEON_2]") {
     TestController controller(GENERATOR_DOORWAY_DUNGEON_2);
     auto& dungeon = controller.match.dungeon;

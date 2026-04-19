@@ -1,4 +1,5 @@
 
+#include "AnimationConfig.hpp"
 #include "ActionFlyweight.hpp"
 #include "Array.hpp"
 #include "Builder.hpp"
@@ -99,6 +100,9 @@ void TestController::activateObjectCharacter(int objectCharacterId){
         .isSkippingAnimations = isSkippingAnimations,
         .isSkippingLogging = isSkippingLogging
     };
+    controller.buildActivationContext(preactivation, [&](ActivationContext& ctx){
+        testKeyframe = Keyframe::buildTargetKeyframe(AnimationConfig{.animation=ANIMATION_BOUNCE_FROM_FLOOR_TO_LOCK, .act=ANIMATION_ACT_TARGET_TO_SUBJECT}, ctx);
+    });
     isSuccess = controller.activate(preactivation);
     updateEverything();
 }

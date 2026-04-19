@@ -2,7 +2,7 @@
 
 #include "ActivatorAttack.hpp"
 #include "ActivatorDamage.hpp"
-#include "Activation.hpp"
+#include "ActivationContext.hpp"
 #include "Character.hpp"
 #include "Codeset.hpp"
 #include "DamageTypeBits.hpp"
@@ -44,7 +44,6 @@ static RequestContext makeRequest(
 {
     return RequestContext{
         .player = player,
-        .room = room,
         .match = match,
         .codeset = codeset,
         .controller = controller,
@@ -53,18 +52,22 @@ static RequestContext makeRequest(
     };
 }
 
-// Build a minimal Activation for direct activator testing.
-static Activation makeActivation(
+// Build a minimal ActivationContext for direct activator testing.
+static ActivationContext makeActivation(
     RequestContext& request,
+    Room room,
     Character& attacker,
     Character& target,
     DamageTypeBits damageTypes = {})
 {
-    return Activation{
+    return ActivationContext{
+        .codeset = request.codeset,
         .request = request,
+        .room = room,
         .character = attacker,
         .targetEntity = target,
         .damageTypes = damageTypes,
+        .time = request.time
     };
 }
 
@@ -81,7 +84,7 @@ TEST_CASE("Combat: CAT attacks CAT - 1 damage", "[combat]") {
     Character& target   = allocateDungeonCharacter(match, controller, ROLE_CAT);
 
     RequestContext request = makeRequest(player, room, match, codeset, controller);
-    Activation activation = makeActivation(request, attacker, target);
+    ActivationContext activation = makeActivation(request, room, attacker, target);
 
     ActivatorAttack attackActivator;
     const bool ok = attackActivator.activate(activation);
@@ -105,7 +108,7 @@ TEST_CASE("Combat: CAT attacks MELEE-resistant CAT - 0 damage (vector resisted)"
     controller.updateTraits(target);
 
     RequestContext request = makeRequest(player, room, match, codeset, controller);
-    Activation activation = makeActivation(request, attacker, target);
+    ActivationContext activation = makeActivation(request, room, attacker, target);
 
     ActivatorAttack attackActivator;
     const bool ok = attackActivator.activate(activation);
@@ -129,7 +132,7 @@ TEST_CASE("Combat: CAT attacks SLASH-resistant CAT - 0 damage (all effects resis
     controller.updateTraits(target);
 
     RequestContext request = makeRequest(player, room, match, codeset, controller);
-    Activation activation = makeActivation(request, attacker, target);
+    ActivationContext activation = makeActivation(request, room, attacker, target);
 
     ActivatorAttack attackActivator;
     const bool ok = attackActivator.activate(activation);
@@ -153,7 +156,7 @@ TEST_CASE("Combat: FIRE damage - 2 damage (1 base + 1 fire bonus)", "[combat]") 
     // No vector — skip straight to effect processing
     const auto damageTypes = makeDamageTypeBits({ DAMAGE_TYPE_FIRE });
     RequestContext request = makeRequest(player, room, match, codeset, controller);
-    Activation activation = makeActivation(request, attacker, target, damageTypes);
+    ActivationContext activation = makeActivation(request, room, attacker, target, damageTypes);
 
     ActivatorDamage damageActivator;
     const bool ok = damageActivator.activate(activation);
@@ -177,7 +180,7 @@ TEST_CASE("Combat: FIRE damage on FIRE-resistant target - 0 damage", "[combat]")
 
     const auto damageTypes = makeDamageTypeBits({ DAMAGE_TYPE_FIRE });
     RequestContext request = makeRequest(player, room, match, codeset, controller);
-    Activation activation = makeActivation(request, attacker, target, damageTypes);
+    ActivationContext activation = makeActivation(request, room, attacker, target, damageTypes);
 
     ActivatorDamage damageActivator;
     const bool ok = damageActivator.activate(activation);
@@ -201,7 +204,7 @@ TEST_CASE("Combat: PIERCE damage on PIERCE-weak target - 2 damage", "[combat]") 
 
     const auto damageTypes = makeDamageTypeBits({ DAMAGE_TYPE_PIERCE });
     RequestContext request = makeRequest(player, room, match, codeset, controller);
-    Activation activation = makeActivation(request, attacker, target, damageTypes);
+    ActivationContext activation = makeActivation(request, room, attacker, target, damageTypes);
 
     ActivatorDamage damageActivator;
     const bool ok = damageActivator.activate(activation);
@@ -225,7 +228,7 @@ TEST_CASE("Combat: PIERCE damage on PIERCE-resistant target - 0 damage", "[comba
 
     const auto damageTypes = makeDamageTypeBits({ DAMAGE_TYPE_PIERCE });
     RequestContext request = makeRequest(player, room, match, codeset, controller);
-    Activation activation = makeActivation(request, attacker, target, damageTypes);
+    ActivationContext activation = makeActivation(request, room, attacker, target, damageTypes);
 
     ActivatorDamage damageActivator;
     const bool ok = damageActivator.activate(activation);
@@ -247,7 +250,7 @@ TEST_CASE("Combat: COLD damage - 1 damage and target loses a move", "[combat]") 
 
     const auto damageTypes = makeDamageTypeBits({ DAMAGE_TYPE_COLD });
     RequestContext request = makeRequest(player, room, match, codeset, controller);
-    Activation activation = makeActivation(request, attacker, target, damageTypes);
+    ActivationContext activation = makeActivation(request, room, attacker, target, damageTypes);
 
     ActivatorDamage damageActivator;
     const bool ok = damageActivator.activate(activation);
@@ -271,7 +274,7 @@ TEST_CASE("Combat: ELECTRIC damage - 1 damage and target loses an action", "[com
 
     const auto damageTypes = makeDamageTypeBits({ DAMAGE_TYPE_ELECTRIC });
     RequestContext request = makeRequest(player, room, match, codeset, controller);
-    Activation activation = makeActivation(request, attacker, target, damageTypes);
+    ActivationContext activation = makeActivation(request, room, attacker, target, damageTypes);
 
     ActivatorDamage damageActivator;
     const bool ok = damageActivator.activate(activation);
@@ -298,7 +301,7 @@ TEST_CASE("Combat: POISE negates base damage when action-ready", "[combat]") {
     controller.updateTraits(target);
 
     RequestContext request = makeRequest(player, room, match, codeset, controller);
-    Activation activation = makeActivation(request, attacker, target);
+    ActivationContext activation = makeActivation(request, room, attacker, target);
 
     ActivatorAttack attackActivator;
     const bool ok = attackActivator.activate(activation);
@@ -323,7 +326,7 @@ TEST_CASE("Combat: PARRY triggers counter-attack", "[combat]") {
     controller.updateTraits(target);
 
     RequestContext request = makeRequest(player, room, match, codeset, controller);
-    Activation activation = makeActivation(request, attacker, target);
+    ActivationContext activation = makeActivation(request, room, attacker, target);
 
     ActivatorAttack attackActivator;
     const bool ok = attackActivator.activate(activation);
@@ -361,7 +364,7 @@ TEST_CASE("Combat: CRUSH damage breaks builder armor", "[combat]") {
 
     const auto damageTypes = makeDamageTypeBits({ DAMAGE_TYPE_CRUSH });
     RequestContext request = makeRequest(player, room, tc.match, tc.codeset, tc.controller);
-    Activation activation = makeActivation(request, attacker, builderChar, damageTypes);
+    ActivationContext activation = makeActivation(request, room, attacker, builderChar, damageTypes);
 
     ActivatorDamage damageActivator;
     const bool ok = damageActivator.activate(activation);

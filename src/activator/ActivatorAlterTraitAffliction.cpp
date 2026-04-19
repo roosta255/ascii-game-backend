@@ -11,7 +11,7 @@ static void applySpec(Character& character, const AlterTraitAfflictionSpec& spec
     character.traitsAfflicted.setIndexOff((size_t)TRAIT_NIL);
 }
 
-bool ActivatorAlterTraitAffliction::activate(Activation& activation) const {
+bool ActivatorAlterTraitAffliction::activate(ActivationContext& activation) const {
     bool isSuccess = false;
     activation.request.access([&](RequestContext& req) {
         auto& controller = req.controller;
@@ -30,7 +30,7 @@ bool ActivatorAlterTraitAffliction::activate(Activation& activation) const {
                         { EventComponentKind::ROLE, (int)subject.role },
                         -1
                     };
-                    controller.addLoggedEvent(activation, req.room.roomId, event);
+                    controller.addLoggedEvent(activation, activation.room.roomId, event);
                     controller.addRequestLoggedEvent(activation, event);
                 }
             }
@@ -50,7 +50,7 @@ bool ActivatorAlterTraitAffliction::activate(Activation& activation) const {
                             { EventComponentKind::ROLE, (int)target.role },
                             -1
                         };
-                        controller.addLoggedEvent(activation, req.room.roomId, event);
+                        controller.addLoggedEvent(activation, activation.room.roomId, event);
                         controller.addRequestLoggedEvent(activation, event);
                     }
                 }

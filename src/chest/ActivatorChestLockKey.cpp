@@ -1,5 +1,5 @@
 #include "ActivatorChestLockKey.hpp"
-#include "Activation.hpp"
+#include "ActivationContext.hpp"
 #include "Chest.hpp"
 #include "Codeset.hpp"
 #include "Dungeon.hpp"
@@ -10,7 +10,7 @@
 #include "MatchController.hpp"
 #include "Preactivation.hpp"
 
-bool ActivatorChestLockKey::activate(Activation& activation) const {
+bool ActivatorChestLockKey::activate(ActivationContext& activation) const {
     bool isSuccess = false;
     activation.request.access([&](RequestContext& req) {
         auto& controller = req.controller;
@@ -18,7 +18,7 @@ bool ActivatorChestLockKey::activate(Activation& activation) const {
         auto& match      = req.match;
         auto& player     = req.player;
         auto& subject    = activation.character;
-        auto& room       = req.room;
+        auto& room       = activation.room;
 
         const auto computed = controller.getTraitsComputed(subject.characterId).final;
         if (codeset.addFailure(!subject.isActor(codeset.error, computed))) return;

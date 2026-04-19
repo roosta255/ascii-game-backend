@@ -159,6 +159,13 @@ Maybe<bool> constexpr operator[]
     return index < N ? Maybe<bool>(_state[index / 32ull] & (1ull << (index % 32u))) : Maybe<bool>::empty();
 }
 
+bool inline contains(const Bitstick& rhs) const {
+    for(int i = 0; i < WordCount; i++)
+        if((_state[i] & rhs._state[i]) != rhs._state[i])
+            return false;
+    return true;
+}
+
 bool constexpr operator==
 ( const Bitstick& rhs
 ) const

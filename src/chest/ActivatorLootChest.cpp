@@ -1,7 +1,7 @@
 #include "ActionFlyweight.hpp"
 #include "ActivatorCritterBite.hpp"
 #include "ActivatorLootChest.hpp"
-#include "Activation.hpp"
+#include "ActivationContext.hpp"
 #include "Codeset.hpp"
 #include "EventFlyweight.hpp"
 #include "Dungeon.hpp"
@@ -13,7 +13,7 @@
 #include "MatchController.hpp"
 #include "Preactivation.hpp"
 
-bool ActivatorLootChest::activate(Activation& activation) const {
+bool ActivatorLootChest::activate(ActivationContext& activation) const {
     bool isSuccess = false;
     activation.request.access([&](RequestContext& req) {
         auto& controller = req.controller;
@@ -21,7 +21,7 @@ bool ActivatorLootChest::activate(Activation& activation) const {
         auto& match = req.match;
         auto& player = req.player;
         auto& subject = activation.character;
-        auto& room = req.room;
+        auto& room = activation.room;
 
         if (codeset.addFailure(!subject.isActor(codeset.error, controller.getTraitsComputed(subject.characterId).final))) {
             return;

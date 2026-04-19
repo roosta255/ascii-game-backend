@@ -5,5 +5,5 @@
 class ActivatorTimeGate : public iActivator {
 public:
     static constexpr auto TIME_GATE_DIRECTION = Cardinal::north();
-    bool activate(Activation& activation) const override;
+    bool activate(ActivationContext& activation) const override;
 };

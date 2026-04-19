@@ -1,5 +1,5 @@
 #include "ActivatorDamage.hpp"
-#include "Activation.hpp"
+#include "ActivationContext.hpp"
 #include "Character.hpp"
 #include "Codeset.hpp"
 #include "DamageFlyweight.hpp"
@@ -8,7 +8,7 @@
 #include "MatchController.hpp"
 #include "TraitEnum.hpp"
 
-bool ActivatorDamage::activate(Activation& activation) const {
+bool ActivatorDamage::activate(ActivationContext& activation) const {
     bool isSuccess = false;
     bool isTargetAccessed = false;
     activation.request.access([&](RequestContext& req) {

@@ -12,7 +12,9 @@
 class Inventory;
 
 struct ActivationContext {
+    Codeset& codeset;
     Pointer<RequestContext> request;
+    Room& room;
 
     Character& character;
 
@@ -32,6 +34,7 @@ struct ActivationContext {
     DamageTypeBits damageTypes;
 
     bool isSortingState = false;
+    Timestamp time;
 
     // Helpers to extract typed targets from targetEntity.
     // Return an empty Pointer when targetEntity holds a different type.
@@ -57,6 +60,3 @@ struct ActivationContext {
         return Pointer<Wall>{};
     }
 };
-
-// Backward-compatibility alias — remove once all sites migrated
-using Activation = ActivationContext;

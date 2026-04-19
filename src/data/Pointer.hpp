@@ -60,6 +60,13 @@ Maybe<T2> map(F f){
 	return Maybe<T2>();
 }
 
+template<typename T2, typename F>
+Maybe<T2> mapConst(F f)const{
+    if(isPresent())
+        return Maybe<T2>(f(*_ptr));
+	return Maybe<T2>();
+}
+
 inline Pointer<T>& operator=(T& setting){
 	_ptr = &setting;
 	return *this;

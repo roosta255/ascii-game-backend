@@ -15,3 +15,5 @@ const char* animation_to_text(int);
 inline std::ostream& operator<<(std::ostream& os, AnimationEnum code) {
     return os << std::string(animation_to_text(code));
 }
+
+constexpr int KEYFRAME_DATA_ARRAY_SIZE = 2;

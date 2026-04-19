@@ -57,7 +57,6 @@ add_library(core_backend STATIC
     src/behavior/BehaviorFlyweight.cpp
     src/activator/ActionEnum.cpp
     src/activator/ActionFlyweight.cpp
-    src/activator/Activation.cpp
     src/activator/ActivatorAlterTraitAffliction.cpp
     src/activator/ActivatorEndTurn.cpp
     src/activator/ActivatorMoveToDoor.cpp
@@ -67,11 +66,14 @@ add_library(core_backend STATIC
     src/activator/ActivatorUseInventoryItem.cpp
     src/activator/ActivatorRuleExecution.cpp
     src/activator/ActivatorUseLock.cpp
+    src/activator/ActivationAddTargetKeyframe.cpp
     src/activator/CharacterAction.cpp
     src/activator/RuleFlyweight.cpp
     src/animation/AnimationEnum.cpp
     src/animation/AnimationFlyweight.cpp
+    src/animation/AnimationSemantic.cpp
     src/animation/AnimationTypes.cpp
+    src/animation/AnimationType.cpp
     src/animation/Keyframe.cpp
     src/chest/ActivatorChestLockKey.cpp
     src/chest/ActivatorCritterBite.cpp
@@ -89,7 +91,6 @@ add_library(core_backend STATIC
     src/damage/ActivatorDamageElectric.cpp
     src/damage/ActivatorDamageFire.cpp
     src/damage/ActivatorDamagePierce.cpp
-    src/door/ActivatorBounceFloor.cpp
     src/door/ActivatorExitDungeon.cpp
     src/door/ActivatorElevator.cpp
     src/door/ActivatorInactiveDoor.cpp
@@ -200,6 +201,7 @@ add_executable(test_target
     test/maps/GeneratorTest.cpp
     test/maps/GeneratorTest4D.cpp
     test/maps/GeneratorTutorial.cpp
+    test/ActivationAddTargetKeyframeTests.cpp
     test/TraitModifierTests.cpp
     test/CharacterSheetApiViewTests.cpp
     test/EventLogTests.cpp

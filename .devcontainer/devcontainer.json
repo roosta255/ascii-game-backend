@@ -8,9 +8,14 @@
   "workspaceFolder": "/workspaces/backend",
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/backend,type=bind",
 
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+  },
+
   "remoteEnv": {
     "SHELL": "/bin/bash",
-    "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+    "HOST_PROJECT_PATH": "${localWorkspaceFolder}"
   },
 
   "customizations": {

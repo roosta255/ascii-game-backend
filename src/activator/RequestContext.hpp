@@ -13,7 +13,6 @@ class Codeset;
 
 struct RequestContext {
     Player& player;
-    Room& room;
 
     Match& match;
     Codeset& codeset;

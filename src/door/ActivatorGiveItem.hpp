@@ -10,5 +10,5 @@ public:
 
     ItemEnum item = ITEM_NIL;
 
-    bool activate(Activation& activation) const override;
+    bool activate(ActivationContext& activation) const override;
 };

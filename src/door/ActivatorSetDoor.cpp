@@ -6,11 +6,11 @@
 #include "MatchController.hpp"
 #include "Room.hpp"
 
-bool ActivatorSetDoor::activate(Activation& activation) const {
+bool ActivatorSetDoor::activate(ActivationContext& activation) const {
     bool result = false;
     activation.request.access([&](RequestContext& req) {
         auto& codeset = req.codeset;
-        auto& room = req.room;
+        auto& room = activation.room;
 
         Cardinal direction;
         if (codeset.addFailure(!activation.direction.copy(direction), CODE_ACTIVATION_DIRECTION_NOT_SPECIFIED)) {

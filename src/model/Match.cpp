@@ -384,7 +384,7 @@ static_assert(std::has_unique_object_representations_v<Array<Item, Inventory::ST
 static_assert(std::has_unique_object_representations_v<Inventory>);
 static_assert(std::has_unique_object_representations_v<Player>);
 static_assert(std::has_unique_object_representations_v<int>);
-static_assert(std::has_unique_object_representations_v<Array<int, Keyframe::DATA_ARRAY_SIZE> >);
+static_assert(std::has_unique_object_representations_v<Array<int, KEYFRAME_DATA_ARRAY_SIZE> >);
 static_assert(std::has_unique_object_representations_v<Location>);
 static_assert(std::has_unique_object_representations_v<Timestamp>);
 static_assert(std::has_unique_object_representations_v<Keyframe>);

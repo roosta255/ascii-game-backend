@@ -10,7 +10,7 @@
 #include "TraitEnum.hpp"
 #include "TraitModifier.hpp"
 
-bool ActivatorCritterBite::activate(Activation& activation) const {
+bool ActivatorCritterBite::activate(ActivationContext& activation) const {
     bool isSuccess = false;
     activation.request.access([&](RequestContext& req) {
         auto& codeset = req.codeset;
@@ -31,7 +31,7 @@ bool ActivatorCritterBite::activate(Activation& activation) const {
                     modifier.applyAffliction(target);
                     req.controller.updateTraits(target);
                     isSuccess = true;
-                    req.controller.addLoggedEvent(activation, req.room.roomId, LoggedEvent{
+                    req.controller.addLoggedEvent(activation, activation.room.roomId, LoggedEvent{
                         EVENT_CRITTER_BITE,
                         { EventComponentKind::ROLE, (int)subject.role },
                         {},
@@ -42,7 +42,7 @@ bool ActivatorCritterBite::activate(Activation& activation) const {
             });
 
             if (isSuccess && !req.isSkippingAnimations) {
-                const int roomId = req.room.roomId;
+                const int roomId = activation.room.roomId;
                 Keyframe::insertKeyframe(
                     Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(subject.keyframes),
                     Keyframe::buildJump(req.time, 1800, roomId)

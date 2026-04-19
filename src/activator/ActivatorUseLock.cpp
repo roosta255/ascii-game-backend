@@ -4,12 +4,12 @@
 #include "Match.hpp"
 #include "MatchController.hpp"
 
-bool ActivatorUseLock::activate(Activation& activation) const {
+bool ActivatorUseLock::activate(ActivationContext& activation) const {
     bool isSuccess = false;
     activation.request.access([&](RequestContext& req) {
         auto& controller = req.controller;
         auto& codeset = req.codeset;
-        auto& room = req.room;
+        auto& room = activation.room;
         auto& subject = activation.character;
 
         codeset.addFailure(!activation.targetLock().access([&](Wall& wall) {

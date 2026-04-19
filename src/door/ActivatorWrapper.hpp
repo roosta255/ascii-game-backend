@@ -7,8 +7,7 @@ class ActivatorWrapper : public iActivator {
 public:
     ActivatorWrapper() = default;
     void init(const WrapperConfig& config);
-    bool activate(Activation& activation) const override;
-
+    bool activate(ActivationContext& activation) const override;
 private:
     WrapperConfig _config;
 };

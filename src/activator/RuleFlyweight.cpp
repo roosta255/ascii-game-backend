@@ -54,19 +54,27 @@ static const Array<ActivatorWrapper, RULE_COUNT>& getWrappers() {
     return wrappers;
 }
 
-bool RuleFlyweight::tryActivate(Activation& activation) {
+bool RuleFlyweight::tryActivate(ActivationContext& ctx) {
     bool result = false;
-    activation.request.access([&](RequestContext& req) {
+    ctx.request.access([&](RequestContext& req) {
         const auto& wrappers = getWrappers();
+        bool anyMatched = false;
         for (const ActivatorWrapper& wrapper : wrappers) {
-            bool wasFailure = req.codeset.isAnyFailure;
-            if (wrapper.activate(activation)) {
+            bool wasFailure = ctx.codeset.isAnyFailure;
+            if (wrapper.activate(ctx)) {
                 result = true;
-                return;
+                anyMatched = true;
+                break;
             }
-            // A new failure means the rule matched but couldn't succeed — stop here
-            if (req.codeset.isAnyFailure && !wasFailure) return;
-            // No failure change means the rule didn't match — continue to next
+            if (ctx.codeset.isAnyFailure && !wasFailure) {
+                // Rule matched but failed — wrapper already logged specific codes
+                anyMatched = true;
+                break;
+            }
+            // else: rule didn't match — try the next one
+        }
+        if (!anyMatched) {
+            ctx.codeset.addFailure(true, CODE_RULE_EXECUTION_FAILED);
         }
     });
     return result;

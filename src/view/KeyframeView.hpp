@@ -25,7 +25,7 @@ struct KeyframeView
         this->t1 = (long)model.t1;
         this->room0 = model.room0;
 
-        data.reserve(Keyframe::DATA_ARRAY_SIZE);
+        data.reserve(KEYFRAME_DATA_ARRAY_SIZE);
         for (const auto& d: model.data) {
             this->data.push_back(d);
         }

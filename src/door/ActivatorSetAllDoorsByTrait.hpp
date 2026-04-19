@@ -20,5 +20,5 @@ public:
     TraitBits clear = {};
     AnimationEnum animation = ANIMATION_COUNT;
 
-    bool activate(Activation& activation) const override;
+    bool activate(ActivationContext& activation) const override;
 };

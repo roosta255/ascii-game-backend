@@ -58,5 +58,5 @@ public:
 
     constexpr bool isNil() const { return mHigh == 0 && mLow == 0; }
     static constexpr Timestamp nil() { return Timestamp(0, 0); }
-    static constexpr Timestamp max() { return Timestamp(0xFFFFFFFF, 0xFFFFFFFF); }
+    static constexpr Timestamp max() { return Timestamp(0x7FFFFFFF, static_cast<int32_t>(0xFFFFFFFF)); }
 };

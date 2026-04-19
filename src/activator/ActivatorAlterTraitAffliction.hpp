@@ -19,5 +19,5 @@ public:
     explicit ActivatorAlterTraitAffliction(AlterTraitAfflictionConfig config) : config(config) {}
 
     AlterTraitAfflictionConfig config;
-    bool activate(Activation& activation) const override;
+    bool activate(ActivationContext& activation) const override;
 };

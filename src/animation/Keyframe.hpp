@@ -8,6 +8,8 @@
 #include "Timestamp.hpp"
 #include "int2.hpp"
 
+struct ActivationContext;
+struct AnimationConfig;
 struct Codeset;
 struct Location;
 
@@ -15,22 +17,9 @@ struct Keyframe
 {
     Timestamp t0 = Timestamp::nil();
     Timestamp t1 = Timestamp::nil();
-    static constexpr int DATA_ARRAY_SIZE = 2;
     int animation = ANIMATION_NIL;
     int room0 = 0;
-    Array<int, DATA_ARRAY_SIZE> data = {};
-    // (walking, hurtling, smacking), (casting, sleeping), (hurting, dying)
-
-    // WALKING_FROM_WALL_TO_WALL: [w0, .., w1, ..]
-    // WALKING_FROM_WALL_TO_FLOOR: [w0, .., x1, y1]
-    // WALKING_FROM_FLOOR_TO_WALL: [x0, y0, w1, ..]
-    // WALKING_FROM_FLOOR_TO_FLOOR: [x0, y0, x1, y1]
-    // hurtling: [x0, y0, x1, y1]
-    // smacking: [x0, y0, x1, y1]
-    // casting: []
-    // sleeping: []
-    // hurting: []
-    // dying: []
+    Array<int, KEYFRAME_DATA_ARRAY_SIZE> data = {0,0};
 
     bool operator==(const Keyframe& rhs) const {
         return t0 == rhs.t0 && t1 == rhs.t1 && animation == rhs.animation && room0 == rhs.room0
@@ -41,6 +30,8 @@ struct Keyframe
     Keyframe removeOffset() const;
 
     bool isAvailable()const;
+
+    static Maybe<Keyframe> buildTargetKeyframe(const AnimationConfig& cfg, const ActivationContext& ctx);
 
     // coincidentally, the api guarantees movement only ever happens the room in the parameters.
     // wall -> wall, character passed 3 rooms, only room0 renders movement.
@@ -53,18 +44,6 @@ struct Keyframe
     static Keyframe buildWalking(const Timestamp& start, long duration, const int room0, const int floorId0, const int floorId1);
 
     static Keyframe buildWalking(const Timestamp& start, long duration, const int room0, const Location& location0, const Location& location1, Codeset& codeset);
-
-    static Keyframe buildHurtling(const Timestamp& start, long duration, const int room0, const int2 xy0, const int2 xy1);
-
-    static Keyframe buildSmacking(const Timestamp& start, long duration, const int room0, const int2 xy0, const int2 xy1);
-
-    static Keyframe buildCasting(const Timestamp& start, long duration, const int room0);
-
-    static Keyframe buildSleeping(const Timestamp& start, long duration, const int room0);
-
-    static Keyframe buildHurting(const Timestamp& start, long duration, const int room0);
-
-    static Keyframe buildDying(const Timestamp& start, long duration, const int room0);
 
     static Keyframe buildJump(const Timestamp& start, long duration, const int room0);
 
@@ -94,13 +73,6 @@ struct Keyframe
     static Keyframe buildTransition(const Timestamp& start, long duration, const int room0, const AnimationEnum animation, const int fromType, const int toType);
 
     static bool insertKeyframe(Rack<Keyframe> rack, const Keyframe& insertion);
-
-    // Returns true if animation is a movement type (walking/hurtling/smacking).
-    static bool isMovement(int animation);
-
-    // Returns the latest t1 of any active movement keyframes in rack,
-    // or fallback if no active movement keyframes exist.
-    static Timestamp getLatestMovementEnd(Rack<Keyframe> rack, const Timestamp& fallback);
 };
 
 std::ostream& operator<<(std::ostream& os, const Keyframe& kf);

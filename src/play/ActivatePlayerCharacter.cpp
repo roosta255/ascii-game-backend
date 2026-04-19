@@ -1,6 +1,6 @@
 #include "ActivatePlayerCharacter.hpp"
-#include "Activation.hpp"
+#include "ActivationContext.hpp"
 
-CodeEnum ActivatePlayerCharacter::activate(Activation& activation) const {
+CodeEnum ActivatePlayerCharacter::activate(ActivationContext& activation) const {
     return CODE_SUCCESS;
 } 

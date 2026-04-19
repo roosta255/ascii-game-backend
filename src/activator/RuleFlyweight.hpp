@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Activation.hpp"
+#include "ActivationContext.hpp"
 #include "Array.hpp"
 #include "RuleEnum.hpp"
 #include "WrapperConfig.hpp"
@@ -13,7 +13,7 @@ struct RuleFlyweight {
 
     // Iterates all global rules in priority order (highest first).
     // Returns true if a matching rule activated successfully.
-    // Returns false and leaves a failure in the codeset if a rule matched but failed.
-    // Returns false with no codeset change if no rule matched.
-    static bool tryActivate(Activation& activation);
+    // Returns false and leaves a failure in the codeset if a rule matched but failed,
+    // or if no rule matched (CODE_RULE_EXECUTION_FAILED).
+    static bool tryActivate(ActivationContext& activation);
 };

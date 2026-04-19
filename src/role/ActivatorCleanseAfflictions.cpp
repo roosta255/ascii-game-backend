@@ -4,7 +4,7 @@
 #include "TraitFlyweight.hpp"
 #include "TraitType.hpp"
 
-bool ActivatorCleanseAfflictions::activate(Activation& activation) const {
+bool ActivatorCleanseAfflictions::activate(ActivationContext& activation) const {
     auto& character = activation.character;
     const auto& flyweights = TraitFlyweight::getFlyweights();
 

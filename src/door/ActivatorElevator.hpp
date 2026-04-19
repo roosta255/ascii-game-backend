@@ -100,7 +100,7 @@ public:
         , isMoving);
     }
 
-    bool activate(Activation& activation) const override;
+    bool activate(ActivationContext& activation) const override;
 
     static bool setupElevatorLevel(const int elevatorRoomId, const bool isElevatorPresent, const bool isPaid, const bool isDoorway, const bool isExistingHigher, const bool isExistingLower, const bool isHigherPaid = false, const bool isLowerPaid = false);
 };

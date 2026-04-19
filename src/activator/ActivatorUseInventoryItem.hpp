@@ -5,5 +5,5 @@
 
 class ActivatorUseInventoryItem : public iActivator {
 public:
-    bool activate(Activation& activation) const override;
+    bool activate(ActivationContext& activation) const override;
 };

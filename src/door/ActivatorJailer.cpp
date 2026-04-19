@@ -8,12 +8,12 @@
 #include "MatchController.hpp"
 #include "Room.hpp"
 
-bool ActivatorJailer::activate(Activation& activation) const {
+bool ActivatorJailer::activate(ActivationContext& activation) const {
     bool isSuccess = false;
     activation.request.access([&](RequestContext& req) {
         auto& controller = req.controller;
         auto& codeset = req.codeset;
-        auto& room = req.room;
+        auto& room = activation.room;
         auto& subject = activation.character;
 
         Cardinal direction;

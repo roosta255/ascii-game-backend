@@ -3,7 +3,7 @@
 #include "Cardinal.hpp"
 #include "CodeEnum.hpp"
 #include "Pointer.hpp"
-#include "Activation.hpp"
+#include "ActivationContext.hpp"
 
 class Player;
 class Character;
@@ -12,6 +12,6 @@ class Match;
 
 class iActivator {
 public:
-    virtual bool activate(Activation& activation) const { return CODE_NOOP; }
+    virtual bool activate(ActivationContext& activation) const { return CODE_NOOP; }
     virtual ~iActivator() = default;
 }; 

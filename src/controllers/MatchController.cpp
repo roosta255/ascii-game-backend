@@ -53,86 +53,19 @@ bool MatchController::activate(const iActivator& activator, const Preactivation&
     eventQueuePtr = &eventQueue;
 
     bool isSuccess = false;
-    codeset.addFailure(!match.getPlayer(preactivation.playerId, codeset.error).access([&](Player& player) {
-        codeset.addFailure(!match.getCharacter(preactivation.action.characterId, codeset.error).access([&](Character& character) {
-            codeset.addFailure(!match.dungeon.getRoom(preactivation.action.roomId, codeset.error).access([&](Room& room) {
-                Pointer<Inventory> sourceInventory = preactivation.sourceInventoryId.isPresent()
-                    ? match.getInventory(preactivation.sourceInventoryId.orElse(-1), codeset.error)
-                    : Pointer<Inventory>(player.inventory);
-                Pointer<Inventory> targetInventory;
-                int targetInventoryIdx;
-                if (preactivation.action.targetInventoryIndex.copy(targetInventoryIdx)) {
-                    targetInventory = match.getInventory(targetInventoryIdx, codeset.error);
+    buildActivationContext(preactivation, [&](ActivationContext& ctx){
+        codeset.addFailure(!(isSuccess = activator.activate(ctx)));
+        outEventLog.access([&](std::vector<LoggedEvent>& eventLog) {
+            eventLog.clear();
+            ctx.request.access([&](RequestContext& request) {
+                CyclicalRack<LoggedEvent> log(request.eventLog.begin(), 32, (size_t)request.eventLogHead, (size_t)request.eventLogSize);
+                for (size_t i = 0; i < log.size(); ++i) {
+                    eventLog.push_back(log[i]);
                 }
-                RequestContext request{
-                    .player = player,
-                    .room = room,
-                    .match = match,
-                    .codeset = codeset,
-                    .controller = *this,
-                    .time = preactivation.time,
-                    .floorId = preactivation.action.floorId,
-                    .isSkippingAnimations = preactivation.isSkippingAnimations,
-                    .isSkippingLogging = preactivation.isSortingState || preactivation.isSkippingLogging
-                };
-                ActivationContext activation{
-                    .request = request,
-                    .character = character,
-                    .sourceInventory = sourceInventory,
-                    .targetInventory = targetInventory,
-                    .targetItemSlot = preactivation.action.targetItemIndex,
-                    .direction = preactivation.action.direction,
-                    .isSortingState = preactivation.isSortingState
-                };
-                sourceInventory.access([&](Inventory& inventory){
-                    activation.sourceItem = inventory.items.getPointer(preactivation.sourceItemIndex.orElse(-1));
-                });
-
-                // Resolve TargetPreactivationEntity → TargetEntity
-                std::visit([&](auto& t) {
-                    using T = std::decay_t<decltype(t)>;
-                    if constexpr (std::is_same_v<T, PreactivationTargetCharacter>) {
-                        activation.targetEntity = match.getCharacter(t.characterId, codeset.error);
-                    } else if constexpr (std::is_same_v<T, PreactivationTargetItem>) {
-                        targetInventory.access([&](Inventory& inventory) {
-                            activation.targetEntity = inventory.items.getPointer(t.itemIndex);
-                        });
-                    } else if constexpr (std::is_same_v<T, PreactivationTargetDoor>) {
-                        activation.targetEntity = DoorTarget{ Pointer<Wall>(room.getWall(t.direction)) };
-                    } else if constexpr (std::is_same_v<T, PreactivationTargetLock>) {
-                        activation.targetEntity = LockTarget{ Pointer<Wall>(room.getWall(t.direction)) };
-                    } else if constexpr (std::is_same_v<T, NoPreactivationTarget>) {
-                        // Fall back to legacy action fields for backward compatibility
-                        Cardinal dir;
-                        if (preactivation.action.direction.copy(dir)) {
-                            if (preactivation.action.type == ACTION_ACTIVATE_LOCK) {
-                                activation.targetEntity = LockTarget{ Pointer<Wall>(room.getWall(dir)) };
-                            } else if (preactivation.action.type == ACTION_ACTIVATE_DOOR
-                                    || preactivation.action.type == ACTION_MOVE_TO_DOOR) {
-                                activation.targetEntity = DoorTarget{ Pointer<Wall>(room.getWall(dir)) };
-                            }
-                        }
-                        if (std::holds_alternative<NoTarget>(activation.targetEntity)) {
-                            int charId;
-                            if (preactivation.action.targetCharacterId.copy(charId)) {
-                                activation.targetEntity = match.getCharacter(charId, codeset.error);
-                            }
-                        }
-                    }
-                }, preactivation.targetPreactivationEntity);
-                codeset.addFailure(!(isSuccess = activator.activate(activation)));
-                outEventLog.access([&](std::vector<LoggedEvent>& eventLog) {
-                    eventLog.clear();
-                    activation.request.access([&](RequestContext& request) {
-                        CyclicalRack<LoggedEvent> log(request.eventLog.begin(), 32, (size_t)request.eventLogHead, (size_t)request.eventLogSize);
-                        for (size_t i = 0; i < log.size(); ++i) {
-                            eventLog.push_back(log[i]);
-                        }
-                    });
-                });
-            }));
-        }));
-    }));
+            });
+        });
+    });
+                
 
     if (!isSuccess) {
         eventQueuePtr = nullptr;
@@ -159,7 +92,7 @@ bool MatchController::activate(const iActivator& activator, const Preactivation&
         eventQueue.erase(eventQueue.begin());
         ++totalProcessed;
 
-        // TODO: run trigger.activator in a full Activation context with time = animationTime
+        // TODO: run trigger.activator in a full ActivationContext context with time = animationTime
 
         // Dispatch behavioral responses to all AI agents in the same room as the event character.
         // Behavior responses are not cascaded (BEHAVIOR_EVENT_NIL suppresses further dispatch).
@@ -293,6 +226,84 @@ bool MatchController::assignCharacterToFloor(int characterId, int roomId, Channe
             Location oldLocation;
             updateCharacterLocation(character, newLocation, oldLocation);
             isSuccess = true;
+        }));
+    }));
+    return isSuccess;
+}
+
+bool MatchController::buildActivationContext(const Preactivation& preactivation, std::function<void(ActivationContext&)> consumer) {
+    bool isSuccess = false;
+    codeset.addFailure(!match.getPlayer(preactivation.playerId, codeset.error).access([&](Player& player) {
+        codeset.addFailure(!match.getCharacter(preactivation.action.characterId, codeset.error).access([&](Character& character) {
+            codeset.addFailure(!match.dungeon.getRoom(preactivation.action.roomId, codeset.error).access([&](Room& room) {
+                Pointer<Inventory> sourceInventory = preactivation.sourceInventoryId.isPresent()
+                    ? match.getInventory(preactivation.sourceInventoryId.orElse(-1), codeset.error)
+                    : Pointer<Inventory>(player.inventory);
+                Pointer<Inventory> targetInventory;
+                int targetInventoryIdx;
+                if (preactivation.action.targetInventoryIndex.copy(targetInventoryIdx)) {
+                    targetInventory = match.getInventory(targetInventoryIdx, codeset.error);
+                }
+                RequestContext request{
+                    .player = player,
+                    .match = match,
+                    .codeset = codeset,
+                    .controller = *this,
+                    .time = preactivation.time,
+                    .floorId = preactivation.action.floorId,
+                    .isSkippingAnimations = preactivation.isSkippingAnimations,
+                    .isSkippingLogging = preactivation.isSortingState || preactivation.isSkippingLogging
+                };
+                ActivationContext activation{
+                    .codeset = codeset,
+                    .request = request,
+                    .room = room,
+                    .character = character,
+                    .sourceInventory = sourceInventory,
+                    .targetInventory = targetInventory,
+                    .targetItemSlot = preactivation.action.targetItemIndex,
+                    .direction = preactivation.action.direction,
+                    .isSortingState = preactivation.isSortingState
+                };
+                sourceInventory.access([&](Inventory& inventory){
+                    activation.sourceItem = inventory.items.getPointer(preactivation.sourceItemIndex.orElse(-1));
+                });
+
+                // Resolve TargetPreactivationEntity → TargetEntity
+                std::visit([&](auto& t) {
+                    using T = std::decay_t<decltype(t)>;
+                    if constexpr (std::is_same_v<T, PreactivationTargetCharacter>) {
+                        activation.targetEntity = match.getCharacter(t.characterId, codeset.error);
+                    } else if constexpr (std::is_same_v<T, PreactivationTargetItem>) {
+                        targetInventory.access([&](Inventory& inventory) {
+                            activation.targetEntity = inventory.items.getPointer(t.itemIndex);
+                        });
+                    } else if constexpr (std::is_same_v<T, PreactivationTargetDoor>) {
+                        activation.targetEntity = DoorTarget{ Pointer<Wall>(room.getWall(t.direction)) };
+                    } else if constexpr (std::is_same_v<T, PreactivationTargetLock>) {
+                        activation.targetEntity = LockTarget{ Pointer<Wall>(room.getWall(t.direction)) };
+                    } else if constexpr (std::is_same_v<T, NoPreactivationTarget>) {
+                        // Fall back to legacy action fields for backward compatibility
+                        Cardinal dir;
+                        if (preactivation.action.direction.copy(dir)) {
+                            if (preactivation.action.type == ACTION_ACTIVATE_LOCK) {
+                                activation.targetEntity = LockTarget{ Pointer<Wall>(room.getWall(dir)) };
+                            } else if (preactivation.action.type == ACTION_ACTIVATE_DOOR
+                                    || preactivation.action.type == ACTION_MOVE_TO_DOOR) {
+                                activation.targetEntity = DoorTarget{ Pointer<Wall>(room.getWall(dir)) };
+                            }
+                        }
+                        if (std::holds_alternative<NoTarget>(activation.targetEntity)) {
+                            int charId;
+                            if (preactivation.action.targetCharacterId.copy(charId)) {
+                                activation.targetEntity = match.getCharacter(charId, codeset.error);
+                            }
+                        }
+                    }
+                }, preactivation.targetPreactivationEntity);
+                consumer(activation);
+                isSuccess = true;
+            }));
         }));
     }));
     return isSuccess;
@@ -738,7 +749,7 @@ bool MatchController::breakArmorItem(Character& character) {
     return true;
 }
 
-void MatchController::addLoggedEvent(Activation& activation, int roomId, LoggedEvent event) {
+void MatchController::addLoggedEvent(ActivationContext& activation, int roomId, LoggedEvent event) {
     activation.request.access([&](RequestContext& request) {
         if (request.isSkippingLogging) return;
         request.match.dungeon.rooms.access(roomId, [&](Room& room) {
@@ -754,7 +765,7 @@ void MatchController::addLoggedEvent(Activation& activation, int roomId, LoggedE
     });
 }
 
-void MatchController::addRequestLoggedEvent(Activation& activation, LoggedEvent event) {
+void MatchController::addRequestLoggedEvent(ActivationContext& activation, LoggedEvent event) {
     activation.request.access([&](RequestContext& request) {
         if (request.isSkippingLogging) return;
         CyclicalRack<LoggedEvent> reqLog(request.eventLog.begin(), 32, (size_t)request.eventLogHead, (size_t)request.eventLogSize);

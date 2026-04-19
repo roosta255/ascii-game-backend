@@ -3,7 +3,18 @@
     "allow": [
       "Bash(cmake --build build_ninja --target test_target)",
       "Bash(build_ninja/test_target \"[tutorial]\")",
-      "Bash(cmake --build build --target test_runner)"
+      "Bash(cmake --build build --target test_runner)",
+      "Bash(cmake --build build --target tests)",
+      "Bash(cmake --build /workspaces/backend/build)",
+      "Bash(cmake --build build)",
+      "Bash(git -C /workspaces/backend diff HEAD~3 HEAD --name-only)",
+      "Bash(git -C /workspaces/backend diff HEAD~3 HEAD -- src/remodel/Pathfinder.cpp src/remodel/Pathfinder.hpp src/remodel/PathfindingCounter.cpp src/remodel/PathfindingCounter.hpp)",
+      "Bash(git -C /workspaces/backend log -3 --oneline)",
+      "Bash(git -C /workspaces/backend show HEAD --stat)",
+      "Bash(git -C /workspaces/backend show HEAD~1 --stat)",
+      "Bash(git -C /workspaces/backend show HEAD~2 --stat)",
+      "Bash(cmake --build build --target test_target -j1)",
+      "Bash(cmake -S /workspaces/backend -B /workspaces/backend/build -DCMAKE_BUILD_TYPE=Debug)"
     ]
   }
 }

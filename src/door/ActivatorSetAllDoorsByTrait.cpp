@@ -4,7 +4,7 @@
 #include "Match.hpp"
 #include "Room.hpp"
 
-bool ActivatorSetAllDoorsByTrait::activate(Activation& activation) const {
+bool ActivatorSetAllDoorsByTrait::activate(ActivationContext& activation) const {
     activation.request.access([&](RequestContext& req) {
         int roomId = 0;
         for (Room& room : req.match.dungeon.rooms) {

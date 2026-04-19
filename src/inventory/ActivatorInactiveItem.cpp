@@ -1,6 +1,6 @@
 #include "ActivatorInactiveItem.hpp"
 #include "Match.hpp"
 
-bool ActivatorInactiveItem::activate(Activation& activation) const {
+bool ActivatorInactiveItem::activate(ActivationContext& activation) const {
     return false;
 } 

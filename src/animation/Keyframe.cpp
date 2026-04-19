@@ -1,8 +1,13 @@
+#include "ActivationContext.hpp"
+#include "AnimationConfig.hpp"
 #include "AnimationFlyweight.hpp"
 #include "Codeset.hpp"
 #include "Keyframe.hpp"
 #include "Location.hpp"
 #include "Maybe.hpp"
+
+template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
+template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
 Keyframe Keyframe::removeOffset() const {
     Keyframe result = *this;
@@ -16,13 +21,102 @@ bool Keyframe::isAvailable()const{
     return animation <= ANIMATION_NIL || animation >= ANIMATION_COUNT || now >= t1;
 }
 
+Maybe<Keyframe> Keyframe::buildTargetKeyframe(const AnimationConfig& cfg, const ActivationContext& ctx) {
+    Array<int, ANIMATION_SEMANTIC_COUNT> semanticData{};
+    const auto characterSemantic = ctx.character.location.type == LOCATION_FLOOR ? ANIMATION_SEMANTIC_FROM_FLOOR : ctx.character.location.type == LOCATION_DOOR || ctx.character.location.type == LOCATION_DOOR_SHARED ? ANIMATION_SEMANTIC_FROM_DOOR : ANIMATION_SEMANTIC_NONE;
+    const auto targetSemantic = std::visit(overloaded{
+            [](const Pointer<Character>& cp) {
+                return cp.mapConst<AnimationSemantic>([&](const Character& c){
+                    return c.location.type == LOCATION_FLOOR ? ANIMATION_SEMANTIC_TO_FLOOR
+                        : c.location.type == LOCATION_DOOR || c.location.type == LOCATION_DOOR_SHARED ? ANIMATION_SEMANTIC_TO_DOOR
+                        : ANIMATION_SEMANTIC_NONE;
+                }).orElse(ANIMATION_SEMANTIC_NONE);
+            },
+            [](const DoorTarget&) { return ANIMATION_SEMANTIC_TO_DOOR; },
+            [](const LockTarget&) { return ANIMATION_SEMANTIC_TO_LOCK; },
+            [](const auto&) { return ANIMATION_SEMANTIC_NONE; },
+        }, ctx.targetEntity);
+
+    const auto isFlipping = cfg.act == ANIMATION_ACT_TARGET || cfg.act == ANIMATION_ACT_TARGET_TO_SUBJECT;
+    const auto effectiveCharSemantic = isFlipping
+        ? animation_semantic_flipped(characterSemantic) : characterSemantic;
+    const auto effectiveTargetSemantic = isFlipping
+        ? animation_semantic_flipped(targetSemantic) : targetSemantic;
+
+    semanticData.access((int)effectiveCharSemantic, [&](int& val) {
+        val = ctx.character.location.data;
+    });
+    std::visit(overloaded{
+        [&](const Pointer<Character>& cp) {
+            semanticData.access((int)effectiveTargetSemantic, [&](int& val) {
+                cp.accessConst([&](const Character& c){
+                    val = c.location.data;
+                });
+            });
+        },
+        [&](const DoorTarget&) {
+            ctx.direction.accessConst([&](const Cardinal& dir) {
+                semanticData.access((int)effectiveTargetSemantic, [&](int& val) { val = (int)dir; });
+            });
+        },
+        [&](const LockTarget&) {
+            ctx.direction.accessConst([&](const Cardinal& dir) {
+                semanticData.access((int)effectiveTargetSemantic, [&](int& val) { val = (int)dir; });
+            });
+        },
+        [](const auto&) {},
+    }, ctx.targetEntity);
+
+    AnimationTypes semantics;
+    const auto addSemantic = [&](AnimationSemantic s) {
+        if (s != ANIMATION_SEMANTIC_NONE)
+            semantics.setIndexOn((size_t)semantic_to_type(s));
+    };
+    switch (cfg.act) {
+        case ANIMATION_ACT_SUBJECT:
+            addSemantic(characterSemantic);
+            break;
+        case ANIMATION_ACT_TARGET:
+            addSemantic(animation_semantic_flipped(targetSemantic));
+            break;
+        case ANIMATION_ACT_SUBJECT_TO_TARGET:
+            addSemantic(characterSemantic);
+            addSemantic(targetSemantic);
+            break;
+        case ANIMATION_ACT_TARGET_TO_SUBJECT:
+            addSemantic(animation_semantic_flipped(targetSemantic));
+            addSemantic(animation_semantic_flipped(characterSemantic));
+            break;
+    }
+
+    Maybe<Keyframe> result;
+
+    AnimationFlyweight::queryAnimation(cfg.animation, semantics).accessConst([&](const AnimationEnum& animation){
+        AnimationFlyweight::getFlyweights().accessConst((int)animation, [&](const AnimationFlyweight& flyweight){
+            result = Keyframe{
+                .t0 = ctx.time,
+                .t1 = ctx.time + flyweight.baseDuration,
+                .animation = animation,
+                .room0 = ctx.room.roomId,
+                .data = flyweight.data.transform([&](const AnimationSemantic& s) {
+                    return semanticData[(int)s].orElse(0);
+                })
+            };
+        });
+        ctx.codeset.addFailure(!result.isPresent());
+    });
+    ctx.codeset.addFailure(!result.isPresent());
+
+    return result;
+}
+
 Keyframe Keyframe::buildWalking(const Timestamp& start, long duration, const int room0, const Cardinal wall0, const Cardinal wall1) {
     return Keyframe {
         .t0 = start,
         .t1 = start + duration,
         .animation = ANIMATION_WALKING_FROM_WALL_TO_WALL,
         .room0 = room0,
-        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{(int)wall0, (int)wall1})
+        .data = Array<int,KEYFRAME_DATA_ARRAY_SIZE>(std::array<int,KEYFRAME_DATA_ARRAY_SIZE>{(int)wall0, (int)wall1})
     };
 }
 
@@ -32,7 +126,7 @@ Keyframe Keyframe::buildWalking(const Timestamp& start, long duration, const int
         .t1 = start + duration,
         .animation = ANIMATION_WALKING_FROM_WALL_TO_FLOOR,
         .room0 = room0,
-        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{(int)wall0, floorId1})
+        .data = Array<int,KEYFRAME_DATA_ARRAY_SIZE>(std::array<int,KEYFRAME_DATA_ARRAY_SIZE>{(int)wall0, floorId1})
     };
 }
 
@@ -42,7 +136,7 @@ Keyframe Keyframe::buildWalking(const Timestamp& start, long duration, const int
         .t1 = start + duration,
         .animation = ANIMATION_WALKING_FROM_FLOOR_TO_WALL,
         .room0 = room0,
-        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{floorId0, (int)wall1})
+        .data = Array<int,KEYFRAME_DATA_ARRAY_SIZE>(std::array<int,KEYFRAME_DATA_ARRAY_SIZE>{floorId0, (int)wall1})
     };
 }
 
@@ -52,7 +146,7 @@ Keyframe Keyframe::buildWalking(const Timestamp& start, long duration, const int
         .t1 = start + duration,
         .animation = ANIMATION_WALKING_FROM_FLOOR_TO_FLOOR,
         .room0 = room0,
-        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{floorId0, floorId1})
+        .data = Array<int,KEYFRAME_DATA_ARRAY_SIZE>(std::array<int,KEYFRAME_DATA_ARRAY_SIZE>{floorId0, floorId1})
     };
 }
 
@@ -110,63 +204,7 @@ Keyframe Keyframe::buildWalking(const Timestamp& start, long duration, const int
         .t1 = start + duration,
         .animation = animation,
         .room0 = room0,
-        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{location0.data, coalesced1.second})
-    };
-}
-
-Keyframe Keyframe::buildHurtling(const Timestamp& start, long duration, const int room0, const int2 xy0, const int2 xy1) {
-    return Keyframe {
-        .t0 = start,
-        .t1 = start + duration,
-        .animation = ANIMATION_HURTLING,
-        .room0 = room0,
-        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{xy0[0], xy0[1]})
-    };
-}
-
-Keyframe Keyframe::buildSmacking(const Timestamp& start, long duration, const int room0, const int2 xy0, const int2 xy1) {
-    return Keyframe {
-        .t0 = start,
-        .t1 = start + duration,
-        .animation = ANIMATION_SMACKING,
-        .room0 = room0,
-        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{xy0[0], xy0[1]})
-    };
-}
-
-Keyframe Keyframe::buildCasting(const Timestamp& start, long duration, const int room0) {
-    return Keyframe {
-        .t0 = start,
-        .t1 = start + duration,
-        .animation = ANIMATION_CASTING,
-        .room0 = room0
-    };
-}
-
-Keyframe Keyframe::buildSleeping(const Timestamp& start, long duration, const int room0) {
-    return Keyframe {
-        .t0 = start,
-        .t1 = start + duration,
-        .animation = ANIMATION_SLEEPING,
-        .room0 = room0
-    };
-}
-
-Keyframe Keyframe::buildHurting(const Timestamp& start, long duration, const int room0) {
-    return Keyframe {
-        .t0 = start,
-        .t1 = start + duration,
-        .animation = ANIMATION_HURTING,
-        .room0 = room0
-    };
-}
-
-Keyframe Keyframe::buildDying(const Timestamp& start, long duration, const int room0) {
-    return Keyframe {
-        .t0 = start,
-        .t1 = start + duration,
-        .animation = ANIMATION_DYING,
-        .room0 = room0
+        .data = Array<int,KEYFRAME_DATA_ARRAY_SIZE>(std::array<int,KEYFRAME_DATA_ARRAY_SIZE>{location0.data, coalesced1.second})
     };
 }
 
@@ -194,7 +232,7 @@ Keyframe Keyframe::buildBounceLock(const Timestamp& start, long duration, const 
         .t1 = start + duration,
         .animation = ANIMATION_BOUNCE_FROM_FLOOR_TO_LOCK,
         .room0 = room0,
-        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{floorId, (int)direction})
+        .data = Array<int,KEYFRAME_DATA_ARRAY_SIZE>(std::array<int,KEYFRAME_DATA_ARRAY_SIZE>{floorId, (int)direction})
     };
 }
 
@@ -204,7 +242,7 @@ Keyframe Keyframe::buildBounceLock(const Timestamp& start, long duration, const 
         .t1 = start + duration,
         .animation = ANIMATION_BOUNCE_FROM_DOOR_TO_LOCK,
         .room0 = room0,
-        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{(int)characterDoor, (int)direction})
+        .data = Array<int,KEYFRAME_DATA_ARRAY_SIZE>(std::array<int,KEYFRAME_DATA_ARRAY_SIZE>{(int)characterDoor, (int)direction})
     };
 }
 
@@ -214,7 +252,7 @@ Keyframe Keyframe::buildBounceFloor(const Timestamp& start, long duration, const
         .t1 = start + duration,
         .animation = ANIMATION_BOUNCE_FROM_FLOOR_TO_FLOOR,
         .room0 = room0,
-        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{floorId, targetFloorId})
+        .data = Array<int,KEYFRAME_DATA_ARRAY_SIZE>(std::array<int,KEYFRAME_DATA_ARRAY_SIZE>{floorId, targetFloorId})
     };
 }
 
@@ -224,7 +262,7 @@ Keyframe Keyframe::buildBounceFloor(const Timestamp& start, long duration, const
         .t1 = start + duration,
         .animation = ANIMATION_BOUNCE_FROM_DOOR_TO_FLOOR,
         .room0 = room0,
-        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{(int)characterDoor, targetFloorId})
+        .data = Array<int,KEYFRAME_DATA_ARRAY_SIZE>(std::array<int,KEYFRAME_DATA_ARRAY_SIZE>{(int)characterDoor, targetFloorId})
     };
 }
 
@@ -234,7 +272,7 @@ static Keyframe buildTraitToggle(const Timestamp& start, long duration, const in
         .t1 = start + duration,
         .animation = animation,
         .room0 = room0,
-        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,Keyframe::DATA_ARRAY_SIZE>{begins ? 1 : 0, 0})
+        .data = Array<int,KEYFRAME_DATA_ARRAY_SIZE>(std::array<int,KEYFRAME_DATA_ARRAY_SIZE>{begins ? 1 : 0, 0})
     };
 }
 
@@ -269,7 +307,7 @@ Keyframe Keyframe::buildTransition(const Timestamp& start, long duration, const 
         .t1 = start + duration,
         .animation = animation,
         .room0 = room0,
-        .data = Array<int,Keyframe::DATA_ARRAY_SIZE>(std::array<int,DATA_ARRAY_SIZE>{fromType, toType})
+        .data = Array<int,KEYFRAME_DATA_ARRAY_SIZE>(std::array<int,KEYFRAME_DATA_ARRAY_SIZE>{fromType, toType})
     };
 }
 
@@ -316,33 +354,13 @@ bool Keyframe::insertKeyframe(Rack<Keyframe> rack, const Keyframe& input) {
     return evict.isPresent();
 }
 
-// TODO: put this as data in enum
-bool Keyframe::isMovement(int animation) {
-    return animation == ANIMATION_WALKING_FROM_WALL_TO_WALL
-        || animation == ANIMATION_WALKING_FROM_WALL_TO_FLOOR
-        || animation == ANIMATION_WALKING_FROM_FLOOR_TO_WALL
-        || animation == ANIMATION_WALKING_FROM_FLOOR_TO_FLOOR
-        || animation == ANIMATION_HURTLING
-        || animation == ANIMATION_SMACKING;
-}
-
-Timestamp Keyframe::getLatestMovementEnd(Rack<Keyframe> rack, const Timestamp& fallback) {
-    Timestamp latest = fallback;
-    for (const auto& keyframe: rack) {
-        if (isMovement(keyframe.animation) && keyframe.t1 > latest) {
-            latest = keyframe.t1;
-        }
-    }
-    return latest;
-}
-
 std::ostream& operator<<(std::ostream& os, const Keyframe& kf) {
     os << "Keyframe{ animation=" << (AnimationEnum)kf.animation
        << ", room0=" << kf.room0
        << ", t0=" << (int64_t)kf.t0
        << ", t1=" << (int64_t)kf.t1
        << ", data=[";
-    for (int i = 0; i < Keyframe::DATA_ARRAY_SIZE; i++) {
+    for (int i = 0; i < KEYFRAME_DATA_ARRAY_SIZE; i++) {
         if (i > 0) os << ", ";
         os << kf.data.begin()[i];
     }

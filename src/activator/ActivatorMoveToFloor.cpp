@@ -3,12 +3,12 @@
 #include "Match.hpp"
 #include "MatchController.hpp"
 
-bool ActivatorMoveToFloor::activate(Activation& activation) const {
+bool ActivatorMoveToFloor::activate(ActivationContext& activation) const {
     bool result = false;
     activation.request.access([&](RequestContext& req) {
         auto& controller = req.controller;
         auto& codeset = req.codeset;
-        auto& room = req.room;
+        auto& room = activation.room;
         auto& subject = activation.character;
 
         int floorId;
@@ -45,8 +45,7 @@ bool ActivatorMoveToFloor::activate(Activation& activation) const {
 
         if (!req.isSkippingAnimations) {
             auto rack = Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(subject.keyframes);
-            const auto start = Keyframe::getLatestMovementEnd(rack, req.time);
-            const auto keyframe = Keyframe::buildWalking(start, MatchController::MOVE_ANIMATION_DURATION, room.roomId, oldLocation, newLocation, codeset);
+            const auto keyframe = Keyframe::buildWalking(req.time, MatchController::MOVE_ANIMATION_DURATION, room.roomId, oldLocation, newLocation, codeset);
             if(!Keyframe::insertKeyframe(rack, keyframe)) {
                 codeset.addLog(CODE_ANIMATION_OVERFLOW_IN_MOVE_CHARACTER_TO_FLOOR);
             }

@@ -13,7 +13,7 @@
 #include "Room.hpp"
 #include "Wall.hpp"
 
-bool ActivatorElevator::activate(Activation& activation) const {
+bool ActivatorElevator::activate(ActivationContext& activation) const {
     bool result = false;
     activation.request.access([&](RequestContext& req) {
         auto& controller = req.controller;
@@ -24,7 +24,7 @@ bool ActivatorElevator::activate(Activation& activation) const {
         mutator.isElevatorOverride = true;
         auto& subject = activation.character;
         auto& inventory = req.player.inventory;
-        auto& room = req.room;
+        auto& room = activation.room;
 
         Cardinal outDirection;
         if (codeset.addFailure(!activation.direction.copy(outDirection), CODE_ACTIVATION_DIRECTION_NOT_SPECIFIED)) {

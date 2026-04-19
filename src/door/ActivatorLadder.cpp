@@ -5,13 +5,13 @@
 #include "Player.hpp"
 #include "DoorEnum.hpp"
 
-bool ActivatorLadder::activate(Activation& activation) const {
+bool ActivatorLadder::activate(ActivationContext& activation) const {
     bool result = false;
     activation.request.access([&](RequestContext& req) {
         auto& controller = req.controller;
         auto& codeset = req.codeset;
         auto& subject = activation.character;
-        auto& room = req.room;
+        auto& room = activation.room;
         const auto roomId = room.roomId;
 
         Cardinal direction;
