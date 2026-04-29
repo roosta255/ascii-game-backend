@@ -29,7 +29,7 @@
         {
             "label": "Run Server",
             "type": "shell",
-            "command": "docker stop cloudflare_tunnel drogon_backend drogon_backend_dev 2>/dev/null || true && docker rm cloudflare_tunnel drogon_backend drogon_backend_dev 2>/dev/null || true && docker compose -f docker-compose.dev.yml up -d --force-recreate --remove-orphans",
+            "command": "docker stop drogon_backend drogon_backend_dev 2>/dev/null || true && docker rm drogon_backend drogon_backend_dev 2>/dev/null || true && docker compose -f docker-compose.dev.yml up -d --force-recreate agame-backend-dev",
             "problemMatcher": []
         },
         {

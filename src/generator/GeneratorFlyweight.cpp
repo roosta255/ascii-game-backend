@@ -1,4 +1,5 @@
 #include "Array.hpp"
+#include "GeneratorAtom.hpp"
 #include "GeneratorDoorwayDungeon1.hpp"
 #include "GeneratorDoorwayDungeon2.hpp"
 #include "GeneratorDoorwayDungeon3Traits.hpp"

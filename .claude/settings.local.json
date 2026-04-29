@@ -31,7 +31,13 @@
       "Bash(grep -r \"#include.*json\" /workspaces/backend/src/*.cpp)",
       "Bash(/workspaces/backend/src/enum/Code.enum:*)",
       "Bash(build/test_target \"[generator_tutorial]\")",
-      "Bash(docker network *)"
+      "Bash(docker network *)",
+      "Bash(cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug)",
+      "Bash(wait)",
+      "Bash(ctest --output-on-failure)",
+      "Bash(make test_target)",
+      "Bash(./test_target)",
+      "Bash(cmake --build build --target test_target -- -j4)"
     ]
   }
 }

@@ -46,6 +46,7 @@ set(PROJECT_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/view
     ${CMAKE_CURRENT_SOURCE_DIR}/src/view/api
     ${CMAKE_CURRENT_SOURCE_DIR}/src/view/store
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/procgen
     /usr/include/jsoncpp
 )
 
@@ -106,10 +107,14 @@ add_library(core_backend STATIC
     src/generator/DungeonAuthor.cpp
     src/generator/DungeonGenerator.cpp
     src/generator/DungeonMutator.cpp
+    src/generator/GeneratorAtom.cpp
     src/generator/GeneratorDoorwayDungeon1.cpp
     src/generator/GeneratorDoorwayDungeon2.cpp
     src/generator/GeneratorDoorwayDungeon3Traits.cpp
     src/generator/GeneratorFlyweight.cpp
+    src/procgen/AtomLibrary.cpp
+    src/procgen/GraphPathEmbedder.cpp
+    src/procgen/SerpentineEmbedder.cpp
     src/generator/GeneratorPuzzle2.cpp
     src/generator/GeneratorTest.cpp
     src/generator/GeneratorTest4D.cpp
@@ -195,6 +200,7 @@ add_executable(test_target
     test/CombatTests.cpp
     test/MatchTests.cpp
     test/TestController.cpp
+    test/maps/GeneratorAtom.cpp
     test/maps/GeneratorDoorwayDungeon1.cpp
     test/maps/GeneratorDoorwayDungeon2.cpp
     test/maps/GeneratorDoorwayDungeon3Traits.cpp
