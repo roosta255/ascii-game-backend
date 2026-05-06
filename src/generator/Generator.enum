@@ -174,4 +174,3 @@ GENERATOR_REMODEL_DECL(PIETY_TUTORIAL_SETUP,
 )
 GENERATOR_DECL(DOORWAY_DUNGEON_3_TRAITS, GeneratorDoorwayDungeon3Traits, true, LAYOUT_7_LEVEL_TOWER, 61, RemodelGroup{REMODEL_GROUP_PIETY_TUTORIAL_SETUP}, (RemodelAuthorSetBuilderStartingRoomId{0, {1,0,6,0}}), (RemodelAuthorSetupBuilderRole{0}))
 GENERATOR_DECL(ATOM,                     GeneratorAtom,                true,  LAYOUT_2D_8x8,        -1)
-

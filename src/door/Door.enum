@@ -1,7 +1,7 @@
 // name,                              doorAttributes,                                                         door,             lock
 DOOR_DECL(EXIT,                             ({TRAIT_IS_DOORWAY}),                                                   ActivatorWrapper,       iActivator)
 DOOR_DOOR_WRAPPER({
-    .effects = { .onSuccess = { ActivatorExitDungeon{}, ActivatorAlterTraitAffliction({ .target = { .set = makeTraitBits({TRAIT_EXITED_DUNGEON}) } }) } }
+    .effects = { .onSuccess = { ActivatorExitDungeon{}, ActivatorAlterTraitAffliction({ .actor = { .set = makeTraitBits({TRAIT_EXITED_DUNGEON}) } }) } }
 })
 DOOR_DECL(WALL,                             ({TRAIT_IS_DOOR_BLOCKING}),                                             iActivator,             iActivator)
 DOOR_DECL(WALL_ALLOCATED,                   ({TRAIT_IS_DOOR_BLOCKING}),                                             iActivator,             iActivator)
