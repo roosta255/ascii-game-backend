@@ -27,5 +27,12 @@ struct BuilderStoreView
     }
 };
 
-// Reflection-based JSON serialization
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(BuilderStoreView, character, player, startingRoomId)
+inline void to_json(nlohmann::json& j, const BuilderStoreView& v) {
+    j = {{"character", v.character}, {"player", v.player}, {"startingRoomId", v.startingRoomId}};
+}
+
+inline void from_json(const nlohmann::json& j, BuilderStoreView& v) {
+    j.at("character").get_to(v.character);
+    j.at("player").get_to(v.player);
+    v.startingRoomId = j.value("startingRoomId", 0);
+}
