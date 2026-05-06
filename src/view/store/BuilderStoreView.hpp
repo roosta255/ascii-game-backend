@@ -11,19 +11,21 @@ struct BuilderStoreView
 {
     CharacterStoreView character;
     PlayerStoreView player;
- 
+    int startingRoomId = 0;
+
     inline BuilderStoreView() = default;
- 
+
     inline BuilderStoreView(const Builder& model)
-    : player(model.player), character(model.character) {}
- 
+    : player(model.player), character(model.character), startingRoomId(model.startingRoomId) {}
+
     inline operator Builder() const {
         return Builder{
             .player = this->player,
-            .character = this->character
+            .character = this->character,
+            .startingRoomId = this->startingRoomId
         };
     }
 };
 
 // Reflection-based JSON serialization
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(BuilderStoreView, character, player)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(BuilderStoreView, character, player, startingRoomId)

@@ -26,6 +26,12 @@ Maybe<int> DungeonAuthor::getRoomId(const int4& coord) {
     return found->second.map<int>([&](Room& room){return room.roomId;});
 }
 
+bool DungeonAuthor::setupChest(const int4& coord, const DungeonMutator::ChestSpec& spec) {
+    return getRoomId(coord).map<bool>([&](const int& roomId){
+            return mutator.setupChest(roomId, spec);
+        }).orElse(false);
+}
+
 bool DungeonAuthor::setup2x5Room(const int4& coord) {
     return getRoomId(coord).map<bool>([&](const int& roomId){
             return mutator.setup2x5Room(roomId);
@@ -122,7 +128,26 @@ bool DungeonAuthor::setupSacramentForgiveness (const int4& coord, int& outCharac
         }).orElse(false);
 }
 
-bool DungeonAuthor::setupHorizontalWalls(std::initializer_list<DoorEnum> row, int y, int z) {
+bool DungeonAuthor::setupBuilderStartingRoomId(int builderIndex, const int4& coord) {
+    return getRoomId(coord).map<bool>([&](const int& roomId){
+            return mutator.setBuilderStartingRoomId(builderIndex, roomId);
+        }).orElse(false);
+}
+
+bool DungeonAuthor::setupElevatorColumn(int elevatorRoomId, const std::vector<int>& columnRoomIds, int paidIndex) {
+    const auto EMPTY = Maybe<int>::empty();
+    std::vector<DungeonMutator::ElevatorProperties> props;
+    props.reserve(columnRoomIds.size());
+    for (int i = 0; i < (int)columnRoomIds.size(); ++i) {
+        props.push_back({
+            .connectedRoomIds = Array<Maybe<int>, 4>({EMPTY, EMPTY, Maybe<int>(columnRoomIds[i]), EMPTY}),
+            .isPaid = i == paidIndex
+        });
+    }
+    return mutator.setupElevatorColumn(elevatorRoomId, Rack<DungeonMutator::ElevatorProperties>(props));
+}
+
+bool DungeonAuthor::setupHorizontalWalls(std::vector<DoorEnum> row, int y, int z) {
     if (row.size() != size[0]) {
         return false;
     }
@@ -151,7 +176,7 @@ bool DungeonAuthor::setupHorizontalWalls(std::initializer_list<DoorEnum> row, in
     return true;
 }
 
-bool DungeonAuthor::setupVerticalWalls(std::initializer_list<DoorEnum> row, int y, int z) {
+bool DungeonAuthor::setupVerticalWalls(std::vector<DoorEnum> row, int y, int z) {
     if (row.size() != size[0] - 1) {
         return false;
     }

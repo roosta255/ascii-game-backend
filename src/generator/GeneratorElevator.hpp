@@ -7,10 +7,8 @@
 #include "int4.hpp"
 #include "Rack.hpp"
 #include "Room.hpp"
-// provides entrance
-// provides neighbors
 
-class GeneratorDoorwayDungeon2 : public iGenerator {
+class GeneratorElevator : public iGenerator {
 public:
     constexpr static auto BOSS_ROOM_ID = 4;
     constexpr static auto ELEVATOR_ROOM_ID = 63;

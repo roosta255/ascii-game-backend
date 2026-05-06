@@ -1,8 +1,177 @@
-GENERATOR_DECL(TUTORIAL,          GeneratorTutorial,         false)
-GENERATOR_DECL(PUZZLE_2,          GeneratorPuzzle2,           true)
-GENERATOR_DECL(TEST,              GeneratorTest,              true)
-GENERATOR_DECL(TEST_4D,           GeneratorTest4D,            true)
-GENERATOR_DECL(DOORWAY_DUNGEON_1, GeneratorDoorwayDungeon1,   true)
-GENERATOR_DECL(DOORWAY_DUNGEON_2, GeneratorDoorwayDungeon2,   true)
-GENERATOR_DECL(DOORWAY_DUNGEON_3_TRAITS, GeneratorDoorwayDungeon3Traits,   true)
-GENERATOR_DECL(ATOM,                    GeneratorAtom,                     true)
+GENERATOR_REMODEL_DECL(ELEVATOR_WALLS,
+    (RemodelAuthorSetupElevatorColumn{63, {7,16,25,34,43,52,61}, 6}),
+    (RemodelAuthorSetupHorizontalWalls{{DOOR_DOORWAY,DOOR_DOORWAY,DOOR_DOORWAY}, 1, 6}),
+    (RemodelAuthorSetupHorizontalWalls{{DOOR_DOORWAY,DOOR_DOORWAY,DOOR_DOORWAY}, 0, 6}),
+    (RemodelAuthorSetupHorizontalWalls{{DOOR_DOORWAY,DOOR_DOORWAY,DOOR_DOORWAY}, 1, 5}),
+    (RemodelAuthorSetupHorizontalWalls{{DOOR_DOORWAY,DOOR_DOORWAY,DOOR_DOORWAY}, 0, 5}),
+    (RemodelAuthorSetupHorizontalWalls{{DOOR_WALL,DOOR_DOORWAY,DOOR_WALL},       1, 4}),
+    (RemodelAuthorSetupHorizontalWalls{{DOOR_WALL,DOOR_DOORWAY,DOOR_WALL},       0, 4}),
+    (RemodelAuthorSetupHorizontalWalls{{DOOR_DOORWAY,DOOR_WALL,DOOR_DOORWAY},    1, 3}),
+    (RemodelAuthorSetupHorizontalWalls{{DOOR_DOORWAY,DOOR_DOORWAY,DOOR_DOORWAY}, 0, 3}),
+    (RemodelAuthorSetupHorizontalWalls{{DOOR_DOORWAY,DOOR_DOORWAY,DOOR_DOORWAY}, 1, 2}),
+    (RemodelAuthorSetupHorizontalWalls{{DOOR_DOORWAY,DOOR_WALL,DOOR_DOORWAY},    0, 2}),
+    (RemodelAuthorSetupHorizontalWalls{{DOOR_WALL,DOOR_WALL,DOOR_WALL},          1, 1}),
+    (RemodelAuthorSetupHorizontalWalls{{DOOR_WALL,DOOR_WALL,DOOR_WALL},          0, 1}),
+    (RemodelAuthorSetupHorizontalWalls{{DOOR_WALL,DOOR_WALL,DOOR_WALL},          1, 0}),
+    (RemodelAuthorSetupHorizontalWalls{{DOOR_WALL,DOOR_WALL,DOOR_WALL},          0, 0}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_WALL,DOOR_WALL},       2, 6}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_WALL,DOOR_WALL},       1, 6}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_DOORWAY,DOOR_DOORWAY}, 0, 6}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_WALL,DOOR_WALL},       2, 5}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_DOORWAY,DOOR_DOORWAY}, 1, 5}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_WALL,DOOR_WALL},       0, 5}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_DOORWAY,DOOR_DOORWAY}, 2, 4}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_DOORWAY,DOOR_DOORWAY}, 1, 4}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_DOORWAY,DOOR_DOORWAY}, 0, 4}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_DOORWAY,DOOR_DOORWAY}, 2, 3}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_WALL,DOOR_WALL},       1, 3}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_DOORWAY,DOOR_DOORWAY}, 0, 3}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_DOORWAY,DOOR_WALL},    2, 2}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_WALL,DOOR_DOORWAY},    1, 2}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_DOORWAY,DOOR_DOORWAY}, 0, 2}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_DOORWAY,DOOR_WALL},    2, 1}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_DOORWAY,DOOR_DOORWAY}, 1, 1}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_DOORWAY,DOOR_DOORWAY}, 0, 1}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_DOORWAY,DOOR_DOORWAY}, 2, 0}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_DOORWAY,DOOR_DOORWAY}, 1, 0}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_DOORWAY,DOOR_DOORWAY}, 0, 0})
+)
+
+GENERATOR_REMODEL_DECL(DOORWAY_DUNGEON_1_WALLS,
+    (RemodelAuthorSetupHorizontalWalls{{DOOR_WALL,DOOR_DOORWAY,DOOR_DOORWAY,DOOR_DOORWAY,DOOR_WALL}, 2, 0}),
+    (RemodelAuthorSetupHorizontalWalls{{DOOR_WALL,DOOR_DOORWAY,DOOR_WALL,DOOR_DOORWAY,DOOR_WALL},   1, 0}),
+    (RemodelAuthorSetupHorizontalWalls{{DOOR_WALL,DOOR_DOORWAY,DOOR_DOORWAY,DOOR_DOORWAY,DOOR_WALL}, 0, 0}),
+    (RemodelAuthorSetupHorizontalWalls{{DOOR_DOORWAY,DOOR_DOORWAY,DOOR_DOORWAY,DOOR_DOORWAY,DOOR_DOORWAY}, 2, 1}),
+    (RemodelAuthorSetupHorizontalWalls{{DOOR_DOORWAY,DOOR_WALL,DOOR_WALL,DOOR_WALL,DOOR_DOORWAY},   1, 1}),
+    (RemodelAuthorSetupHorizontalWalls{{DOOR_DOORWAY,DOOR_DOORWAY,DOOR_DOORWAY,DOOR_DOORWAY,DOOR_DOORWAY}, 0, 1}),
+    (RemodelAuthorSetupHorizontalWalls{{DOOR_DOORWAY,DOOR_DOORWAY,DOOR_DOORWAY,DOOR_DOORWAY,DOOR_DOORWAY}, 2, 2}),
+    (RemodelAuthorSetupHorizontalWalls{{DOOR_WALL,DOOR_DOORWAY,DOOR_WALL,DOOR_DOORWAY,DOOR_WALL},   1, 2}),
+    (RemodelAuthorSetupHorizontalWalls{{DOOR_DOORWAY,DOOR_DOORWAY,DOOR_DOORWAY,DOOR_DOORWAY,DOOR_DOORWAY}, 0, 2}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_DOORWAY,DOOR_WALL,DOOR_WALL,DOOR_DOORWAY},   3, 0}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_DOORWAY,DOOR_WALL,DOOR_DOORWAY,DOOR_DOORWAY}, 2, 0}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_DOORWAY,DOOR_DOORWAY,DOOR_DOORWAY,DOOR_DOORWAY}, 1, 0}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_DOORWAY,DOOR_WALL,DOOR_WALL,DOOR_DOORWAY},   0, 0}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_DOORWAY,DOOR_DOORWAY,DOOR_DOORWAY,DOOR_DOORWAY}, 3, 1}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_WALL,DOOR_WALL,DOOR_WALL,DOOR_WALL},         2, 1}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_WALL,DOOR_WALL,DOOR_WALL,DOOR_WALL},         1, 1}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_DOORWAY,DOOR_DOORWAY,DOOR_DOORWAY,DOOR_DOORWAY}, 0, 1}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_WALL,DOOR_DOORWAY,DOOR_DOORWAY,DOOR_WALL},   3, 2}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_DOORWAY,DOOR_WALL,DOOR_WALL,DOOR_DOORWAY},   2, 2}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_DOORWAY,DOOR_WALL,DOOR_WALL,DOOR_DOORWAY},   1, 2}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_WALL,DOOR_DOORWAY,DOOR_DOORWAY,DOOR_WALL},   0, 2}),
+    (RemodelAuthorSetupLadderUp{{2,1,0,0}, Cardinal::north()}),
+    (RemodelAuthorSetupLadderUp{{2,3,1,0}, Cardinal::north()})
+)
+
+GENERATOR_REMODEL_DECL(TUTORIAL_SETUP,
+    (RemodelAuthorSetupDoorway{{0,0,0,0}, Cardinal::east()}),
+    (RemodelAuthorSetupDoorway{{0,2,0,0}, Cardinal::north()}),
+    (RemodelAuthorSetupTogglerBlue{{1,0,0,0}, Cardinal::north()}),
+    (RemodelAuthorSetupTogglerOrange{{1,1,0,0}, Cardinal::east()}),
+    (RemodelAuthorSetupTogglerBlue{{2,1,0,0}, Cardinal::east()}),
+    (RemodelAuthorSetupKeeper{{2,1,0,0}, Cardinal::south(), true}),
+    (RemodelAuthorSetupKeeper{{2,0,0,0}, Cardinal::east(), true}),
+    (RemodelAuthorSetupKeeper{{2,2,0,0}, Cardinal::west(), false}),
+    (RemodelAuthorSetupKeeper{{2,2,0,0}, Cardinal::south(), false}),
+    (RemodelAuthorSetupKeeper{{1,2,0,0}, Cardinal::west(), false}),
+    (RemodelAuthorSetupKeeper{{3,1,0,0}, Cardinal::north(), false}),
+    (RemodelAuthorSetupShifter{{3,2,0,0}, Cardinal::west(), false}),
+    (RemodelAuthorSetupTogglerSwitch{{1,0,0,0}}),
+    (RemodelAuthorSetupTogglerSwitch{{1,1,0,0}}),
+    (RemodelAuthorSetupTogglerSwitch{{2,2,0,0}}),
+    (RemodelAuthorSetupTogglerSwitch{{3,0,0,0}})
+)
+
+GENERATOR_DECL(TUTORIAL,                 GeneratorTutorial,            false, LAYOUT_2D_8x8,        -1, RemodelGroup{REMODEL_GROUP_TUTORIAL_SETUP}, (RemodelAuthorSetBuilderStartingRoomId{0, {0,0,0,0}}), (RemodelAuthorSetupBuilderRole{0}))
+GENERATOR_DECL(PUZZLE_2,                 GeneratorPuzzle2,             true,  LAYOUT_2D_8x8,        -1, (RemodelAuthorSetBuilderStartingRoomId{0, {0,0,0,0}}), (RemodelAuthorSetupBuilderRole{0}))
+GENERATOR_REMODEL_DECL(TEST_SETUP,
+    (RemodelAuthorSetup2x5Room{{1,1,0,0}}),
+    (RemodelAuthorSetup2x5Room{{1,2,0,0}}),
+    (RemodelAuthorSetupDoorway{{0,0,0,0}, Cardinal::east()}),
+    (RemodelAuthorSetupDoorway{{0,1,0,0}, Cardinal::east()}),
+    (RemodelAuthorSetupDoorway{{0,2,0,0}, Cardinal::east()}),
+    (RemodelAuthorSetupDoorway{{0,3,0,0}, Cardinal::east()}),
+    (RemodelAuthorSetupDoorway{{0,4,0,0}, Cardinal::east()}),
+    (RemodelAuthorSetupDoorway{{0,5,0,0}, Cardinal::east()}),
+    (RemodelAuthorSetupDoorway{{1,1,0,0}, Cardinal::south()}),
+    (RemodelAuthorSetupDoorway{{1,2,0,0}, Cardinal::south()}),
+    (RemodelAuthorSetupDoorway{{1,3,0,0}, Cardinal::south()}),
+    (RemodelAuthorSetupDoorway{{1,4,0,0}, Cardinal::south()}),
+    (RemodelAuthorSetupDoorway{{1,5,0,0}, Cardinal::south()}),
+    (RemodelAuthorSetupDoorway{{2,1,0,0}, Cardinal::north()}),
+    (RemodelAuthorSetupDoorway{{3,1,0,0}, Cardinal::north()}),
+    (RemodelAuthorSetupDoorway{{4,1,0,0}, Cardinal::north()}),
+    (RemodelAuthorSetupDoorway{{5,1,0,0}, Cardinal::north()}),
+    (RemodelAuthorSetupDoorway{{6,1,0,0}, Cardinal::north()}),
+    (RemodelAuthorSetupDoorway{{2,1,0,0}, Cardinal::south()}),
+    (RemodelAuthorSetupDoorway{{3,1,0,0}, Cardinal::south()}),
+    (RemodelAuthorSetupDoorway{{4,1,0,0}, Cardinal::south()}),
+    (RemodelAuthorSetupDoorway{{5,1,0,0}, Cardinal::south()}),
+    (RemodelAuthorSetupDoorway{{6,1,0,0}, Cardinal::south()}),
+    (RemodelAuthorSetupDoorway{{2,1,0,0}, Cardinal::west()}),
+    (RemodelAuthorSetupDoorway{{3,1,0,0}, Cardinal::west()}),
+    (RemodelAuthorSetupDoorway{{4,1,0,0}, Cardinal::west()}),
+    (RemodelAuthorSetupDoorway{{5,1,0,0}, Cardinal::west()}),
+    (RemodelAuthorSetupDoorway{{6,1,0,0}, Cardinal::west()}),
+    (RemodelAuthorSetupDoorway{{6,1,0,0}, Cardinal::east()}),
+    (RemodelAuthorSetupDoorway{{6,0,0,0}, Cardinal::east()}),
+    (RemodelAuthorSetupKeeper{{1,1,0,0}, Cardinal::west(), true}),
+    (RemodelAuthorSetupJailer{{1,2,0,0}, Cardinal::west(), false}),
+    (RemodelAuthorChestSeeder{{.room = int4{0,0,0,0}, .lock = LOCK_KEY_CATALYST_CLOSED, .critterRole = ROLE_SNAKE}}),
+    (RemodelAuthorChestSeeder{{.room = int4{0,0,0,0}, .lock = LOCK_KEY_CONSUMER_CLOSED, .critterRole = ROLE_SNAKE}})
+)
+
+GENERATOR_DECL(TEST, GeneratorTest, true, LAYOUT_2D_8x8, -1, RemodelGroup{REMODEL_GROUP_TEST_SETUP}, (RemodelAuthorSetBuilderStartingRoomId{0, {0,0,0,0}}), (RemodelAuthorSetupBuilderRole{0}))
+
+GENERATOR_REMODEL_DECL(TEST_4D_SETUP,
+    (RemodelAuthorSetupTimeGateRoomToFuture{{1,1,0,0}, true, false}),
+    (RemodelAuthorSetup2x5Room{{0,1,0,0}}),
+    (RemodelAuthorSetup2x5Room{{2,1,0,0}}),
+    (RemodelAuthorSetup4x1Room{{1,0,0,0}}),
+    (RemodelAuthorSetup4x1Room{{1,2,0,0}}),
+    (RemodelAuthorSetupLightningRodRoom{{2,2,1,0}, false, false}),
+    (RemodelAuthorSetupPoleUp{{2,2,0,0}, Cardinal::west()}),
+    (RemodelAuthorSetupLadderUp{{2,2,0,0}, Cardinal::east()}),
+    (RemodelAuthorSetupDoorway{{0,0,0,0}, Cardinal::east()}),
+    (RemodelAuthorSetupDoorway{{0,1,0,0}, Cardinal::east()}),
+    (RemodelAuthorSetupDoorway{{1,1,0,0}, Cardinal::east()}),
+    (RemodelAuthorSetupDoorway{{1,0,0,0}, Cardinal::north()}),
+    (RemodelAuthorSetupDoorway{{2,0,0,0}, Cardinal::north()}),
+    (RemodelAuthorSetupDoorway{{2,1,0,0}, Cardinal::north()}),
+    (RemodelAuthorSetup2x5Room{{0,1,0,1}}),
+    (RemodelAuthorSetup2x5Room{{2,1,0,1}}),
+    (RemodelAuthorSetup4x1Room{{1,0,0,1}}),
+    (RemodelAuthorSetup4x1Room{{1,2,0,1}}),
+    (RemodelAuthorSetupLightningRodRoom{{2,2,1,1}, false, false}),
+    (RemodelAuthorSetupPoleUp{{2,2,0,1}, Cardinal::west()}),
+    (RemodelAuthorSetupLadderUp{{2,2,0,1}, Cardinal::east()}),
+    (RemodelAuthorSetupDoorway{{0,0,0,1}, Cardinal::east()}),
+    (RemodelAuthorSetupDoorway{{0,1,0,1}, Cardinal::east()}),
+    (RemodelAuthorSetupDoorway{{1,1,0,1}, Cardinal::east()}),
+    (RemodelAuthorSetupDoorway{{1,0,0,1}, Cardinal::north()}),
+    (RemodelAuthorSetupDoorway{{2,0,0,1}, Cardinal::north()}),
+    (RemodelAuthorSetupDoorway{{2,1,0,1}, Cardinal::north()})
+)
+GENERATOR_DECL(TEST_4D,                    GeneratorTest4D,              true,  LAYOUT_4D_3x3x2,      -1, RemodelGroup{REMODEL_GROUP_TEST_4D_SETUP}, (RemodelAuthorSetBuilderStartingRoomId{0, {0,0,0,0}}), (RemodelAuthorSetupBuilderRole{0}))
+GENERATOR_DECL(DOORWAY_DUNGEON_1,          GeneratorDoorwayDungeon1,     true,  LAYOUT_3D_5x4x3,      17, RemodelGroup{REMODEL_GROUP_DOORWAY_DUNGEON_1_WALLS}, (RemodelAuthorSetBuilderStartingRoomId{0, {2,0,2,0}}), (RemodelAuthorSetupBuilderRole{0}))
+GENERATOR_DECL(DOORWAY_DUNGEON_1_PROC_GEN, GeneratorDoorwayDungeon1,     true,  LAYOUT_3D_5x4x3,      17, RemodelGroup{REMODEL_GROUP_DOORWAY_DUNGEON_1_WALLS}, )
+GENERATOR_DECL(ELEVATOR,                   GeneratorElevator, true, LAYOUT_7_LEVEL_TOWER,  4, RemodelGroup{REMODEL_GROUP_ELEVATOR_WALLS}, ElevatorContentHandcrafted{}, (RemodelAuthorSetBuilderStartingRoomId{0, {1,0,6,0}}), (RemodelAuthorSetupBuilderRole{0}))
+GENERATOR_DECL(ELEVATOR_BLANK,             GeneratorElevator, true, LAYOUT_7_LEVEL_TOWER, -1, RemodelGroup{REMODEL_GROUP_ELEVATOR_WALLS}, ElevatorContentBlank{})
+GENERATOR_DECL(ELEVATOR_PROCGEN,           GeneratorElevator, true, LAYOUT_7_LEVEL_TOWER, -1, RemodelGroup{REMODEL_GROUP_ELEVATOR_WALLS}, ElevatorContentAtom{})
+GENERATOR_REMODEL_DECL(PIETY_TUTORIAL_SETUP,
+    (RemodelAuthorSetupHorizontalWalls{{DOOR_TOGGLER_BLUE_CLOSED, DOOR_WALL, DOOR_WALL}, 1, 6}),
+    (RemodelAuthorSetupHorizontalWalls{{DOOR_COVENANT_CLOSED, DOOR_TOGGLER_ORANGE_OPEN, DOOR_COVENANT_CLOSED}, 0, 6}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_DOORWAY, DOOR_WALL}, 2, 6}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_COVENANT_CLOSED, DOOR_TOGGLER_BLUE_CLOSED}, 1, 6}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_COVENANT_CLOSED, DOOR_DOORWAY}, 0 , 6}),
+    (RemodelAuthorSetupShifter{{0,2,6,0}, Cardinal::east(), false}),
+    (RemodelAuthorSetupShifter{{1,0,6,0}, Cardinal::east(), false}),
+    (RemodelAuthorSetupExitDoor{{1,2,6,0}, Cardinal::north()}),
+    (RemodelAuthorSetupTogglerSwitch{{2,0,6,0}}),
+    (RemodelAuthorChestSeeder{{.room = int4{0,1,6,0}, .critterRole = ROLE_CAT, .items = {ITEM_KEY}}}),
+    (RemodelAuthorSetupSacramentForgiveness{{1,1,6,0}}),
+    (RemodelAuthorSetupSacramentForgiveness{{0,0,6,0}})
+)
+GENERATOR_DECL(DOORWAY_DUNGEON_3_TRAITS, GeneratorDoorwayDungeon3Traits, true, LAYOUT_7_LEVEL_TOWER, 61, RemodelGroup{REMODEL_GROUP_PIETY_TUTORIAL_SETUP}, (RemodelAuthorSetBuilderStartingRoomId{0, {1,0,6,0}}), (RemodelAuthorSetupBuilderRole{0}))
+GENERATOR_DECL(ATOM,                     GeneratorAtom,                true,  LAYOUT_2D_8x8,        -1)
+

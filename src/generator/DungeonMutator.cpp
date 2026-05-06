@@ -1,4 +1,5 @@
 #include "ActivatorElevator.hpp"
+#include "Chest.hpp"
 #include "ActivatorLightningRod.hpp"
 #include "ActivatorTimeGate.hpp"
 #include "Character.hpp"
@@ -114,6 +115,29 @@ bool DungeonMutator::setupDoorway (const int& roomId, const Cardinal dir) {
 
 bool DungeonMutator::setupExitDoor (const int& roomId, const Cardinal dir) {
     return !codeset.addFailure(!setDoor(roomId, dir, DOOR_EXIT), CODE_GENERATOR_UTILITY_FAILED_TO_SETUP_EXIT_DOOR);
+}
+
+bool DungeonMutator::setupChest(const int& roomId, const ChestSpec& spec) {
+    bool success = true;
+    if (spec.critterRole != ROLE_EMPTY) {
+        success = controller.allocateChest(roomId, [&](Chest& chest, Character& container, Character& critter) {
+            chest.lock = spec.lock;
+            container.role = ROLE_CHEST;
+            critter.role = spec.critterRole;
+            for (ItemEnum item : spec.items) {
+                success &= controller.giveInventoryItem(chest.inventory, item);
+            }
+        });
+    } else {
+        success = controller.allocateChest(roomId, [&](Chest& chest, Character& container) {
+            chest.lock = spec.lock;
+            container.role = ROLE_CHEST;
+            for (ItemEnum item : spec.items) {
+                success &= controller.giveInventoryItem(chest.inventory, item);
+            }
+        });
+    }
+    return success;
 }
 
 bool DungeonMutator::setup2x5Room(const int& roomId) {
@@ -261,4 +285,13 @@ bool DungeonMutator::setupSacramentForgiveness (const int& roomId, int& outChara
         character.role = ROLE_SACRAMENT_FORGIVENESS;
         character.visibility = ~0x0;
     }, outCharacterId, outFloorId), CODE_DUNGEON_MUTATOR_FAILED_TO_SETUP_SACRAMENT_FORGIVENESS);
+}
+
+bool DungeonMutator::setBuilderStartingRoomId(int builderIndex, int roomId) {
+    bool isSuccess = false;
+    controller.match.builders.access(builderIndex, [&](Builder& builder) {
+        builder.startingRoomId = roomId;
+        isSuccess = true;
+    });
+    return isSuccess;
 }

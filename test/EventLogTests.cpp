@@ -7,7 +7,7 @@
 #include "DoorEnum.hpp"
 #include "Dungeon.hpp"
 #include "EventEnum.hpp"
-#include "GeneratorDoorwayDungeon2.hpp"
+#include "GeneratorElevator.hpp"
 #include "GeneratorEnum.hpp"
 #include "ItemEnum.hpp"
 #include "LoggedEvent.hpp"
@@ -148,7 +148,7 @@ TEST_CASE("EventLog: SHIFTER_LOCK", "[eventlog]") {
 }
 
 TEST_CASE("EventLog: ELEVATOR", "[eventlog]") {
-    TestController tc(GENERATOR_DOORWAY_DUNGEON_2);
+    TestController tc(GENERATOR_ELEVATOR);
     tc.isSkippingAnimations = true;
     tc.generate(0);
     REQUIRE(tc.match.start());
@@ -159,15 +159,15 @@ TEST_CASE("EventLog: ELEVATOR", "[eventlog]") {
         .action = {
             .type = ACTION_ACTIVATE_LOCK,
             .characterId = tc.builderOffset,
-            .roomId = GeneratorDoorwayDungeon2::ELEVATOR_ROOM_ID,
-            .direction = GeneratorDoorwayDungeon2::ELEVATOR_EXIT_DIRECTION,
+            .roomId = GeneratorElevator::ELEVATOR_ROOM_ID,
+            .direction = GeneratorElevator::ELEVATOR_EXIT_DIRECTION,
         },
         .playerId = TestController::BUILDER_ID,
         .isSkippingAnimations = true,
     });
     REQUIRE(tc.isSuccess);
 
-    tc.match.dungeon.rooms.access(GeneratorDoorwayDungeon2::ELEVATOR_ROOM_ID, [&](Room& room) {
+    tc.match.dungeon.rooms.access(GeneratorElevator::ELEVATOR_ROOM_ID, [&](Room& room) {
         auto event = requireLastEvent(room);
         REQUIRE(event.action == EVENT_ELEVATOR);
     });

@@ -1,102 +1,11 @@
 #include "Chest.hpp"
-#include "DoorEnum.hpp"
-#include "Dungeon.hpp"
-#include "DungeonAuthor.hpp"
 #include "GeneratorTest.hpp"
-#include "iLayout.hpp"
 #include "LayoutEnum.hpp"
-#include "LayoutFlyweight.hpp"
 #include "LockEnum.hpp"
 #include "Match.hpp"
 #include "MatchController.hpp"
 #include "RoleEnum.hpp"
 
-bool GeneratorTest::generate (int seed, Match& dst, Codeset& codeset) const {
-    MatchController controller(dst, codeset);
-    constexpr auto LAYOUT = LAYOUT_2D_8x8;
-    dst.dungeon.layout = LAYOUT;
-    bool success = true;
-
-    CodeEnum error = CODE_UNKNOWN_ERROR;
-    if (!dst.setupSingleBuilder(error))
-        return false;
-
-    // TODO: starting locations
-    int floorId = 0, builderId, roomId = 0;
-    dst.builders.access(0, [&](Builder& builder){
-        builder.character.role = ROLE_BUILDER;
-        if (dst.containsCharacter(builder.character, builderId)) {
-            bool isBuilderFloorFree = controller.findFreeFloor(roomId, CHANNEL_CORPOREAL, floorId);
-            if (isBuilderFloorFree) {
-                controller.assignCharacterToFloor(builderId, roomId, CHANNEL_CORPOREAL, floorId);
-            }
-        }
-        controller.updateTraits(builder.character);
-    });
-
-    LayoutFlyweight::getFlyweights().accessConst(LAYOUT, [&](const LayoutFlyweight& flyweight){
-        flyweight.layout.accessConst([&](const iLayout& layoutIntf){
-            layoutIntf.setupAdjacencyPointers(dst.dungeon.rooms);
-            DungeonAuthor util(controller, layoutIntf);
-
-            success &= util.setup2x5Room(int4{1,1,0,0});
-            success &= util.setup2x5Room(int4{1,2,0,0});
-
-            success &= util.setupDoorway(int4{0,0,0,0}, Cardinal::east());
-            success &= util.setupDoorway(int4{0,1,0,0}, Cardinal::east());
-            success &= util.setupDoorway(int4{0,2,0,0}, Cardinal::east());
-            success &= util.setupDoorway(int4{0,3,0,0}, Cardinal::east());
-            success &= util.setupDoorway(int4{0,4,0,0}, Cardinal::east());
-            success &= util.setupDoorway(int4{0,5,0,0}, Cardinal::east());
-            /*success &= util.setupDoorway(int4{0,1,0,0}, Cardinal::west());
-            success &= util.setupDoorway(int4{0,2,0,0}, Cardinal::west());
-            success &= util.setupDoorway(int4{0,3,0,0}, Cardinal::west());
-            success &= util.setupDoorway(int4{0,4,0,0}, Cardinal::west());
-            success &= util.setupDoorway(int4{0,5,0,0}, Cardinal::west());*/
-            success &= util.setupDoorway(int4{1,1,0,0}, Cardinal::south());
-            success &= util.setupDoorway(int4{1,2,0,0}, Cardinal::south());
-            success &= util.setupDoorway(int4{1,3,0,0}, Cardinal::south());
-            success &= util.setupDoorway(int4{1,4,0,0}, Cardinal::south());
-            success &= util.setupDoorway(int4{1,5,0,0}, Cardinal::south());
-            success &= util.setupDoorway(int4{2,1,0,0}, Cardinal::north());
-            success &= util.setupDoorway(int4{3,1,0,0}, Cardinal::north());
-            success &= util.setupDoorway(int4{4,1,0,0}, Cardinal::north());
-            success &= util.setupDoorway(int4{5,1,0,0}, Cardinal::north());
-            success &= util.setupDoorway(int4{6,1,0,0}, Cardinal::north());
-            success &= util.setupDoorway(int4{2,1,0,0}, Cardinal::south());
-            success &= util.setupDoorway(int4{3,1,0,0}, Cardinal::south());
-            success &= util.setupDoorway(int4{4,1,0,0}, Cardinal::south());
-            success &= util.setupDoorway(int4{5,1,0,0}, Cardinal::south());
-            success &= util.setupDoorway(int4{6,1,0,0}, Cardinal::south());
-            success &= util.setupDoorway(int4{2,1,0,0}, Cardinal::west());
-            success &= util.setupDoorway(int4{3,1,0,0}, Cardinal::west());
-            success &= util.setupDoorway(int4{4,1,0,0}, Cardinal::west());
-            success &= util.setupDoorway(int4{5,1,0,0}, Cardinal::west());
-            success &= util.setupDoorway(int4{6,1,0,0}, Cardinal::west());
-            success &= util.setupDoorway(int4{6,1,0,0}, Cardinal::east());
-            success &= util.setupDoorway(int4{6,0,0,0}, Cardinal::east());
-
-            success &= util.setupKeeper(int4{1,1,0,0}, Cardinal::west(), true);
-            success &= util.setupJailer(int4{1,2,0,0}, Cardinal::west(), false);
-
-        });
-    });
-
-    success &= controller.allocateChest(0, [&](Chest& chest, Character& container, Character& critter) {
-        container.role = ROLE_CHEST;
-        critter.role = ROLE_SNAKE;
-        chest.lock = LOCK_KEY_CATALYST_CLOSED;
-    });
-
-    success &= controller.allocateChest(0, [&](Chest& chest, Character& container, Character& critter) {
-        container.role = ROLE_CHEST;
-        critter.role = ROLE_SNAKE;
-        chest.lock = LOCK_KEY_CONSUMER_CLOSED;
-    });
-
-    if (!success) {
-        return false;
-    }
-
+bool GeneratorTest::generate(int seed, Match& dst, Codeset& codeset) const {
     return true;
 }

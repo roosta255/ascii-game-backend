@@ -1,10 +1,14 @@
 #pragma once
 
 #include "DoorEnum.hpp"
+#include "ItemEnum.hpp"
+#include "LockEnum.hpp"
 #include "Maybe.hpp"
 #include "Rack.hpp"
 #include "Room.hpp"
+#include "RoleEnum.hpp"
 #include "RoomEnum.hpp"
+#include <vector>
 
 class Codeset;
 class Dungeon;
@@ -24,6 +28,12 @@ private:
 
 public:
     // structs
+    struct ChestSpec {
+        LockEnum lock = LOCK_NIL;
+        RoleEnum critterRole = ROLE_EMPTY;
+        std::vector<ItemEnum> items;
+    };
+
     struct ElevatorProperties {
         Array<Maybe<int>, 4> connectedRoomIds;
         bool isPaid;
@@ -38,6 +48,7 @@ public:
     bool setSharedShaftAbove(const int& roomA, Cardinal dir, DoorEnum doorA, DoorEnum doorB);
     bool setSharedDoor(const int& roomA, Cardinal dir, DoorEnum doorA, DoorEnum doorB, const Maybe<int> setRoomId = Maybe<int>::empty());
 
+    bool setupChest(const int& roomId, const ChestSpec&);
     bool setup2x5Room(const int& roomId);
     bool setup3x3Room(const int& roomId);
     bool setup4x1Room(const int& roomId);
@@ -60,4 +71,5 @@ public:
     bool setupTogglerSwitchBlue(const int& roomId, int& outCharacterId, int& outRoomId);
     bool setupTogglerSwitchOrange(const int& roomId, int& outCharacterId, int& outRoomId);
     bool setupSacramentForgiveness(const int& roomId, int& outCharacterId, int& outFloorId);
+    bool setBuilderStartingRoomId(int builderIndex, int roomId);
 };

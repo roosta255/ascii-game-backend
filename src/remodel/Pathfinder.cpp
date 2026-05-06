@@ -70,7 +70,7 @@ Pathfinder Pathfinder::build(const std::string& playerId, int pathCharacterId, c
         codeset.addTable(CODE_PATHFINDER_A_STAR_CACHE_MISS);
     }
 
-    const auto handleCounter = [&](PathfindingCounter& counter, const CharacterAction& action){
+    const auto handleCounter = [&](PathfindingCounter& counter, const CharacterAction& action, const Match& currentMatch){
         const auto handleActionCounter = [&](PathfindingCounter::ActionCounter& actionCounter){
             actionCounter.count++;
             actionCounter.rooms.setIndexOn(action.roomId);
@@ -98,6 +98,14 @@ Pathfinder Pathfinder::build(const std::string& playerId, int pathCharacterId, c
         ActionFlyweight::getFlyweights().accessConst(action.type, [&](const ActionFlyweight& flyweight){
             if (flyweight.type == ACTION_TYPE_MOVEMENT) {
                 handleActionCounter(isDoorway ? counter.doorwayMoveCounter : counter.nonDoorwayMoveCounter);
+                if (isDoorway) {
+                    action.direction.accessConst([&](const Cardinal& dir){
+                        auto& doorMovements = currentMatch.dungeon.isBlueOpen ? counter.blueDungeonDoorMovements : counter.orangeDungeonDoorMovements;
+                        doorMovements.getPointer(dir.getIndex()).access([&](Bitstick<DUNGEON_ROOM_COUNT>& door){
+                            door.setIndexOn(action.roomId);
+                        });
+                    });
+                }
             }
 
             counter.actionTypeCounter.getPointer(flyweight.type).access([&](PathfindingCounter::ActionCounter& actionCounter){
@@ -120,12 +128,12 @@ Pathfinder Pathfinder::build(const std::string& playerId, int pathCharacterId, c
             return false;
         }, [&](const CharacterAction& action, const Match& heuristic) {
             created.counters.getPointer(PATHFIND_1_FRONTIER).access([&](PathfindingCounter& counter){
-                handleCounter(counter, action);
+                handleCounter(counter, action, heuristic);
             });
             return 0; // TODO: compute a real distance function to the boss room
-        }, [&](const CharacterAction& action, const Match&) {
+        }, [&](const CharacterAction& action, const Match& solutionMatch) {
             created.counters.getPointer(PATHFIND_1_SOLUTION).access([&](PathfindingCounter& counter){
-                handleCounter(counter, action);
+                handleCounter(counter, action, solutionMatch);
             });
         }, false);
 

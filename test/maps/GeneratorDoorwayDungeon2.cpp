@@ -7,7 +7,7 @@
 #include "Codeset.hpp"
 #include "DoorEnum.hpp"
 #include "Dungeon.hpp"
-#include "GeneratorDoorwayDungeon2.hpp"
+#include "GeneratorElevator.hpp"
 #include "GeneratorEnum.hpp"
 #include "int2.hpp"
 #include "Match.hpp"
@@ -18,8 +18,8 @@
 #include "Room.hpp"
 #include "TestController.hpp"
 
-TEST_CASE("Test elevator configuration", "[match][GENERATOR_DOORWAY_DUNGEON_2]") {
-    TestController controller(GENERATOR_DOORWAY_DUNGEON_2);
+TEST_CASE("Test elevator configuration", "[match][GENERATOR_ELEVATOR]") {
+    TestController controller(GENERATOR_ELEVATOR);
     auto& dungeon = controller.match.dungeon;
 
     // Generate test layout
@@ -37,7 +37,7 @@ TEST_CASE("Test elevator configuration", "[match][GENERATOR_DOORWAY_DUNGEON_2]")
     };
 
     int chestOnFloor7 = -1;
-    REQUIRE(findChestOffset(GeneratorDoorwayDungeon2::FLOOR_7_CHEST_ROOM_ID, chestOnFloor7));
+    REQUIRE(findChestOffset(GeneratorElevator::FLOOR_7_CHEST_ROOM_ID, chestOnFloor7));
     REQUIRE(chestOnFloor7 != -1);
 
     const bool isChestAccessed = controller.match.dungeon.findChestByContainerId(chestOnFloor7, controller.codeset.error).access([&](Chest& chest) {
@@ -70,15 +70,15 @@ TEST_CASE("Test elevator configuration", "[match][GENERATOR_DOORWAY_DUNGEON_2]")
     REQUIRE(isChestAccessed);
 
     const auto getElevatorDoorColumn = [&](){
-        return GeneratorDoorwayDungeon2::ELEVATOR_COLUMN_ROOM_IDS.transform([&](const int index, const int& roomId){
+        return GeneratorElevator::ELEVATOR_COLUMN_ROOM_IDS.transform([&](const int index, const int& roomId){
             return dungeon.rooms.mapIndexAlaConst<DoorEnum>(roomId, [&](const Room& room){
-                return room.getWall(GeneratorDoorwayDungeon2::ELEVATOR_EXIT_DIRECTION.getFlip()).door;
+                return room.getWall(GeneratorElevator::ELEVATOR_EXIT_DIRECTION.getFlip()).door;
             }).orElse(DOOR_COUNT);
         });
     };
 
     const auto getElevatorDoorEnums = [&](){
-        return dungeon.rooms.mapIndexAlaConst<Array<DoorEnum, 4>>(GeneratorDoorwayDungeon2::ELEVATOR_ROOM_ID, [&](const Room& room){
+        return dungeon.rooms.mapIndexAlaConst<Array<DoorEnum, 4>>(GeneratorElevator::ELEVATOR_ROOM_ID, [&](const Room& room){
             return room.walls.transform([&](const Wall& wall){
                 return wall.door;
             });
@@ -86,8 +86,8 @@ TEST_CASE("Test elevator configuration", "[match][GENERATOR_DOORWAY_DUNGEON_2]")
     };
 
     const auto getElevatorRoomId = [&](){
-        return dungeon.rooms.mapIndexAlaConst<int>(GeneratorDoorwayDungeon2::ELEVATOR_ROOM_ID, [&](const Room& room){
-            return room.getWall(GeneratorDoorwayDungeon2::ELEVATOR_EXIT_DIRECTION).adjacent;
+        return dungeon.rooms.mapIndexAlaConst<int>(GeneratorElevator::ELEVATOR_ROOM_ID, [&](const Room& room){
+            return room.getWall(GeneratorElevator::ELEVATOR_EXIT_DIRECTION).adjacent;
         }).orElse(-1);
     };
 
@@ -96,7 +96,7 @@ TEST_CASE("Test elevator configuration", "[match][GENERATOR_DOORWAY_DUNGEON_2]")
         , DOOR_ELEVATOR_CLOSED_KEYED
         , DOOR_ELEVATOR_OPEN_KEYED_PAYING_BUTTON
         , DOOR_ELEVATOR_CLOSED_KEYED });
-    REQUIRE(getElevatorRoomId() == GeneratorDoorwayDungeon2::ELEVATOR_COLUMN_ROOM_IDS.getOrDefault(6, -1));
+    REQUIRE(getElevatorRoomId() == GeneratorElevator::ELEVATOR_COLUMN_ROOM_IDS.getOrDefault(6, -1));
     REQUIRE(getElevatorDoorColumn() == std::array<DoorEnum, 7>
         { DOOR_ELEVATOR_CLOSED_KEYLESS
         , DOOR_ELEVATOR_CLOSED_KEYLESS
@@ -201,7 +201,7 @@ TEST_CASE("Test elevator configuration", "[match][GENERATOR_DOORWAY_DUNGEON_2]")
         , DOOR_ELEVATOR_CLOSED_KEYED
         , DOOR_ELEVATOR_OPEN_KEYED_MOVING_BUTTON
         , DOOR_ELEVATOR_CLOSED_KEYED });
-    REQUIRE(getElevatorRoomId() == GeneratorDoorwayDungeon2::ELEVATOR_COLUMN_ROOM_IDS.getOrDefault(6, -1));
+    REQUIRE(getElevatorRoomId() == GeneratorElevator::ELEVATOR_COLUMN_ROOM_IDS.getOrDefault(6, -1));
     REQUIRE(getElevatorDoorColumn() == std::array<DoorEnum, 7>
         { DOOR_ELEVATOR_CLOSED_KEYLESS
         , DOOR_ELEVATOR_CLOSED_KEYLESS
@@ -225,7 +225,7 @@ TEST_CASE("Test elevator configuration", "[match][GENERATOR_DOORWAY_DUNGEON_2]")
         , DOOR_ELEVATOR_CLOSED_KEYED
         , DOOR_ELEVATOR_OPEN_KEYED_PAYING_BUTTON
         , DOOR_ELEVATOR_CLOSED_KEYED });
-    REQUIRE(getElevatorRoomId() == GeneratorDoorwayDungeon2::ELEVATOR_COLUMN_ROOM_IDS.getOrDefault(5, -1));
+    REQUIRE(getElevatorRoomId() == GeneratorElevator::ELEVATOR_COLUMN_ROOM_IDS.getOrDefault(5, -1));
     REQUIRE(getElevatorDoorColumn() == std::array<DoorEnum, 7>
         { DOOR_ELEVATOR_CLOSED_KEYLESS
         , DOOR_ELEVATOR_CLOSED_KEYLESS

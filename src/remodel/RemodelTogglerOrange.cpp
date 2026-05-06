@@ -6,7 +6,7 @@
 #include "RemodelTogglerOrange.hpp"
 
 bool RemodelTogglerOrange::mutateMatch(Remodel& params, const Match& source, const PathfindingCounter& counter, std::function<bool(const Match&)> acceptance) const {
-    return counter.loopDoorways([&](const int& roomId, const Cardinal& dir){
+    return counter.loopDoorways(counter.orangeDungeonDoorMovements, [&](const int& roomId, const Cardinal& dir){
         Match scratch = source;
         MatchController controller(scratch, params.codeset);
         DungeonMutator mutator(controller);

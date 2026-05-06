@@ -422,21 +422,19 @@ bool MatchController::findFreeFloor(int roomId, ChannelEnum channel, int& output
 bool MatchController::generate(int seed) {
     bool success = false;
     codeset.addFailure(!GeneratorFlyweight::getFlyweights().accessConst(match.generator, [&](const GeneratorFlyweight& flyweight){
-        flyweight.generator.accessConst([&](const iGenerator& generator){
 
-            // setup characterId
-            match.accessAllCharacters([&](Character& character){
-                codeset.addFailure(!match.containsCharacter(character, character.characterId), CODE_MATCH_GENERATE_FAILED_DUE_TO_INNACCESSIBLE_CHARACTER);
-            });
-
-            // setup roomId
-            for (Room& room: match.dungeon.rooms) {
-                codeset.addFailure(!match.dungeon.containsRoom(room, room.roomId), CODE_MATCH_GENERATE_FAILED_DUE_TO_INNACCESSIBLE_ROOM);
-            }
-
-            // generate match
-            codeset.addFailure(!(success = generator.generate(seed, match, codeset)));
+        // setup characterId
+        match.accessAllCharacters([&](Character& character){
+            codeset.addFailure(!match.containsCharacter(character, character.characterId), CODE_MATCH_GENERATE_FAILED_DUE_TO_INNACCESSIBLE_CHARACTER);
         });
+
+        // setup roomId
+        for (Room& room: match.dungeon.rooms) {
+            codeset.addFailure(!match.dungeon.containsRoom(room, room.roomId), CODE_MATCH_GENERATE_FAILED_DUE_TO_INNACCESSIBLE_ROOM);
+        }
+
+        // generate match (applies generator + full remodel list)
+        codeset.addFailure(!(success = flyweight.buildMatch(seed, match, codeset)));
     }), CODE_MATCH_GENERATE_FAILED_DUE_TO_INNACCESSIBLE_GENERATOR_FLYWEIGHT);
 
     // Rebuild traitsComputed from the fully-populated match so callers on this

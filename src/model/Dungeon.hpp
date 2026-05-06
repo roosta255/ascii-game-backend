@@ -33,6 +33,7 @@ struct Dungeon {
     Array<Character, MAX_CHARACTERS> characters;
     Array<Chest, MAX_CHESTS> chests;
     int layout = 0;
+    int startingRoomId = 0;
     int32_t isBlueOpen = false;  // When true, blue doors are open and orange doors are closed
 
     // Toggles all blue/orange doors in the dungeon based on isBlueOpen

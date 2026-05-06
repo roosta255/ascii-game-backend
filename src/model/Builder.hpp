@@ -11,6 +11,7 @@ class Match;
 struct Builder {
     Player player;
     Character character;
+    int startingRoomId = 0;
 
     void startTurn(Match& match);  // Start builder's turn
     void endTurn(Match& match);    // End builder's turn

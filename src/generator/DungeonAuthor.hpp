@@ -5,6 +5,7 @@
 #include "DoorEnum.hpp"
 #include "DungeonMutator.hpp"
 #include <functional>
+#include <vector>
 #include "int4.hpp"
 #include "Maybe.hpp"
 #include "Pointer.hpp"
@@ -32,6 +33,7 @@ public:
 
     Maybe<int> getRoomId(const int4&);
 
+    bool setupChest(const int4&, const DungeonMutator::ChestSpec&);
     bool setup4x1Room(const int4&);
     bool setup2x5Room(const int4&);
     bool setup3x3Room(const int4&);
@@ -51,6 +53,8 @@ public:
     bool setupTogglerSwitch(const int4&, int& outCharacterId, int& outFloorId);
     bool setupSacramentForgiveness(const int4&, int& outCharacterId, int& outFloorId);
 
-    bool setupHorizontalWalls (std::initializer_list<DoorEnum> row, int y, int z);
-    bool setupVerticalWalls (std::initializer_list<DoorEnum> row, int y, int z);
+    bool setupBuilderStartingRoomId(int builderIndex, const int4&);
+    bool setupElevatorColumn(int elevatorRoomId, const std::vector<int>& columnRoomIds, int paidIndex);
+    bool setupHorizontalWalls (std::vector<DoorEnum> row, int y, int z);
+    bool setupVerticalWalls (std::vector<DoorEnum> row, int y, int z);
 };

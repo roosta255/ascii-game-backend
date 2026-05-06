@@ -7,7 +7,7 @@
 #include "Codeset.hpp"
 #include "DoorEnum.hpp"
 #include "Dungeon.hpp"
-#include "GeneratorDoorwayDungeon2.hpp"
+#include "GeneratorElevator.hpp"
 #include "GeneratorEnum.hpp"
 #include "int2.hpp"
 #include "Match.hpp"
@@ -18,8 +18,8 @@
 #include "Room.hpp"
 #include "TestController.hpp"
 
-TEST_CASE("Builder can pathfind to room #52", "[match][GENERATOR_DOORWAY_DUNGEON_2]") {
-    TestController controller(GENERATOR_DOORWAY_DUNGEON_2);
+TEST_CASE("Builder can pathfind to room #52", "[match][GENERATOR_ELEVATOR]") {
+    TestController controller(GENERATOR_ELEVATOR);
     controller.generate(0);
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
     REQUIRE(controller.isSuccess);

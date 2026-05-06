@@ -104,8 +104,6 @@ static bool compileAtomIntoPlacement(
 
 bool GeneratorAtom::generate(int seed, Match& dst, Codeset& codeset) const {
     MatchController controller(dst, codeset);
-    constexpr auto LAYOUT = LAYOUT_2D_8x8;
-    dst.dungeon.layout = LAYOUT;
     bool success = true;
 
     CodeEnum error = CODE_UNKNOWN_ERROR;
@@ -122,7 +120,7 @@ bool GeneratorAtom::generate(int seed, Match& dst, Codeset& codeset) const {
         controller.updateTraits(builder.character);
     });
 
-    LayoutFlyweight::getFlyweights().accessConst(LAYOUT, [&](const LayoutFlyweight& fw){
+    LayoutFlyweight::getFlyweights().accessConst(dst.dungeon.layout, [&](const LayoutFlyweight& fw){
         fw.layout.accessConst([&](const iLayout& layoutIntf){
             layoutIntf.setupAdjacencyPointers(dst.dungeon.rooms);
             DungeonAuthor author(controller, layoutIntf);

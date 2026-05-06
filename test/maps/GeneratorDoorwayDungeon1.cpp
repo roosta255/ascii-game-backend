@@ -26,7 +26,7 @@ TEST_CASE("Verify empty dungeon is navigable manually", "[match][GENERATOR_DOORW
     TestController controller(GENERATOR_DOORWAY_DUNGEON_1);
 
     // Generate test layout
-    controller.generate(GeneratorDoorwayDungeon1::SKIP_SEED);
+    controller.generate(0);
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
 
     // Start the match

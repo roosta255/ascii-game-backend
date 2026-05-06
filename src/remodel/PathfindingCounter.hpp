@@ -16,7 +16,9 @@ struct PathfindingCounter {
     Array<ActionCounter, ACTION_COUNT> actionCounter;
     Array<ActionCounter, ACTION_TYPE_COUNT> actionTypeCounter;
     ActionCounter doorwayMoveCounter, nonDoorwayMoveCounter;
+    Array<Bitstick<DUNGEON_ROOM_COUNT>, 4> blueDungeonDoorMovements, orangeDungeonDoorMovements;
 
     bool loopDoorways(std::function<bool(const int&, const Cardinal&)> consumer, const int seed) const;
+    bool loopDoorways(const Array<Bitstick<DUNGEON_ROOM_COUNT>, 4>& doors, std::function<bool(const int&, const Cardinal&)> consumer, const int seed) const;
     bool loopRooms(std::function<bool(const int&)> consumer, const int seed) const;
 };

@@ -107,10 +107,14 @@ add_library(core_backend STATIC
     src/generator/DungeonAuthor.cpp
     src/generator/DungeonGenerator.cpp
     src/generator/DungeonMutator.cpp
+    src/generator/ElevatorContent.cpp
+    src/generator/GeneratorRemodelGroupFlyweight.cpp
+    src/generator/RemodelAuthor.cpp
+    src/generator/RemodelGroup.cpp
     src/generator/GeneratorAtom.cpp
     src/generator/GeneratorDoorwayDungeon1.cpp
-    src/generator/GeneratorDoorwayDungeon2.cpp
     src/generator/GeneratorDoorwayDungeon3Traits.cpp
+    src/generator/GeneratorElevator.cpp
     src/generator/GeneratorFlyweight.cpp
     src/procgen/AtomLibrary.cpp
     src/procgen/GraphPathEmbedder.cpp
@@ -148,6 +152,10 @@ add_library(core_backend STATIC
     src/remodel/PathfindingCounter.cpp
     src/remodel/Remodel.cpp
     src/remodel/RemodelFlyweight.cpp
+    src/remodel/RemodelAuthorChestSeeder.cpp
+    src/remodel/RemodelAuthorRunGeneratorLoop.cpp
+    src/remodel/RemodelAuthorSetBuilderStartingRoomId.cpp
+    src/remodel/RemodelAuthorSetupBuilderRole.cpp
     src/remodel/RemodelJailer.cpp
     src/remodel/RemodelKeeper.cpp
     src/remodel/RemodelShifter.cpp

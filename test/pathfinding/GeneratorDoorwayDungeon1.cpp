@@ -46,7 +46,7 @@ Array<int, ROLE_COUNT> countCharactersByType(const Match& match) {
 }
 
 TEST_CASE("Test default generation with pathfinding", "[match][GENERATOR_DOORWAY_DUNGEON_1]") {
-    TestController controller(GENERATOR_DOORWAY_DUNGEON_1);
+    TestController controller(GENERATOR_DOORWAY_DUNGEON_1_PROC_GEN);
 
     // Generate test layout
     controller.generate(0);
@@ -81,7 +81,7 @@ TEST_CASE("Test keeper generation with pathfinding", "[match][GENERATOR_DOORWAY_
     TestController controller(GENERATOR_DOORWAY_DUNGEON_1);
 
     // Generate test layout
-    controller.generate(GeneratorDoorwayDungeon1::SKIP_SEED);
+    controller.generate(0);
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
 
     
