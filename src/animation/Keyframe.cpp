@@ -272,7 +272,7 @@ static Keyframe buildTraitToggle(const Timestamp& start, long duration, const in
         .t1 = start + duration,
         .animation = animation,
         .room0 = room0,
-        .data = Array<int,KEYFRAME_DATA_ARRAY_SIZE>(std::array<int,KEYFRAME_DATA_ARRAY_SIZE>{begins ? 1 : 0, 0})
+        .data = Array<int,KEYFRAME_DATA_ARRAY_SIZE>(std::array<int,KEYFRAME_DATA_ARRAY_SIZE>{begins ? 0 : 1, begins ? 1 : 0})
     };
 }
 
@@ -299,6 +299,15 @@ Keyframe Keyframe::buildFrozen(const Timestamp& start, long duration, const int 
 }
 Keyframe Keyframe::buildEnflame(const Timestamp& start, long duration, const int room0, bool begins) {
     return buildTraitToggle(start, duration, room0, ANIMATION_ENFLAME, begins);
+}
+Keyframe Keyframe::buildPiety(const Timestamp& start, long duration, const int room0, bool begins) {
+    return buildTraitToggle(start, duration, room0, ANIMATION_PIETY, begins);
+}
+Keyframe Keyframe::buildMagical(const Timestamp& start, long duration, const int room0, bool begins) {
+    return buildTraitToggle(start, duration, room0, ANIMATION_MAGICAL, begins);
+}
+Keyframe Keyframe::buildUnholy(const Timestamp& start, long duration, const int room0, bool begins) {
+    return buildTraitToggle(start, duration, room0, ANIMATION_UNHOLY, begins);
 }
 
 Keyframe Keyframe::buildTransition(const Timestamp& start, long duration, const int room0, const AnimationEnum animation, const int fromType, const int toType) {

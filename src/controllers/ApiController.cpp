@@ -648,11 +648,13 @@ void ApiController::getFlyweights
         bool isGlyphing = false;
         bool isReversible = false;
         bool isOverlay = false;
+        bool isEyeColor = false;
         fw.types[ANIMATION_TYPE_IS_TRANSLATING].copy(isTranslating);
         fw.types[ANIMATION_TYPE_IS_TRANSITIONING].copy(isTransition);
         fw.types[ANIMATION_TYPE_IS_GLYPHING].copy(isGlyphing);
         fw.types[ANIMATION_TYPE_IS_REVERSIBLE].copy(isReversible);
         fw.types[ANIMATION_TYPE_IS_OVERLAY].copy(isOverlay);
+        fw.types[ANIMATION_TYPE_IS_EYE_COLOR].copy(isEyeColor);
         entry["index"] = animationIndex++;
         entry["name"] = fw.name;
         entry["isTranslating"] = isTranslating;
@@ -660,6 +662,7 @@ void ApiController::getFlyweights
         entry["isGlyphing"] = isGlyphing;
         entry["isReversible"] = isReversible;
         entry["isOverlay"] = isOverlay;
+        entry["isEyeColor"] = isEyeColor;
         animations.append(entry);
     }
 

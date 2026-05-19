@@ -79,7 +79,8 @@ GENERATOR_REMODEL_DECL(TUTORIAL_SETUP,
     (RemodelAuthorSetupTogglerSwitch{{1,0,0,0}}),
     (RemodelAuthorSetupTogglerSwitch{{1,1,0,0}}),
     (RemodelAuthorSetupTogglerSwitch{{2,2,0,0}}),
-    (RemodelAuthorSetupTogglerSwitch{{3,0,0,0}})
+    (RemodelAuthorSetupTogglerSwitch{{3,0,0,0}}),
+    (RemodelAuthorSetupExitDoor{{0,3,0,0}, Cardinal::north()})
 )
 
 GENERATOR_DECL(TUTORIAL,                 GeneratorTutorial,            false, LAYOUT_2D_8x8,        -1, RemodelGroup{REMODEL_GROUP_TUTORIAL_SETUP}, (RemodelAuthorSetBuilderStartingRoomId{0, {0,0,0,0}}), (RemodelAuthorSetupBuilderRole{0}))

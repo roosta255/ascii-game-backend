@@ -1,8 +1,10 @@
 #include "ActivatorAlterTraitAffliction.hpp"
 #include "Character.hpp"
 #include "Codeset.hpp"
+#include "Keyframe.hpp"
 #include "LoggedEvent.hpp"
 #include "MatchController.hpp"
+#include "Rack.hpp"
 #include "TraitEnum.hpp"
 
 static void applySpec(Character& character, const AlterTraitAfflictionSpec& spec) {
@@ -53,6 +55,13 @@ bool ActivatorAlterTraitAffliction::activate(ActivationContext& activation) cons
                         controller.addLoggedEvent(activation, activation.room.roomId, event);
                         controller.addRequestLoggedEvent(activation, event);
                     }
+                }
+                if (!req.isSkippingAnimations) {
+                    auto rack = Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(target.keyframes);
+                    if (config.target.set[(size_t)TRAIT_PIETY].orElse(false))
+                        Keyframe::insertKeyframe(rack, Keyframe::buildPiety(req.time, 800, activation.room.roomId, true));
+                    if (config.target.clear[(size_t)TRAIT_PIETY].orElse(false))
+                        Keyframe::insertKeyframe(rack, Keyframe::buildPiety(req.time, 800, activation.room.roomId, false));
                 }
                 applied = true;
             });

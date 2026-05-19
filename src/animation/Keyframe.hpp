@@ -59,7 +59,7 @@ struct Keyframe
     // DOOR_FLOOR_BOUNCE_FROM_DOOR: data[0] = character's door direction, data[1] = target floorId (cellId)
     static Keyframe buildBounceFloor(const Timestamp& start, long duration, const int room0, const Cardinal characterDoor, const int targetFloorId);
 
-    // Trait-toggle animations: begins=true sets data[0]=1 (effect starts), begins=false sets data[0]=0 (effect ends)
+    // Trait-toggle animations: data[0]=FROM_BOOL (prior state), data[1]=TO_BOOL (new state)
     static Keyframe buildSleep(const Timestamp& start, long duration, const int room0, bool begins);
     static Keyframe buildEnchain(const Timestamp& start, long duration, const int room0, bool begins);
     static Keyframe buildEncage(const Timestamp& start, long duration, const int room0, bool begins);
@@ -68,6 +68,9 @@ struct Keyframe
     static Keyframe buildEnrage(const Timestamp& start, long duration, const int room0, bool begins);
     static Keyframe buildFrozen(const Timestamp& start, long duration, const int room0, bool begins);
     static Keyframe buildEnflame(const Timestamp& start, long duration, const int room0, bool begins);
+    static Keyframe buildPiety(const Timestamp& start, long duration, const int room0, bool begins);
+    static Keyframe buildMagical(const Timestamp& start, long duration, const int room0, bool begins);
+    static Keyframe buildUnholy(const Timestamp& start, long duration, const int room0, bool begins);
 
     // TRANSITION: [fromType, toType, 0, 0]
     static Keyframe buildTransition(const Timestamp& start, long duration, const int room0, const AnimationEnum animation, const int fromType, const int toType);

@@ -219,6 +219,7 @@ add_executable(test_target
     test/TraitModifierTests.cpp
     test/CharacterSheetApiViewTests.cpp
     test/EventLogTests.cpp
+    test/PietyAnimationTests.cpp
 )
 
 target_include_directories(test_target PRIVATE ${PROJECT_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/test)
