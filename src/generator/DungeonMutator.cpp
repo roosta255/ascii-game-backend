@@ -119,11 +119,33 @@ bool DungeonMutator::setupExitDoor (const int& roomId, const Cardinal dir) {
 
 bool DungeonMutator::setupChest(const int& roomId, const ChestSpec& spec) {
     bool success = true;
-    if (spec.critterRole != ROLE_EMPTY) {
+    const bool hasCritter = spec.critterRole != ROLE_EMPTY;
+    const bool hasContained = spec.containedRole.isPresent();
+
+    if (hasCritter && hasContained) {
+        success = controller.allocateChest(roomId, [&](Chest& chest, Character& container, Character& critter, Character& contained) {
+            chest.lock = spec.lock;
+            container.role = ROLE_CHEST;
+            critter.role = spec.critterRole;
+            contained.role = spec.containedRole.orElse(ROLE_EMPTY);
+            for (ItemEnum item : spec.items) {
+                success &= controller.giveInventoryItem(chest.inventory, item);
+            }
+        });
+    } else if (hasCritter) {
         success = controller.allocateChest(roomId, [&](Chest& chest, Character& container, Character& critter) {
             chest.lock = spec.lock;
             container.role = ROLE_CHEST;
             critter.role = spec.critterRole;
+            for (ItemEnum item : spec.items) {
+                success &= controller.giveInventoryItem(chest.inventory, item);
+            }
+        });
+    } else if (hasContained) {
+        success = controller.allocateChestWithContained(roomId, [&](Chest& chest, Character& container, Character& contained) {
+            chest.lock = spec.lock;
+            container.role = ROLE_CHEST;
+            contained.role = spec.containedRole.orElse(ROLE_EMPTY);
             for (ItemEnum item : spec.items) {
                 success &= controller.giveInventoryItem(chest.inventory, item);
             }

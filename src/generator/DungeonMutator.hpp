@@ -31,6 +31,7 @@ public:
     struct ChestSpec {
         LockEnum lock = LOCK_NIL;
         RoleEnum critterRole = ROLE_EMPTY;
+        Maybe<RoleEnum> containedRole = Maybe<RoleEnum>::empty();
         std::vector<ItemEnum> items;
     };
 

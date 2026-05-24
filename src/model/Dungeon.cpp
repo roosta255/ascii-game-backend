@@ -6,6 +6,7 @@
 #include "Keyframe.hpp"
 #include "LayoutFlyweight.hpp"
 #include "DoorEnum.hpp"
+#include "LockEnum.hpp"
 #include "RoleEnum.hpp"
 #include "CodeEnum.hpp"
 #include <json/json.h>
@@ -95,6 +96,17 @@ void Dungeon::toggleDoors(const Timestamp& time, bool isSkippingAnimations) {
             }
         }
         roomId++;
+    }
+
+    for (Chest& chest : chests) {
+        LockEnum newLock = chest.lock;
+        if (chest.lock == LOCK_TOGGLER_BLUE_OPEN || chest.lock == LOCK_TOGGLER_BLUE_CLOSED) {
+            newLock = isBlueOpen ? LOCK_TOGGLER_BLUE_OPEN : LOCK_TOGGLER_BLUE_CLOSED;
+        }
+        else if (chest.lock == LOCK_TOGGLER_ORANGE_OPEN || chest.lock == LOCK_TOGGLER_ORANGE_CLOSED) {
+            newLock = isBlueOpen ? LOCK_TOGGLER_ORANGE_CLOSED : LOCK_TOGGLER_ORANGE_OPEN;
+        }
+        chest.lock = newLock;
     }
 }
 

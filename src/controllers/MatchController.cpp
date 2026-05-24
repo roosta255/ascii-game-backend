@@ -212,6 +212,76 @@ bool MatchController::allocateChest(int roomId, std::function<void(Chest&, Chara
     return isSuccess;
 }
 
+bool MatchController::allocateChestWithContained(int roomId, std::function<void(Chest&, Character&, Character&)> consumer) {
+    setupLocations(false);
+
+    bool isSuccess = false;
+    codeset.addFailure(!match.allocateChest([&](Chest& chest) {
+        int containerCharacterId, containerFloorId;
+        if (codeset.addFailure(!allocateCharacterToFloor(
+            roomId,
+            CHANNEL_CORPOREAL,
+            [&](Character& containerCharacter) {
+                codeset.addFailure(!match.allocateCharacter([&](Character& containedCharacter) {
+                    chest.containerCharacterId = containerCharacter.characterId;
+                    codeset.addFailure(!chest.inventory.giveItem(ITEM_CONTAINED, codeset.error));
+                    chest.inventory.accessItem(ITEM_CONTAINED, [&](Item& item) {
+                        item.stacks = containedCharacter.characterId;
+                    });
+                    consumer(chest, containerCharacter, containedCharacter);
+                    containedCharacter.location = Location::makeChest(roomId, CHANNEL_CORPOREAL, containerCharacter.characterId);
+                    updateTraits(containedCharacter);
+                    isSuccess = true;
+                }), CODE_UNABLE_TO_FIND_FREE_CHARACTER_IN_DUNGEON);
+            },
+            containerCharacterId,
+            containerFloorId
+        )))
+            return;
+    }), CODE_UNABLE_TO_FIND_FREE_CHEST_IN_DUNGEON);
+
+    return isSuccess;
+}
+
+bool MatchController::allocateChest(int roomId, std::function<void(Chest&, Character&, Character&, Character&)> consumer) {
+    setupLocations(false);
+
+    bool isSuccess = false;
+    codeset.addFailure(!match.allocateChest([&](Chest& chest) {
+        int containerCharacterId, containerFloorId;
+        if (codeset.addFailure(!allocateCharacterToFloor(
+            roomId,
+            CHANNEL_CORPOREAL,
+            [&](Character& containerCharacter) {
+                codeset.addFailure(!match.allocateCharacter([&](Character& critterCharacter) {
+                    codeset.addFailure(!match.allocateCharacter([&](Character& containedCharacter) {
+                        chest.containerCharacterId = containerCharacter.characterId;
+                        codeset.addFailure(!chest.inventory.giveItem(ITEM_CRITTER, codeset.error));
+                        chest.inventory.accessItem(ITEM_CRITTER, [&](Item& item) {
+                            item.stacks = critterCharacter.characterId;
+                        });
+                        codeset.addFailure(!chest.inventory.giveItem(ITEM_CONTAINED, codeset.error));
+                        chest.inventory.accessItem(ITEM_CONTAINED, [&](Item& item) {
+                            item.stacks = containedCharacter.characterId;
+                        });
+                        consumer(chest, containerCharacter, critterCharacter, containedCharacter);
+                        critterCharacter.location = Location::makeChest(roomId, CHANNEL_CORPOREAL, containerCharacter.characterId);
+                        updateTraits(critterCharacter);
+                        containedCharacter.location = Location::makeChest(roomId, CHANNEL_CORPOREAL, containerCharacter.characterId);
+                        updateTraits(containedCharacter);
+                        isSuccess = true;
+                    }), CODE_UNABLE_TO_FIND_FREE_CHARACTER_IN_DUNGEON);
+                }), CODE_UNABLE_TO_FIND_FREE_CHARACTER_IN_DUNGEON);
+            },
+            containerCharacterId,
+            containerFloorId
+        )))
+            return;
+    }), CODE_UNABLE_TO_FIND_FREE_CHEST_IN_DUNGEON);
+
+    return isSuccess;
+}
+
 bool MatchController::assignCharacterToFloor(int characterId, int roomId, ChannelEnum channel, int floorId) {
     bool isSuccess = false;
     codeset.addFailure(!match.getCharacter(characterId, codeset.error).access([&](Character& character) {

@@ -70,6 +70,8 @@ public:
     bool activate(const iActivator& activator, const Preactivation& preactivation, Pointer<std::vector<LoggedEvent>> outEventLog = Pointer<std::vector<LoggedEvent>>::empty());
     bool allocateChest(int roomId, std::function<void(Chest&, Character&)> consumer);
     bool allocateChest(int roomId, std::function<void(Chest&, Character&, Character&)> consumer);
+    bool allocateChestWithContained(int roomId, std::function<void(Chest&, Character&, Character&)> consumer);
+    bool allocateChest(int roomId, std::function<void(Chest&, Character&, Character&, Character&)> consumer);
     bool allocateCharacterToFloor(int roomId, ChannelEnum channel, std::function<void(Character&)> consumer, int& outCharacterId, int& outFloorId);
     bool assignCharacterToFloor(int characterId, int roomId, ChannelEnum channel, int floorId);
     bool buildActivationContext(const Preactivation& preactivation, std::function<void(ActivationContext&)>);

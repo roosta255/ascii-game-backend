@@ -15,6 +15,7 @@ struct ChestApiView
     bool isLocked         = false;
     int containerCharacterId = -1;
     Array<KeyframeView, Chest::MAX_KEYFRAMES> keyframes;
+    bool isLockActionable = false;
 
     inline ChestApiView() = default;
 
@@ -26,9 +27,10 @@ struct ChestApiView
         LockFlyweight::getFlyweights().accessConst(model.lock, [&](const LockFlyweight& flyweight) {
             this->lock     = flyweight.name;
             this->isLocked = flyweight.isLocked;
+            this->isLockActionable = flyweight.isLockActionable;
         });
     }
 };
 
 // Reflection-based JSON serialization
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ChestApiView, inventory, lock, isLocked, containerCharacterId, keyframes)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ChestApiView, inventory, lock, isLocked, containerCharacterId, keyframes, isLockActionable)

@@ -2,7 +2,7 @@
 
 #include <string>
 
-#define LOCK_DECL( name_, is_locked_, activation_intf_ ) LOCK_##name_,
+#define LOCK_DECL( name_, ... ) LOCK_##name_,
 enum LockEnum
 {
 #include "Lock.enum"

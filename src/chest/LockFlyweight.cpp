@@ -16,6 +16,7 @@ const Array<LockFlyweight, LOCK_COUNT>& LockFlyweight::getFlyweights()
             flyweights.getPointer( LOCK_##name_ ).access([&](LockFlyweight& flyweight){ \
                 flyweight.name = #name_; \
                 flyweight.isLocked = is_locked_; \
+                flyweight.isLockActionable = !std::is_same_v<activation_intf_, iActivator>; \
                 flyweight.activator = GLOBAL_##name_##activation_intf_; \
             });
         #include "Lock.enum"

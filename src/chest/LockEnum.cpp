@@ -2,7 +2,7 @@
 
 const char* action_to_text(int index) {
     static const char* names[] = {
-        #define LOCK_DECL( name_, is_locked_, activation_intf_ ) #name_,
+        #define LOCK_DECL( name_, ... ) #name_,
         #include "Lock.enum"
         #undef LOCK_DECL
     };
