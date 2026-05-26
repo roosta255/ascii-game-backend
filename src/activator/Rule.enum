@@ -137,6 +137,7 @@ RULE_DECL(SACRAMENT_FORGIVENESS_SET_PIETY,
     .conditions = { .target = { .restricted = makeTraitBits({TRAIT_UNDEAD, TRAIT_PIETY}) } },
     .costs = { .action = 1 },
     .effects = { .onSuccess = { ActivationAddTargetKeyframe{{.animation=ANIMATION_BOUNCE_FROM_FLOOR_TO_FLOOR, .act=ANIMATION_ACT_TARGET_TO_SUBJECT}},
+                                ActivationAddTargetKeyframe{{.animation=ANIMATION_FORGIVENESS, .act=ANIMATION_ACT_SUBJECT}},
                                 ActivatorAlterTraitAffliction({ .target = { .set = makeTraitBits({TRAIT_PIETY}), .clear = makeTraitBits({TRAIT_CAT_BITE}) } }) } }
 }))
 

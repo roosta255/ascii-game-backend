@@ -89,23 +89,42 @@ Maybe<Keyframe> Keyframe::buildTargetKeyframe(const AnimationConfig& cfg, const 
             break;
     }
 
+    bool isQueryable = false;
+    AnimationFlyweight::getFlyweights().accessConst((int)cfg.animation, [&](const AnimationFlyweight& f){
+        isQueryable = f.types[ANIMATION_TYPE_IS_QUERYABLE].orElse(false);
+    });
+
     Maybe<Keyframe> result;
 
-    AnimationFlyweight::queryAnimation(cfg.animation, semantics).accessConst([&](const AnimationEnum& animation){
-        AnimationFlyweight::getFlyweights().accessConst((int)animation, [&](const AnimationFlyweight& flyweight){
+    if (isQueryable) {
+        AnimationFlyweight::queryAnimation(cfg.animation, semantics).accessConst([&](const AnimationEnum& animation){
+            AnimationFlyweight::getFlyweights().accessConst((int)animation, [&](const AnimationFlyweight& flyweight){
+                result = Keyframe{
+                    .t0 = ctx.time,
+                    .t1 = ctx.time + flyweight.baseDuration,
+                    .animation = animation,
+                    .room0 = ctx.room.roomId,
+                    .data = flyweight.data.transform([&](const AnimationSemantic& s) {
+                        return semanticData[(int)s].orElse(0);
+                    })
+                };
+            });
+            ctx.codeset.addFailure(!result.isPresent());
+        });
+        ctx.codeset.addFailure(!result.isPresent());
+    } else {
+        AnimationFlyweight::getFlyweights().accessConst((int)cfg.animation, [&](const AnimationFlyweight& flyweight){
             result = Keyframe{
                 .t0 = ctx.time,
                 .t1 = ctx.time + flyweight.baseDuration,
-                .animation = animation,
+                .animation = cfg.animation,
                 .room0 = ctx.room.roomId,
                 .data = flyweight.data.transform([&](const AnimationSemantic& s) {
                     return semanticData[(int)s].orElse(0);
                 })
             };
         });
-        ctx.codeset.addFailure(!result.isPresent());
-    });
-    ctx.codeset.addFailure(!result.isPresent());
+    }
 
     return result;
 }
