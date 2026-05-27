@@ -95,10 +95,7 @@ add_library(core_backend STATIC
     src/door/ActivatorExitDungeon.cpp
     src/door/ActivatorElevator.cpp
     src/door/ActivatorInactiveDoor.cpp
-    src/door/ActivatorKeeper.cpp
-    src/door/ActivatorJailer.cpp
     src/door/ActivatorLightningRod.cpp
-    src/door/ActivatorShifter.cpp
     src/door/ActivatorTimeGate.cpp
     src/door/ActivatorTimeGateCube.cpp
     src/door/ActivatorSetAllDoorsByTrait.cpp

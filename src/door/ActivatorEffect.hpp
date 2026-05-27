@@ -35,15 +35,12 @@
 #include "ActivatorElevator.hpp"
 #include "ActivatorGiveItem.hpp"
 #include "ActivatorInactiveDoor.hpp"
-#include "ActivatorJailer.hpp"
-#include "ActivatorKeeper.hpp"
 #include "ActivatorLadder.hpp"
 #include "ActivatorLightningRod.hpp"
 #include "ActivatorPole.hpp"
 #include "ActivatorSetDoor.hpp"
 #include "ActivatorSetSharedDoors.hpp"
 #include "ActivatorSetSharedDoorsByTrait.hpp"
-#include "ActivatorShifter.hpp"
 #include "ActivatorTimeGate.hpp"
 #include "ActivatorTimeGateCube.hpp"
 #include "ActivatorValidateNotOccupied.hpp"
@@ -93,15 +90,12 @@ using ActivatorEffect = std::variant<
     ActivatorElevator,
     ActivatorGiveItem,
     ActivatorInactiveDoor,
-    ActivatorJailer,
-    ActivatorKeeper,
     ActivatorLadder,
     ActivatorLightningRod,
     ActivatorPole,
     ActivatorSetDoor,
     ActivatorSetSharedDoors,
     ActivatorSetSharedDoorsByTrait,
-    ActivatorShifter,
     ActivatorTimeGate,
     ActivatorTimeGateCube,
     ActivatorValidateNotOccupied,

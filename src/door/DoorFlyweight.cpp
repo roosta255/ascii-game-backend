@@ -4,8 +4,6 @@
 #include "TraitBits.hpp"
 #include "iActivator.hpp"
 #include "ActivatorElevator.hpp"
-#include "ActivatorJailer.hpp"
-#include "ActivatorKeeper.hpp"
 #include "ActivatorInactiveDoor.hpp"
 #include "ActivatorRuleExecution.hpp"
 #include "ActivatorWrapper.hpp"
