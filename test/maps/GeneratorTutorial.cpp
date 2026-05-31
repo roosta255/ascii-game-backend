@@ -7,7 +7,6 @@
 #include "Codeset.hpp"
 #include "Dungeon.hpp"
 #include "GeneratorEnum.hpp"
-#include "GeneratorTutorial.hpp"
 #include "int2.hpp"
 #include "Match.hpp"
 #include "MatchController.hpp"

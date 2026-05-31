@@ -12,7 +12,6 @@
 #include "Codeset.hpp"
 #include "Dungeon.hpp"
 #include "GeneratorEnum.hpp"
-#include "GeneratorTutorial.hpp"
 #include "ItemEnum.hpp"
 #include "Keyframe.hpp"
 #include "LockEnum.hpp"

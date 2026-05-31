@@ -92,6 +92,84 @@ bool ActivatorChestLockKey::activate(ActivationContext& activation) const {
                         isSuccess = true;
                         break;
                     }
+                    case LOCK_KEY_KEEPER_CLOSED: {
+                        if (codeset.addFailure(!controller.takeInventoryItem(player.inventory, ITEM_KEY, req.time, room.roomId, req.isSkippingAnimations))) {
+                            controller.addRequestLoggedEvent(activation, LoggedEvent{
+                                EVENT_MISSING_ITEM,
+                                { EventComponentKind::ROLE, (int)subject.role },
+                                {},
+                                { EventComponentKind::ITEM, (int)ITEM_KEY },
+                                -1
+                            });
+                            return;
+                        }
+                        if (codeset.addFailure(!controller.takeCharacterAction(subject))) {
+                            controller.addRequestLoggedEvent(activation, LoggedEvent{
+                                EVENT_NO_ACTIONS,
+                                { EventComponentKind::ROLE, (int)subject.role },
+                                {}, {}, -1
+                            });
+                            return;
+                        }
+                        chest.lock = LOCK_KEY_KEEPER_OPEN;
+                        if (!req.isSkippingAnimations) {
+                            Keyframe::insertKeyframe(
+                                Rack<Keyframe>::buildFromArray<Chest::MAX_KEYFRAMES>(chest.keyframes),
+                                Keyframe::buildTransition(req.time, 300, room.roomId, ANIMATION_FALL, LOCK_KEY_KEEPER_CLOSED, LOCK_KEY_KEEPER_OPEN)
+                            );
+                        }
+                        isSuccess = true;
+                        break;
+                    }
+                    case LOCK_KEY_KEEPER_OPEN: {
+                        if (codeset.addFailure(!controller.takeCharacterAction(subject))) {
+                            controller.addRequestLoggedEvent(activation, LoggedEvent{
+                                EVENT_NO_ACTIONS,
+                                { EventComponentKind::ROLE, (int)subject.role },
+                                {}, {}, -1
+                            });
+                            return;
+                        }
+                        if (codeset.addFailure(!controller.giveInventoryItem(player.inventory, ITEM_KEY, req.time, room.roomId, req.isSkippingAnimations))) return;
+                        chest.lock = LOCK_KEY_KEEPER_CLOSED;
+                        if (!req.isSkippingAnimations) {
+                            Keyframe::insertKeyframe(
+                                Rack<Keyframe>::buildFromArray<Chest::MAX_KEYFRAMES>(chest.keyframes),
+                                Keyframe::buildTransition(req.time, 300, room.roomId, ANIMATION_RISE, LOCK_KEY_KEEPER_OPEN, LOCK_KEY_KEEPER_CLOSED)
+                            );
+                        }
+                        isSuccess = true;
+                        break;
+                    }
+                    case LOCK_KEY_JAILER_CLOSED: {
+                        if (codeset.addFailure(!controller.takeInventoryItem(player.inventory, ITEM_KEY, req.time, room.roomId, req.isSkippingAnimations))) {
+                            controller.addRequestLoggedEvent(activation, LoggedEvent{
+                                EVENT_MISSING_ITEM,
+                                { EventComponentKind::ROLE, (int)subject.role },
+                                {},
+                                { EventComponentKind::ITEM, (int)ITEM_KEY },
+                                -1
+                            });
+                            return;
+                        }
+                        if (codeset.addFailure(!controller.takeCharacterAction(subject))) {
+                            controller.addRequestLoggedEvent(activation, LoggedEvent{
+                                EVENT_NO_ACTIONS,
+                                { EventComponentKind::ROLE, (int)subject.role },
+                                {}, {}, -1
+                            });
+                            return;
+                        }
+                        chest.lock = LOCK_KEY_JAILER_OPEN;
+                        if (!req.isSkippingAnimations) {
+                            Keyframe::insertKeyframe(
+                                Rack<Keyframe>::buildFromArray<Chest::MAX_KEYFRAMES>(chest.keyframes),
+                                Keyframe::buildTransition(req.time, 300, room.roomId, ANIMATION_FALL, LOCK_KEY_JAILER_CLOSED, LOCK_KEY_JAILER_OPEN)
+                            );
+                        }
+                        isSuccess = true;
+                        break;
+                    }
                     default:
                         break;
                 }

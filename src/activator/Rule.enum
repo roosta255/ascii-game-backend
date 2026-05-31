@@ -150,6 +150,29 @@ RULE_DECL(TOGGLER_TOGGLE,
                  .target = { .traits = makeTraitBits({TRAIT_ACTOR}) } },
     .costs = { .action = 1 },
     .effects = { .onSuccess = {
-        ActivationAddTargetKeyframe{{.animation=ANIMATION_BOUNCE_FROM_FLOOR_TO_LOCK, .act=ANIMATION_ACT_TARGET_TO_SUBJECT, .isDebug=true}},
+        ActivationAddTargetKeyframe{{.animation=ANIMATION_BOUNCE_FROM_FLOOR_TO_LOCK, .act=ANIMATION_ACT_TARGET_TO_SUBJECT, .isDebug=false}},
         ActivatorToggler{} } }
+}))
+
+// Unlock (key-out): KEY_JAILER_CLOSED -> KEY_JAILER_CLOSED
+//                 - KEY_KEEPER_CLOSED -> KEY_KEEPER_CLOSED
+//            delta: set DOOR_KEYED
+RULE_DECL(CHEST_KEY_UNLOCK,
+({
+    .matches = { .target = { .locks = makeTraitBits({TRAIT_KEYABLE}) } },
+    .conditions = { .actor = { .required = makeTraitBits({TRAIT_ACTOR, TRAIT_KEYER, TRAIT_ACTION_READY}) },
+                    .target = { .restricted = makeTraitBits({TRAIT_DOOR_KEYED}) } },
+    .costs = { .item = { ITEM_KEY }, .action = 1 },
+    .effects = { .onSuccess = { DungeonChestLockTransformer{ChestScope::Target, {.set=makeTraitBits({TRAIT_LOCK_OPEN, TRAIT_DOOR_KEYED})} } } }
+}))
+
+// Unlock (key-out): KEY_JAILER_CLOSED -> KEY_JAILER_CLOSED
+//            delta: set DOOR_KEYED, clear IS_DOOR_BLOCKING
+RULE_DECL(CHEST_KEY_LOCK,
+({
+    .matches = { .target = { .locks = makeTraitBits({TRAIT_KEYABLE, TRAIT_KEY_TAKEABLE}) } },
+    .conditions = { .actor = { .required = makeTraitBits({TRAIT_ACTOR, TRAIT_KEYER, TRAIT_ACTION_READY}) } },
+    .costs = { .action = 1 },
+    .effects = { .onSuccess = { ActivatorGiveItem{ITEM_KEY},
+                                DungeonChestLockTransformer{ChestScope::Target, {.clear=makeTraitBits({TRAIT_LOCK_OPEN, TRAIT_DOOR_KEYED})} } } }
 }))

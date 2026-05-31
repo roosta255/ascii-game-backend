@@ -1,8 +1,10 @@
 #include "Array.hpp"
 #include "LockFlyweight.hpp"
 #include "Match.hpp"
+#include "TraitBits.hpp"
 #include "iActivator.hpp"
 #include "ActivatorChestLockKey.hpp"
+#include "ActivatorRuleExecution.hpp"
 #include "ActivatorToggler.hpp"
 #include <unordered_map>
 
@@ -11,13 +13,14 @@ const Array<LockFlyweight, LOCK_COUNT>& LockFlyweight::getFlyweights()
     static auto flyweights = [](){
         Array<LockFlyweight, LOCK_COUNT> flyweights;
 
-        #define LOCK_DECL( name_, is_locked_, activation_intf_ ) \
+        #define LOCK_DECL( name_, is_locked_, activation_intf_, lock_attributes_ ) \
             static activation_intf_ GLOBAL_##name_##activation_intf_; \
             flyweights.getPointer( LOCK_##name_ ).access([&](LockFlyweight& flyweight){ \
                 flyweight.name = #name_; \
                 flyweight.isLocked = is_locked_; \
                 flyweight.isLockActionable = !std::is_same_v<activation_intf_, iActivator>; \
                 flyweight.activator = GLOBAL_##name_##activation_intf_; \
+                flyweight.lockAttributes = makeTraitBits lock_attributes_; \
             });
         #include "Lock.enum"
         #undef LOCK_DECL
@@ -25,6 +28,21 @@ const Array<LockFlyweight, LOCK_COUNT>& LockFlyweight::getFlyweights()
         return flyweights;
     }();
     return flyweights;
+}
+
+bool LockFlyweight::findByTraits(const TraitBits& traits, LockEnum& output) {
+    const auto& flyweights = getFlyweights();
+    for (int i = 0; i < LOCK_COUNT; i++) {
+        bool found = false;
+        flyweights.accessConst(i, [&](const LockFlyweight& fw) {
+            if (fw.lockAttributes == traits) {
+                output = LockEnum(i);
+                found = true;
+            }
+        });
+        if (found) return true;
+    }
+    return false;
 }
 
 bool LockFlyweight::indexByString

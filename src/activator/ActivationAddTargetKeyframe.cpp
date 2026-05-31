@@ -1,6 +1,7 @@
 #include "ActivationAddTargetKeyframe.hpp"
 #include "AnimationConfig.hpp"
 #include "Character.hpp"
+#include "LocationEnum.hpp"
 #include "Codeset.hpp"
 #include "Item.hpp"
 #include "Keyframe.hpp"
@@ -13,6 +14,13 @@ bool ActivationAddTargetKeyframe::activate(ActivationContext& activation) const 
     bool result = false;
     activation.request.access([&](RequestContext& req) {
         if (req.isSkippingAnimations) { result = true; return; }
+
+        if (activation.character.location.type == LOCATION_CHEST) { result = true; return; }
+        bool targetIsInChest = false;
+        activation.targetCharacter().accessConst([&](const Character& c) {
+            targetIsInChest = c.location.type == LOCATION_CHEST;
+        });
+        if (targetIsInChest) { result = true; return; }
 
         if (cfg.isDebug) {
             activation.codeset.addLog(CODE_ADD_KEYFRAME_SUBJECT, activation.character.characterId);
@@ -27,7 +35,11 @@ bool ActivationAddTargetKeyframe::activate(ActivationContext& activation) const 
         }
 
         const auto kf = Keyframe::buildTargetKeyframe(cfg, activation);
-        if (activation.codeset.addFailure(!kf.isPresent(), CODE_ACTIVATION_ADD_TARGET_KEYFRAME_FAILED_TO_BUILD)) return;
+        if (!kf.isPresent()) {
+            if (!cfg.isDebug) activation.codeset.addFailure(true, CODE_ACTIVATION_ADD_TARGET_KEYFRAME_FAILED_TO_BUILD);
+            result = !activation.codeset.isAnyFailure;
+            return;
+        }
 
         const bool insertIntoTarget = cfg.act == ANIMATION_ACT_TARGET || cfg.act == ANIMATION_ACT_TARGET_TO_SUBJECT;
 

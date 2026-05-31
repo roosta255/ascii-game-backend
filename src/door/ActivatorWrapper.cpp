@@ -6,6 +6,7 @@
 #include "DoorFlyweight.hpp"
 #include "ItemEnum.hpp"
 #include "ItemFlyweight.hpp"
+#include "LockFlyweight.hpp"
 #include "LoggedEvent.hpp"
 #include "MatchController.hpp"
 #include "Player.hpp"
@@ -84,6 +85,15 @@ bool ActivatorWrapper::activate(ActivationContext& activation) const {
                     for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && m.roles[i] != ROLE_COUNT; i++) {
                         if (target.role == m.roles[i]) { found = true; break; }
                     }
+                    matched = found;
+                }
+                if (matched && m.locks.isAny()) {
+                    bool found = false;
+                    activation.targetChest().access([&](Chest& chest) {
+                        LockFlyweight::getFlyweights().accessConst((int)chest.lock, [&](const LockFlyweight& fw) {
+                            found = !(m.locks - fw.lockAttributes).isAny();
+                        });
+                    });
                     matched = found;
                 }
                 targetMatched = matched;

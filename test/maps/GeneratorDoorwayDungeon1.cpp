@@ -7,7 +7,6 @@
 #include "Codeset.hpp"
 #include "DoorEnum.hpp"
 #include "Dungeon.hpp"
-#include "GeneratorDoorwayDungeon1.hpp"
 #include "GeneratorEnum.hpp"
 #include "int2.hpp"
 #include "Match.hpp"

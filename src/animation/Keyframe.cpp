@@ -109,9 +109,7 @@ Maybe<Keyframe> Keyframe::buildTargetKeyframe(const AnimationConfig& cfg, const 
                     })
                 };
             });
-            ctx.codeset.addFailure(!result.isPresent());
         });
-        ctx.codeset.addFailure(!result.isPresent());
     } else {
         AnimationFlyweight::getFlyweights().accessConst((int)cfg.animation, [&](const AnimationFlyweight& flyweight){
             result = Keyframe{

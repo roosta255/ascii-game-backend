@@ -2,8 +2,10 @@
 
 #include "Cardinal.hpp"
 #include "Character.hpp"
+#include "Chest.hpp"
 #include "DamageTypeBits.hpp"
 #include "Item.hpp"
+#include "Match.hpp"
 #include "Maybe.hpp"
 #include "Pointer.hpp"
 #include "RequestContext.hpp"
@@ -58,5 +60,27 @@ struct ActivationContext {
         if (auto* p = std::get_if<DoorTarget>(&targetEntity)) return p->wall;
         if (auto* p = std::get_if<LockTarget>(&targetEntity)) return p->wall;
         return Pointer<Wall>{};
+    }
+
+    // Finds the chest whose containerCharacterId matches the target character.
+    Pointer<Chest> targetChest() const {
+        Pointer<Chest> result;
+        targetCharacter().access([&](Character& target) {
+            request.access([&](RequestContext& req) {
+                CodeEnum dummy = CODE_LOOT_CHEST_NOT_FOUND;
+                result = req.match.dungeon.findChestByContainerId(target.characterId, dummy);
+            });
+        });
+        return result;
+    }
+
+    // Finds the chest whose containerCharacterId matches the source character.
+    Pointer<Chest> sourceChest() const {
+        Pointer<Chest> result;
+        request.access([&](RequestContext& req) {
+            CodeEnum dummy = CODE_LOOT_CHEST_NOT_FOUND;
+            result = req.match.dungeon.findChestByContainerId(character.characterId, dummy);
+        });
+        return result;
     }
 };

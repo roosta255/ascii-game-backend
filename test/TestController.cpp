@@ -4,6 +4,7 @@
 #include "Array.hpp"
 #include "Builder.hpp"
 #include "Cardinal.hpp"
+#include "Chest.hpp"
 #include "Dungeon.hpp"
 #include "Inventory.hpp"
 #include "InventoryDigest.hpp"
@@ -45,6 +46,51 @@ void TestController::activateCharacter(int subjectCharacterId, int objectCharact
 
     isSuccess = controller.activate(preactivation);
     updateEverything();
+}
+
+void TestController::activateChestLock(LockEnum lockType) {
+    int containerCharacterId = -1;
+    for (const Chest& chest : match.dungeon.chests) {
+        if (chest.lock != lockType || chest.containerCharacterId == -1) continue;
+        match.findCharacter(containerCharacterId, [&](const Character& c) {
+            return c.characterId == chest.containerCharacterId && c.location.roomId == latestPosition;
+        });
+        if (containerCharacterId != -1) break;
+    }
+
+    Preactivation preactivation{
+        .action = {
+            .type = ACTION_USE_CHEST_LOCK,
+            .characterId = builderOffset,
+            .roomId = latestPosition,
+            .targetCharacterId = containerCharacterId,
+        },
+        .playerId = BUILDER_ID,
+        .isSkippingAnimations = isSkippingAnimations,
+        .isSkippingLogging = isSkippingLogging
+    };
+    isSuccess = controller.activate(preactivation);
+    updateEverything();
+}
+
+void TestController::activateContainedCharacter(LockEnum lockType, RoleEnum role) {
+    int containedCharacterId = -1;
+    for (const Chest& chest : match.dungeon.chests) {
+        if (chest.lock != lockType || chest.containerCharacterId == -1) continue;
+        int containerFound = -1;
+        match.findCharacter(containerFound, [&](const Character& c) {
+            return c.characterId == chest.containerCharacterId && c.location.roomId == latestPosition;
+        });
+        if (containerFound == -1) continue;
+        chest.inventory.accessItems(ITEM_CONTAINED, [&](const Item& item) {
+            if (containedCharacterId != -1) return;
+            match.findCharacter(containedCharacterId, [&](const Character& c) {
+                return c.characterId == item.stacks && c.role == role;
+            });
+        });
+        if (containedCharacterId != -1) break;
+    }
+    activateObjectCharacter(containedCharacterId);
 }
 
 void TestController::activateDoor(Cardinal dir){

@@ -17,6 +17,7 @@
 #include "ActivatorCritterBite.hpp"
 #include "ActivatorLootChest.hpp"
 #include "ActivatorUseChestLock.hpp"
+#include "DungeonChestLockTransformer.hpp"
 // damage
 #include "ActivatorAttack.hpp"
 #include "ActivatorDamage.hpp"
@@ -72,6 +73,7 @@ using ActivatorEffect = std::variant<
     ActivatorCritterBite,
     ActivatorLootChest,
     ActivatorUseChestLock,
+    DungeonChestLockTransformer,
     // damage
     ActivatorAttack,
     ActivatorDamage,

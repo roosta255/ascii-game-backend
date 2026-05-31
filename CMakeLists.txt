@@ -81,6 +81,7 @@ add_library(core_backend STATIC
     src/chest/ActivatorLootChest.cpp
     src/chest/ActivatorUseChestLock.cpp
     src/chest/Chest.cpp
+    src/chest/DungeonChestLockTransformer.cpp
     src/chest/LockEnum.cpp
     src/chest/LockFlyweight.cpp
     src/controllers/MatchController.cpp
@@ -105,21 +106,15 @@ add_library(core_backend STATIC
     src/generator/DungeonGenerator.cpp
     src/generator/DungeonMutator.cpp
     src/generator/ElevatorContent.cpp
+    src/generator/GeneratorNoop.cpp
     src/generator/GeneratorRemodelGroupFlyweight.cpp
     src/generator/RemodelAuthor.cpp
     src/generator/RemodelGroup.cpp
     src/generator/GeneratorAtom.cpp
-    src/generator/GeneratorDoorwayDungeon1.cpp
-    src/generator/GeneratorDoorwayDungeon3Traits.cpp
-    src/generator/GeneratorElevator.cpp
     src/generator/GeneratorFlyweight.cpp
     src/procgen/AtomLibrary.cpp
     src/procgen/GraphPathEmbedder.cpp
     src/procgen/SerpentineEmbedder.cpp
-    src/generator/GeneratorPuzzle2.cpp
-    src/generator/GeneratorTest.cpp
-    src/generator/GeneratorTest4D.cpp
-    src/generator/GeneratorTutorial.cpp
     src/generator/iGenerator.cpp
     src/damage/DamageAttrBits.cpp
     src/damage/DamageTypeBits.cpp
@@ -206,6 +201,7 @@ add_executable(test_target
     test/MatchTests.cpp
     test/TestController.cpp
     test/maps/GeneratorAtom.cpp
+    test/maps/GeneratorChestKeyTutorial.cpp
     test/maps/GeneratorDoorwayDungeon1.cpp
     test/maps/GeneratorDoorwayDungeon2.cpp
     test/maps/GeneratorDoorwayDungeon3Traits.cpp

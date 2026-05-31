@@ -25,12 +25,15 @@ struct WrapperConfig {
                                             ROLE_COUNT, ROLE_COUNT, ROLE_COUNT, ROLE_COUNT };
         ItemEnum  items[MAX_MATCH_LIST] = { ITEM_NIL, ITEM_NIL, ITEM_NIL, ITEM_NIL,
                                             ITEM_NIL, ITEM_NIL, ITEM_NIL, ITEM_NIL };
+        // Chest lock match: all bits must be present in the target chest's lock's lockAttributes.
+        TraitBits locks = {};
 
         bool isAny() const {
             return traits.isAny()
                 || doors[0] != DOOR_COUNT
                 || roles[0] != ROLE_COUNT
-                || items[0] != ITEM_NIL;
+                || items[0] != ITEM_NIL
+                || locks.isAny();
         }
     };
 

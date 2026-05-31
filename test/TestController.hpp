@@ -6,6 +6,7 @@
 #include "Keyframe.hpp"
 #include "InventoryDigest.hpp"
 #include "ItemEnum.hpp"
+#include "LockEnum.hpp"
 #include "Match.hpp"
 #include "MatchApiParameters.hpp"
 #include "MatchApiView.hpp"
@@ -44,6 +45,8 @@ public:
 
     // functions
     void activateCharacter(int subjectCharacterId, int objectCharacterId);
+    void activateChestLock(LockEnum lockType);
+    void activateContainedCharacter(LockEnum lockType, RoleEnum role);
     void activateLock(Cardinal dir);
     void activateDoor(Cardinal dir);
     void activateObjectCharacter(int objectCharacterId);

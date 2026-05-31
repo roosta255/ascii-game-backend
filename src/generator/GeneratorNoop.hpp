@@ -8,7 +8,7 @@
 // provides entrance
 // provides neighbors
 
-class GeneratorTutorial : public iGenerator {
+class GeneratorNoop : public iGenerator {
 public:
     bool generate(int seed, Match&, Codeset& codeset) const override;
 };

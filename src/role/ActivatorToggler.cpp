@@ -9,7 +9,7 @@
 
 bool ActivatorToggler::activate(ActivationContext& activation) const {
     bool isSuccess = false;
-    activation.request.access([&](RequestContext& req) {
+    activation.codeset.addFailure(!activation.request.access([&](RequestContext& req) {
         const RoleEnum newRole = (activation.character.role == ROLE_TOGGLER_ORANGE) ? ROLE_TOGGLER_BLUE : ROLE_TOGGLER_ORANGE;
         const auto newAnimation = newRole == ROLE_TOGGLER_BLUE ? ANIMATION_TOGGLER_SWITCH_BLUE : ANIMATION_TOGGLER_SWITCH_ORANGE;
 
@@ -36,6 +36,6 @@ bool ActivatorToggler::activate(ActivationContext& activation) const {
             { EventComponentKind::ROLE, (int)newRole },
             -1
         });
-    });
+    }), CODE_INACCESSIBLE_ACTIVATION_REQUEST);
     return isSuccess;
 }
