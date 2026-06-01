@@ -15,6 +15,7 @@ DungeonAuthor::DungeonAuthor (MatchController& controller, const iLayout& layout
     dungeon(controller.match.dungeon), layout(&layoutIn), codeset(controller.codeset), mutator(controller), controller(controller)
 {
     size = build_room_map(dungeon.rooms, *layout, mapping);
+    mutator.setCoordinateResolver([this](const int4& c){ return this->getRoomId(c); });
 }
 
 Maybe<int> DungeonAuthor::getRoomId(const int4& coord) {
@@ -26,112 +27,76 @@ Maybe<int> DungeonAuthor::getRoomId(const int4& coord) {
     return found->second.map<int>([&](Room& room){return room.roomId;});
 }
 
-bool DungeonAuthor::setupChest(const int4& coord, const DungeonMutator::ChestSpec& spec) {
-    return getRoomId(coord).map<bool>([&](const int& roomId){
-            return mutator.setupChest(roomId, spec);
-        }).orElse(false);
+bool DungeonAuthor::setupChest(const RoomRef& room, const DungeonMutator::ChestSpec& spec) {
+    return mutator.setupChest(room, spec);
 }
 
-bool DungeonAuthor::setup2x5Room(const int4& coord) {
-    return getRoomId(coord).map<bool>([&](const int& roomId){
-            return mutator.setup2x5Room(roomId);
-        }).orElse(false);
+bool DungeonAuthor::setup2x5Room(const RoomRef& room) {
+    return mutator.setup2x5Room(room);
 }
 
-bool DungeonAuthor::setup3x3Room(const int4& coord) {
-    return getRoomId(coord).map<bool>([&](const int& roomId){
-            return mutator.setup3x3Room(roomId);
-        }).orElse(false);
+bool DungeonAuthor::setup3x3Room(const RoomRef& room) {
+    return mutator.setup3x3Room(room);
 }
 
-bool DungeonAuthor::setup4x1Room(const int4& coord) {
-    return getRoomId(coord).map<bool>([&](const int& roomId){
-            return mutator.setup4x1Room(roomId);
-        }).orElse(false);
+bool DungeonAuthor::setup4x1Room(const RoomRef& room) {
+    return mutator.setup4x1Room(room);
 }
 
-bool DungeonAuthor::setupDoorway (const int4& coord, const Cardinal dir) {
-    return getRoomId(coord).map<bool>([&](const int& roomId){
-            return mutator.setupDoorway(roomId, dir);
-        }).orElse(false);
+bool DungeonAuthor::setupDoorway(const RoomRef& room, const Cardinal dir) {
+    return mutator.setupDoorway(room, dir);
 }
 
-bool DungeonAuthor::setupExitDoor (const int4& coord, const Cardinal dir) {
-    return getRoomId(coord).map<bool>([&](const int& roomId){
-            return mutator.setupExitDoor(roomId, dir);
-        }).orElse(false);
+bool DungeonAuthor::setupExitDoor(const RoomRef& room, const Cardinal dir) {
+    return mutator.setupExitDoor(room, dir);
 }
 
-bool DungeonAuthor::setupJailer (const int4& coord, const Cardinal dir, const bool isKeyed) {
-    return getRoomId(coord).map<bool>([&](const int& roomId){
-            return mutator.setupJailer(roomId, dir, isKeyed);
-        }).orElse(false);
+bool DungeonAuthor::setupJailer(const RoomRef& room, const Cardinal dir, const bool isKeyed) {
+    return mutator.setupJailer(room, dir, isKeyed);
 }
 
-bool DungeonAuthor::setupKeeper (const int4& coord, const Cardinal dir, const bool isKeyed) {
-    return getRoomId(coord).map<bool>([&](const int& roomId){
-            return mutator.setupKeeper(roomId, dir, isKeyed);
-        }).orElse(false);
+bool DungeonAuthor::setupKeeper(const RoomRef& room, const Cardinal dir, const bool isKeyed) {
+    return mutator.setupKeeper(room, dir, isKeyed);
 }
 
-bool DungeonAuthor::setupLadderUp(const int4& coord, const Cardinal dir) {
-    return getRoomId(coord).map<bool>([&](const int& roomId){
-            return mutator.setupLadderUp(roomId, dir);
-        }).orElse(false);
+bool DungeonAuthor::setupLadderUp(const RoomRef& bottomRoom, const Cardinal dir) {
+    return mutator.setupLadderUp(bottomRoom, dir);
 }
 
-bool DungeonAuthor::setupPoleUp(const int4& coord, const Cardinal dir) {
-    return getRoomId(coord).map<bool>([&](const int& roomId){
-            return mutator.setupPoleUp(roomId, dir);
-        }).orElse(false);
+bool DungeonAuthor::setupPoleUp(const RoomRef& bottomRoom, const Cardinal dir) {
+    return mutator.setupPoleUp(bottomRoom, dir);
 }
 
-bool DungeonAuthor::setupCovenantDoor (const int4& coord, const Cardinal dir) {
-    return getRoomId(coord).map<bool>([&](const int& roomId){
-            return mutator.setupCovenantDoor(roomId, dir);
-        }).orElse(false);
+bool DungeonAuthor::setupCovenantDoor(const RoomRef& room, const Cardinal dir) {
+    return mutator.setupCovenantDoor(room, dir);
 }
 
-bool DungeonAuthor::setupShifter (const int4& coord, const Cardinal dir, const bool isKeyed) {
-    return getRoomId(coord).map<bool>([&](const int& roomId){
-            return mutator.setupShifter(roomId, dir, isKeyed);
-        }).orElse(false);
+bool DungeonAuthor::setupShifter(const RoomRef& room, const Cardinal dir, const bool isKeyed) {
+    return mutator.setupShifter(room, dir, isKeyed);
 }
 
-bool DungeonAuthor::setupTimeGateRoomToFuture(const int4& coord, const bool isCubed, const bool isAwakened) {
-    return getRoomId(coord).map<bool>([&](const int& roomId){
-            return mutator.setupTimeGateRoomToFuture(roomId, isCubed, isAwakened);
-        }).orElse(false);
+bool DungeonAuthor::setupTimeGateRoomToFuture(const RoomRef& room, const bool isCubed, const bool isAwakened) {
+    return mutator.setupTimeGateRoomToFuture(room, isCubed, isAwakened);
 }
 
-bool DungeonAuthor::setupTogglerBlue (const int4& coord, const Cardinal dir) {
-    return getRoomId(coord).map<bool>([&](const int& roomId){
-            return mutator.setupTogglerBlue(roomId, dir);
-        }).orElse(false);
+bool DungeonAuthor::setupTogglerBlue(const RoomRef& room, const Cardinal dir) {
+    return mutator.setupTogglerBlue(room, dir);
 }
 
-bool DungeonAuthor::setupTogglerOrange (const int4& coord, const Cardinal dir) {
-    return getRoomId(coord).map<bool>([&](const int& roomId){
-            return mutator.setupTogglerOrange(roomId, dir);
-        }).orElse(false);
+bool DungeonAuthor::setupTogglerOrange(const RoomRef& room, const Cardinal dir) {
+    return mutator.setupTogglerOrange(room, dir);
 }
 
-bool DungeonAuthor::setupTogglerSwitch (const int4& coord, int& outCharacterId, int& outFloorId) {
-    return getRoomId(coord).map<bool>([&](const int& roomId){
-            return mutator.setupTogglerSwitch(roomId, outCharacterId, outFloorId);
-        }).orElse(false);
+bool DungeonAuthor::setupTogglerSwitch(const RoomRef& room, int& outCharacterId, int& outFloorId) {
+    return mutator.setupTogglerSwitch(room, outCharacterId, outFloorId);
 }
 
-bool DungeonAuthor::setupSacramentForgiveness (const int4& coord, int& outCharacterId, int& outFloorId) {
-    return getRoomId(coord).map<bool>([&](const int& roomId){
-            return mutator.setupSacramentForgiveness(roomId, outCharacterId, outFloorId);
-        }).orElse(false);
+bool DungeonAuthor::setupSacramentForgiveness(const RoomRef& room, int& outCharacterId, int& outFloorId) {
+    return mutator.setupSacramentForgiveness(room, outCharacterId, outFloorId);
 }
 
-bool DungeonAuthor::setupBuilderStartingRoomId(int builderIndex, const int4& coord) {
-    return getRoomId(coord).map<bool>([&](const int& roomId){
-            return mutator.setBuilderStartingRoomId(builderIndex, roomId);
-        }).orElse(false);
+bool DungeonAuthor::setupBuilderStartingRoomId(int builderIndex, const RoomRef& room) {
+    return mutator.setBuilderStartingRoomId(builderIndex, room);
 }
 
 bool DungeonAuthor::setupElevatorColumn(int elevatorRoomId, const std::vector<int>& columnRoomIds, int paidIndex) {
@@ -205,14 +170,10 @@ bool DungeonAuthor::setupVerticalWalls(std::vector<DoorEnum> row, int y, int z) 
     return true;
 }
 
-bool DungeonAuthor::setupLightningRodRoom(const int4& coord, const bool isCubed, const bool isAwakened) {
-    return getRoomId(coord).map<bool>([&](const int& roomId){
-            return mutator.setupLightningRodRoom(roomId, isCubed, isAwakened);
-        }).orElse(false);
+bool DungeonAuthor::setupLightningRodRoom(const RoomRef& room, const bool isCubed, const bool isAwakened) {
+    return mutator.setupLightningRodRoom(room, isCubed, isAwakened);
 }
 
-bool DungeonAuthor::setupPowerGeneratorRoom(const int4& coord) {
-    return getRoomId(coord).map<bool>([&](const int& roomId){
-            return mutator.setupPowerGeneratorRoom(roomId);
-        }).orElse(false);
+bool DungeonAuthor::setupPowerGeneratorRoom(const RoomRef& room) {
+    return mutator.setupPowerGeneratorRoom(room);
 }

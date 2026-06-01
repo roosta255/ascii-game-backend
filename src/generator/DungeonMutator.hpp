@@ -1,6 +1,7 @@
 #pragma once
 
 #include "DoorEnum.hpp"
+#include "int4.hpp"
 #include "ItemEnum.hpp"
 #include "LockEnum.hpp"
 #include "Maybe.hpp"
@@ -8,6 +9,8 @@
 #include "Room.hpp"
 #include "RoleEnum.hpp"
 #include "RoomEnum.hpp"
+#include <functional>
+#include <variant>
 #include <vector>
 
 class Codeset;
@@ -15,18 +18,23 @@ class Dungeon;
 class MatchController;
 
 class DungeonMutator {
+public:
+    using RoomRef = std::variant<int, int4>;
+
 private:
     Dungeon& dungeon;
     Codeset& codeset;
     MatchController& controller;
-public:
-    bool isElevatorOverride = false;
-private:
+    std::function<Maybe<int>(const int4&)> coordinateResolver;
+
     // internal functions
     Pointer<Room> getRoom(const int& roomId);
     bool setDoor(DoorEnum& source, DoorEnum next);
+    Maybe<int> resolveRoom(const RoomRef& room);
 
 public:
+    bool isElevatorOverride = false;
+
     // structs
     struct ChestSpec {
         LockEnum lock = LOCK_NIL;
@@ -43,34 +51,36 @@ public:
     // constructors
     DungeonMutator(MatchController& controller);
 
-    // functions
-    bool setDoor(const int& roomId, Cardinal dir, DoorEnum type, const Maybe<int> setRoomId = Maybe<int>::empty());
-    bool setRoom(const int& roomId, RoomEnum type);
-    bool setSharedShaftAbove(const int& roomA, Cardinal dir, DoorEnum doorA, DoorEnum doorB);
-    bool setSharedDoor(const int& roomA, Cardinal dir, DoorEnum doorA, DoorEnum doorB, const Maybe<int> setRoomId = Maybe<int>::empty());
+    void setCoordinateResolver(std::function<Maybe<int>(const int4&)> resolver);
 
-    bool setupChest(const int& roomId, const ChestSpec&);
-    bool setup2x5Room(const int& roomId);
-    bool setup3x3Room(const int& roomId);
-    bool setup4x1Room(const int& roomId);
-    bool setupDoorway(const int& roomId, Cardinal dir);
-    bool setupExitDoor(const int& roomId, Cardinal dir);
-    bool setupElevatorColumn(const int& elevatorRoomId, const Rack<ElevatorProperties>& elevatorPropertyList);
-    bool setupElevatorLevel(const int elevatorRoomId, const ElevatorProperties& connectedRoomIds, const bool isElevatorPresent, const bool isExistingHigher, const bool isExistingLower, const bool isHigherPaid = false, const bool isLowerPaid = false);
-    bool setupJailer(const int& roomId, Cardinal dir, bool isKeyed);
-    bool setupKeeper(const int& roomId, Cardinal dir, bool isKeyed);
-    bool setupLadderUp(const int& bottomRoom, Cardinal dir);
-    bool setupLightningRodRoom(const int& roomId, bool isCubed, bool isAwakened);
-    bool setupPoleUp(const int& bottomRoom, Cardinal dir);
-    bool setupPowerGeneratorRoom(const int& roomId);
-    bool setupCovenantDoor(const int& roomId, Cardinal dir);
-    bool setupShifter(const int& roomId, Cardinal dir, bool isKeyed);
-    bool setupTimeGateRoomToFuture(const int& presentRoom, bool isCubed, bool isAwakened);
-    bool setupTogglerBlue(const int& roomId, Cardinal dir);
-    bool setupTogglerOrange(const int& roomId, Cardinal dir);
-    bool setupTogglerSwitch(const int& roomId, int& outCharacterId, int& outRoomId);
-    bool setupTogglerSwitchBlue(const int& roomId, int& outCharacterId, int& outRoomId);
-    bool setupTogglerSwitchOrange(const int& roomId, int& outCharacterId, int& outRoomId);
-    bool setupSacramentForgiveness(const int& roomId, int& outCharacterId, int& outFloorId);
-    bool setBuilderStartingRoomId(int builderIndex, int roomId);
+    // functions
+    bool setDoor(const RoomRef& room, Cardinal dir, DoorEnum type, const Maybe<int> setRoomId = Maybe<int>::empty());
+    bool setRoom(const RoomRef& room, RoomEnum type);
+    bool setSharedShaftAbove(const RoomRef& roomA, Cardinal dir, DoorEnum doorA, DoorEnum doorB);
+    bool setSharedDoor(const RoomRef& roomA, Cardinal dir, DoorEnum doorA, DoorEnum doorB, const Maybe<int> setRoomId = Maybe<int>::empty());
+
+    bool setupChest(const RoomRef& room, const ChestSpec&);
+    bool setup2x5Room(const RoomRef& room);
+    bool setup3x3Room(const RoomRef& room);
+    bool setup4x1Room(const RoomRef& room);
+    bool setupDoorway(const RoomRef& room, Cardinal dir);
+    bool setupExitDoor(const RoomRef& room, Cardinal dir);
+    bool setupElevatorColumn(const RoomRef& elevatorRoom, const Rack<ElevatorProperties>& elevatorPropertyList);
+    bool setupElevatorLevel(const RoomRef& elevatorRoom, const ElevatorProperties& connectedRoomIds, const bool isElevatorPresent, const bool isExistingHigher, const bool isExistingLower, const bool isHigherPaid = false, const bool isLowerPaid = false);
+    bool setupJailer(const RoomRef& room, Cardinal dir, bool isKeyed);
+    bool setupKeeper(const RoomRef& room, Cardinal dir, bool isKeyed);
+    bool setupLadderUp(const RoomRef& bottomRoom, Cardinal dir);
+    bool setupLightningRodRoom(const RoomRef& room, bool isCubed, bool isAwakened);
+    bool setupPoleUp(const RoomRef& bottomRoom, Cardinal dir);
+    bool setupPowerGeneratorRoom(const RoomRef& room);
+    bool setupCovenantDoor(const RoomRef& room, Cardinal dir);
+    bool setupShifter(const RoomRef& room, Cardinal dir, bool isKeyed);
+    bool setupTimeGateRoomToFuture(const RoomRef& presentRoom, bool isCubed, bool isAwakened);
+    bool setupTogglerBlue(const RoomRef& room, Cardinal dir);
+    bool setupTogglerOrange(const RoomRef& room, Cardinal dir);
+    bool setupTogglerSwitch(const RoomRef& room, int& outCharacterId, int& outRoomId);
+    bool setupTogglerSwitchBlue(const RoomRef& room, int& outCharacterId, int& outRoomId);
+    bool setupTogglerSwitchOrange(const RoomRef& room, int& outCharacterId, int& outRoomId);
+    bool setupSacramentForgiveness(const RoomRef& room, int& outCharacterId, int& outFloorId);
+    bool setBuilderStartingRoomId(int builderIndex, const RoomRef& room);
 };

@@ -19,6 +19,9 @@ class MatchController;
 class iLayout;
 
 class DungeonAuthor {
+public:
+    using RoomRef = DungeonMutator::RoomRef;
+
 private:
     int4 size{1,1,1,1};
     const iLayout* layout;
@@ -33,27 +36,27 @@ public:
 
     Maybe<int> getRoomId(const int4&);
 
-    bool setupChest(const int4&, const DungeonMutator::ChestSpec&);
-    bool setup4x1Room(const int4&);
-    bool setup2x5Room(const int4&);
-    bool setup3x3Room(const int4&);
-    bool setupDoorway(const int4&, const Cardinal);
-    bool setupExitDoor(const int4&, const Cardinal);
-    bool setupJailer(const int4&, const Cardinal, const bool);
-    bool setupKeeper(const int4&, const Cardinal, const bool);
-    bool setupLadderUp(const int4&, const Cardinal);
-    bool setupLightningRodRoom(const int4&, const bool isCubed, const bool isAwakened);
-    bool setupPoleUp(const int4&, const Cardinal);
-    bool setupPowerGeneratorRoom(const int4&);
-    bool setupCovenantDoor(const int4&, const Cardinal);
-    bool setupShifter(const int4&, const Cardinal, const bool);
-    bool setupTimeGateRoomToFuture(const int4&, const bool isCubed, const bool isAwakened);
-    bool setupTogglerBlue(const int4&, const Cardinal);
-    bool setupTogglerOrange(const int4&, const Cardinal);
-    bool setupTogglerSwitch(const int4&, int& outCharacterId, int& outFloorId);
-    bool setupSacramentForgiveness(const int4&, int& outCharacterId, int& outFloorId);
+    bool setupChest(const RoomRef&, const DungeonMutator::ChestSpec&);
+    bool setup4x1Room(const RoomRef&);
+    bool setup2x5Room(const RoomRef&);
+    bool setup3x3Room(const RoomRef&);
+    bool setupDoorway(const RoomRef&, const Cardinal);
+    bool setupExitDoor(const RoomRef&, const Cardinal);
+    bool setupJailer(const RoomRef&, const Cardinal, const bool);
+    bool setupKeeper(const RoomRef&, const Cardinal, const bool);
+    bool setupLadderUp(const RoomRef&, const Cardinal);
+    bool setupLightningRodRoom(const RoomRef&, const bool isCubed, const bool isAwakened);
+    bool setupPoleUp(const RoomRef&, const Cardinal);
+    bool setupPowerGeneratorRoom(const RoomRef&);
+    bool setupCovenantDoor(const RoomRef&, const Cardinal);
+    bool setupShifter(const RoomRef&, const Cardinal, const bool);
+    bool setupTimeGateRoomToFuture(const RoomRef&, const bool isCubed, const bool isAwakened);
+    bool setupTogglerBlue(const RoomRef&, const Cardinal);
+    bool setupTogglerOrange(const RoomRef&, const Cardinal);
+    bool setupTogglerSwitch(const RoomRef&, int& outCharacterId, int& outFloorId);
+    bool setupSacramentForgiveness(const RoomRef&, int& outCharacterId, int& outFloorId);
 
-    bool setupBuilderStartingRoomId(int builderIndex, const int4&);
+    bool setupBuilderStartingRoomId(int builderIndex, const RoomRef&);
     bool setupElevatorColumn(int elevatorRoomId, const std::vector<int>& columnRoomIds, int paidIndex);
     bool setupHorizontalWalls (std::vector<DoorEnum> row, int y, int z);
     bool setupVerticalWalls (std::vector<DoorEnum> row, int y, int z);
