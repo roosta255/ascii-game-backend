@@ -6,6 +6,7 @@
 #include "KeyframeView.hpp"
 #include <nlohmann/json.hpp>
 #include <string>
+#include "TraitFlyweight.hpp"
 #include <vector>
 
 struct ItemApiView
@@ -15,17 +16,23 @@ struct ItemApiView
     int index = 0;
     bool isActionable = false;
     Array<KeyframeView, Item::MAX_KEYFRAMES> keyframes;
+    std::vector<std::string> itemAttributes;
 
     inline ItemApiView() = default;
 
     inline ItemApiView(const Item& model): type(item_to_text(model.type)), stacks(model.stacks)
     , keyframes(model.keyframes.convert<KeyframeView>())
     {
-        model.accessFlyweight([&](const ItemFlyweight& flyweight){
-            this->isActionable = flyweight.isActionable;
+        model.accessFlyweight([&](const ItemFlyweight& itemFlyweight){
+            this->isActionable = itemFlyweight.isActionable;
+            for (const auto& traitFlyweight : TraitFlyweight::getFlyweights()) {
+                if (itemFlyweight.itemAttributes[traitFlyweight.index].orElse(false)) {
+                    this->itemAttributes.push_back(traitFlyweight.name);
+                }
+            }
         });
     }
 };
 
 // Reflection-based JSON serialization
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ItemApiView, type, stacks, index, isActionable, keyframes)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ItemApiView, type, stacks, index, isActionable, keyframes, itemAttributes)
