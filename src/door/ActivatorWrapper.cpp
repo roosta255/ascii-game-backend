@@ -25,7 +25,6 @@ bool ActivatorWrapper::activate(ActivationContext& activation) const {
         auto& character = activation.character;
         auto& codeset = req.codeset;
         auto& controller = req.controller;
-        auto& inventory = req.player.inventory;
 
         const auto computed = controller.getTraitsComputed(character.characterId).final;
 
@@ -58,7 +57,7 @@ bool ActivatorWrapper::activate(ActivationContext& activation) const {
                         matched = !(m.traits - fw.itemAttributes).isAny();
                     if (matched && m.items[0] != ITEM_NIL) {
                         bool found = false;
-                        for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && m.items[i] != ITEM_NIL; i++) {
+                        for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && m.items[i] != ITEM_UNALLOCATED; i++) {
                             if (item.type == m.items[i]) { found = true; break; }
                         }
                         matched = found;
@@ -107,7 +106,7 @@ bool ActivatorWrapper::activate(ActivationContext& activation) const {
                             matched = !(m.traits - fw.itemAttributes).isAny();
                         if (matched && m.items[0] != ITEM_NIL) {
                             bool found = false;
-                            for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && m.items[i] != ITEM_NIL; i++) {
+                            for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && m.items[i] != ITEM_UNALLOCATED; i++) {
                                 if (item.type == m.items[i]) { found = true; break; }
                             }
                             matched = found;
@@ -360,8 +359,9 @@ bool ActivatorWrapper::activate(ActivationContext& activation) const {
             });
         }
 
+        auto inventory = req.player.getInventory(req.match.dungeon);
         for (int i = 0; i < WrapperConfig::MAX_COSTS; i++) {
-            if (_config.costs.item[i] == ITEM_NIL) break;
+            if (_config.costs.item[i] == ITEM_UNALLOCATED) break;
             if (codeset.addFailure(!controller.takeInventoryItem(inventory, _config.costs.item[i], true), CODE_WRAPPER_INSUFFICIENT_ITEM_COST)) {
                 controller.addRequestLoggedEvent(activation, LoggedEvent{
                     EVENT_MISSING_ITEM,
@@ -375,7 +375,7 @@ bool ActivatorWrapper::activate(ActivationContext& activation) const {
         }
 
         for (int i = 0; i < WrapperConfig::MAX_COSTS; i++) {
-            if (_config.costs.item[i] == ITEM_NIL) break;
+            if (_config.costs.item[i] == ITEM_UNALLOCATED) break;
             if (codeset.addFailure(!controller.takeInventoryItem(inventory, _config.costs.item[i], req.time, activation.room.roomId, req.isSkippingAnimations), CODE_WRAPPER_FAILED_TO_TAKE_ITEM)) return;
         }
 

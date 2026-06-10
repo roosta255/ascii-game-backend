@@ -1,6 +1,7 @@
 // ITEM_DECL(name_, stacks_, activator_, traits_)
 // ITEM_CARRY_MODIFIER_DECL({{req}, {rest}, {set}, {clr}})
 
+ITEM_DECL(UNALLOCATED,   0, iActivator, ({ TRAIT_NIL }))  // slot not owned by any character
 ITEM_DECL(NIL,           0, iActivator, ({ TRAIT_NIL }))
 ITEM_DECL(KEY,           9, iActivator, ({ TRAIT_ITEM_TRANSFERABLE, TRAIT_ITEM_KEY }))
 ITEM_DECL(CUBE_AWAKENED, 1, iActivator, ({ TRAIT_ITEM_TRANSFERABLE, TRAIT_ITEM_CUBE }))
@@ -11,3 +12,5 @@ ITEM_DECL(CONTAINED,      1, iActivator, ({ TRAIT_NIL }))  // stacks field store
 ITEM_DECL(SWORD,         1, iActivator, ({ TRAIT_ITEM_TRANSFERABLE, TRAIT_ITEM_UTILIZED }))
     ITEM_DAMAGE_TYPES_DECL( ({ DAMAGE_TYPE_SLASH, DAMAGE_TYPE_PIERCE }) )
 ITEM_DECL(ARMOR,         1, iActivator, ({ TRAIT_ITEM_TRANSFERABLE, TRAIT_ITEM_ARMOR }))
+ITEM_DECL(COIN,          9, iActivator, ({ TRAIT_ITEM_TRANSFERABLE, TRAIT_PICKPOCKETABLE }))
+ITEM_DECL(FOOD,          9, iActivator, ({ TRAIT_ITEM_TRANSFERABLE, TRAIT_PICKPOCKETABLE }))

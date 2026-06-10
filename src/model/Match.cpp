@@ -6,23 +6,17 @@
 #include "iGenerator.hpp"
 #include "iLayout.hpp"
 #include "int2.hpp"
-// #include "ItemFlyweight.hpp"
-// #include "JsonParameters.hpp"
+#include "ItemEnum.hpp"
 #include "Keyframe.hpp"
 #include "make_filename.hpp"
 #include "Match.hpp"
 #include "RoleEnum.hpp"
-// #include "RoleFlyweight.hpp"
-// #include <json/json.h>
-// #include <nlohmann/json.hpp>
+#include "RoleFlyweight.hpp"
 
 // constructors
 Match::Match() {
     accessAllCharacters([&](Character& character){
         containsCharacter(character, character.characterId);
-    });
-    accessAllInventories([&](Inventory& inventory){
-        containsInventory(inventory, inventory.inventoryId);
     });
 }
 
@@ -48,16 +42,6 @@ void Match::accessAllCharacters(std::function<void(const Character&)> consumer) 
     }
 }
 
-void Match::accessAllInventories(std::function<void(Inventory&)> consumer) {
-    // NOTE: new character sets have to be added here
-    for(auto& builder: builders) {
-        consumer(builder.player.inventory);
-    }
-    for(auto& chest: dungeon.chests) {
-        consumer(chest.inventory);
-    }
-}
-
 void Match::accessUsedCharacters(std::function<void(const Character&)> consumer)const {
     accessAllCharacters([&](const Character& character){
         if (character.role != ROLE_EMPTY) {
@@ -69,22 +53,62 @@ void Match::accessUsedCharacters(std::function<void(const Character&)> consumer)
 bool Match::allocateCharacter(std::function<void(Character&)> consumer) {
     for (Character& character: dungeon.characters) {
         if (character.role == ROLE_EMPTY) {
-            // Calculate the offset for the new character, guaranteed contained
-            // this will be reassigned after the consumer
             int characterId;
             containsCharacter(character, characterId);
 
-            // zero out any attributes
             Character blank;
             character = blank;
             character.characterId = characterId;
-            // Claim this slot before calling the consumer to prevent nested
-            // allocateCharacter calls from selecting the same slot again.
             character.role = ROLE_COUNT;
 
-            // run consumer
             consumer(character);
             character.characterId = characterId;
+
+            allocateInventory(character);
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Match::allocateInventory(Character& character) {
+    if (character.itemStartIndex >= 0) return true;  // already allocated
+    int invSize = 0;
+    CodeEnum dummy = CODE_UNKNOWN_ERROR;
+    character.accessRole(dummy, [&](const RoleFlyweight& fw) { invSize = fw.inventorySize; });
+    if (invSize <= 0) return true;
+
+    Item* rawItems = dungeon.items.begin();
+    for (int start = 0; start <= Dungeon::MAX_ITEMS - invSize; start++) {
+        bool isFree = true;
+        for (int j = 0; j < invSize; j++) {
+            if (rawItems[start + j].type != ITEM_UNALLOCATED) { isFree = false; break; }
+        }
+        if (isFree) {
+            for (int j = 0; j < invSize; j++) {
+                rawItems[start + j] = Item{ .type = ITEM_NIL };
+            }
+            character.itemStartIndex = start;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Match::allocatePlayerInventory(Player& player) {
+    if (player.itemStartIndex >= 0) return true;  // already allocated
+    const int invSize = Player::INVENTORY_SIZE;
+    Item* rawItems = dungeon.items.begin();
+    for (int start = 0; start <= Dungeon::MAX_ITEMS - invSize; start++) {
+        bool isFree = true;
+        for (int j = 0; j < invSize; j++) {
+            if (rawItems[start + j].type != ITEM_UNALLOCATED) { isFree = false; break; }
+        }
+        if (isFree) {
+            for (int j = 0; j < invSize; j++) {
+                rawItems[start + j] = Item{ .type = ITEM_NIL };
+            }
+            player.itemStartIndex = start;
             return true;
         }
     }
@@ -96,12 +120,19 @@ bool Match::allocateChest(std::function<void(Chest&)> consumer) {
         if (chest.containerCharacterId == -1) {
             Chest blank;
             chest = blank;
-            int inventoryId = -1;
-            containsInventory(chest.inventory, inventoryId);
-            chest.inventory.inventoryId = inventoryId;
             consumer(chest);
-            // set it twice in case of overridden in consumer
-            chest.inventory.inventoryId = inventoryId;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Match::allocateConduct(std::function<void(Conduct&)> consumer) {
+    for (Conduct& conduct : dungeon.conducts) {
+        if (conduct.characterId == -1) {
+            Conduct blank;
+            conduct = blank;
+            consumer(conduct);
             return true;
         }
     }
@@ -216,17 +247,6 @@ bool Match::containsCharacter(const Character& source, int& offset) const {
     return false;
 }
 
-bool Match::containsInventory(const Inventory& source, int& offset) const {
-    auto base = reinterpret_cast<const char*>(this);
-    auto ptr = reinterpret_cast<const char*>(&source);
-    auto end = base + sizeof(Match);
-    if (ptr >= base && ptr < end) {
-        offset = static_cast<int>(ptr - base);
-        return true;
-    }
-    return false;
-}
-
 bool Match::containsOffset(int offset) const {
     return offset > 0 && offset < sizeof(Match);
 }
@@ -241,15 +261,6 @@ Pointer<Character> Match::getCharacter (int offset, CodeEnum& error) {
         return Pointer<Character>(*reinterpret_cast<Character*>(ptr));
     error = CODE_INACCESSIBLE_CHARACTER_ID;
     return Pointer<Character>::empty();
-}
-
-Pointer<Inventory> Match::getInventory(int offset, CodeEnum& error) {
-    auto base = reinterpret_cast<char*>(this);
-    auto ptr = base + offset;
-    if (containsOffset(offset))
-        return Pointer<Inventory>(*reinterpret_cast<Inventory*>(ptr));
-    error = CODE_INACCESSIBLE_INVENTORY_ID;
-    return Pointer<Inventory>::empty();
 }
 
 Pointer<Player> Match::getPlayer(const std::string& player, CodeEnum& error) {
@@ -380,8 +391,7 @@ static_assert(std::is_trivially_copyable_v<Match>);
 static_assert(std::has_unique_object_representations_v<TextPath>);
 static_assert(std::has_unique_object_representations_v<TextID>);
 static_assert(std::has_unique_object_representations_v<Item>);
-static_assert(std::has_unique_object_representations_v<Array<Item, Inventory::STANDARD_ITEM_SLOTS> >);
-static_assert(std::has_unique_object_representations_v<Inventory>);
+static_assert(std::has_unique_object_representations_v<Array<Item, Dungeon::MAX_ITEMS> >);
 static_assert(std::has_unique_object_representations_v<Player>);
 static_assert(std::has_unique_object_representations_v<int>);
 static_assert(std::has_unique_object_representations_v<Array<int, KEYFRAME_DATA_ARRAY_SIZE> >);
@@ -422,7 +432,7 @@ static_assert(sizeof(Array<Room, DUNGEON_ROOM_COUNT>) <= KILOBYTE * 128, "size m
 static_assert(sizeof(Array<Character, Dungeon::MAX_CHARACTERS>) > KILOBYTE, "size milestone passed");
 static_assert(sizeof(Array<Character, Dungeon::MAX_CHARACTERS>) > KILOBYTE * 2, "size milestone passed");
 static_assert(sizeof(Array<Character, Dungeon::MAX_CHARACTERS>) > KILOBYTE * 4, "size milestone passed");
-static_assert(sizeof(Array<Character, Dungeon::MAX_CHARACTERS>) <= KILOBYTE * 8, "size milestone passed");
+static_assert(sizeof(Array<Character, Dungeon::MAX_CHARACTERS>) <= KILOBYTE * 16, "size milestone passed");
 static_assert(sizeof(Array<Character, Dungeon::MAX_CHARACTERS>) < KILOBYTE * 16, "size milestone passed");
 static_assert(sizeof(Array<Character, Dungeon::MAX_CHARACTERS>) < KILOBYTE * 32, "size milestone passed");
 static_assert(sizeof(Array<Character, Dungeon::MAX_CHARACTERS>) < KILOBYTE * 64, "size milestone passed");

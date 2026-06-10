@@ -1,3 +1,4 @@
+#include "CharacterAllocSpec.hpp"
 #include "Chest.hpp"
 #include "ElevatorContent.hpp"
 #include "GeneratorElevator.hpp"
@@ -15,11 +16,20 @@ bool ElevatorContentHandcrafted::mutateMatch(Remodel& params, const Match& sourc
     Match copy = source;
     MatchController controller(copy, params.codeset);
     bool success = true;
-    success &= controller.allocateChest(GeneratorElevator::FLOOR_7_CHEST_ROOM_ID, [&](Chest& chest, Character& container, Character& critter) {
-        container.role = ROLE_CHEST;
-        critter.role = ROLE_SPIDER;
-        success &= controller.giveInventoryItem(chest.inventory, ITEM_KEY_ELEVATOR);
-    });
+    int containerId = -1;
+    success &= controller.allocate(
+        CharacterAllocSpec{
+            .role = ROLE_CHEST,
+            .chest = ChestAllocSpec{
+                .inventory = {
+                    CritterCharacterSpec{.character = CharacterAllocSpec{.role = ROLE_SPIDER}},
+                    ItemSpec{.item = ITEM_KEY_ELEVATOR}
+                }
+            }
+        },
+        AttachmentContext::floor(GeneratorElevator::FLOOR_7_CHEST_ROOM_ID),
+        containerId
+    );
     if (success) acceptance(copy);
     return success;
 }
@@ -38,11 +48,20 @@ bool ElevatorContentAtom::mutateMatch(Remodel& params, const Match& source, cons
     Match copy = source;
     MatchController controller(copy, params.codeset);
     bool success = true;
-    success &= controller.allocateChest(roomId, [&](Chest& chest, Character& container, Character& critter) {
-        container.role = ROLE_CHEST;
-        critter.role = ROLE_SPIDER;
-        success &= controller.giveInventoryItem(chest.inventory, ITEM_KEY_ELEVATOR);
-    });
+    int containerId2 = -1;
+    success &= controller.allocate(
+        CharacterAllocSpec{
+            .role = ROLE_CHEST,
+            .chest = ChestAllocSpec{
+                .inventory = {
+                    CritterCharacterSpec{.character = CharacterAllocSpec{.role = ROLE_SPIDER}},
+                    ItemSpec{.item = ITEM_KEY_ELEVATOR}
+                }
+            }
+        },
+        AttachmentContext::floor(roomId),
+        containerId2
+    );
     if (success) acceptance(copy);
     return success;
 }

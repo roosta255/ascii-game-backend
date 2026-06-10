@@ -8,8 +8,7 @@ struct Preactivation {
     CharacterAction action;
     std::string playerId;
     TargetPreactivationEntity targetPreactivationEntity;
-    Maybe<int> sourceItemIndex;
-    Maybe<int> sourceInventoryId;
+    Maybe<int> sourceItemIndex;  // absolute index into dungeon.items[]
     bool isSkippingAnimations = false;
     bool isSortingState = false;
     bool isSkippingLogging = false;

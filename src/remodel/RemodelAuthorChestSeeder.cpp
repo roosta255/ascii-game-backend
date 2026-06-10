@@ -1,4 +1,4 @@
-#include "DungeonAuthor.hpp"
+#include "DungeonMutator.hpp"
 #include "Match.hpp"
 #include "Remodel.hpp"
 #include "RemodelAuthorChestSeeder.hpp"
@@ -9,7 +9,7 @@ bool RemodelAuthorChestSeeder::mutateMatch(
     const PathfindingCounter&,
     std::function<bool(const Match&)> acceptance) const
 {
-    return withAuthor(dst, source, [&](DungeonAuthor& author) {
-        return author.setupChest(chest.room, {chest.lock, chest.critterRole, chest.containedRole, chest.items});
+    return withAuthor(dst, source, [&](DungeonMutator& m) {
+        return m.setupChest(chest.room, {chest.lock, chest.critterRole, chest.containedRole, chest.items});
     }, acceptance);
 }

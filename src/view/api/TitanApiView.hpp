@@ -13,7 +13,7 @@ struct TitanApiView
     inline TitanApiView() = default;
  
     inline TitanApiView(const Titan& model, const MatchApiParameters& params)
-    : player(model.player, params) 
+    : player(model.player, params, 10)
     {}
 };
 

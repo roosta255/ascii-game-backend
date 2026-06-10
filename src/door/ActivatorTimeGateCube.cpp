@@ -2,7 +2,6 @@
 #include "Room.hpp"
 #include "Character.hpp"
 #include "Codeset.hpp"
-#include "Inventory.hpp"
 #include "Keyframe.hpp"
 #include "Match.hpp"
 #include "MatchController.hpp"
@@ -15,7 +14,7 @@ bool ActivatorTimeGateCube::activate(ActivationContext& activation) const {
         MatchController& controller = req.controller;
         Codeset& codeset = req.codeset;
         Character& subject = activation.character;
-        auto& inventory = req.player.inventory;
+        auto inventory = req.player.getInventory(req.match.dungeon);
 
         if (!controller.isCharacterKeyerValidation(subject)) {
             controller.addRequestLoggedEvent(activation, LoggedEvent{

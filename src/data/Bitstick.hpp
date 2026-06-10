@@ -166,6 +166,13 @@ bool inline contains(const Bitstick& rhs) const {
     return true;
 }
 
+bool inline shares(const Bitstick& rhs) const {
+    for(int i = 0; i < WordCount; i++)
+        if((_state[i] & rhs._state[i]) != 0)
+            return true;
+    return false;
+}
+
 bool constexpr operator==
 ( const Bitstick& rhs
 ) const

@@ -11,8 +11,6 @@
 #include "RequestContext.hpp"
 #include "TargetEntity.hpp"
 
-class Inventory;
-
 struct ActivationContext {
     Codeset& codeset;
     Pointer<RequestContext> request;
@@ -21,15 +19,9 @@ struct ActivationContext {
     Character& character;
 
     Pointer<Item> sourceItem;
-
-    Pointer<Inventory> sourceInventory;
-    Pointer<Inventory> targetInventory;
+    Maybe<int> targetItemIndex;  // absolute index into dungeon.items[], for actions like LOOT_CHEST
 
     TargetEntity targetEntity;
-
-    // Item index within targetInventory — used by activators that target
-    // a specific item slot inside a container (e.g. ActivatorLootChest).
-    Maybe<int> targetItemSlot;
 
     Maybe<Cardinal> direction;
 
@@ -39,7 +31,6 @@ struct ActivationContext {
     Timestamp time;
 
     // Helpers to extract typed targets from targetEntity.
-    // Return an empty Pointer when targetEntity holds a different type.
     Pointer<Character> targetCharacter() const {
         auto* p = std::get_if<Pointer<Character>>(&targetEntity);
         return p ? *p : Pointer<Character>{};
@@ -62,7 +53,6 @@ struct ActivationContext {
         return Pointer<Wall>{};
     }
 
-    // Finds the chest whose containerCharacterId matches the target character.
     Pointer<Chest> targetChest() const {
         Pointer<Chest> result;
         targetCharacter().access([&](Character& target) {
@@ -74,7 +64,6 @@ struct ActivationContext {
         return result;
     }
 
-    // Finds the chest whose containerCharacterId matches the source character.
     Pointer<Chest> sourceChest() const {
         Pointer<Chest> result;
         request.access([&](RequestContext& req) {

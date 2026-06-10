@@ -7,3 +7,4 @@
 using TraitBits = Bitstick<(size_t)TRAIT_COUNT>;
 
 TraitBits makeTraitBits(std::initializer_list<TraitEnum> setList);
+TraitBits makeTraitBits();

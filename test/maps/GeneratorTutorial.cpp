@@ -231,7 +231,7 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
         .data = Array<int, KEYFRAME_DATA_ARRAY_SIZE>({2, 1})});
     {
         Maybe<Keyframe> fallKeyframe = Maybe<Keyframe>::empty();
-        controller.inventoryPtr->accessItem(ITEM_KEY, [&](const Item& item) {
+        controller.playerPtr->getInventory(controller.match.dungeon).accessItem(ITEM_KEY, [&](const Item& item) {
             fallKeyframe = queryKeyframes(item.keyframes, ANIMATION_FALL);
         });
         REQUIRE(fallKeyframe.orElse(Keyframe{}).removeOffset() ==
@@ -293,7 +293,7 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
             .data = Array<int, KEYFRAME_DATA_ARRAY_SIZE>({3, 0})});
     {
         Maybe<Keyframe> riseKeyframe = Maybe<Keyframe>::empty();
-        controller.inventoryPtr->accessItem(ITEM_KEY, [&](const Item& item) {
+        controller.playerPtr->getInventory(controller.match.dungeon).accessItem(ITEM_KEY, [&](const Item& item) {
             riseKeyframe = queryKeyframes(item.keyframes, ANIMATION_RISE);
         });
         REQUIRE(riseKeyframe.orElse(Keyframe{}).removeOffset() == Keyframe{

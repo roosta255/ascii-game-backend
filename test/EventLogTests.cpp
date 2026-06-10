@@ -2,8 +2,10 @@
 #include "ActionEnum.hpp"
 #include "ActivatorChestLockKey.hpp"
 #include "Cardinal.hpp"
+#include "Character.hpp"
 #include "Chest.hpp"
 #include "Codeset.hpp"
+#include "Inventory.hpp"
 #include "DoorEnum.hpp"
 #include "Dungeon.hpp"
 #include "EventEnum.hpp"
@@ -237,7 +239,10 @@ TEST_CASE("EventLog: LOOT_CHEST", "[eventlog]") {
 
     // Add a lootable key to the chest
     tc.match.dungeon.findChestByContainerId(containerId, tc.codeset.error).access([&](Chest& chest) {
-        chest.inventory.giveItem(ITEM_KEY, tc.codeset.error);
+        CodeEnum chErr = CODE_UNKNOWN_ERROR;
+        tc.match.getCharacter(chest.containerCharacterId, chErr).access([&](Character& containerChar) {
+            containerChar.getInventory(tc.match.dungeon).giveItem(ITEM_KEY, tc.codeset.error);
+        });
     });
     REQUIRE(tc.codeset.getErrorTable() == Codeset::getEmptyTable());
 
@@ -265,8 +270,12 @@ TEST_CASE("EventLog: CRITTER_BITE", "[eventlog]") {
     // Find a snake critter from a chest
     int critterId = -1;
     for (const Chest& chest : tc.match.dungeon.chests) {
-        chest.inventory.accessItems(ITEM_CRITTER, [&](const Item& item) {
-            critterId = item.stacks;
+        if (chest.containerCharacterId < 0) continue;
+        CodeEnum chErr = CODE_UNKNOWN_ERROR;
+        tc.match.getCharacter(chest.containerCharacterId, chErr).access([&](Character& containerChar) {
+            containerChar.getInventory(tc.match.dungeon).accessItems(ITEM_CRITTER, [&](const Item& item) {
+                critterId = item.stacks;
+            });
         });
         if (critterId != -1) break;
     }

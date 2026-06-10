@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include "AnimationEnum.hpp"
 #include "Character.hpp"
+#include "CharacterAllocSpec.hpp"
 #include "ChannelEnum.hpp"
 #include "GeneratorEnum.hpp"
 #include "Keyframe.hpp"
@@ -25,11 +26,11 @@ TEST_CASE("SACRAMENT_FORGIVENESS grants PIETY and inserts eye color keyframe", "
     REQUIRE(tc.isSuccess);
 
     // Place a SACRAMENT_FORGIVENESS character in the builder's current room
-    int sacramentId = -1, sacramentFloor = -1;
-    bool allocated = tc.controller.allocateCharacterToFloor(
-        tc.latestPosition, CHANNEL_CORPOREAL,
-        [](Character& c) { c.role = ROLE_SACRAMENT_FORGIVENESS; c.visibility = ~0x0; },
-        sacramentId, sacramentFloor
+    int sacramentId = -1;
+    bool allocated = tc.controller.allocate(
+        CharacterAllocSpec{.role = ROLE_SACRAMENT_FORGIVENESS},
+        AttachmentContext::floor(tc.latestPosition),
+        sacramentId
     );
     REQUIRE(allocated);
     REQUIRE(sacramentId != -1);
@@ -69,11 +70,11 @@ TEST_CASE("SACRAMENT_FORGIVENESS skips PIETY keyframe when animations are disabl
     tc.endTurn();
     REQUIRE(tc.isSuccess);
 
-    int sacramentId = -1, sacramentFloor = -1;
-    REQUIRE(tc.controller.allocateCharacterToFloor(
-        tc.latestPosition, CHANNEL_CORPOREAL,
-        [](Character& c) { c.role = ROLE_SACRAMENT_FORGIVENESS; c.visibility = ~0x0; },
-        sacramentId, sacramentFloor
+    int sacramentId = -1;
+    REQUIRE(tc.controller.allocate(
+        CharacterAllocSpec{.role = ROLE_SACRAMENT_FORGIVENESS},
+        AttachmentContext::floor(tc.latestPosition),
+        sacramentId
     ));
 
     Preactivation preactivation{

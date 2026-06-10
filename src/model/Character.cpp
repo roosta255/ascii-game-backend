@@ -1,5 +1,7 @@
 #include "Character.hpp"
 #include "CharacterDigest.hpp"
+#include "Dungeon.hpp"
+#include "Inventory.hpp"
 #include "JsonParameters.hpp"
 #include "Match.hpp"
 #include <json/json.h>
@@ -141,6 +143,15 @@ void Character::startTurn(Match& match)
 void Character::endTurn(Match& match)
 {
     // Currently no end-of-turn cleanup needed
+}
+
+Inventory Character::getInventory(Dungeon& dungeon) const {
+    if (itemStartIndex < 0) return Inventory(nullptr, 0);
+    int invSize = 0;
+    CodeEnum dummy = CODE_UNKNOWN_ERROR;
+    accessRole(dummy, [&](const RoleFlyweight& fw) { invSize = fw.inventorySize; });
+    if (invSize <= 0) return Inventory(nullptr, 0);
+    return Inventory(dungeon.items.begin() + itemStartIndex, invSize);
 }
 
 std::ostream& operator<<(std::ostream& os, const Character& rhs) {

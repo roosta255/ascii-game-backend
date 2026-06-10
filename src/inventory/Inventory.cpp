@@ -1,6 +1,5 @@
 #include "Inventory.hpp"
 #include "ItemFlyweight.hpp"
-#include "min.hpp"
 
 InventoryDigest Inventory::makeDigest() const
 {
@@ -11,9 +10,9 @@ InventoryDigest Inventory::makeDigest() const
         .isCubeDormant = false,
         .cubes = 0
     };
-    for(const auto& item : this->items)
-    {
-        if (digest.isEmpty && item.type != ITEM_NIL) {
+    for (int i = 0; i < size; i++) {
+        const auto& item = items[i];
+        if (digest.isEmpty && item.type != ITEM_NIL && item.type != ITEM_UNALLOCATED) {
             digest.isEmpty = false;
         }
         if (item.type == ITEM_KEY) {
@@ -36,10 +35,9 @@ InventoryDigest Inventory::makeDigest() const
 
 bool Inventory::accessItem(ItemEnum target, std::function<void(Item&)> consumer)
 {
-    for(auto& item : this->items)
-    {
-        if (target == item.type) {
-            consumer(item);
+    for (int i = 0; i < size; i++) {
+        if (target == items[i].type) {
+            consumer(items[i]);
             return true;
         }
     }
@@ -48,9 +46,25 @@ bool Inventory::accessItem(ItemEnum target, std::function<void(Item&)> consumer)
 
 bool Inventory::accessItem(ItemEnum target, std::function<void(const Item&)> consumer) const
 {
-    for(const auto& item : this->items)
-    {
-        if (target == item.type) {
+    for (int i = 0; i < size; i++) {
+        if (target == items[i].type) {
+            consumer(items[i]);
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Inventory::accessItemByTraits(TraitBits required, TraitBits restricted, std::function<void(const Item&)> consumer) const
+{
+    const auto& flyweights = ItemFlyweight::getFlyweights();
+    for (int i = 0; i < size; i++) {
+        const auto& item = items[i];
+        if (item.type == ITEM_NIL || item.stacks <= 0) continue;
+        bool isFound = flyweights.getPointer(item.type).mapConst<bool>([&](const ItemFlyweight& fw){
+            return fw.itemAttributes.contains(required) && !fw.itemAttributes.shares(restricted);
+        }).orElse(false);
+        if (isFound) {
             consumer(item);
             return true;
         }
@@ -61,10 +75,9 @@ bool Inventory::accessItem(ItemEnum target, std::function<void(const Item&)> con
 bool Inventory::accessItems(ItemEnum target, std::function<void(const Item&)> consumer) const
 {
     bool isFound = false;
-    for(const auto& item : this->items)
-    {
-        if (target == item.type) {
-            consumer(item);
+    for (int i = 0; i < size; i++) {
+        if (target == items[i].type) {
+            consumer(items[i]);
             isFound = true;
         }
     }
@@ -82,24 +95,21 @@ bool Inventory::giveItem(ItemEnum type, CodeEnum& result, const bool isDryRun)
         result = CODE_PUSHED_ITEM_WITH_INVALID_TYPE;
         return false;
     }
-
     if (capacity == 0) {
         result = CODE_PUSHED_ITEM_WITH_0_CAPACITY_TYPE;
         return false;
     }
 
-    for(auto& item : this->items)
-    {
+    for (int i = 0; i < size; i++) {
+        auto& item = items[i];
         if (type == item.type && item.stacks < capacity) {
-            if (!isDryRun) {
-                item.stacks += 1;
-            }
+            if (!isDryRun) item.stacks += 1;
             return true;
         }
     }
 
-    for(auto& item : this->items)
-    {
+    for (int i = 0; i < size; i++) {
+        auto& item = items[i];
         if (item.type == ITEM_NIL) {
             if (!isDryRun) {
                 item.type = type;
@@ -135,20 +145,19 @@ bool Inventory::takeItem(ItemEnum type, CodeEnum& result, const bool isDryRun)
         result = CODE_TAKEN_ITEM_WITH_INVALID_TYPE;
         return false;
     }
-
     if (capacity == 0) {
         result = CODE_TAKEN_ITEM_WITH_0_CAPACITY_TYPE;
         return false;
     }
 
-    for(auto& item : this->items)
-    {
+    for (int i = 0; i < size; i++) {
+        auto& item = items[i];
         if (type == item.type) {
             if (!isDryRun) {
                 if (item.stacks > 1) {
                     item.stacks -= 1;
                 } else {
-                    item = Item();
+                    item = Item{ .type = ITEM_NIL };
                 }
             }
             return true;
@@ -179,7 +188,8 @@ bool Inventory::processDelta(ItemEnum type, const bool delta, CodeEnum& result, 
 }
 
 bool Inventory::accessItem(int index, CodeEnum& result, std::function<void(Item&)> consumer) {
-    if (this->items.access(index, consumer)) {
+    if (index >= 0 && index < size) {
+        consumer(items[index]);
         return true;
     }
     result = CODE_INVENTORY_ITEM_INDEX_IS_INNACCESSIBLE;

@@ -2,7 +2,6 @@
 #include "Character.hpp"
 #include "Codeset.hpp"
 #include "DoorEnum.hpp"
-#include "Inventory.hpp"
 #include "Keyframe.hpp"
 #include "Match.hpp"
 #include "MatchController.hpp"
@@ -15,7 +14,7 @@ bool ActivatorLightningRod::activate(ActivationContext& activation) const {
         auto& controller = req.controller;
         auto& codeset = req.codeset;
         auto& subject = activation.character;
-        auto& inventory = req.player.inventory;
+        auto inventory = req.player.getInventory(req.match.dungeon);
         auto& room = activation.room;
 
         if (!req.controller.isCharacterKeyerValidation(subject)) {

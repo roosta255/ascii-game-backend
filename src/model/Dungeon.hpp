@@ -6,9 +6,11 @@
 #include "Array.hpp"
 #include "Chest.hpp"
 #include "CodeEnum.hpp"
+#include "Conduct.hpp"
 #include "DUNGEON_ROOM_COUNT.hpp"
 #include "HASH_MACRO_DECL.hpp"
 #include "int4.hpp"
+#include "Item.hpp"
 #include "Room.hpp"
 #include "Character.hpp"
 #include "Pointer.hpp"
@@ -28,10 +30,14 @@ class Match;
 struct Dungeon {
     static constexpr auto MAX_CHARACTERS = 32;
     static constexpr auto MAX_CHESTS = 8;
+    static constexpr auto MAX_CONDUCTS = 16;
+    static constexpr auto MAX_ITEMS = 128;
 
     Array<Room, DUNGEON_ROOM_COUNT> rooms;
     Array<Character, MAX_CHARACTERS> characters;
     Array<Chest, MAX_CHESTS> chests;
+    Array<Conduct, MAX_CONDUCTS> conducts;
+    Array<Item, MAX_ITEMS> items;
     int layout = 0;
     int startingRoomId = 0;
     int32_t isBlueOpen = false;  // When true, blue doors are open and orange doors are closed

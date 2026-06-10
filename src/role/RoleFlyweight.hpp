@@ -3,6 +3,8 @@
 #include <string>
 
 #include "Array.hpp"
+#include "BehaviorEnum.hpp"
+#include "ConductEnum.hpp"
 #include "DamageTypeBits.hpp"
 #include "Maybe.hpp"
 #include "Pointer.hpp"
@@ -21,11 +23,13 @@ struct RoleFlyweight {
     int feats = 0;
     int actions = 0;
     int moves = 0;
+    int inventorySize = 0;
     bool isActionable = false;
     bool isMovable = false;
     int attributes = 0;
     const char* name;
     TraitBits traitsSourced;
+    Array<BehaviorEnum, CONDUCT_COUNT> defaultConductStates;
     Maybe<TraitModifier> biteTraitModifier;
     DamageTypeBits damageTypes;
 

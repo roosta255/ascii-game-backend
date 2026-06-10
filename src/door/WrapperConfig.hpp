@@ -23,8 +23,8 @@ struct WrapperConfig {
                                             DOOR_COUNT, DOOR_COUNT, DOOR_COUNT, DOOR_COUNT };
         RoleEnum  roles[MAX_MATCH_LIST] = { ROLE_COUNT, ROLE_COUNT, ROLE_COUNT, ROLE_COUNT,
                                             ROLE_COUNT, ROLE_COUNT, ROLE_COUNT, ROLE_COUNT };
-        ItemEnum  items[MAX_MATCH_LIST] = { ITEM_NIL, ITEM_NIL, ITEM_NIL, ITEM_NIL,
-                                            ITEM_NIL, ITEM_NIL, ITEM_NIL, ITEM_NIL };
+        ItemEnum  items[MAX_MATCH_LIST] = { ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED,
+                                            ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED };
         // Chest lock match: all bits must be present in the target chest's lock's lockAttributes.
         TraitBits locks = {};
 
@@ -32,7 +32,7 @@ struct WrapperConfig {
             return traits.isAny()
                 || doors[0] != DOOR_COUNT
                 || roles[0] != ROLE_COUNT
-                || items[0] != ITEM_NIL
+                || items[0] != ITEM_UNALLOCATED
                 || locks.isAny();
         }
     };
@@ -55,7 +55,7 @@ struct WrapperConfig {
     };
 
     struct Costs {
-        ItemEnum item[MAX_COSTS] = { ITEM_NIL, ITEM_NIL };
+        ItemEnum item[MAX_COSTS] = { ITEM_UNALLOCATED, ITEM_UNALLOCATED };
         int action = 0;
         int move = 0;
     };
@@ -83,7 +83,7 @@ struct WrapperConfig {
             && !conditions.tool.restricted.isAny()
             && !conditions.target.required.isAny()
             && !conditions.target.restricted.isAny()
-            && costs.item[0] == ITEM_NIL
+            && costs.item[0] == ITEM_UNALLOCATED
             && costs.move == 0
             && costs.action == 0;
     }

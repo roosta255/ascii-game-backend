@@ -8,6 +8,7 @@
 #include "Dungeon.hpp"
 #include "Inventory.hpp"
 #include "InventoryDigest.hpp"
+#include "Player.hpp"
 #include "Match.hpp"
 #include "MatchApiParameters.hpp"
 #include "MatchApiView.hpp"
@@ -25,7 +26,8 @@ TestController::TestController(const GeneratorEnum& generator): controller(match
     match.generator = generator;
     match.builders.access(BUILDER_INDEX, [&](Builder& builder) {
         match.containsCharacter(builder.character, builderOffset);
-        inventoryPtr = &builder.player.inventory;
+        match.allocatePlayerInventory(builder.player);
+        playerPtr = &builder.player;
         builderCharacterPtr = &builder.character;
     });
 }
@@ -82,10 +84,14 @@ void TestController::activateContainedCharacter(LockEnum lockType, RoleEnum role
             return c.characterId == chest.containerCharacterId && c.location.roomId == latestPosition;
         });
         if (containerFound == -1) continue;
-        chest.inventory.accessItems(ITEM_CONTAINED, [&](const Item& item) {
-            if (containedCharacterId != -1) return;
-            match.findCharacter(containedCharacterId, [&](const Character& c) {
-                return c.characterId == item.stacks && c.role == role;
+        CodeEnum chErr = CODE_UNKNOWN_ERROR;
+        match.getCharacter(chest.containerCharacterId, chErr).access([&](Character& containerChar) {
+            auto inv = containerChar.getInventory(match.dungeon);
+            inv.accessItems(ITEM_CONTAINED, [&](const Item& item) {
+                if (containedCharacterId != -1) return;
+                match.findCharacter(containedCharacterId, [&](const Character& c) {
+                    return c.characterId == item.stacks && c.role == role;
+                });
             });
         });
         if (containedCharacterId != -1) break;
@@ -182,7 +188,8 @@ void TestController::generate(int seed) {
 }
 
 void TestController::giveItem(ItemEnum type) {
-    isSuccess = inventoryPtr->giveItem(type, codeset.error);
+    auto inv = playerPtr->getInventory(match.dungeon);
+    isSuccess = inv.giveItem(type, codeset.error);
     updateInventory();
 }
 
@@ -204,18 +211,15 @@ void TestController::lootInventory(int containerCharacterId, const ItemEnum& tar
         .isSkippingAnimations = isSkippingAnimations,
         .isSkippingLogging = isSkippingLogging
     };
-    match.dungeon.findChestByContainerId(containerCharacterId, codeset.error).access([&](Chest& chest) {
-        int targetInventoryId = -1;
-        if (match.containsInventory(chest.inventory, targetInventoryId)) {
-            preactivation.action.targetInventoryIndex = targetInventoryId;
-        }
-        chest.inventory.accessItem(targetItemType, [&](const Item& item){
-            // item.type is correctly the ITEM_KEY_ELEVATOR
-            int targetItemIndex = -1;
-            if (chest.inventory.items.containsAddress(item, targetItemIndex)) {
-                preactivation.action.targetItemIndex = targetItemIndex;
+    CodeEnum chErr = CODE_UNKNOWN_ERROR;
+    match.getCharacter(containerCharacterId, chErr).access([&](Character& containerChar) {
+        auto inv = containerChar.getInventory(match.dungeon);
+        for (int i = 0; i < inv.size; i++) {
+            if (inv.items[i].type == targetItemType) {
+                preactivation.action.targetItemIndex = containerChar.itemStartIndex + i;
+                break;
             }
-        });
+        }
     });
     isSuccess = controller.activate(preactivation);
     updateInventory();
@@ -275,16 +279,15 @@ void TestController::updateEverything() {
 }
 
 void TestController::updateInventory(){
-    inventory = inventoryPtr->makeDigest();
+    if (playerPtr) {
+        auto inv = playerPtr->getInventory(match.dungeon);
+        inventory = inv.makeDigest();
+    }
 }
 
 Match TestController::saveAndLoadMatch() {
     nlohmann::json j = MatchStoreView(match);
-    Match loaded = (Match)j.get<MatchStoreView>();
-    loaded.accessAllInventories([&](Inventory& inventory) {
-        loaded.containsInventory(inventory, inventory.inventoryId);
-    });
-    return loaded;
+    return (Match)j.get<MatchStoreView>();
 }
 
 MatchApiView TestController::getMatchApiView() {

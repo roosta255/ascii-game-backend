@@ -3,9 +3,10 @@
 #include "AtomPlacement.hpp"
 #include "Cardinal.hpp"
 #include "ChannelEnum.hpp"
+#include "CharacterAllocSpec.hpp"
 #include "Chest.hpp"
 #include "Codeset.hpp"
-#include "DungeonAuthor.hpp"
+#include "DungeonMutator.hpp"
 #include "GeneratorAtom.hpp"
 #include "GraphPathEmbedder.hpp"
 #include "iLayout.hpp"
@@ -58,7 +59,7 @@ static bool compileAtomIntoPlacement(
     const Atom&          atom,
     const AtomPlacement& p,
     const LayoutGrid&    grid,
-    DungeonAuthor&       author,
+    DungeonMutator&       author,
     MatchController&     controller,
     Codeset&             codeset)
 {
@@ -85,11 +86,20 @@ static bool compileAtomIntoPlacement(
     for (int n = 0; n < 4; ++n) {
         if (atom.nodeHasKeyChest[n]) {
             int roomId = p.roomIds[n];
-            success &= controller.allocateChest(roomId, [&](Chest& chest, Character& container, Character& critter){
-                container.role = ROLE_CHEST;
-                critter.role   = ROLE_CAT;
-                chest.inventory.giveItem(ITEM_KEY, codeset.error);
-            });
+            int containerId = -1;
+            success &= controller.allocate(
+                CharacterAllocSpec{
+                    .role = ROLE_CHEST,
+                    .chest = ChestAllocSpec{
+                        .inventory = {
+                            CritterCharacterSpec{.character = CharacterAllocSpec{.role = ROLE_CAT}},
+                            ItemSpec{.item = ITEM_KEY}
+                        }
+                    }
+                },
+                AttachmentContext::floor(roomId),
+                containerId
+            );
         }
         if (atom.nodeHasToggler[n]) {
             int outCharId = -1, outFloorId = -1;
@@ -113,6 +123,8 @@ bool GeneratorAtom::generate(int seed, Match& dst, Codeset& codeset) const {
     int builderId = -1, floorId = 0;
     dst.builders.access(0, [&](Builder& builder){
         builder.character.role = ROLE_BUILDER;
+        dst.allocatePlayerInventory(builder.player);
+        builder.character.itemStartIndex = builder.player.itemStartIndex;
         if (dst.containsCharacter(builder.character, builderId)) {
             if (controller.findFreeFloor(START_ROOM, CHANNEL_CORPOREAL, floorId))
                 controller.assignCharacterToFloor(builderId, START_ROOM, CHANNEL_CORPOREAL, floorId);
@@ -123,7 +135,7 @@ bool GeneratorAtom::generate(int seed, Match& dst, Codeset& codeset) const {
     LayoutFlyweight::getFlyweights().accessConst(dst.dungeon.layout, [&](const LayoutFlyweight& fw){
         fw.layout.accessConst([&](const iLayout& layoutIntf){
             layoutIntf.setupAdjacencyPointers(dst.dungeon.rooms);
-            DungeonAuthor author(controller, layoutIntf);
+            DungeonMutator author(controller, layoutIntf);
 
             const auto* grid = dynamic_cast<const LayoutGrid*>(&layoutIntf);
             if (!grid) { success = false; return; }

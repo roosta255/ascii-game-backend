@@ -24,7 +24,7 @@ struct DungeonApiView
     inline DungeonApiView(const Dungeon& model, const MatchApiParameters& params)
     : isBlueOpen(model.isBlueOpen)
     , characters(model.characters.transform([&](const Character& character){return CharacterApiView(character, params);}))
-    , chests(model.chests.transform([&](const Chest& chest){return ChestApiView(chest);}))
+    , chests(model.chests.transform([&](const Chest& chest){return ChestApiView(chest, model);}))
     , rooms(model.rooms.transform([&](const Room& room){return RoomApiView(room, params);}))
     {
         LayoutFlyweight::getFlyweights().accessConst(model.layout, [&](const LayoutFlyweight& flyweight){

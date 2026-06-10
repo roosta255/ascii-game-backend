@@ -1,4 +1,4 @@
-#include "DungeonAuthor.hpp"
+#include "DungeonMutator.hpp"
 #include "Match.hpp"
 #include "Remodel.hpp"
 #include "RemodelAuthorSetBuilderStartingRoomId.hpp"
@@ -9,7 +9,7 @@ bool RemodelAuthorSetBuilderStartingRoomId::mutateMatch(
     const PathfindingCounter&,
     std::function<bool(const Match&)> acceptance) const
 {
-    return withAuthor(dst, source, [&](DungeonAuthor& author) {
-        return author.setupBuilderStartingRoomId(builderIndex, coords);
+    return withAuthor(dst, source, [&](DungeonMutator& m) {
+        return m.setBuilderStartingRoomId(builderIndex, coords);
     }, acceptance);
 }

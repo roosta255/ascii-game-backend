@@ -1,21 +1,42 @@
 #include "ActivatorElevator.hpp"
+#include "build_room_map.hpp"
+#include "Cardinal.hpp"
 #include "Chest.hpp"
 #include "ActivatorLightningRod.hpp"
 #include "ActivatorTimeGate.hpp"
 #include "Character.hpp"
+#include "CharacterAllocSpec.hpp"
 #include "Codeset.hpp"
 #include "DoorEnum.hpp"
 #include "Dungeon.hpp"
 #include "DungeonMutator.hpp"
+#include "iLayout.hpp"
 #include "Match.hpp"
 #include "MatchController.hpp"
+#include "RoleFlyweight.hpp"
 #include "RoleEnum.hpp"
 
 DungeonMutator::DungeonMutator(MatchController& controller)
     : dungeon(controller.match.dungeon), codeset(controller.codeset), controller(controller) {}
 
+DungeonMutator::DungeonMutator(MatchController& controller, const iLayout& layoutIn)
+    : dungeon(controller.match.dungeon), codeset(controller.codeset), controller(controller), layout(&layoutIn)
+{
+    size = build_room_map(dungeon.rooms, layoutIn, mapping);
+    coordinateResolver = [this](const int4& c){ return this->getRoomId(c); };
+}
+
 void DungeonMutator::setCoordinateResolver(std::function<Maybe<int>(const int4&)> resolver) {
     coordinateResolver = std::move(resolver);
+}
+
+Maybe<int> DungeonMutator::getRoomId(const int4& coord) {
+    auto found = mapping.find(coord);
+    if (found == mapping.end()) {
+        codeset.addError(CODE_DUNGEON_AUTHOR_FAILED_MAP_COORDINATE);
+        return Maybe<int>::empty();
+    }
+    return found->second.map<int>([&](Room& room){ return room.roomId; });
 }
 
 Maybe<int> DungeonMutator::resolveRoom(const RoomRef& room) {
@@ -146,48 +167,23 @@ bool DungeonMutator::setupExitDoor (const RoomRef& room, const Cardinal dir) {
 
 bool DungeonMutator::setupChest(const RoomRef& room, const ChestSpec& spec) {
     return resolveRoom(room).map<bool>([&](const int& roomId) {
-        bool success = true;
-        const bool hasCritter = spec.critterRole != ROLE_EMPTY;
-        const bool hasContained = spec.containedRole.isPresent();
+        ChestAllocSpec chestAlloc;
+        chestAlloc.lock = spec.lock;
 
-        if (hasCritter && hasContained) {
-            success = controller.allocateChest(roomId, [&](Chest& chest, Character& container, Character& critter, Character& contained) {
-                chest.lock = spec.lock;
-                container.role = ROLE_CHEST;
-                critter.role = spec.critterRole;
-                contained.role = spec.containedRole.orElse(ROLE_EMPTY);
-                for (ItemEnum item : spec.items) {
-                    success &= controller.giveInventoryItem(chest.inventory, item);
-                }
-            });
-        } else if (hasCritter) {
-            success = controller.allocateChest(roomId, [&](Chest& chest, Character& container, Character& critter) {
-                chest.lock = spec.lock;
-                container.role = ROLE_CHEST;
-                critter.role = spec.critterRole;
-                for (ItemEnum item : spec.items) {
-                    success &= controller.giveInventoryItem(chest.inventory, item);
-                }
-            });
-        } else if (hasContained) {
-            success = controller.allocateChestWithContained(roomId, [&](Chest& chest, Character& container, Character& contained) {
-                chest.lock = spec.lock;
-                container.role = ROLE_CHEST;
-                contained.role = spec.containedRole.orElse(ROLE_EMPTY);
-                for (ItemEnum item : spec.items) {
-                    success &= controller.giveInventoryItem(chest.inventory, item);
-                }
-            });
-        } else {
-            success = controller.allocateChest(roomId, [&](Chest& chest, Character& container) {
-                chest.lock = spec.lock;
-                container.role = ROLE_CHEST;
-                for (ItemEnum item : spec.items) {
-                    success &= controller.giveInventoryItem(chest.inventory, item);
-                }
-            });
-        }
-        return success;
+        if (spec.critterRole != ROLE_EMPTY)
+            chestAlloc.inventory.push_back(CritterCharacterSpec{.character = CharacterAllocSpec{.role = spec.critterRole}});
+        spec.containedRole.accessConst([&](const RoleEnum& role) {
+            chestAlloc.inventory.push_back(ContainedCharacterSpec{.character = CharacterAllocSpec{.role = role}});
+        });
+        for (ItemEnum item : spec.items)
+            chestAlloc.inventory.push_back(ItemSpec{.item = item});
+
+        int containerId = -1;
+        return !codeset.addFailure(!controller.allocate(
+            CharacterAllocSpec{.role = ROLE_CHEST, .chest = chestAlloc},
+            AttachmentContext::floor(roomId),
+            containerId
+        ), CODE_DUNGEON_MUTATOR_FAILED_TO_ALLOCATE_CHARACTER);
     }).orElse(false);
 }
 
@@ -252,6 +248,19 @@ bool DungeonMutator::setupElevatorColumn(const RoomRef& elevatorRoom, const Rack
     return isSuccess && setRoom(elevatorRoom, ROOM_ELEVATOR);
 }
 
+bool DungeonMutator::setupElevatorColumn(int elevatorRoomId, const std::vector<int>& columnRoomIds, int paidIndex) {
+    const auto EMPTY = Maybe<int>::empty();
+    std::vector<ElevatorProperties> props;
+    props.reserve(columnRoomIds.size());
+    for (int i = 0; i < (int)columnRoomIds.size(); ++i) {
+        props.push_back({
+            .connectedRoomIds = Array<Maybe<int>, 4>({EMPTY, EMPTY, Maybe<int>(columnRoomIds[i]), EMPTY}),
+            .isPaid = i == paidIndex
+        });
+    }
+    return setupElevatorColumn(elevatorRoomId, Rack<ElevatorProperties>(props));
+}
+
 bool DungeonMutator::setupJailer (const RoomRef& room, const Cardinal dir, const bool isKeyed) {
     return !codeset.addFailure(!setSharedDoor(room, dir, isKeyed ? DOOR_JAILER_INGRESS_KEYED : DOOR_JAILER_INGRESS_KEYLESS, isKeyed ? DOOR_JAILER_EGRESS_KEYED : DOOR_JAILER_EGRESS_KEYLESS), CODE_GENERATOR_UTILITY_FAILED_TO_SETUP_JAILER);
 }
@@ -304,40 +313,92 @@ bool DungeonMutator::setupTogglerOrange (const RoomRef& room, const Cardinal dir
     return !codeset.addFailure(!setSharedDoor(room, dir, DOOR_TOGGLER_ORANGE_OPEN, DOOR_TOGGLER_ORANGE_OPEN), CODE_GENERATOR_UTILITY_FAILED_TO_SETUP_TOGGLER_ORANGE);
 }
 
-bool DungeonMutator::setupTogglerSwitch (const RoomRef& room, int& outCharacterId, int& outFloorId) {
+bool DungeonMutator::allocateCharacter(const RoomRef& room, RoleEnum role, int& outCharacterId, int& outFloorId) {
     return resolveRoom(room).map<bool>([&](const int& roomId) {
-        return !codeset.addFailure(!controller.allocateCharacterToFloor(roomId, CHANNEL_CORPOREAL, [&](Character& character){
-            character.role = ROLE_TOGGLER_BLUE;
-            character.visibility = ~0x0;
-        }, outCharacterId, outFloorId), CODE_DUNGEON_MUTATOR_FAILED_TO_SETUP_TOGGLER_SWITCH);
+        bool success = !codeset.addFailure(!controller.allocate(
+            CharacterAllocSpec{.role = role},
+            AttachmentContext::floor(roomId),
+            outCharacterId
+        ), CODE_DUNGEON_MUTATOR_FAILED_TO_ALLOCATE_CHARACTER);
+        if (success) {
+            controller.match.getCharacter(outCharacterId, codeset.error).access([&](const Character& character) {
+                outFloorId = character.location.data;
+            });
+        }
+        return success;
     }).orElse(false);
+}
+
+bool DungeonMutator::setupTogglerSwitch (const RoomRef& room, int& outCharacterId, int& outFloorId) {
+    return allocateCharacter(room, ROLE_TOGGLER_BLUE, outCharacterId, outFloorId);
 }
 
 bool DungeonMutator::setupTogglerSwitchBlue (const RoomRef& room, int& outCharacterId, int& outFloorId) {
-    return resolveRoom(room).map<bool>([&](const int& roomId) {
-        return !codeset.addFailure(!controller.allocateCharacterToFloor(roomId, CHANNEL_CORPOREAL, [&](Character& character){
-            character.role = ROLE_TOGGLER_BLUE;
-            character.visibility = ~0x0;
-        }, outCharacterId, outFloorId), CODE_DUNGEON_MUTATOR_FAILED_TO_SETUP_TOGGLER_SWITCH);
-    }).orElse(false);
+    return allocateCharacter(room, ROLE_TOGGLER_BLUE, outCharacterId, outFloorId);
 }
 
 bool DungeonMutator::setupTogglerSwitchOrange (const RoomRef& room, int& outCharacterId, int& outFloorId) {
-    return resolveRoom(room).map<bool>([&](const int& roomId) {
-        return !codeset.addFailure(!controller.allocateCharacterToFloor(roomId, CHANNEL_CORPOREAL, [&](Character& character){
-            character.role = ROLE_TOGGLER_ORANGE;
-            character.visibility = ~0x0;
-        }, outCharacterId, outFloorId), CODE_DUNGEON_MUTATOR_FAILED_TO_SETUP_TOGGLER_SWITCH);
-    }).orElse(false);
+    return allocateCharacter(room, ROLE_TOGGLER_ORANGE, outCharacterId, outFloorId);
 }
 
 bool DungeonMutator::setupSacramentForgiveness (const RoomRef& room, int& outCharacterId, int& outFloorId) {
-    return resolveRoom(room).map<bool>([&](const int& roomId) {
-        return !codeset.addFailure(!controller.allocateCharacterToFloor(roomId, CHANNEL_CORPOREAL, [&](Character& character){
-            character.role = ROLE_SACRAMENT_FORGIVENESS;
-            character.visibility = ~0x0;
-        }, outCharacterId, outFloorId), CODE_DUNGEON_MUTATOR_FAILED_TO_SETUP_SACRAMENT_FORGIVENESS);
-    }).orElse(false);
+    return allocateCharacter(room, ROLE_SACRAMENT_FORGIVENESS, outCharacterId, outFloorId);
+}
+
+bool DungeonMutator::setupHorizontalWalls(std::vector<DoorEnum> row, int y, int z) {
+    if (row.size() != (size_t)size[0]) {
+        return false;
+    }
+
+    auto it = row.begin();
+    for (int t = 0; t < size[3]; ++t) {
+        for (int x = 0; x < size[0]; x++, it++) {
+            const int4 coord = {x, y, z, t};
+            auto found = mapping.find(coord);
+            if (found == mapping.end()) {
+                continue;
+            }
+
+            found->second.access([&](Room& roomA) {
+                Wall& wallA = roomA.getWall(Cardinal::north());
+                layout->getWallNeighbor(dungeon.rooms, roomA, Cardinal::north()).access([&](Room& roomB) {
+                    Wall& wallB = roomB.getWall(Cardinal::south());
+                    wallA.door = *it;
+                    wallB.door = *it;
+                });
+            });
+        }
+    }
+
+    return true;
+}
+
+bool DungeonMutator::setupVerticalWalls(std::vector<DoorEnum> row, int y, int z) {
+    if (row.size() != (size_t)(size[0] - 1)) {
+        return false;
+    }
+
+    auto it = row.begin();
+    for (int t = 0; t < size[3]; ++t) {
+        for (int x = 0; x < size[0] - 1; ++x, ++it) {
+            int4 coord = {x, y, z, t};
+            auto found = mapping.find(coord);
+            if (found == mapping.end()) {
+                continue;
+            }
+
+            found->second.access([&](Room& roomA) {
+                Wall& wallEast = roomA.getWall(Cardinal::east());
+                layout->getWallNeighbor(dungeon.rooms, roomA, Cardinal::east()).access([&](Room& roomB) {
+                    Wall& wallWest = roomB.getWall(Cardinal::west());
+                    wallEast.door = *it;
+                    wallWest.door = *it;
+                });
+            });
+        }
+    }
+
+    return true;
 }
 
 bool DungeonMutator::setBuilderStartingRoomId(int builderIndex, const RoomRef& room) {

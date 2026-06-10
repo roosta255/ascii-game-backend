@@ -10,8 +10,7 @@ struct CharacterAction {
     int characterId = 0;
     int roomId = 0;
     Maybe<int> targetCharacterId;
-    Maybe<int> targetItemIndex;
-    Maybe<int> targetInventoryIndex;
+    Maybe<int> targetItemIndex;  // absolute index into dungeon.items[]
     Maybe<Cardinal> direction;
     Maybe<int> floorId;
 
@@ -22,7 +21,6 @@ struct CharacterAction {
             && roomId == rhs.roomId
             && targetCharacterId == rhs.targetCharacterId
             && targetItemIndex == rhs.targetItemIndex
-            && targetInventoryIndex == rhs.targetInventoryIndex
             && direction == rhs.direction
             && floorId == rhs.floorId;
     }

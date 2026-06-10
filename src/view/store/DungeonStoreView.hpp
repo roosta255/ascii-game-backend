@@ -4,7 +4,9 @@
 #include "Array.hpp"
 #include "CharacterStoreView.hpp"
 #include "ChestStoreView.hpp"
+#include "ConductStoreView.hpp"
 #include "Dungeon.hpp"
+#include "ItemStoreView.hpp"
 #include "LayoutFlyweight.hpp"
 #include "RoomStoreView.hpp"
 #include <string>
@@ -18,6 +20,8 @@ struct DungeonStoreView
     Array<CharacterStoreView, Dungeon::MAX_CHARACTERS> characters;
     Array<RoomStoreView, DUNGEON_ROOM_COUNT> rooms;
     Array<ChestStoreView, Dungeon::MAX_CHESTS> chests;
+    Array<ConductStoreView, Dungeon::MAX_CONDUCTS> conducts;
+    Array<ItemStoreView, Dungeon::MAX_ITEMS> items;
 
     inline DungeonStoreView() = default;
 
@@ -26,6 +30,8 @@ struct DungeonStoreView
     , characters(model.characters.convert<CharacterStoreView>())
     , rooms(model.rooms.convert<RoomStoreView>())
     , chests(model.chests.convert<ChestStoreView>())
+    , conducts(model.conducts.convert<ConductStoreView>())
+    , items(model.items.convert<ItemStoreView>())
     {
         LayoutFlyweight::getFlyweights().accessConst(model.layout, [&](const LayoutFlyweight& flyweight){
             this->layout = flyweight.name;
@@ -37,6 +43,8 @@ struct DungeonStoreView
             .rooms = this->rooms.convert<Room>(),
             .characters = this->characters.convert<Character>(),
             .chests = this->chests.convert<Chest>(),
+            .conducts = this->conducts.convert<Conduct>(),
+            .items = this->items.convert<Item>(),
             .isBlueOpen = this->isBlueOpen
         };
         LayoutFlyweight::indexByString(this->layout, model.layout);
@@ -50,6 +58,8 @@ inline void to_json(nlohmann::json& j, const DungeonStoreView& v) {
     j["characters"]  = v.characters;
     j["rooms"]       = v.rooms;
     j["chests"]      = v.chests;
+    j["conducts"]    = v.conducts;
+    j["items"]       = v.items;
 }
 
 inline void from_json(const nlohmann::json& j, DungeonStoreView& v) {
@@ -57,5 +67,7 @@ inline void from_json(const nlohmann::json& j, DungeonStoreView& v) {
     j.at("layout").get_to(v.layout);
     j.at("characters").get_to(v.characters);
     j.at("rooms").get_to(v.rooms);
-    v.chests = j.value("chests", Array<ChestStoreView, Dungeon::MAX_CHESTS>{});
+    v.chests   = j.value("chests",   Array<ChestStoreView,   Dungeon::MAX_CHESTS>{});
+    v.conducts = j.value("conducts", Array<ConductStoreView, Dungeon::MAX_CONDUCTS>{});
+    v.items    = j.value("items",    Array<ItemStoreView,     Dungeon::MAX_ITEMS>{});
 }

@@ -33,9 +33,10 @@ bool ActivatorChestLockKey::activate(ActivationContext& activation) const {
 
         codeset.addFailure(!activation.targetCharacter().access([&](Character& containerChar) {
             codeset.addFailure(!match.dungeon.findChestByContainerId(containerChar.characterId, codeset.error).access([&](Chest& chest) {
+                auto playerInv = player.getInventory(req.match.dungeon);
                 switch (chest.lock) {
                     case LOCK_KEY_CATALYST_CLOSED: {
-                        if (codeset.addFailure(!controller.takeInventoryItem(player.inventory, ITEM_KEY, true))) {
+                        if (codeset.addFailure(!controller.takeInventoryItem(playerInv, ITEM_KEY, true))) {
                             controller.addRequestLoggedEvent(activation, LoggedEvent{
                                 EVENT_MISSING_ITEM,
                                 { EventComponentKind::ROLE, (int)subject.role },
@@ -64,7 +65,7 @@ bool ActivatorChestLockKey::activate(ActivationContext& activation) const {
                         break;
                     }
                     case LOCK_KEY_CONSUMER_CLOSED: {
-                        if (codeset.addFailure(!controller.takeInventoryItem(player.inventory, ITEM_KEY, req.time, room.roomId, req.isSkippingAnimations))) {
+                        if (codeset.addFailure(!controller.takeInventoryItem(playerInv, ITEM_KEY, req.time, room.roomId, req.isSkippingAnimations))) {
                             controller.addRequestLoggedEvent(activation, LoggedEvent{
                                 EVENT_MISSING_ITEM,
                                 { EventComponentKind::ROLE, (int)subject.role },
@@ -93,7 +94,7 @@ bool ActivatorChestLockKey::activate(ActivationContext& activation) const {
                         break;
                     }
                     case LOCK_KEY_KEEPER_CLOSED: {
-                        if (codeset.addFailure(!controller.takeInventoryItem(player.inventory, ITEM_KEY, req.time, room.roomId, req.isSkippingAnimations))) {
+                        if (codeset.addFailure(!controller.takeInventoryItem(playerInv, ITEM_KEY, req.time, room.roomId, req.isSkippingAnimations))) {
                             controller.addRequestLoggedEvent(activation, LoggedEvent{
                                 EVENT_MISSING_ITEM,
                                 { EventComponentKind::ROLE, (int)subject.role },
@@ -130,7 +131,7 @@ bool ActivatorChestLockKey::activate(ActivationContext& activation) const {
                             });
                             return;
                         }
-                        if (codeset.addFailure(!controller.giveInventoryItem(player.inventory, ITEM_KEY, req.time, room.roomId, req.isSkippingAnimations))) return;
+                        if (codeset.addFailure(!controller.giveInventoryItem(playerInv, ITEM_KEY, req.time, room.roomId, req.isSkippingAnimations))) return;
                         chest.lock = LOCK_KEY_KEEPER_CLOSED;
                         if (!req.isSkippingAnimations) {
                             Keyframe::insertKeyframe(
@@ -142,7 +143,7 @@ bool ActivatorChestLockKey::activate(ActivationContext& activation) const {
                         break;
                     }
                     case LOCK_KEY_JAILER_CLOSED: {
-                        if (codeset.addFailure(!controller.takeInventoryItem(player.inventory, ITEM_KEY, req.time, room.roomId, req.isSkippingAnimations))) {
+                        if (codeset.addFailure(!controller.takeInventoryItem(playerInv, ITEM_KEY, req.time, room.roomId, req.isSkippingAnimations))) {
                             controller.addRequestLoggedEvent(activation, LoggedEvent{
                                 EVENT_MISSING_ITEM,
                                 { EventComponentKind::ROLE, (int)subject.role },

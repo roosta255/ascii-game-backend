@@ -3,10 +3,14 @@
 #include "adl_serializer.hpp"
 #include "Character.hpp"
 #include "CharacterSheetApiView.hpp"
+#include "Dungeon.hpp"
+#include "InventoryApiView.hpp"
 #include "Keyframe.hpp"
 #include "KeyframeView.hpp"
 #include "AnimationFlyweight.hpp"
 #include "LocationView.hpp"
+#include "Match.hpp"
+#include "MatchApiParameters.hpp"
 #include "RoleFlyweight.hpp"
 #include "TraitFlyweight.hpp"
 #include <string>
@@ -31,6 +35,7 @@ struct CharacterApiView
     int characterId = -1;
     CharacterSheetApiView sheet;
     std::vector<std::string> traitsComputed;
+    InventoryApiView inventory;
 
     inline CharacterApiView() = default;
 
@@ -62,12 +67,18 @@ struct CharacterApiView
         }
 
         // role
+        int invSize = 0;
         RoleFlyweight::getFlyweights().accessConst(model.role, [&](const RoleFlyweight& flyweight) {
             this->role = flyweight.name;
             this->isActionable = flyweight.isActionable;
             this->actionsRemaining = flyweight.actions - model.actions;
             this->movesRemaining = flyweight.moves - model.moves;
+            invSize = flyweight.inventorySize;
         });
+
+        auto& mutableDungeon = const_cast<Dungeon&>(params.match.dungeon);
+        auto inv = model.getInventory(mutableDungeon);
+        this->inventory = InventoryApiView(inv, model.itemStartIndex < 0 ? 0 : model.itemStartIndex, invSize);
     }
 
 };
@@ -100,7 +111,8 @@ inline void to_json(nlohmann::json& j, const CharacterApiView& view) {
         {"location", view.location},
         {"characterId", view.characterId},
         {"sheet", view.sheet},
-        {"traitsComputed", view.traitsComputed}
+        {"traitsComputed", view.traitsComputed},
+        {"inventory", view.inventory}
     };
 }
 

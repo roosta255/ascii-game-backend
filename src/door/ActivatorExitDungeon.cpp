@@ -1,7 +1,10 @@
 #include "ActivatorExitDungeon.hpp"
 #include "Codeset.hpp"
 #include "EventFlyweight.hpp"
+#include "Item.hpp"
+#include "ItemEnum.hpp"
 #include "Match.hpp"
+#include "RoleEnum.hpp"
 #include "MatchController.hpp"
 
 bool ActivatorExitDungeon::activate(ActivationContext& activation) const {
@@ -10,6 +13,7 @@ bool ActivatorExitDungeon::activate(ActivationContext& activation) const {
         auto& controller = req.controller;
         auto& codeset = req.codeset;
         auto& match = req.match;
+        auto& player = req.player;
         auto& room = activation.room;
         auto& subject = activation.character;
 
@@ -47,6 +51,25 @@ bool ActivatorExitDungeon::activate(ActivationContext& activation) const {
                 direction.getIndex()
             });
             return;
+        }
+
+        bool hasMonkey = false;
+        for (const auto& ch : match.dungeon.characters) {
+            if (ch.role == ROLE_MONKEY) { hasMonkey = true; break; }
+        }
+        if (hasMonkey) {
+            int coins = 0, food = 0;
+            auto playerInv = player.getInventory(match.dungeon);
+            playerInv.accessItem(ITEM_COIN, [&](const Item& item) { coins = item.stacks; });
+            playerInv.accessItem(ITEM_FOOD, [&](const Item& item) { food  = item.stacks; });
+            if (codeset.addFailure(coins < 1 || food < 1, CODE_EXIT_INSUFFICIENT_RESOURCES)) {
+                controller.addRequestLoggedEvent(activation, LoggedEvent{
+                    EVENT_INSUFFICIENT_RESOURCES,
+                    { EventComponentKind::ROLE, (int)subject.role },
+                    {}, {}, -1
+                });
+                return;
+            }
         }
 
         if (codeset.addFailure(!subject.takeMove(codeset.error))) {

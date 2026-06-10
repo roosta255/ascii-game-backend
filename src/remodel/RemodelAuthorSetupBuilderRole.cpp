@@ -24,6 +24,8 @@ bool RemodelAuthorSetupBuilderRole::mutateMatch(
 
     copy.builders.access(this->builderIndex, [&](Builder& builder) {
         builder.character.role = ROLE_BUILDER;
+        copy.allocatePlayerInventory(builder.player);
+        builder.character.itemStartIndex = builder.player.itemStartIndex;
 
         if (copy.containsCharacter(builder.character, builderId)) {
             bool ok = controller.findFreeFloor(builder.startingRoomId, CHANNEL_CORPOREAL, floorId);

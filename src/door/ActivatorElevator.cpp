@@ -6,7 +6,6 @@
 #include "DoorEnum.hpp"
 #include "DungeonMutator.hpp"
 #include "EventFlyweight.hpp"
-#include "Inventory.hpp"
 #include "Match.hpp"
 #include "MatchController.hpp"
 #include "Player.hpp"
@@ -23,7 +22,6 @@ bool ActivatorElevator::activate(ActivationContext& activation) const {
         auto mutator = DungeonMutator(req.controller);
         mutator.isElevatorOverride = true;
         auto& subject = activation.character;
-        auto& inventory = req.player.inventory;
         auto& room = activation.room;
 
         Cardinal outDirection;
@@ -98,6 +96,7 @@ bool ActivatorElevator::activate(ActivationContext& activation) const {
                 return;
             }
 
+            auto inventory = req.player.getInventory(req.match.dungeon);
             if (isPaying && codeset.addFailure(!controller.takeInventoryItem(inventory, ITEM_KEY_ELEVATOR, req.time, room.roomId, req.isSkippingAnimations), CODE_ELEVATOR_FAILED_TO_PAY_KEY)) {
                 controller.addRequestLoggedEvent(activation, LoggedEvent{
                     EVENT_MISSING_ITEM,

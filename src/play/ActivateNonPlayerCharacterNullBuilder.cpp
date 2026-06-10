@@ -2,10 +2,10 @@
 #include "ActivationContext.hpp"
 #include "Match.hpp"
 
-CodeEnum ActivateNonPlayerCharacterNullBuilder::activate(ActivationContext& activation) const {
-    CodeEnum result = CODE_UNKNOWN_ERROR;
+bool ActivateNonPlayerCharacterNullBuilder::activate(ActivationContext& activation) const {
+    bool result = false;
     activation.request.access([&](RequestContext& req) {
-        result = req.match.turner.endBuilderTurn(req.match);
+        result = (req.match.turner.endBuilderTurn(req.match) == CODE_SUCCESS);
     });
     return result;
 }

@@ -17,6 +17,7 @@ using GeneratorRemodelVariant = std::variant<
     ElevatorContentAtom,
     ElevatorContentBlank,
     ElevatorContentHandcrafted,
+    RemodelAuthorAllocateCharacter,
     RemodelAuthorChestSeeder,
     RemodelAuthorRunGeneratorLoop,
     RemodelAuthorSetup4x1Room,

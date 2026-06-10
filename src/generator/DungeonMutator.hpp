@@ -5,16 +5,19 @@
 #include "ItemEnum.hpp"
 #include "LockEnum.hpp"
 #include "Maybe.hpp"
+#include "Pointer.hpp"
 #include "Rack.hpp"
 #include "Room.hpp"
 #include "RoleEnum.hpp"
 #include "RoomEnum.hpp"
 #include <functional>
+#include <unordered_map>
 #include <variant>
 #include <vector>
 
 class Codeset;
 class Dungeon;
+class iLayout;
 class MatchController;
 
 class DungeonMutator {
@@ -27,10 +30,15 @@ private:
     MatchController& controller;
     std::function<Maybe<int>(const int4&)> coordinateResolver;
 
+    int4 size{1,1,1,1};
+    const iLayout* layout = nullptr;
+    std::unordered_map<int4, Pointer<Room>> mapping;
+
     // internal functions
     Pointer<Room> getRoom(const int& roomId);
     bool setDoor(DoorEnum& source, DoorEnum next);
     Maybe<int> resolveRoom(const RoomRef& room);
+    Maybe<int> getRoomId(const int4& coord);
 
 public:
     bool isElevatorOverride = false;
@@ -50,10 +58,12 @@ public:
 
     // constructors
     DungeonMutator(MatchController& controller);
+    DungeonMutator(MatchController& controller, const iLayout& layout);
 
     void setCoordinateResolver(std::function<Maybe<int>(const int4&)> resolver);
 
     // functions
+    bool allocateCharacter(const RoomRef& room, RoleEnum role, int& outCharacterId, int& outFloorId);
     bool setDoor(const RoomRef& room, Cardinal dir, DoorEnum type, const Maybe<int> setRoomId = Maybe<int>::empty());
     bool setRoom(const RoomRef& room, RoomEnum type);
     bool setSharedShaftAbove(const RoomRef& roomA, Cardinal dir, DoorEnum doorA, DoorEnum doorB);
@@ -66,7 +76,9 @@ public:
     bool setupDoorway(const RoomRef& room, Cardinal dir);
     bool setupExitDoor(const RoomRef& room, Cardinal dir);
     bool setupElevatorColumn(const RoomRef& elevatorRoom, const Rack<ElevatorProperties>& elevatorPropertyList);
+    bool setupElevatorColumn(int elevatorRoomId, const std::vector<int>& columnRoomIds, int paidIndex);
     bool setupElevatorLevel(const RoomRef& elevatorRoom, const ElevatorProperties& connectedRoomIds, const bool isElevatorPresent, const bool isExistingHigher, const bool isExistingLower, const bool isHigherPaid = false, const bool isLowerPaid = false);
+    bool setupHorizontalWalls(std::vector<DoorEnum> row, int y, int z);
     bool setupJailer(const RoomRef& room, Cardinal dir, bool isKeyed);
     bool setupKeeper(const RoomRef& room, Cardinal dir, bool isKeyed);
     bool setupLadderUp(const RoomRef& bottomRoom, Cardinal dir);
@@ -82,5 +94,6 @@ public:
     bool setupTogglerSwitchBlue(const RoomRef& room, int& outCharacterId, int& outRoomId);
     bool setupTogglerSwitchOrange(const RoomRef& room, int& outCharacterId, int& outRoomId);
     bool setupSacramentForgiveness(const RoomRef& room, int& outCharacterId, int& outFloorId);
+    bool setupVerticalWalls(std::vector<DoorEnum> row, int y, int z);
     bool setBuilderStartingRoomId(int builderIndex, const RoomRef& room);
 };

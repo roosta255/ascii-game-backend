@@ -46,6 +46,7 @@ set(PROJECT_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/view
     ${CMAKE_CURRENT_SOURCE_DIR}/src/view/api
     ${CMAKE_CURRENT_SOURCE_DIR}/src/view/store
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/play
     ${CMAKE_CURRENT_SOURCE_DIR}/src/procgen
     /usr/include/jsoncpp
 )
@@ -56,10 +57,14 @@ set(PROJECT_INCLUDE_DIRS
 add_library(core_backend STATIC
     src/behavior/BehaviorEnum.cpp
     src/behavior/BehaviorFlyweight.cpp
+    src/behavior/Conduct.cpp
+    src/behavior/TriggerWrapper.cpp
     src/activator/ActionEnum.cpp
     src/activator/ActionFlyweight.cpp
     src/activator/ActivatorAlterTraitAffliction.cpp
     src/activator/ActivatorEndTurn.cpp
+    src/activator/ActivatorNpcAct.cpp
+    src/activator/ActivatorPickpocket.cpp
     src/activator/ActivatorMoveToDoor.cpp
     src/activator/ActivatorMoveToFloor.cpp
     src/activator/ActivatorUseCharacter.cpp
@@ -102,7 +107,6 @@ add_library(core_backend STATIC
     src/door/ActivatorSetAllDoorsByTrait.cpp
     src/door/ActivatorSetSharedDoorsByTrait.cpp
     src/door/DoorFlyweight.cpp
-    src/generator/DungeonAuthor.cpp
     src/generator/DungeonGenerator.cpp
     src/generator/DungeonMutator.cpp
     src/generator/ElevatorContent.cpp
@@ -154,6 +158,8 @@ add_library(core_backend STATIC
     src/remodel/RemodelTogglerBlue.cpp
     src/remodel/RemodelTogglerOrange.cpp
     src/remodel/RemodelTogglerSwitch.cpp
+    src/play/ActivateNonPlayerCharacterNullBuilder.cpp
+    src/play/ActivateNonPlayerCharacterNullTitan.cpp
     src/role/ActivatorCleanseAfflictions.cpp
     src/role/ActivatorToggler.cpp
     src/role/RoleFlyweight.cpp

@@ -348,7 +348,7 @@ TEST_CASE("Combat: CRUSH damage breaks builder armor", "[combat]") {
 
     // Verify the armor was placed in the builder's inventory
     bool hadArmor = false;
-    tc.inventoryPtr->accessItem(ITEM_ARMOR, [&](const Item& item) {
+    tc.playerPtr->getInventory(tc.match.dungeon).accessItem(ITEM_ARMOR, [&](const Item& item) {
         hadArmor = item.stacks > 0;
     });
     REQUIRE(hadArmor);
@@ -373,7 +373,7 @@ TEST_CASE("Combat: CRUSH damage breaks builder armor", "[combat]") {
 
     // Armor should be gone after crush
     bool stillHasArmor = false;
-    tc.inventoryPtr->accessItem(ITEM_ARMOR, [&](const Item& item) {
+    tc.playerPtr->getInventory(tc.match.dungeon).accessItem(ITEM_ARMOR, [&](const Item& item) {
         stillHasArmor = item.stacks > 0;
     });
     REQUIRE(!stillHasArmor);

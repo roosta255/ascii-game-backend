@@ -1,6 +1,8 @@
 #include "ActionFlyweight.hpp"
 #include "ActivatorAttack.hpp"
 #include "ActivatorCritterBite.hpp"
+#include "ActivatorNpcAct.hpp"
+#include "ActivatorPickpocket.hpp"
 #include "ActivatorDamage.hpp"
 #include "ActivatorEndTurn.hpp"
 #include "ActivatorLootChest.hpp"

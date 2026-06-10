@@ -12,7 +12,7 @@ class ItemFlyweight;
 struct Item {
     static constexpr int MAX_KEYFRAMES = 2;
 
-    ItemEnum type = ITEM_NIL;
+    ItemEnum type = ITEM_UNALLOCATED;
     int stacks = 0;
     Array<Keyframe, MAX_KEYFRAMES> keyframes;
 

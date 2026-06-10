@@ -1,11 +1,11 @@
+#include "ActivatorToggler.hpp"
 #include "ActivatorWrapper.hpp"
 #include "Array.hpp"
 #include "DamageTypeBits.hpp"
+#include "iActivator.hpp"
+#include "Match.hpp"
 #include "RoleEnum.hpp"
 #include "RoleFlyweight.hpp"
-#include "Match.hpp"
-#include "iActivator.hpp"
-#include "ActivatorToggler.hpp"
 
 const Array<RoleFlyweight, ROLE_COUNT>& RoleFlyweight::getFlyweights()
 {
@@ -57,6 +57,14 @@ const Array<RoleFlyweight, ROLE_COUNT>& RoleFlyweight::getFlyweights()
             useWrapperConfigs.access((int)lastRole, [](WrapperConfig& config) { \
                 config = WrapperConfig __VA_ARGS__; \
             });
+        #define ROLE_CONDUCT_DECL(slot_, behavior_) \
+            flyweights.getPointer(lastRole).access([&](RoleFlyweight& fw){ \
+                fw.defaultConductStates.set(CONDUCT_##slot_, behavior_); \
+            });
+        #define ROLE_INVENTORY_SIZE_DECL(size_) \
+            flyweights.getPointer(lastRole).access([&](RoleFlyweight& fw){ \
+                fw.inventorySize = size_; \
+            });
 
         #include "Role.enum"
         #undef ROLE_DECL
@@ -66,6 +74,8 @@ const Array<RoleFlyweight, ROLE_COUNT>& RoleFlyweight::getFlyweights()
         #undef ROLE_DAMAGE_DECL
         #undef ROLE_ATTACK_DECL
         #undef ROLE_USE_WRAPPER
+        #undef ROLE_CONDUCT_DECL
+        #undef ROLE_INVENTORY_SIZE_DECL
 
         for (int i = 0; i < ROLE_COUNT; i++) {
             useWrapperConfigs.access(i, [&](WrapperConfig& config) {

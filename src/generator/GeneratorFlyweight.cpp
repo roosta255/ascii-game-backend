@@ -2,7 +2,7 @@
 #include "Builder.hpp"
 #include "Codeset.hpp"
 #include "GeneratorAtom.hpp"
-#include "DungeonAuthor.hpp"
+#include "DungeonMutator.hpp"
 #include "GeneratorEnum.hpp"
 #include "GeneratorNoop.hpp"
 #include "GeneratorFlyweight.hpp"

@@ -12,6 +12,8 @@
 #include "TraitBits.hpp"
 
 class CharacterDigest;
+class Dungeon;
+class Inventory;
 class Match;
 class RoleFlyweight;
 class Room;
@@ -23,12 +25,12 @@ struct Character
     Location location;
     int damage = 0;
     RoleEnum role = ROLE_EMPTY;
-    BehaviorEnum behavior = BEHAVIOR_NIL;
     int feats = 0;
     int actions = 0;
     int moves = 0;
     int visibility = ~0x0;
     int characterId = -1;
+    int itemStartIndex = -1;
     TraitBits traitsAfflicted;
 
     // there are two problems to solve:
@@ -53,6 +55,7 @@ struct Character
     // so a character being hurt, dying, walking, jumping, these are all rendered in time.
 
     bool accessRole(CodeEnum &error, std::function<void(const RoleFlyweight &)>) const;
+    Inventory getInventory(Dungeon& dungeon) const;
 
     bool isMovable(CodeEnum &error, const TraitBits &traitsComputed, const bool isCheckingCount = false) const;
     bool isActor(CodeEnum &error, const TraitBits &traitsComputed, const bool isCheckingCount = false) const;

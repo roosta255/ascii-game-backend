@@ -13,7 +13,7 @@
 #include <functional>
 #include <vector>
 
-class DungeonAuthor;
+class DungeonMutator;
 struct Remodel;
 
 struct RemodelAuthorSetup4x1Room : public RemodelAuthorBase {
@@ -143,6 +143,15 @@ struct RemodelAuthorSetupSacramentForgiveness : public RemodelAuthorBase {
     bool mutateMatch(Remodel&, const Match&, const PathfindingCounter&, std::function<bool(const Match&)>) const override;
 };
 
+struct RemodelAuthorAllocateCharacter : public RemodelAuthorBase {
+    int4 coords;
+    RoleEnum role;
+    mutable int outCharacterId = -1;
+    mutable int outFloorId     = -1;
+    RemodelAuthorAllocateCharacter(int4 coords, RoleEnum role) : coords(coords), role(role) {}
+    bool mutateMatch(Remodel&, const Match&, const PathfindingCounter&, std::function<bool(const Match&)>) const override;
+};
+
 struct RemodelAuthorSetupElevatorColumn : public RemodelAuthorBase {
     int elevatorRoomId;
     std::vector<int> columnRoomIds;
@@ -168,9 +177,9 @@ struct RemodelAuthorSetupVerticalWalls : public RemodelAuthorBase {
     bool mutateMatch(Remodel&, const Match&, const PathfindingCounter&, std::function<bool(const Match&)>) const override;
 };
 
-// Generic callable: stores any DungeonAuthor method as a function/lambda.
+// Generic callable: stores any DungeonMutator method as a function/lambda.
 struct RemodelAuthorApply : public RemodelAuthorBase {
-    std::function<bool(DungeonAuthor&)> call;
-    explicit RemodelAuthorApply(std::function<bool(DungeonAuthor&)> c) : call(std::move(c)) {}
+    std::function<bool(DungeonMutator&)> call;
+    explicit RemodelAuthorApply(std::function<bool(DungeonMutator&)> c) : call(std::move(c)) {}
     bool mutateMatch(Remodel&, const Match&, const PathfindingCounter&, std::function<bool(const Match&)>) const override;
 };

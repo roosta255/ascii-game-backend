@@ -14,7 +14,7 @@
 #include "Remodel.hpp"
 #include "RoleEnum.hpp"
 
-class Inventory;
+class Player;
 
 class TestController {
 public:
@@ -28,7 +28,7 @@ public:
     Match match;
     Codeset codeset;
     MatchController controller;
-    Inventory* inventoryPtr = nullptr;
+    Player* playerPtr = nullptr;
     Character* builderCharacterPtr = nullptr;
     InventoryDigest inventory;
     Maybe<Keyframe> testKeyframe;

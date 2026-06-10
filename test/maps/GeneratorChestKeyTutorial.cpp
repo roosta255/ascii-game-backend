@@ -1,9 +1,11 @@
 #include <catch2/catch_test_macros.hpp>
+#include "ActionEnum.hpp"
 #include "Cardinal.hpp"
 #include "GeneratorEnum.hpp"
 #include "ItemEnum.hpp"
 #include "LockEnum.hpp"
 #include "Match.hpp"
+#include "Preactivation.hpp"
 #include "RoleEnum.hpp"
 #include "TestController.hpp"
 
@@ -244,4 +246,69 @@ TEST_CASE("ChestKeyTutorial sequence completion", "[match][GENERATOR_CHEST_KEY_T
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
     REQUIRE(controller.isSuccess);
 
+}
+
+TEST_CASE("Monkey steals ITEM_FOOD from builder in shared room", "[match][GENERATOR_CHEST_KEY_TUTORIAL][monkey]") {
+    TestController tc(GENERATOR_CHEST_KEY_TUTORIAL);
+    tc.isSkippingAnimations = true;
+
+    tc.generate(0);
+    REQUIRE(tc.codeset.getErrorTable() == Codeset::getEmptyTable());
+    REQUIRE(tc.match.start());
+
+    // Seed builder with food
+    tc.giveItem(ITEM_FOOD);
+
+    // Move builder north into the monkey's starting room
+    tc.moveCharacterToWall(Cardinal::north());
+    REQUIRE(tc.isSuccess);
+    tc.moveCharacterToFloor(4);
+    REQUIRE(tc.isSuccess);
+    const int monkeyRoomId = tc.latestPosition;
+
+    // Exhaust builder's action budget so TRAIT_ACTION_READY becomes false,
+    // which is the condition that makes a builder pickpocketable.
+    tc.builderCharacterPtr->actions = 2;
+    tc.controller.updateTraits(*tc.builderCharacterPtr);
+
+    // Unlock the chest in the monkey's room so it can receive the stolen item.
+    for (auto& chest : tc.match.dungeon.chests) {
+        if (chest.containerCharacterId < 0) continue;
+        bool inRoom = false;
+        tc.controller.isCharacterWithinRoom(chest.containerCharacterId, monkeyRoomId, inRoom);
+        if (!inRoom) continue;
+        chest.lock = LOCK_NIL;
+        break;
+    }
+
+    // Locate the monkey NPC
+    int monkeyCharId    = -1;
+    int monkeyLocRoomId = -1;
+    for (auto& ch : tc.match.dungeon.characters) {
+        if (ch.role == ROLE_MONKEY) {
+            monkeyCharId    = ch.characterId;
+            monkeyLocRoomId = ch.location.roomId;
+            break;
+        }
+    }
+    REQUIRE(monkeyCharId != -1);
+    REQUIRE(monkeyLocRoomId == monkeyRoomId);
+
+    // Fire the monkey's NPC action — it should pickpocket the food
+    tc.isSuccess = tc.controller.activate(Preactivation{
+        .action = {
+            .type        = ACTION_NPC_ACT,
+            .characterId = monkeyCharId,
+            .roomId      = monkeyLocRoomId,
+        },
+        .playerId             = TestController::BUILDER_ID,
+        .isSkippingAnimations = true,
+    });
+
+    REQUIRE(tc.isSuccess);
+
+    // Food must have moved out of the builder's inventory
+    int foodAfter = 0;
+    tc.playerPtr->getInventory(tc.match.dungeon).accessItem(ITEM_FOOD, [&](auto& item) { foodAfter = item.stacks; });
+    REQUIRE(foodAfter == 0);
 }

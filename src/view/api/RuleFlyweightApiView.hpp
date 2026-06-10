@@ -78,7 +78,7 @@ private:
     static nlohmann::json serializeCosts(const WrapperConfig::Costs& costs) {
         nlohmann::json items = nlohmann::json::array();
         for (int i = 0; i < WrapperConfig::MAX_COSTS; i++) {
-            if (costs.item[i] == ITEM_NIL) break;
+            if (costs.item[i] == ITEM_UNALLOCATED) break;
             items.push_back(item_to_text(costs.item[i]));
         }
         return {

@@ -14,7 +14,25 @@
       "Bash(git -C /workspaces/backend show HEAD~1 --stat)",
       "Bash(git -C /workspaces/backend show HEAD~2 --stat)",
       "Bash(cmake --build build --target test_target -j1)",
-      "Bash(cmake -S /workspaces/backend -B /workspaces/backend/build -DCMAKE_BUILD_TYPE=Debug)"
+      "Bash(cmake -S /workspaces/backend -B /workspaces/backend/build -DCMAKE_BUILD_TYPE=Debug)",
+      "Bash(cmake --build build --clean-first)",
+      "Bash(./build/test_target)",
+      "Bash(cmake --build build --parallel 8)",
+      "Bash(ctest --test-dir build --output-on-failure)",
+      "Bash(make -j4)",
+      "Bash(./test_target --reporter compact)",
+      "Bash(./test_target \"[eventlog]\" --success)",
+      "Bash(make -C build -j4 test_target)",
+      "Bash(./test_target \"Test elevator configuration\")",
+      "Bash(./build/test_target \"[combat]\")",
+      "Bash(netstat -tlnp)",
+      "Read(//proc/6936/net/**)",
+      "Bash(awk 'NR>1 {print $2, $3, $4}')",
+      "Bash(curl -s http://localhost:8080/api/matches)",
+      "Bash(curl -sv http://localhost:8080/api/matches)",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl -sv http://172.19.0.3:8080/api/matches)",
+      "Bash(curl -s https://game-backend.callawayservice.com/api/matches)"
     ]
   }
 }

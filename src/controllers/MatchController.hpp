@@ -4,7 +4,9 @@
 #include "BehaviorEventEnum.hpp"
 #include "Cardinal.hpp"
 #include "Character.hpp"
+#include "CharacterAllocSpec.hpp"
 #include "CodeEnum.hpp"
+#include "Conduct.hpp"
 #include "DUNGEON_ROOM_COUNT.hpp"
 #include "EventFlyweight.hpp"
 #include "int2.hpp"
@@ -26,7 +28,7 @@ class CharacterAction;
 class Codeset;
 struct Chest;
 class iActivator;
-class Inventory;
+struct Inventory;
 class Match;
 class Player;
 struct Preactivation;
@@ -54,6 +56,7 @@ private:
     Map<int, Map<int2, int> > doors; // roomId -> <channel, direction> -> characterId
     Map<int, TraitModifier::TraitComputation> traitsComputed; // characterId -> computed traits (always fresh, never persisted)
     Map<int, Pointer<Chest>> chestContainerMap; // containerCharacterId -> Chest
+    Map<int, Pointer<Conduct>> conductMap; // characterId -> Conduct
     std::vector<PendingTrigger>* eventQueuePtr = nullptr; // set during activate(); used by pushTrigger()
     Timestamp animationTime; // latest animation end time across all active activations
     bool isLocationsSetup = false;
@@ -68,11 +71,7 @@ public:
     // functions
     bool activate(const Preactivation& preactivation, Pointer<std::vector<LoggedEvent>> outEventLog = Pointer<std::vector<LoggedEvent>>::empty());
     bool activate(const iActivator& activator, const Preactivation& preactivation, Pointer<std::vector<LoggedEvent>> outEventLog = Pointer<std::vector<LoggedEvent>>::empty());
-    bool allocateChest(int roomId, std::function<void(Chest&, Character&)> consumer);
-    bool allocateChest(int roomId, std::function<void(Chest&, Character&, Character&)> consumer);
-    bool allocateChestWithContained(int roomId, std::function<void(Chest&, Character&, Character&)> consumer);
-    bool allocateChest(int roomId, std::function<void(Chest&, Character&, Character&, Character&)> consumer);
-    bool allocateCharacterToFloor(int roomId, ChannelEnum channel, std::function<void(Character&)> consumer, int& outCharacterId, int& outFloorId);
+    bool allocate(const CharacterAllocSpec& spec, const AttachmentContext& attachment, int& outCharacterId);
     bool assignCharacterToFloor(int characterId, int roomId, ChannelEnum channel, int floorId);
     bool buildActivationContext(const Preactivation& preactivation, std::function<void(ActivationContext&)>);
 
@@ -90,6 +89,7 @@ public:
     const Map<int, Map<int2, int> >& getDoors();
     const Map<int, Map<int2, int> >& getFloors();
     Pointer<Chest> getChestByContainerId(int characterId);
+    Pointer<Conduct> getConductByCharacterId(int characterId);
 
     bool giveInventoryItem(Inventory& inventory, const ItemEnum type, const bool isDryrun = false);
     bool giveInventoryItem(Inventory& inventory, const ItemEnum type, const Timestamp& time, const int roomId, const bool isSkippingAnimations);

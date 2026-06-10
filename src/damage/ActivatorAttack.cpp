@@ -5,7 +5,6 @@
 #include "Codeset.hpp"
 #include "DamageTypeBits.hpp"
 #include "DamageTypeEnum.hpp"
-#include "Inventory.hpp"
 #include "ItemFlyweight.hpp"
 #include "Match.hpp"
 #include "MatchController.hpp"
@@ -44,8 +43,6 @@ bool ActivatorAttack::activate(ActivationContext& activation) const {
                     .room = activation.room,
                     .character = target,
                     .sourceItem = activation.sourceItem,
-                    .sourceInventory = activation.sourceInventory,
-                    .targetInventory = activation.targetInventory,
                     .targetEntity = Pointer<Character>(attacker),
                     .direction = activation.direction,
                     .damageTypes = activation.damageTypes,
@@ -89,8 +86,6 @@ bool ActivatorAttack::activate(ActivationContext& activation) const {
                 .room = activation.room,
                 .character = attacker,
                 .sourceItem = activation.sourceItem,
-                .sourceInventory = activation.sourceInventory,
-                .targetInventory = activation.targetInventory,
                 .targetEntity = Pointer<Character>(target),
                 .direction = activation.direction,
                 .damageTypes = damageTypes,

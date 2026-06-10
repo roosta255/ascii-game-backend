@@ -2,7 +2,6 @@
 
 #include "adl_serializer.hpp"
 #include "Chest.hpp"
-#include "InventoryStoreView.hpp"
 #include "KeyframeView.hpp"
 #include "LockEnum.hpp"
 #include "LockFlyweight.hpp"
@@ -11,7 +10,6 @@
 
 struct ChestStoreView
 {
-    InventoryStoreView inventory;
     std::string lock = "UNPARSED_LOCK";
     int containerCharacterId = -1;
     Array<KeyframeView, Chest::MAX_KEYFRAMES> keyframes;
@@ -19,8 +17,7 @@ struct ChestStoreView
     inline ChestStoreView() = default;
 
     inline ChestStoreView(const Chest& model)
-        : inventory(model.inventory)
-        , containerCharacterId(model.containerCharacterId)
+        : containerCharacterId(model.containerCharacterId)
         , keyframes(model.keyframes.convert<KeyframeView>())
     {
         LockFlyweight::getFlyweights().accessConst(model.lock, [&](const LockFlyweight& flyweight) {
@@ -31,7 +28,6 @@ struct ChestStoreView
     inline operator Chest() const
     {
         Chest model{
-            .inventory             = this->inventory,
             .containerCharacterId  = this->containerCharacterId,
             .keyframes             = this->keyframes.convert<Keyframe>(),
         };
@@ -42,14 +38,13 @@ struct ChestStoreView
 
 inline void to_json(nlohmann::json& j, const ChestStoreView& v) {
     j = {
-        {"inventory", v.inventory}, {"lock", v.lock},
+        {"lock", v.lock},
         {"containerCharacterId", v.containerCharacterId},
         {"keyframes", v.keyframes}
     };
 }
 
 inline void from_json(const nlohmann::json& j, ChestStoreView& v) {
-    j.at("inventory").get_to(v.inventory);
     j.at("lock").get_to(v.lock);
     j.at("containerCharacterId").get_to(v.containerCharacterId);
     if (j.contains("keyframes")) j.at("keyframes").get_to(v.keyframes);

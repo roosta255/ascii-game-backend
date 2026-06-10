@@ -17,7 +17,6 @@ bool ActivatorTimeGate::activate(ActivationContext& activation) const {
         const auto roomId = room.roomId;
         auto& codeset = req.codeset;
         auto& subject = activation.character;
-        auto& inventory = req.player.inventory;
 
         Wall* sourceWallPtr = nullptr;
         activation.targetDoor().access([&](Wall& w) { sourceWallPtr = &w; });

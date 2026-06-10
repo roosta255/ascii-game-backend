@@ -10,3 +10,8 @@ TraitBits makeTraitBits(std::initializer_list<TraitEnum> setList) {
     }
     return bits;
 }
+
+TraitBits makeTraitBits() {
+    TraitBits bits;
+    return bits;
+}

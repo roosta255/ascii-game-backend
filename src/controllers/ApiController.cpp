@@ -515,13 +515,11 @@ void ApiController::performCharacterAction
             .roomId = roomId,
             .targetCharacterId = json->isMember("target") ? (*json)["target"].asInt() : Maybe<int>::empty(),
             .targetItemIndex = json->isMember("target_item") ? (*json)["target_item"].asInt() : json->isMember("item") ? (*json)["item"].asInt() : Maybe<int>::empty(),
-            .targetInventoryIndex = json->isMember("target_inventory") ? (*json)["target_inventory"].asInt() : Maybe<int>::empty(),
             .direction = json->isMember("direction") ? Cardinal((*json)["direction"].asInt()) : Maybe<Cardinal>::empty(),
             .floorId = json->isMember("floor") ? (*json)["floor"].asInt() : Maybe<int>::empty(),
         },
         .playerId = accountId,
         .sourceItemIndex = json->isMember("source_item") ? (*json)["source_item"].asInt() : json->isMember("item") ? (*json)["item"].asInt() : Maybe<int>::empty(),
-        .sourceInventoryId = json->isMember("source_inventory") ? (*json)["source_inventory"].asInt() : Maybe<int>::empty(),
         .isSkippingAnimations = false,
         .isSortingState = false,
         .time = Timestamp()

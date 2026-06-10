@@ -33,8 +33,11 @@ bool ActivatorLootChest::activate(ActivationContext& activation) const {
 
         codeset.addFailure(!activation.targetCharacter().access([&](Character& containerChar) {
             codeset.addFailure(!match.dungeon.findChestByContainerId(containerChar.characterId, codeset.error).access([&](Chest& chest) {
-                auto item = chest.inventory.items.getPointer(activation.targetItemSlot.orElse(-1));
-                codeset.addFailure(!item.access([&](Item& chestItem) {
+                auto containerCharInv = containerChar.getInventory(match.dungeon);
+                auto playerInv = player.getInventory(match.dungeon);
+                int absItemIdx = -1;
+                activation.targetItemIndex.copy(absItemIdx);
+                codeset.addFailure(!match.dungeon.items.getPointer(absItemIdx).access([&](Item& chestItem) {
                     bool isLocked = false;
                     LockFlyweight::getFlyweights().accessConst(chest.lock, [&](const LockFlyweight& lf){
                         isLocked = lf.isLocked;
@@ -57,8 +60,8 @@ bool ActivatorLootChest::activate(ActivationContext& activation) const {
                     if (codeset.addFailure(!isTransferable, CODE_LOOT_CHEST_ITEM_NOT_TRANSFERABLE)) return;
 
                     const ItemEnum type = chestItem.type;
-                    if (codeset.addFailure(!controller.takeInventoryItem(chest.inventory, type, req.time, room.roomId, req.isSkippingAnimations))) return;
-                    if (codeset.addFailure(!controller.giveInventoryItem(player.inventory, type, req.time, room.roomId, req.isSkippingAnimations))) return;
+                    if (codeset.addFailure(!controller.takeInventoryItem(containerCharInv, type, req.time, room.roomId, req.isSkippingAnimations))) return;
+                    if (codeset.addFailure(!controller.giveInventoryItem(playerInv, type, req.time, room.roomId, req.isSkippingAnimations))) return;
                     if (codeset.addFailure(!controller.takeCharacterAction(subject))) {
                         controller.addRequestLoggedEvent(activation, LoggedEvent{
                             EVENT_NO_ACTIONS,
@@ -76,7 +79,7 @@ bool ActivatorLootChest::activate(ActivationContext& activation) const {
                         -1
                     });
 
-                    chest.inventory.accessItems(ITEM_CRITTER, [&](const Item& critterItem) {
+                    containerCharInv.accessItems(ITEM_CRITTER, [&](const Item& critterItem) {
                         const auto critterCharacterId = critterItem.stacks;
                         Preactivation critterPreactivation{
                             .action = {
