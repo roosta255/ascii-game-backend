@@ -66,6 +66,7 @@ jobs:
             set -euo pipefail
             cd ~/app
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin
+            trap 'docker logout ghcr.io' EXIT
             export IMAGE_NAME=ghcr.io/${{ github.repository }}:latest
             docker compose -f docker-compose.prod.yml pull
             docker stop drogon_backend 2>/dev/null || true
