@@ -52,7 +52,8 @@ private:
         for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && m.items[i] != ITEM_NIL; i++)
             itemsArr.push_back(item_to_text(m.items[i]));
         return {
-            {"traits", traitsToJson(m.traits)},
+            {"required",    traitsToJson(m.required)},
+            {"restricted",  traitsToJson(m.restricted)},
             {"doors",  doorsArr},
             {"roles",  rolesArr},
             {"items",  itemsArr}

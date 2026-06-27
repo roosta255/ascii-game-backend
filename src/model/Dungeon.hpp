@@ -41,6 +41,9 @@ struct Dungeon {
     int layout = 0;
     int startingRoomId = 0;
     int32_t isBlueOpen = false;  // When true, blue doors are open and orange doors are closed
+    // Phantom character used exclusively by floodFillRoom/floodFillRoomBits for
+    // character-aware room connectivity queries. Never participates in real gameplay.
+    Character pathfinderCharacter;
 
     // Toggles all blue/orange doors in the dungeon based on isBlueOpen
     void toggleDoors(const Timestamp& time, bool isSkippingAnimations);

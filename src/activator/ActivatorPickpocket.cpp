@@ -1,8 +1,7 @@
 #include "ActivatorPickpocket.hpp"
 #include "ActivationContext.hpp"
+#include "BehaviorEventEnum.hpp"
 #include "Codeset.hpp"
-#include "ConductEnum.hpp"
-#include "ConductMemory.hpp"
 #include "EventFlyweight.hpp"
 #include "ItemEnum.hpp"
 #include "MatchController.hpp"
@@ -37,8 +36,12 @@ bool ActivatorPickpocket::activate(ActivationContext& activation) const {
             if (stolenItem == ITEM_NIL) return;
 
             if (!controller.takeCharacterAction(pickpocketer)) return;
-
             if (!controller.takeInventoryItem(victimInventory, stolenItem)) return;
+
+            // Place the stolen item in the pickpocketer's own inventory.
+            auto actorInventory = pickpocketer.getInventory(req.match.dungeon);
+            if (actorInventory.isValid())
+                controller.giveInventoryItem(actorInventory, stolenItem);
 
             controller.updateTraits(pickpocketer);
             result = true;
@@ -50,6 +53,8 @@ bool ActivatorPickpocket::activate(ActivationContext& activation) const {
                 { EventComponentKind::ITEM, (int)stolenItem },
                 -1
             });
+
+            controller.pushTrigger(nullptr, pickpocketer.characterId, victim.characterId, BEHAVIOR_EVENT_PICKPOCKET);
         });
     });
     return result;

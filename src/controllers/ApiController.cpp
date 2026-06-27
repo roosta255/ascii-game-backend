@@ -447,16 +447,19 @@ void ApiController::endTurn
     std::string accountId = (*json)["account"].asString();
     if (!isValidInput(accountId))
         return invokeResponse400("Invalid account field", std::move(callback));
-    CodeEnum error = CODE_UNKNOWN_ERROR;
+    Codeset codeset;
     Match match;
-    if (!matchRepository.load(matchId, error, match))
-        return invokeResponse404(code_to_message(error, "Failed to load match due to: "), std::move(callback));
+    if (!matchRepository.load(matchId, codeset.error, match))
+        return invokeResponse404(codeset.describe("Failed to load match due to: "), std::move(callback));
 
-    if (!match.endTurn(accountId, error))
-        return invokeResponse409(code_to_message(error, "End turn rejected due to: "), std::move(callback));
+    if (!match.endTurn(accountId, codeset.error))
+        return invokeResponse409(codeset.describe("End turn rejected due to: "), std::move(callback));
 
-    if (!matchRepository.save(match, error))
-        return invokeResponse409(code_to_message(error, "Failed to save match due to: "), std::move(callback));
+    MatchController controller(match, codeset);
+    controller.tickNpcConducts();
+
+    if (codeset.addFailure(!matchRepository.save(match, codeset.error)))
+        return invokeResponse409(codeset.describe("Failed to save match due to: "), std::move(callback));
 
     return invokeResponse200("Turn ended", std::move(callback));
 }
@@ -544,6 +547,8 @@ void ApiController::performCharacterAction
     // Attempt to perform the character action
     std::vector<LoggedEvent> eventLog;
     const bool activated = controller.activate(preactivation, Pointer<std::vector<LoggedEvent>>(eventLog));
+
+    if (activated) controller.tickNpcConducts();
 
     // Save the updated match state (only on success)
     if (activated && codeset.addFailure(!matchRepository.save(match, codeset.error)))

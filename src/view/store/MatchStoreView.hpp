@@ -45,6 +45,14 @@ struct MatchStoreView
         model.version = this->version;
         model.builders = this->builders.convert<Builder>();
         model.dungeon = this->dungeon;
+        // The dungeon assignment above replaces pathfinderCharacter with a
+        // default-initialized Character (characterId=-1). Re-run the same
+        // offset-based initialization that Match::Match() performs so every
+        // character slot, including pathfinderCharacter, has the correct id.
+        model.accessAllCharacters([&](Character& ch) {
+            int id;
+            if (model.containsCharacter(ch, id)) ch.characterId = id;
+        });
         model.turner = this->turner;
         model.username = this->username;
         model.titan = this->titan;

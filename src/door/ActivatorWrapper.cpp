@@ -32,18 +32,7 @@ bool ActivatorWrapper::activate(ActivationContext& activation) const {
 
         // Actor is always a character — only traits and roles lists are checked.
         if (_config.matches.actor.isAny()) {
-            const auto& m = _config.matches.actor;
-            bool matched = true;
-            if (m.traits.isAny())
-                matched = !(m.traits - computed).isAny();
-            if (matched && m.roles[0] != ROLE_COUNT) {
-                bool found = false;
-                for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && m.roles[i] != ROLE_COUNT; i++) {
-                    if (character.role == m.roles[i]) { found = true; break; }
-                }
-                matched = found;
-            }
-            if (!matched) return;
+            if (!_config.matches.actor.matchesCharacter(computed, character.role)) return;
         }
 
         // Tool is always an item — only traits and items lists are checked.
@@ -53,8 +42,8 @@ bool ActivatorWrapper::activate(ActivationContext& activation) const {
                 item.accessFlyweight([&](const ItemFlyweight& fw) {
                     const auto& m = _config.matches.tool;
                     bool matched = true;
-                    if (m.traits.isAny())
-                        matched = !(m.traits - fw.itemAttributes).isAny();
+                    if (m.required.isAny())
+                        matched = !(m.required - fw.itemAttributes).isAny();
                     if (matched && m.items[0] != ITEM_NIL) {
                         bool found = false;
                         for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && m.items[i] != ITEM_UNALLOCATED; i++) {
@@ -76,16 +65,7 @@ bool ActivatorWrapper::activate(ActivationContext& activation) const {
             activation.targetCharacter().access([&](Character& target) {
                 targetFound = true;
                 const auto targetComputed = controller.getTraitsComputed(target.characterId).final;
-                bool matched = true;
-                if (m.traits.isAny())
-                    matched = !(m.traits - targetComputed).isAny();
-                if (matched && m.roles[0] != ROLE_COUNT) {
-                    bool found = false;
-                    for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && m.roles[i] != ROLE_COUNT; i++) {
-                        if (target.role == m.roles[i]) { found = true; break; }
-                    }
-                    matched = found;
-                }
+                bool matched = m.matchesCharacter(targetComputed, target.role);
                 if (matched && m.locks.isAny()) {
                     bool found = false;
                     activation.targetChest().access([&](Chest& chest) {
@@ -102,8 +82,8 @@ bool ActivatorWrapper::activate(ActivationContext& activation) const {
                     targetFound = true;
                     item.accessFlyweight([&](const ItemFlyweight& fw) {
                         bool matched = true;
-                        if (m.traits.isAny())
-                            matched = !(m.traits - fw.itemAttributes).isAny();
+                        if (m.required.isAny())
+                            matched = !(m.required - fw.itemAttributes).isAny();
                         if (matched && m.items[0] != ITEM_NIL) {
                             bool found = false;
                             for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && m.items[i] != ITEM_UNALLOCATED; i++) {
@@ -119,8 +99,8 @@ bool ActivatorWrapper::activate(ActivationContext& activation) const {
                 activation.targetWall().access([&](Wall& w) {
                     DoorFlyweight::getFlyweights().accessConst((int)w.door, [&](const DoorFlyweight& fw) {
                         bool matched = true;
-                        if (m.traits.isAny())
-                            matched = !(m.traits - fw.doorAttributes).isAny();
+                        if (m.required.isAny())
+                            matched = !(m.required - fw.doorAttributes).isAny();
                         if (matched && m.doors[0] != DOOR_COUNT) {
                             bool found = false;
                             for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && m.doors[i] != DOOR_COUNT; i++) {

@@ -1,4 +1,5 @@
 #include "ActivatorMoveToFloor.hpp"
+#include "BehaviorEventEnum.hpp"
 #include "Codeset.hpp"
 #include "Match.hpp"
 #include "MatchController.hpp"
@@ -51,6 +52,7 @@ bool ActivatorMoveToFloor::activate(ActivationContext& activation) const {
             }
         }
 
+        controller.pushTrigger(nullptr, subject.characterId, -1, BEHAVIOR_EVENT_MOVE);
         result = true;
     });
     return result;

@@ -2,6 +2,7 @@
 #include "ActivatorAttack.hpp"
 #include "ActivatorCritterBite.hpp"
 #include "ActivatorNpcAct.hpp"
+#include "ActivatorDeposit.hpp"
 #include "ActivatorPickpocket.hpp"
 #include "ActivatorDamage.hpp"
 #include "ActivatorEndTurn.hpp"

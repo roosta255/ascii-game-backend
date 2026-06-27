@@ -3,6 +3,7 @@
 #include "Cardinal.hpp"
 #include "Character.hpp"
 #include "Chest.hpp"
+#include "ConductEnum.hpp"
 #include "DamageTypeBits.hpp"
 #include "Item.hpp"
 #include "Match.hpp"
@@ -17,6 +18,15 @@ struct ActivationContext {
     Room& room;
 
     Character& character;
+
+    // Set by the NPC dispatch loop to identify which conduct slot is active.
+    // TriggerEffectSetBehavior writes state back to this slot.
+    // CONDUCT_NIL when the trigger fires outside the NPC conduct loop.
+    ConductEnum conductSlot = CONDUCT_NIL;
+
+    // Set when this trigger fires from an asObserver slot; identifies the NPC who is observing.
+    // -1 when the trigger fires as actor, target, or outside the NPC event loop.
+    int observerCharacterId = -1;
 
     Pointer<Item> sourceItem;
     Maybe<int> targetItemIndex;  // absolute index into dungeon.items[], for actions like LOOT_CHEST

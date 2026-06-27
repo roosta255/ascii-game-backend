@@ -20,17 +20,6 @@ bool ActivateNonPlayerCharacterNullTitan::activate(ActivationContext& activation
             for (int i = 0; i < MAX_ACTIVATIONS; ++i) {
                 const auto traits = req.controller.getTraitsComputed(character.characterId).final;
                 if (!traits[TRAIT_ACTION_READY].orElse(false) && !traits[TRAIT_MOVEMENT_READY].orElse(false)) break;
-
-                Preactivation preactivation{
-                    .action = {
-                        .type = ACTION_NPC_ACT,
-                        .characterId = character.characterId,
-                        .roomId = character.location.roomId,
-                    },
-                    .playerId = playerId,
-                    .isSkippingAnimations = false,
-                };
-                if (!req.controller.activate(preactivation)) break;
             }
         }
 

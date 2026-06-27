@@ -30,6 +30,7 @@ void Match::accessAllCharacters(std::function<void(Character&)> consumer) {
     for(auto& character: dungeon.characters) {
         consumer(character);
     }
+    consumer(dungeon.pathfinderCharacter);
 }
 
 void Match::accessAllCharacters(std::function<void(const Character&)> consumer) const {
@@ -40,6 +41,7 @@ void Match::accessAllCharacters(std::function<void(const Character&)> consumer) 
     for(const auto& character: dungeon.characters) {
         consumer(character);
     }
+    consumer(dungeon.pathfinderCharacter);
 }
 
 void Match::accessUsedCharacters(std::function<void(const Character&)> consumer)const {

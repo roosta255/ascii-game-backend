@@ -37,7 +37,10 @@
       "Bash(ctest --output-on-failure)",
       "Bash(make test_target)",
       "Bash(./test_target)",
-      "Bash(cmake --build build --target test_target -- -j4)"
+      "Bash(cmake --build build --target test_target -- -j4)",
+      "Bash(ctest --test-dir build -R \"MONKEY_TUTORIAL\" -V)",
+      "Bash(ctest --test-dir build -V)",
+      "Bash(ctest --test-dir /workspaces/backend/build -V)"
     ]
   }
 }

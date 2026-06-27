@@ -32,7 +32,23 @@
       "Bash(curl -sv http://localhost:8080/api/matches)",
       "Bash(python3 -m json.tool)",
       "Bash(curl -sv http://172.19.0.3:8080/api/matches)",
-      "Bash(curl -s https://game-backend.callawayservice.com/api/matches)"
+      "Bash(curl -s https://game-backend.callawayservice.com/api/matches)",
+      "Bash(g++ -std=c++20 -I src/behavior -I src/door -I src/lock -I src/traits -I src/role -I src/item -I src -x c++ -fsyntax-only src/behavior/TriggerWrapper.cpp)",
+      "Bash(make)",
+      "Bash(make -C /workspaces/backend/build)",
+      "Bash(cmake --build .)",
+      "Bash(make -C /workspaces/backend/build clean)",
+      "Bash(xargs ls)",
+      "Bash(./test_target \"[monkey]\" -s)",
+      "Bash(/workspaces/backend/build_ninja/test_target)",
+      "Bash(ninja match_backend test_target)",
+      "Bash(tee /tmp/build_output.txt)",
+      "Bash(cmake --build build --target backend_test)",
+      "Bash(cmake --build build --target test)",
+      "Bash(cmake --build /workspaces/backend/build --target match_backend)",
+      "Bash(make -C /workspaces/backend/build -j4)",
+      "Bash(g++ -std=c++20 -c /workspaces/backend/src/behavior/TriggerWrapper.cpp -I/workspaces/backend/src/behavior -I/workspaces/backend/src/activator -I/workspaces/backend/src/door -I/workspaces/backend/src -o /dev/null)",
+      "Bash(g++ -std=c++20 -c /workspaces/backend/src/behavior/TriggerWrapper.cpp -I/workspaces/backend/src/behavior -I/workspaces/backend/src/activator -I/workspaces/backend/src/door -I/workspaces/backend/src/chest -I/workspaces/backend/src -o /dev/null)"
     ]
   }
 }

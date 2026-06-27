@@ -1,6 +1,8 @@
 #include "ActionFlyweight.hpp"
+#include "ActivationContext.hpp"
 #include "CyclicalRack.hpp"
 #include "BehaviorFlyweight.hpp"
+#include "Player.hpp"
 #include "TraitEnum.hpp"
 #include "AssociatedPriorityMinQueue.hpp"
 #include "ChannelEnum.hpp"
@@ -50,7 +52,7 @@ bool MatchController::activate(const iActivator& activator, const Preactivation&
     if (codeset.addFailure(!match.isStarted(codeset.error))) return false;
 
     std::vector<PendingTrigger> eventQueue;
-    eventQueuePtr = &eventQueue;
+    eventQueuePtr = eventQueue;
 
     bool isSuccess = false;
     buildActivationContext(preactivation, [&](ActivationContext& ctx){
@@ -72,64 +74,7 @@ bool MatchController::activate(const iActivator& activator, const Preactivation&
         return false;
     }
 
-    // Process pending triggers. Failures in the queue do not affect isSuccess.
-    std::vector<LoggedEvent> triggerEventLog;
-    outEventLog.access([&](std::vector<LoggedEvent>& eventLog) { triggerEventLog = eventLog; });
-    constexpr int MAX_QUEUE_SIZE = 200;
-    constexpr int MAX_PROCESSED  = 400;
-    int totalProcessed = 0;
-    while (!eventQueue.empty()) {
-        if ((int)eventQueue.size() > MAX_QUEUE_SIZE) {
-            codeset.addLog(CODE_EVENT_QUEUE_SIZE_LIMIT_EXCEEDED, (int)eventQueue.size());
-            break;
-        }
-        if (totalProcessed >= MAX_PROCESSED) {
-            codeset.addLog(CODE_EVENT_QUEUE_PROCESSED_LIMIT_EXCEEDED, totalProcessed);
-            break;
-        }
-
-        auto trigger = eventQueue.front();
-        eventQueue.erase(eventQueue.begin());
-        ++totalProcessed;
-
-        // TODO: run trigger.activator in a full ActivationContext context with time = animationTime
-
-        // Dispatch behavioral responses to all AI agents in the same room as the event character.
-        // Behavior responses are not cascaded (BEHAVIOR_EVENT_NIL suppresses further dispatch).
-        if (trigger.eventType == BEHAVIOR_EVENT_NIL) continue;
-
-        int roomId = -1;
-        match.accessUsedCharacters([&](const Character& ch) {
-            if (ch.characterId == trigger.characterId) roomId = ch.location.roomId;
-        });
-        if (roomId < 0) continue;
-
-        setupLocations();
-        floors.accessConst(roomId, [&](const Map<int2, int>& floorMap) {
-            for (const auto& [key, agentId] : floorMap) {
-                if (agentId == trigger.characterId || agentId == trigger.targetId) continue;
-                getConductByCharacterId(agentId).access([&](Conduct& conduct) {
-                    for (int c = CONDUCT_NIL + 1; c < CONDUCT_COUNT; c++) {
-                        conduct.memory.accessConst(ConductEnum(c), [&](const ConductMemory& mem) {
-                            if (mem.state == BEHAVIOR_NIL) return;
-                            BehaviorFlyweight::getFlyweights().accessConst(mem.state, [&](const BehaviorFlyweight& fw) {
-                                if (fw.getActivatorForEvent(trigger.eventType).isEmpty()) return;
-                                // TODO: run trigger in a full ActivationContext
-                                eventQueue.push_back(PendingTrigger{
-                                    nullptr,
-                                    agentId,
-                                    trigger.characterId,
-                                    Maybe<int>(agentId),
-                                    BEHAVIOR_EVENT_NIL
-                                });
-                            });
-                        });
-                    }
-                });
-            }
-        });
-    }
-
+    drainEventQueue(eventQueue);
     eventQueuePtr = nullptr;
     return true;
 }
@@ -340,8 +285,25 @@ bool MatchController::findCharacterPath(
     std::function<bool(const Match&)> destination,
     std::function<int(const CharacterAction&, const Match&)> heuristic,
     std::function<void(const CharacterAction&, const Match&)> consumer,
-    const bool isFailure
+    const bool isFailure,
+    const bool suppressConducts,
+    const bool suppressEvents
 ) {
+    const bool prevConducts = suppressNpcConducts;
+    const bool prevEvents   = suppressNpcEventResponse;
+    isPathfindingActive  = true;
+    if (suppressConducts) suppressNpcConducts      = true;
+    if (suppressEvents)   suppressNpcEventResponse = true;
+    struct PathfindingGuard {
+        MatchController& c;
+        bool prevConducts, prevEvents;
+        ~PathfindingGuard() {
+            c.isPathfindingActive  = false;
+            c.suppressNpcConducts      = prevConducts;
+            c.suppressNpcEventResponse = prevEvents;
+        }
+    } guard{*this, prevConducts, prevEvents};
+
     Match start = this->match;
     start.setPathfinding();
     auto frontier = AssociatedPriorityMinQueue<Match>();
@@ -417,6 +379,113 @@ bool MatchController::findCharacterPath(
         }
     }
     return false;
+}
+
+bool MatchController::floodFillRoomBits(
+    int startRoomBits,
+    std::function<void(const CharacterAction&, const Match&)> consumer
+) {
+    int pathfinderCharId;
+    if (!match.containsCharacter(match.dungeon.pathfinderCharacter, pathfinderCharId))
+        return false;
+
+    std::string playerId;
+    for (auto& builder : match.builders) {
+        if (!builder.player.isEmpty()) {
+            playerId = builder.player.account.toString();
+            break;
+        }
+    }
+    if (playerId.empty() && !match.titan.player.isEmpty())
+        playerId = match.titan.player.account.toString();
+    if (playerId.empty())
+        return false;
+
+    const bool prevConducts = suppressNpcConducts;
+    const bool prevEvents   = suppressNpcEventResponse;
+    suppressNpcConducts      = true;
+    suppressNpcEventResponse = true;
+    struct FloodGuard {
+        MatchController& c; bool prevC, prevE;
+        ~FloodGuard() { c.suppressNpcConducts = prevC; c.suppressNpcEventResponse = prevE; }
+    } guard{*this, prevConducts, prevEvents};
+
+    int visitedRooms = startRoomBits;
+    Map<int3, bool> visitedLocations;
+    std::vector<Match> frontier;
+
+    // Enqueues a fresh exploration state from the floor of roomId using the
+    // original dungeon layout (not an evolved BFS state), so each room's
+    // connectivity is evaluated against the real game state.
+    const auto enqueueRoom = [&](int roomId) {
+        Match s = match;
+        s.setPathfinding();
+        Character& pf = s.dungeon.pathfinderCharacter;
+        pf.role     = ROLE_PATHFINDER;
+        pf.moves    = 0;
+        pf.actions  = 0;
+        pf.location = Location::makeFloor(roomId, CHANNEL_CORPOREAL, 0);
+        visitedLocations.set(int3{roomId, (int)pf.location.type, pf.location.data}, true);
+        frontier.push_back(s);
+    };
+
+    for (int i = 0; i < 32; i++) {
+        if (startRoomBits & (1 << i))
+            enqueueRoom(i);
+    }
+
+    while (!frontier.empty()) {
+        Match current = frontier.front();
+        frontier.erase(frontier.begin());
+
+        const int currentRoom = current.dungeon.pathfinderCharacter.location.roomId;
+
+        Codeset nullCodes;
+        MatchController tempCtrl(current, nullCodes);
+        tempCtrl.updateTraits(current.dungeon.pathfinderCharacter);
+        tempCtrl.setupLocations(true);
+
+        tempCtrl.permuteCharacterActions(playerId, pathfinderCharId,
+            [&](const CharacterAction& action, const Match& result) {
+                const Character& pf = result.dungeon.pathfinderCharacter;
+                const int newRoom   = pf.location.roomId;
+                const int3 locKey{newRoom, (int)pf.location.type, pf.location.data};
+
+                if (visitedLocations.containsKey(locKey)) return;
+                visitedLocations.set(locKey, true);
+
+                if (newRoom != currentRoom && !(visitedRooms & (1 << newRoom))) {
+                    // Pathfinder crossed into a previously unseen room.
+                    // ACTION_MOVE_TO_FLOOR carries no direction; recover it from
+                    // the pathfinder's pre-action door position so consumers can
+                    // record per-direction bitmasks.
+                    visitedRooms |= (1 << newRoom);
+                    CharacterAction enriched = action;
+                    const Location& preLoc = current.dungeon.pathfinderCharacter.location;
+                    if (enriched.direction.isEmpty() && preLoc.type == LOCATION_DOOR) {
+                        enriched.direction = Cardinal(preLoc.data);
+                    }
+                    consumer(enriched, result);
+                    enqueueRoom(newRoom);
+                } else if (newRoom == currentRoom) {
+                    // Within-room transition (e.g. floor→door): continue exploring
+                    // from this position so we can attempt door activation next.
+                    Match nextState = result;
+                    nextState.setPathfinding();
+                    frontier.push_back(nextState);
+                }
+            }
+        );
+    }
+
+    return true;
+}
+
+bool MatchController::floodFillRoom(
+    int startRoomId,
+    std::function<void(const CharacterAction&, const Match&)> consumer
+) {
+    return floodFillRoomBits(1 << startRoomId, consumer);
 }
 
 bool MatchController::findFreeFloor(int roomId, ChannelEnum channel, int& output) {
@@ -811,8 +880,188 @@ void MatchController::addRequestLoggedEvent(ActivationContext& activation, Logge
     });
 }
 
+void MatchController::runBehaviorTrigger(int agentId, const iActivator& wrapper, ConductEnum conductSlot, int observerCharacterId, int actorCharacterId) {
+    Player* playerProxy = nullptr;
+    for (auto& builder : match.builders) {
+        playerProxy = &builder.player;
+        break;
+    }
+    if (!playerProxy) return;
+
+    match.getCharacter(agentId, codeset.error).access([&](Character& agentChar) {
+        match.dungeon.getRoom(agentChar.location.roomId, codeset.error).access([&](Room& room) {
+            RequestContext request{
+                .player = *playerProxy,
+                .match = match,
+                .codeset = codeset,
+                .controller = *this,
+                .time = animationTime,
+                .isSkippingAnimations = true,
+                .isSkippingLogging = true,
+            };
+
+            // In observer triggers, activation.character is the original event actor so that
+            // TriggerMatchCharacter{source=Actor} checks the character who caused the event,
+            // not the observing NPC. Proposals always run as the agent (monkey) after.
+            const bool useActorChar = (observerCharacterId != -1)
+                                    && (actorCharacterId != -1)
+                                    && (actorCharacterId != agentId);
+
+            auto fireAndPropose = [&](Character& actorChar) {
+                {
+                    ActivationContext activation{
+                        .codeset = codeset,
+                        .request = request,
+                        .room = room,
+                        .character = actorChar,
+                        .conductSlot = conductSlot,
+                        .observerCharacterId = observerCharacterId,
+                    };
+                    wrapper.activate(activation);
+                }
+                // After the trigger may have changed FSM state, run proposals for the
+                // new state immediately (e.g. PICKPOCKET_ATTEMPT → steal, STASH_DEPOSITING → deposit).
+                ActivationContext proposalCtx{
+                    .codeset = codeset,
+                    .request = request,
+                    .room = room,
+                    .character = agentChar,
+                    .conductSlot = conductSlot,
+                    .observerCharacterId = observerCharacterId,
+                };
+                getConductByCharacterId(agentId).access([&](Conduct& conduct) {
+                    conduct.buildAndExecuteProposals(proposalCtx);
+                });
+            };
+
+            if (useActorChar) {
+                match.getCharacter(actorCharacterId, codeset.error).access([&](Character& actorChar) {
+                    fireAndPropose(actorChar);
+                });
+            } else {
+                ActivationContext activation{
+                    .codeset = codeset,
+                    .request = request,
+                    .room = room,
+                    .character = agentChar,
+                    .conductSlot = conductSlot,
+                    .observerCharacterId = observerCharacterId,
+                };
+                wrapper.activate(activation);
+                getConductByCharacterId(agentId).access([&](Conduct& conduct) {
+                    conduct.buildAndExecuteProposals(activation);
+                });
+            }
+        });
+    });
+}
+
 void MatchController::pushTrigger(const iActivator* activator, int characterId, int targetId, BehaviorEventEnum eventType) {
-    if (eventQueuePtr) eventQueuePtr->push_back(PendingTrigger{ activator, characterId, targetId, Maybe<int>::empty(), eventType });
+    eventQueuePtr.access([&](std::vector<PendingTrigger>& q) {
+        q.push_back(PendingTrigger{ activator, characterId, targetId, Maybe<int>::empty(), eventType });
+    });
+}
+
+void MatchController::drainEventQueue(std::vector<PendingTrigger>& eventQueue) {
+    constexpr int MAX_QUEUE_SIZE = 200;
+    constexpr int MAX_PROCESSED  = 400;
+    int totalProcessed = 0;
+    while (!eventQueue.empty()) {
+        if ((int)eventQueue.size() > MAX_QUEUE_SIZE) {
+            codeset.addLog(CODE_EVENT_QUEUE_SIZE_LIMIT_EXCEEDED, (int)eventQueue.size());
+            break;
+        }
+        if (totalProcessed >= MAX_PROCESSED) {
+            codeset.addLog(CODE_EVENT_QUEUE_PROCESSED_LIMIT_EXCEEDED, totalProcessed);
+            break;
+        }
+
+        auto trigger = eventQueue.front();
+        eventQueue.erase(eventQueue.begin());
+        ++totalProcessed;
+
+        // TODO: run trigger.activator in a full ActivationContext context with time = animationTime
+
+        // Behavior responses are not cascaded (BEHAVIOR_EVENT_NIL suppresses further dispatch).
+        if (trigger.eventType == BEHAVIOR_EVENT_NIL) continue;
+
+        int roomId = -1;
+        match.accessUsedCharacters([&](const Character& ch) {
+            if (ch.characterId == trigger.characterId) roomId = ch.location.roomId;
+        });
+        if (roomId < 0) continue;
+
+        if (suppressNpcEventResponse) continue;
+        setupLocations();
+        floors.accessConst(roomId, [&](const Map<int2, int>& floorMap) {
+            for (const auto& [key, agentId] : floorMap) {
+                getConductByCharacterId(agentId).access([&](Conduct& conduct) {
+                    for (int c = CONDUCT_NIL + 1; c < CONDUCT_COUNT; c++) {
+                        conduct.memory.accessConst(ConductEnum(c), [&](const ConductMemory& mem) {
+                            if (mem.state == BEHAVIOR_NIL) return;
+                            BehaviorFlyweight::getFlyweights().accessConst(mem.state, [&](const BehaviorFlyweight& fw) {
+                                const BehaviorFlyweight::EventTriggers* triggers = fw.getTriggersForEvent(trigger.eventType);
+                                if (!triggers) return;
+                                const bool isObserver = (agentId != trigger.characterId && agentId != trigger.targetId);
+                                const Maybe<TriggerWrapper>& slot = (agentId == trigger.characterId)
+                                    ? triggers->asActor
+                                    : (agentId == trigger.targetId)
+                                        ? triggers->asTarget
+                                        : triggers->asObserver;
+                                slot.accessConst([&](const TriggerWrapper& wrapper) {
+                                    runBehaviorTrigger(agentId, wrapper, ConductEnum(c), isObserver ? agentId : -1, trigger.characterId);
+                                });
+                            });
+                        });
+                    }
+                });
+            }
+        });
+    }
+}
+
+void MatchController::tickNpcConducts() {
+    if (suppressNpcConducts) return;
+    if (!match.isStarted(codeset.error)) return;
+    setupLocations();
+
+    Player* playerProxy = nullptr;
+    for (auto& builder : match.builders) {
+        playerProxy = &builder.player;
+        break;
+    }
+    if (!playerProxy) return;
+
+    std::vector<PendingTrigger> eventQueue;
+    eventQueuePtr = eventQueue;
+
+    for (const auto& [charId, conductPtr] : conductMap) {
+        conductPtr.access([&](Conduct& conduct) {
+            match.getCharacter(charId, codeset.error).access([&](Character& character) {
+                match.dungeon.getRoom(character.location.roomId, codeset.error).access([&](Room& room) {
+                    RequestContext request{
+                        .player = *playerProxy,
+                        .match = match,
+                        .codeset = codeset,
+                        .controller = *this,
+                        .time = animationTime,
+                        .isSkippingAnimations = true,
+                        .isSkippingLogging = true,
+                    };
+                    ActivationContext activation{
+                        .codeset = codeset,
+                        .request = request,
+                        .room = room,
+                        .character = character,
+                    };
+                    conduct.buildAndExecuteProposals(activation);
+                });
+            });
+        });
+        drainEventQueue(eventQueue);
+    }
+
+    eventQueuePtr = nullptr;
 }
 
 void MatchController::setAnimationTime(const Timestamp& t) {

@@ -274,6 +274,7 @@ void TestController::moveCharacterToWall(const Cardinal& dir){
 }
 
 void TestController::updateEverything() {
+    controller.tickNpcConducts();
     updateInventory();
     updateTable();
 }

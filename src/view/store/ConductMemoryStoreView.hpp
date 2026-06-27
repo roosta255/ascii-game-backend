@@ -9,30 +9,26 @@
 
 struct ConductMemoryStoreView
 {
-    int targetCharacterId = -1;
-    int targetObjectId    = -1;
-    int targetRoomId      = -1;
-    std::string state     = "BEHAVIOR_NIL";
+    std::string state = "NIL";
 
     inline ConductMemoryStoreView() = default;
 
     inline ConductMemoryStoreView(const ConductMemory& model)
-    : targetCharacterId(model.targetCharacterId)
-    , targetObjectId(model.targetObjectId)
-    , targetRoomId(model.targetRoomId)
-    , state(behavior_to_text(model.state))
+        : state(behavior_to_text(model.state))
     {}
 
     inline operator ConductMemory() const {
-        ConductMemory model{
-            .targetCharacterId = this->targetCharacterId,
-            .targetObjectId    = this->targetObjectId,
-            .targetRoomId      = this->targetRoomId,
-            .state             = BEHAVIOR_NIL,
-        };
-        BehaviorFlyweight::indexByString(this->state, model.state);
+        ConductMemory model;
+        BehaviorFlyweight::indexByString(state, model.state);
         return model;
     }
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ConductMemoryStoreView, targetCharacterId, targetObjectId, targetRoomId, state)
+inline void to_json(nlohmann::json& j, const ConductMemoryStoreView& v) {
+    j = nlohmann::json::object();
+    j["state"] = v.state;
+}
+
+inline void from_json(const nlohmann::json& j, ConductMemoryStoreView& v) {
+    if (j.contains("state")) j.at("state").get_to(v.state);
+}

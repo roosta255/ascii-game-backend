@@ -72,6 +72,11 @@ inline Pointer<T>& operator=(T& setting){
 	return *this;
 }
 
+inline Pointer<T>& operator=(std::nullptr_t){
+	_ptr = nullptr;
+	return *this;
+}
+
 inline bool operator==(T& rhs){
 	return _ptr == &rhs;
 }

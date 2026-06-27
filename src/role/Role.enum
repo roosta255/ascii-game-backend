@@ -31,8 +31,7 @@ ROLE_DECL(SCORPION,  1,       1,      1,        0,      iActivator,       ( { TR
     ROLE_BITE_MODIFIER_DECL( ({ {TRAIT_NIL}, {TRAIT_NIL}, {TRAIT_SCORPION_BITE}, {TRAIT_NIL} }) )
     ROLE_DAMAGE_TYPES_DECL( ({ DAMAGE_TYPE_PIERCE }) )
 
-ROLE_DECL(MONKEY,    1,       2,      2,        0,      iActivator,       ( { TRAIT_ACTOR, TRAIT_MOBILE, TRAIT_ORGANIC, TRAIT_FOGGY, TRAIT_HANDS, TRAIT_PICKPOCKETER, TRAIT_ITEM_SQUIRRELER, TRAIT_HIDER, TRAIT_WANDERER, TRAIT_CONDUCT } ))
-    ROLE_CONDUCT_DECL(WANDER,     BEHAVIOR_WANDER_IDLE)
+ROLE_DECL(MONKEY,    1,       8,      2,        0,      iActivator,       ( { TRAIT_ACTOR, TRAIT_MOBILE, TRAIT_ORGANIC, TRAIT_FOGGY, TRAIT_HANDS, TRAIT_PICKPOCKETER, TRAIT_ITEM_SQUIRRELER, TRAIT_HIDER, TRAIT_WANDERER, TRAIT_CONDUCT } ))
     ROLE_CONDUCT_DECL(PICKPOCKET, BEHAVIOR_PICKPOCKET_SEARCHING)
     ROLE_INVENTORY_SIZE_DECL(1)
 
@@ -40,3 +39,7 @@ ROLE_DECL(CHEST,     1,       0,      0,        0,      iActivator,       ( { TR
     ROLE_INVENTORY_SIZE_DECL(6)
 
 ROLE_DECL(SACRAMENT_FORGIVENESS,     1,       0,      0,        0,      ActivatorRuleExecution,       ( { TRAIT_OBJECT } ) )
+
+// Phantom character used exclusively for flood-fill room-connectivity queries.
+// Placed temporarily in a dungeon copy; never occupies a real match slot.
+ROLE_DECL(PATHFINDER,               1,       8,      8,        0,      iActivator,                   ( { TRAIT_ACTOR, TRAIT_MOBILE } ) )

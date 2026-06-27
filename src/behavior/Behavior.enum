@@ -1,202 +1,251 @@
 // BEHAVIOR_DECL(name_)
-// Optional per-state event handlers (follow immediately after BEHAVIOR_DECL):
-//   BEHAVIOR_ON_MOVE_DECL(config_)
-//   BEHAVIOR_ON_ATTACK_DECL(config_)
-//   BEHAVIOR_ON_DAMAGE_DECL(config_)
-//   BEHAVIOR_ON_LOOT_DECL(config_)
-//   BEHAVIOR_ON_DEATH_DECL(config_)
-//   BEHAVIOR_ON_PICKPOCKET_DECL(config_)
-//   BEHAVIOR_ON_DEPOSIT_DECL(config_)
+// Optional per-state event handlers (follow immediately after BEHAVIOR_DECL).
+// Each event type has three role-specific slots:
+//   BEHAVIOR_ON_MOVE_AS_ACTOR_DECL(config_)       — FSM owner is the mover
+//   BEHAVIOR_ON_MOVE_AS_TARGET_DECL(config_)      — FSM owner is the move target
+//   BEHAVIOR_ON_MOVE_AS_OBSERVER_DECL(config_)    — FSM owner is in the room but neither
+//   BEHAVIOR_ON_ATTACK_AS_ACTOR_DECL(config_)
+//   BEHAVIOR_ON_ATTACK_AS_TARGET_DECL(config_)
+//   BEHAVIOR_ON_ATTACK_AS_OBSERVER_DECL(config_)
+//   BEHAVIOR_ON_DAMAGE_AS_ACTOR_DECL(config_)
+//   BEHAVIOR_ON_DAMAGE_AS_TARGET_DECL(config_)
+//   BEHAVIOR_ON_DAMAGE_AS_OBSERVER_DECL(config_)
+//   BEHAVIOR_ON_LOOT_AS_ACTOR_DECL(config_)
+//   BEHAVIOR_ON_LOOT_AS_TARGET_DECL(config_)
+//   BEHAVIOR_ON_LOOT_AS_OBSERVER_DECL(config_)
+//   BEHAVIOR_ON_DEATH_AS_ACTOR_DECL(config_)
+//   BEHAVIOR_ON_DEATH_AS_TARGET_DECL(config_)
+//   BEHAVIOR_ON_DEATH_AS_OBSERVER_DECL(config_)
+//   BEHAVIOR_ON_PICKPOCKET_AS_ACTOR_DECL(config_)
+//   BEHAVIOR_ON_PICKPOCKET_AS_TARGET_DECL(config_)
+//   BEHAVIOR_ON_PICKPOCKET_AS_OBSERVER_DECL(config_)
+//   BEHAVIOR_ON_DEPOSIT_AS_ACTOR_DECL(config_)
+//   BEHAVIOR_ON_DEPOSIT_AS_TARGET_DECL(config_)
+//   BEHAVIOR_ON_DEPOSIT_AS_OBSERVER_DECL(config_)
 //   BEHAVIOR_ON_ACT_DECL(config_)
 //
+// Effects write named ConductMemory variables (declared in ConductMemoryVariable.enum):
+//   TriggerEffectSetVar{var}            scannedCharacterId → memory[var]
+//   TriggerEffectSetVarFromObj{var}     scannedObjectId    → memory[var]
+//   TriggerEffectSetVarFromRoom{var}    scannedRoomId      → memory[var]
+//   TriggerEffectSetVarFromContext{var} context char id    → memory[var]
+//   TriggerEffectClearVar{var}          memory[var] = -1
+//   TriggerEffectSetBehavior{state}     memory.state = state
+//
 // Each config_ is a TriggerConfig aggregate initialiser wrapped in ({...}).
-// The event type and required FSM state are implicit: they come from which
-// BEHAVIOR_ON_*_DECL slot and which BEHAVIOR_DECL entry this config belongs to.
 
 BEHAVIOR_DECL(NIL)
 
-// ─── WANDER ──────────────────────────────────────────────────────────────────
-
-BEHAVIOR_DECL(WANDER_IDLE)
-    BEHAVIOR_ON_ACT_DECL(({
-        .conduct = CONDUCT_WANDER,
-        .effects = { TriggerEffectSetBehavior{BEHAVIOR_WANDER_SELECT_DESTINATION} }
-    }))
-
-BEHAVIOR_DECL(WANDER_SELECT_DESTINATION)
-    // onAct: game logic (find free floor, move) handled by onAct executor
-
-BEHAVIOR_DECL(WANDER_MOVING)
-    BEHAVIOR_ON_MOVE_DECL(({
-        .conduct = CONDUCT_WANDER,
-        .effects = {
-            TriggerEffectClearTargetRoom{},
-            TriggerEffectSetBehavior{BEHAVIOR_WANDER_SELECT_DESTINATION}
-        }
-    }))
-    BEHAVIOR_ON_DAMAGE_DECL(({
-        .conduct = CONDUCT_WANDER,
-        .effects = { TriggerEffectSetBehavior{BEHAVIOR_WANDER_IDLE} }
-    }))
-
-// ─── HUNT ─────────────────────────────────────────────────────────────────────
-
-BEHAVIOR_DECL(HUNT_SEARCHING)
-    BEHAVIOR_ON_MOVE_DECL(({
-        .conduct = CONDUCT_HUNT,
-        .matches = { TriggerMatchPickpocketableCharacterVisible{} },
-        .effects = {
-            TriggerEffectSetTargetCharacter{},
-            TriggerEffectSetBehavior{BEHAVIOR_HUNT_PURSUING}
-        }
-    }))
-
-BEHAVIOR_DECL(HUNT_PURSUING)
-    BEHAVIOR_ON_MOVE_DECL(({
-        .conduct = CONDUCT_HUNT,
-        .matches = { TriggerMatchTargetCharacterLost{} },
-        .effects = { TriggerEffectSetBehavior{BEHAVIOR_HUNT_LOST} }
-    }))
-
-BEHAVIOR_DECL(HUNT_LOST)
-    BEHAVIOR_ON_MOVE_DECL(({
-        .conduct = CONDUCT_HUNT,
-        .matches = { TriggerMatchTargetCharacterVisible{} },
-        .effects = { TriggerEffectSetBehavior{BEHAVIOR_HUNT_PURSUING} }
-    }))
-    BEHAVIOR_ON_ACT_DECL(({
-        .conduct = CONDUCT_HUNT,
-        .effects = {
-            TriggerEffectClearTargetCharacter{},
-            TriggerEffectSetBehavior{BEHAVIOR_HUNT_SEARCHING}
-        }
-    }))
-
 // ─── PICKPOCKET ───────────────────────────────────────────────────────────────
+//
+// Flow:
+//
+// SEARCHING
+//     observe victim
+//         -> TRACKING
+//
+// TRACKING
+//     follow remembered victim movement
+//     observe victim
+//         -> ATTEMPT
+//
+// ATTEMPT
+//     success -> STASH_FINDING
+//     failure -> TRACKING
+//
+// STASH_FINDING
+//     find open chest
+//         -> STASH_PATHING
+//
+// STASH_PATHING
+//     compute path
+//         -> STASH_TRAVERSING
+//
+// STASH_TRAVERSING
+//     walk path
+//         -> STASH_DEPOSITING
+//
+// STASH_DEPOSITING
+//     deposit loot
+//         -> PICKPOCKET_SEARCHING
 
 BEHAVIOR_DECL(PICKPOCKET_SEARCHING)
-    BEHAVIOR_PROPOSER_DECL(ProposerPickpocketSearch)
-    BEHAVIOR_ON_MOVE_DECL(({
-        .conduct = CONDUCT_PICKPOCKET,
-        .matches = { TriggerMatchPickpocketableCharacterVisible{} },
+    // Monkey moved into a room containing a victim.
+    BEHAVIOR_ON_MOVE_AS_ACTOR_DECL(({
         .effects = {
-            TriggerEffectSetTargetCharacter{},
-            TriggerEffectSetBehavior{BEHAVIOR_PICKPOCKET_APPROACHING}
+            TriggerEffectScanRoomForCharacter{
+                .match = {
+                    .required   = makeTraitBits({TRAIT_PICKPOCKETABLE}),
+                    .restricted = makeTraitBits({TRAIT_ACTION_READY})
+                },
+                .onFound = {
+                    TriggerEffectSetVar{CONDUCT_MEMORY_CHARACTER_ID},
+                    TriggerEffectSetBehavior{BEHAVIOR_PICKPOCKET_TRACKING}
+                }
+            }
+        }
+    }))
+    // Victim moved into monkey's room.
+    BEHAVIOR_ON_MOVE_AS_OBSERVER_DECL(({
+        .matches = { TriggerMatchCharacter{
+            .source           = TriggerMatchActivationSource::Actor,
+            .traitsRequired   = makeTraitBits({TRAIT_PICKPOCKETABLE}),
+        } },
+        .effects = {
+            TriggerEffectSetVar{CONDUCT_MEMORY_CHARACTER_ID},
+            TriggerEffectSetBehavior{BEHAVIOR_PICKPOCKET_ATTEMPT}
         }
     }))
 
-BEHAVIOR_DECL(PICKPOCKET_APPROACHING)
-    BEHAVIOR_ON_MOVE_DECL(({
-        .conduct = CONDUCT_PICKPOCKET,
-        .matches = { TriggerMatchTargetCharacterVisible{} },
-        .effects = { TriggerEffectSetBehavior{BEHAVIOR_PICKPOCKET_STEALING} }
-    }))
-    BEHAVIOR_ON_DEATH_DECL(({
-        .conduct = CONDUCT_PICKPOCKET,
+BEHAVIOR_DECL(PICKPOCKET_TRACKING)
+    // Remember the tracked victim's most recently observed movement direction.
+    BEHAVIOR_ON_MOVE_AS_OBSERVER_DECL(({
+        .matches = {
+            TriggerMatchCharacterId{
+                .var    = CONDUCT_MEMORY_CHARACTER_ID,
+                .source = TriggerMatchCharacterSource::Actor
+            }
+        },
         .effects = {
-            TriggerEffectClearTargetCharacter{},
+            TriggerEffectSetVarFromDirection{CONDUCT_MEMORY_DIRECTION}
+        }
+    }))
+    // Monkey moved — tracked victim is now visible; attempt steal.
+    BEHAVIOR_ON_MOVE_AS_ACTOR_DECL(({
+        .matches = {
+            TriggerMatchCharacterVisible{.var = CONDUCT_MEMORY_CHARACTER_ID}
+        },
+        .effects = {
+            TriggerEffectSetBehavior{BEHAVIOR_PICKPOCKET_ATTEMPT}
+        }
+    }))
+    // Victim died.
+    BEHAVIOR_ON_DEATH_AS_OBSERVER_DECL(({
+        .matches = {
+            TriggerMatchCharacterId{
+                .var    = CONDUCT_MEMORY_CHARACTER_ID,
+                .source = TriggerMatchCharacterSource::Target
+            }
+        },
+        .effects = {
+            TriggerEffectClearVar{CONDUCT_MEMORY_CHARACTER_ID},
+            TriggerEffectSetBehavior{BEHAVIOR_PICKPOCKET_SEARCHING}
+        }
+    }))
+    // Follow last known victim direction.
+    BEHAVIOR_PROPOSER_DECL(({
+        .priority = 3,
+        .effects  = {
+            TriggerEffectSetDirectionFromVar{CONDUCT_MEMORY_DIRECTION},
+            TriggerEffectExecuteAction{.action = ACTION_MOVE_TO_DOOR}
+        }
+    }))
+
+BEHAVIOR_DECL(PICKPOCKET_ATTEMPT)
+    BEHAVIOR_PROPOSER_DECL(({
+        .priority = 3,
+        .effects  = {
+            TriggerEffectExecuteAction{
+                .action    = ACTION_PICKPOCKET,
+                .targetVar = CONDUCT_MEMORY_CHARACTER_ID
+            }
+        }
+        // .failureEffects = { TriggerEffectSetBehavior{BEHAVIOR_PICKPOCKET_TRACKING} }
+    }))
+    // Successful theft: scan for stash chest, store its room bits, transition to pathing.
+    BEHAVIOR_ON_PICKPOCKET_AS_ACTOR_DECL(({
+        .effects = {
+            TriggerEffectClearVar{CONDUCT_MEMORY_CHARACTER_ID},
+            TriggerEffectScanCharacters{
+                .scanBuilders       = false,
+                .rolesAccepted      = { ROLE_CHEST },
+                .matchedRoomBitsVar = CONDUCT_MEMORY_SEARCH_TARGETS
+            },
+            TriggerEffectSetBehavior{BEHAVIOR_STASH_FINDING}
+        }
+    }))
+    // Victim died.
+    BEHAVIOR_ON_DEATH_AS_OBSERVER_DECL(({
+        .matches = {
+            TriggerMatchCharacterId{
+                .var    = CONDUCT_MEMORY_CHARACTER_ID,
+                .source = TriggerMatchCharacterSource::Target
+            }
+        },
+        .effects = {
+            TriggerEffectClearVar{CONDUCT_MEMORY_CHARACTER_ID},
             TriggerEffectSetBehavior{BEHAVIOR_PICKPOCKET_SEARCHING}
         }
     }))
 
-BEHAVIOR_DECL(PICKPOCKET_STEALING)
-    // Success: transition to deposit cycle (targetObjectId already set by ActivatorPickpocket)
-    BEHAVIOR_ON_PICKPOCKET_DECL(({
-        .conduct = CONDUCT_PICKPOCKET,
-        .effects = { TriggerEffectSetBehavior{BEHAVIOR_DEPOSIT_SEARCHING_CHEST} }
-    }))
-    BEHAVIOR_ON_DEATH_DECL(({
-        .conduct = CONDUCT_PICKPOCKET,
+// ─── STASH ────────────────────────────────────────────────────────────────────
+
+BEHAVIOR_DECL(STASH_FINDING)
+    // Chest room is already in SEARCH_TARGETS (set by PICKPOCKET_ATTEMPT trigger).
+    // Immediately begin pathfinding toward the stash.
+    BEHAVIOR_PROPOSER_DECL(({
+        .priority = 3,
         .effects = {
-            TriggerEffectClearTargetCharacter{},
+            TriggerEffectScanCharacters{
+                .scanBuilders       = false,
+                .rolesAccepted      = { ROLE_CHEST },
+                .matchedRoomBitsVar = CONDUCT_MEMORY_SEARCH_TARGETS
+            },
+            TriggerEffectSetBehavior{BEHAVIOR_STASH_PATHING}
+        }
+    }))
+
+BEHAVIOR_DECL(STASH_PATHING)
+    // Compute A* path toward stash room(s) in SEARCH_TARGETS; write door bits.
+    // Immediately transitions to STASH_TRAVERSING on the same tick.
+    BEHAVIOR_PROPOSER_DECL(({
+        .priority = 3,
+        .effects  = {
+            TriggerEffectComputeFloodPath{
+                .startBitsVar = CONDUCT_MEMORY_SEARCH_TARGETS,
+                .againstNorthVar = CONDUCT_MEMORY_PATHFIND_DOOR_NORTH,
+                .againstEastVar = CONDUCT_MEMORY_PATHFIND_DOOR_EAST,
+                .againstSouthVar = CONDUCT_MEMORY_PATHFIND_DOOR_SOUTH,
+                .againstWestVar = CONDUCT_MEMORY_PATHFIND_DOOR_WEST
+            },
+            TriggerEffectSetBehavior{BEHAVIOR_STASH_TRAVERSING}
+        }
+    }))
+
+BEHAVIOR_DECL(STASH_TRAVERSING)
+    // Follow the computed path door by door toward the stash room.
+    BEHAVIOR_PROPOSER_DECL(({
+        .priority = 3,
+        .effects  = {
+            TriggerEffectTraverseDoor{
+                .doorNorthVar = CONDUCT_MEMORY_PATHFIND_DOOR_NORTH,
+                .doorEastVar  = CONDUCT_MEMORY_PATHFIND_DOOR_EAST,
+                .doorSouthVar = CONDUCT_MEMORY_PATHFIND_DOOR_SOUTH,
+                .doorWestVar  = CONDUCT_MEMORY_PATHFIND_DOOR_WEST,
+            }
+        }
+    }))
+    // Arrived in a room containing the stash chest.
+    BEHAVIOR_ON_MOVE_AS_ACTOR_DECL(({
+        .effects = {
+            TriggerEffectScanRoomForCharacter{
+                .match   = { .roles = { ROLE_CHEST } },
+                .onFound = {
+                    TriggerEffectSetVar{CONDUCT_MEMORY_CHARACTER_ID},
+                    TriggerEffectSetBehavior{BEHAVIOR_STASH_DEPOSITING}
+                }
+            }
+        }
+    }))
+
+BEHAVIOR_DECL(STASH_DEPOSITING)
+    BEHAVIOR_PROPOSER_DECL(({
+        .priority = 3,
+        .effects  = { TriggerEffectExecuteAction{.action = ACTION_DEPOSIT, .targetVar = CONDUCT_MEMORY_CHARACTER_ID} }
+    }))
+    BEHAVIOR_ON_DEPOSIT_AS_ACTOR_DECL(({
+        .effects = {
+            TriggerEffectClearVar{CONDUCT_MEMORY_ROOM_ID},
             TriggerEffectSetBehavior{BEHAVIOR_PICKPOCKET_SEARCHING}
-        }
-    }))
-
-BEHAVIOR_DECL(PICKPOCKET_COOLDOWN)
-    BEHAVIOR_ON_ACT_DECL(({
-        .conduct = CONDUCT_PICKPOCKET,
-        .effects = {
-            TriggerEffectClearTargetCharacter{},
-            TriggerEffectSetBehavior{BEHAVIOR_PICKPOCKET_SEARCHING}
-        }
-    }))
-
-// ─── DEPOSIT ─────────────────────────────────────────────────────────────────
-
-BEHAVIOR_DECL(DEPOSIT_SEARCHING_CHEST)
-    BEHAVIOR_ON_MOVE_DECL(({
-        .conduct = CONDUCT_DEPOSIT,
-        .matches = { TriggerMatchUnlockedChestVisible{} },
-        .effects = {
-            TriggerEffectSetTargetObject{},
-            TriggerEffectSetBehavior{BEHAVIOR_DEPOSIT_MOVING_TO_CHEST}
-        }
-    }))
-    BEHAVIOR_ON_DEATH_DECL(({
-        .conduct = CONDUCT_DEPOSIT,
-        .effects = { TriggerEffectClearTargetObject{} }
-    }))
-
-BEHAVIOR_DECL(DEPOSIT_MOVING_TO_CHEST)
-    BEHAVIOR_ON_MOVE_DECL(({
-        .conduct = CONDUCT_DEPOSIT,
-        .matches = { TriggerMatchTargetChestVisible{} },
-        .effects = { TriggerEffectSetBehavior{BEHAVIOR_DEPOSIT_DEPOSITING} }
-    }))
-    BEHAVIOR_ON_DEATH_DECL(({
-        .conduct = CONDUCT_DEPOSIT,
-        .effects = {
-            TriggerEffectClearTargetObject{},
-            TriggerEffectSetBehavior{BEHAVIOR_DEPOSIT_SEARCHING_CHEST}
-        }
-    }))
-
-BEHAVIOR_DECL(DEPOSIT_DEPOSITING)
-    // Success: stash complete, resume pickpocket cycle
-    BEHAVIOR_ON_DEPOSIT_DECL(({
-        .conduct = CONDUCT_DEPOSIT,
-        .effects = {
-            TriggerEffectClearTargetObject{},
-            TriggerEffectSetBehavior{BEHAVIOR_PICKPOCKET_COOLDOWN}
-        }
-    }))
-    BEHAVIOR_ON_DEATH_DECL(({
-        .conduct = CONDUCT_DEPOSIT,
-        .effects = {
-            TriggerEffectClearTargetObject{},
-            TriggerEffectSetBehavior{BEHAVIOR_DEPOSIT_SEARCHING_CHEST}
-        }
-    }))
-
-// ─── FLEE ─────────────────────────────────────────────────────────────────────
-
-BEHAVIOR_DECL(FLEE_SCANNING)
-    BEHAVIOR_ON_DAMAGE_DECL(({
-        .conduct = CONDUCT_FLEE,
-        .effects = {
-            TriggerEffectSetTargetCharacterFromContext{},
-            TriggerEffectSetBehavior{BEHAVIOR_FLEE_FLEEING}
-        }
-    }))
-    BEHAVIOR_ON_MOVE_DECL(({
-        .conduct = CONDUCT_FLEE,
-        .matches = { TriggerMatchTargetCharacterVisible{} },
-        .effects = { TriggerEffectSetBehavior{BEHAVIOR_FLEE_FLEEING} }
-    }))
-
-BEHAVIOR_DECL(FLEE_FLEEING)
-    BEHAVIOR_ON_MOVE_DECL(({
-        .conduct = CONDUCT_FLEE,
-        .matches = { TriggerMatchTargetCharacterLost{} },
-        .effects = { TriggerEffectSetBehavior{BEHAVIOR_FLEE_SAFE} }
-    }))
-
-BEHAVIOR_DECL(FLEE_SAFE)
-    BEHAVIOR_ON_ACT_DECL(({
-        .conduct = CONDUCT_FLEE,
-        .effects = {
-            TriggerEffectClearTargetCharacter{},
-            TriggerEffectSetBehavior{BEHAVIOR_FLEE_SCANNING}
         }
     }))

@@ -2,9 +2,8 @@
 
 #include "BehaviorEnum.hpp"
 
+// Per-conduct FSM state slot. Variable data shared across all conducts lives
+// in Conduct::vars — see Conduct.hpp.
 struct ConductMemory {
-    int targetCharacterId = -1;
-    int targetObjectId    = -1;
-    int targetRoomId      = -1;
-    BehaviorEnum state    = BEHAVIOR_NIL;
+    BehaviorEnum state = BEHAVIOR_NIL;
 };

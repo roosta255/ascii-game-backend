@@ -57,10 +57,16 @@ private:
     Map<int, TraitModifier::TraitComputation> traitsComputed; // characterId -> computed traits (always fresh, never persisted)
     Map<int, Pointer<Chest>> chestContainerMap; // containerCharacterId -> Chest
     Map<int, Pointer<Conduct>> conductMap; // characterId -> Conduct
-    std::vector<PendingTrigger>* eventQueuePtr = nullptr; // set during activate(); used by pushTrigger()
+    Pointer<std::vector<PendingTrigger>> eventQueuePtr; // set during activate()/tickNpcConducts(); used by pushTrigger()
     Timestamp animationTime; // latest animation end time across all active activations
     bool isLocationsSetup = false;
 public:
+    // Set to true for the duration of findCharacterPath(). Guards against re-entrant A* (TriggerEffectComputePath).
+    bool isPathfindingActive = false;
+    // When true, tickNpcConducts() is a no-op. Set independently or via findCharacterPath() params.
+    bool suppressNpcConducts = false;
+    // When true, drainEventQueue() skips the per-event conduct dispatch loop.
+    bool suppressNpcEventResponse = false;
     // constants
     constexpr static long MOVE_ANIMATION_DURATION = 900;
     constexpr static long BOUNCE_LOCK_ANIMATION_DURATION = 2000;
@@ -76,6 +82,15 @@ public:
     bool buildActivationContext(const Preactivation& preactivation, std::function<void(ActivationContext&)>);
 
     bool findFreeFloor(int roomId, ChannelEnum channel, int& output);
+
+    // BFS flood fill over room connectivity using the dungeon's pathfinderCharacter.
+    // Consumer is called once per newly-discovered room with the CharacterAction that
+    // first crossed into it (action.direction identifies which doorway was used).
+    // floodFillRoom starts from a single room; floodFillRoomBits starts from every
+    // room whose bit is set in startRoomBits (bit i = room i).
+    bool floodFillRoom(int startRoomId, std::function<void(const CharacterAction&, const Match&)> consumer);
+    bool floodFillRoomBits(int startRoomBits, std::function<void(const CharacterAction&, const Match&)> consumer);
+
     bool findCharacterPath
         ( const std::string& playerId
         , int characterId
@@ -83,7 +98,9 @@ public:
         , std::function<bool(const Match&)> destination
         , std::function<int(const CharacterAction&, const Match&)> heuristic
         , std::function<void(const CharacterAction&, const Match&)> consumer
-        , const bool isFailure = true);
+        , const bool isFailure = true
+        , const bool suppressConducts = false
+        , const bool suppressEvents = false);
 
     bool generate(int seed);
     const Map<int, Map<int2, int> >& getDoors();
@@ -127,6 +144,8 @@ public:
     void addRequestLoggedEvent(ActivationContext& activation, LoggedEvent event);
 
     void pushTrigger(const iActivator* activator, int characterId, int targetId = -1, BehaviorEventEnum eventType = BEHAVIOR_EVENT_NIL);
+    void runBehaviorTrigger(int agentId, const iActivator& wrapper, ConductEnum conductSlot, int observerCharacterId = -1, int actorCharacterId = -1);
+    void tickNpcConducts();
 
     // Called by activators when they schedule an animation; advances the global animation clock.
     void setAnimationTime(const Timestamp& t);
@@ -134,4 +153,7 @@ public:
     bool validateCharacterWithinRoom(int characterId, int roomId);
     bool validateDoorNotOccupied(int roomId, ChannelEnum channel, Cardinal dir);
     bool validateSharedDoorNotOccupied(int roomId, ChannelEnum channel, Cardinal dir);
+
+private:
+    void drainEventQueue(std::vector<PendingTrigger>& queue);
 };

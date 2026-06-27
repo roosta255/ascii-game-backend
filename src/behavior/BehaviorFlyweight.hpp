@@ -5,23 +5,29 @@
 #include "Array.hpp"
 #include "BehaviorEnum.hpp"
 #include "BehaviorEventEnum.hpp"
-#include "iProposer.hpp"
 #include "Maybe.hpp"
 #include "Pointer.hpp"
+#include "ProposerConfig.hpp"
 #include "TriggerWrapper.hpp"
 
 struct BehaviorFlyweight {
-    const char* name = nullptr;
-    Maybe<TriggerWrapper> onMove;
-    Maybe<TriggerWrapper> onAttack;
-    Maybe<TriggerWrapper> onDamage;
-    Maybe<TriggerWrapper> onLoot;
-    Maybe<TriggerWrapper> onDeath;
-    Maybe<TriggerWrapper> onPickpocket;
-    Maybe<TriggerWrapper> onDeposit;
-    Pointer<const iProposer> proposer;
+    struct EventTriggers {
+        Maybe<TriggerWrapper> asActor;
+        Maybe<TriggerWrapper> asTarget;
+        Maybe<TriggerWrapper> asObserver;
+    };
 
-    Maybe<TriggerWrapper> getActivatorForEvent(BehaviorEventEnum event) const;
+    const char* name = nullptr;
+    EventTriggers onMove;
+    EventTriggers onAttack;
+    EventTriggers onDamage;
+    EventTriggers onLoot;
+    EventTriggers onDeath;
+    EventTriggers onPickpocket;
+    EventTriggers onDeposit;
+    Maybe<ProposerConfig> proposer;
+
+    const EventTriggers* getTriggersForEvent(BehaviorEventEnum event) const;
 
     static const Array<BehaviorFlyweight, BEHAVIOR_COUNT>& getFlyweights();
     static bool indexByString(const std::string& name, BehaviorEnum& output);

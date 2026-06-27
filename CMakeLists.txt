@@ -58,10 +58,12 @@ add_library(core_backend STATIC
     src/behavior/BehaviorEnum.cpp
     src/behavior/BehaviorFlyweight.cpp
     src/behavior/Conduct.cpp
+    src/behavior/ConductMemoryVariableEnum.cpp
     src/behavior/TriggerWrapper.cpp
     src/activator/ActionEnum.cpp
     src/activator/ActionFlyweight.cpp
     src/activator/ActivatorAlterTraitAffliction.cpp
+    src/activator/ActivatorDeposit.cpp
     src/activator/ActivatorEndTurn.cpp
     src/activator/ActivatorNpcAct.cpp
     src/activator/ActivatorPickpocket.cpp
@@ -211,6 +213,7 @@ add_executable(test_target
     test/maps/GeneratorDoorwayDungeon1.cpp
     test/maps/GeneratorDoorwayDungeon2.cpp
     test/maps/GeneratorDoorwayDungeon3Traits.cpp
+    test/maps/GeneratorMonkeyTutorial.cpp
     test/maps/GeneratorTest.cpp
     test/maps/GeneratorTest4D.cpp
     test/maps/GeneratorTutorial.cpp

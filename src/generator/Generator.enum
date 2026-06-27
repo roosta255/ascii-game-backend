@@ -184,9 +184,19 @@ GENERATOR_REMODEL_DECL(CHEST_KEY_TUTORIAL,
     (RemodelAuthorSetupVerticalWalls{{DOOR_WALL, DOOR_WALL}, 0 , 6}),
     (RemodelAuthorSetupKeeper{{0,1,6,0}, Cardinal::south(), false}),
     (RemodelAuthorSetupKeeper{{1,2,6,0}, Cardinal::west(), true}),
-    (RemodelAuthorAllocateCharacter{{1,1,6,0}, ROLE_MONKEY}),
-    (RemodelAuthorChestSeeder{{.room = int4{1,1,6,0}, .lock = LOCK_KEY_KEEPER_CLOSED, .items = {ITEM_KEY}}}),
+    (RemodelAuthorChestSeeder{{.room = int4{1,1,6,0}, .lock = LOCK_KEY_KEEPER_CLOSED, .items = {ITEM_KEY, ITEM_COIN}}}),
     (RemodelAuthorChestSeeder{{.room = int4{0,2,6,0}, .lock = LOCK_TOGGLER_BLUE_CLOSED, .items = {ITEM_KEY_ELEVATOR}}}),
     (RemodelAuthorChestSeeder{{.room = int4{0,0,6,0}, .lock = LOCK_KEY_JAILER_CLOSED, .containedRole = ROLE_TOGGLER_BLUE }})
 )
 GENERATOR_DECL(CHEST_KEY_TUTORIAL, GeneratorNoop, false, LAYOUT_7_LEVEL_TOWER, 61, RemodelGroup{REMODEL_GROUP_CHEST_KEY_TUTORIAL}, (RemodelAuthorSetBuilderStartingRoomId{0, {1,0,6,0}}), (RemodelAuthorSetupBuilderRole{0}))
+
+GENERATOR_REMODEL_DECL(MONKEY_TUTORIAL,
+    (RemodelAuthorSetupHorizontalWalls{{DOOR_DOORWAY, DOOR_DOORWAY, DOOR_DOORWAY}, 1, 0}),
+    (RemodelAuthorSetupHorizontalWalls{{DOOR_DOORWAY, DOOR_WALL,    DOOR_WALL   }, 0, 0}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_WALL, DOOR_WALL}, 2, 0}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_DOORWAY, DOOR_DOORWAY}, 1, 0}),
+    (RemodelAuthorSetupVerticalWalls{{DOOR_DOORWAY, DOOR_DOORWAY}, 0 , 0}),
+    (RemodelAuthorAllocateCharacter{{1,2,0,0}, ROLE_MONKEY}),
+    (RemodelAuthorChestSeeder{{.room = int4{2,0,0,0}}})
+)
+GENERATOR_DECL(MONKEY_TUTORIAL, GeneratorNoop, false, LAYOUT_3_LEVEL_TOWER, 0, RemodelGroup{REMODEL_GROUP_MONKEY_TUTORIAL}, (RemodelAuthorSetBuilderStartingRoomId{0, {1,1,0,0}}), (RemodelAuthorSetupBuilderRole{0}))

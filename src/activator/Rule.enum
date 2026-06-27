@@ -11,7 +11,7 @@
 //   Requires PIETY. No key.
 RULE_DECL(COVENANT_OPEN,
 ({
-    .matches = { .target = { .traits = makeTraitBits({TRAIT_DOOR_COVENANT, TRAIT_IS_DOOR_BLOCKING}) } },
+    .matches = { .target = { .required = makeTraitBits({TRAIT_DOOR_COVENANT, TRAIT_IS_DOOR_BLOCKING}) } },
     .conditions = { .actor = { .required = makeTraitBits({TRAIT_ACTOR, TRAIT_PIETY, TRAIT_ACTION_READY}) } },
     .costs = { .action = 1 },
     .effects = { .onSuccess = {
@@ -29,7 +29,7 @@ RULE_DECL(COVENANT_OPEN,
 // Close: COVENANT_OPEN -> COVENANT_CLOSED
 RULE_DECL(COVENANT_CLOSE,
 ({
-    .matches = { .target = { .traits = makeTraitBits({TRAIT_DOOR_COVENANT, TRAIT_DOOR_OPEN}) } },
+    .matches = { .target = { .required = makeTraitBits({TRAIT_DOOR_COVENANT, TRAIT_DOOR_OPEN}) } },
     .conditions = { .actor = { .required = makeTraitBits({TRAIT_ACTOR, TRAIT_PIETY, TRAIT_ACTION_READY}) } },
     .costs = { .action = 1 },
     .effects = { .onSuccess = {
@@ -46,7 +46,7 @@ RULE_DECL(COVENANT_CLOSE,
 //   delta: clear DOOR_KEYED, set IS_DOOR_BLOCKING
 RULE_DECL(KEEPER_LOCK,
 ({
-    .matches = { .target = { .traits = makeTraitBits({TRAIT_DOOR_KEEPER, TRAIT_DOOR_KEYED, TRAIT_DOOR_INGRESS}) } },
+    .matches = { .target = { .required = makeTraitBits({TRAIT_DOOR_KEEPER, TRAIT_DOOR_KEYED, TRAIT_DOOR_INGRESS}) } },
     .conditions = { .actor = { .required = makeTraitBits({TRAIT_ACTOR, TRAIT_KEYER, TRAIT_ACTION_READY}) } },
     .costs = { .action = 1 },
     .effects = { .onSuccess = { ActivationAddTargetKeyframe{{ANIMATION_BOUNCE_FROM_FLOOR_TO_LOCK, ANIMATION_ACT_SUBJECT_TO_TARGET}},
@@ -63,7 +63,7 @@ RULE_DECL(KEEPER_LOCK,
 //   delta: set DOOR_KEYED, clear IS_DOOR_BLOCKING
 RULE_DECL(KEEPER_UNLOCK,
 ({
-    .matches = { .target = { .traits = makeTraitBits({TRAIT_DOOR_KEEPER, TRAIT_DOOR_INGRESS}) } },
+    .matches = { .target = { .required = makeTraitBits({TRAIT_DOOR_KEEPER, TRAIT_DOOR_INGRESS}) } },
     .conditions = { .actor = { .required = makeTraitBits({TRAIT_ACTOR, TRAIT_KEYER, TRAIT_ACTION_READY}) },
                     .target = { .restricted = makeTraitBits({TRAIT_DOOR_KEYED}) } },
     .costs = { .item = { ITEM_KEY }, .action = 1 },
@@ -81,7 +81,7 @@ RULE_DECL(KEEPER_UNLOCK,
 //   delta: set DOOR_KEYED, clear IS_DOOR_BLOCKING
 RULE_DECL(JAILER_UNLOCK,
 ({
-    .matches = { .target = { .traits = makeTraitBits({TRAIT_DOOR_JAILER, TRAIT_DOOR_INGRESS}) } },
+    .matches = { .target = { .required = makeTraitBits({TRAIT_DOOR_JAILER, TRAIT_DOOR_INGRESS}) } },
     .conditions = { .actor = { .required = makeTraitBits({TRAIT_ACTOR, TRAIT_KEYER, TRAIT_ACTION_READY}) },
                     .target = { .restricted = makeTraitBits({TRAIT_DOOR_KEYED}) } },
     .costs = { .item = { ITEM_KEY }, .action = 1 },
@@ -98,7 +98,7 @@ RULE_DECL(JAILER_UNLOCK,
 //   delta: clear DOOR_KEYED, set IS_DOOR_BLOCKING
 RULE_DECL(SHIFTER_LOCK,
 ({
-    .matches = { .target = { .traits = makeTraitBits({TRAIT_DOOR_SHIFTER, TRAIT_DOOR_KEYED, TRAIT_DOOR_EGRESS}) } },
+    .matches = { .target = { .required = makeTraitBits({TRAIT_DOOR_SHIFTER, TRAIT_DOOR_KEYED, TRAIT_DOOR_EGRESS}) } },
     .conditions = { .actor = { .required = makeTraitBits({TRAIT_ACTOR, TRAIT_KEYER, TRAIT_ACTION_READY}) } },
     .costs = { .action = 1 },
     .effects = { .onSuccess = { ActivationAddTargetKeyframe{{ANIMATION_BOUNCE_FROM_FLOOR_TO_LOCK, ANIMATION_ACT_SUBJECT_TO_TARGET}},
@@ -115,7 +115,7 @@ RULE_DECL(SHIFTER_LOCK,
 //   delta: set DOOR_KEYED, clear IS_DOOR_BLOCKING
 RULE_DECL(SHIFTER_UNLOCK,
 ({
-    .matches = { .target = { .traits = makeTraitBits({TRAIT_DOOR_SHIFTER, TRAIT_DOOR_INGRESS}) } },
+    .matches = { .target = { .required = makeTraitBits({TRAIT_DOOR_SHIFTER, TRAIT_DOOR_INGRESS}) } },
     .conditions = { .actor = { .required = makeTraitBits({TRAIT_ACTOR, TRAIT_KEYER, TRAIT_ACTION_READY}) },
                     .target = { .restricted = makeTraitBits({TRAIT_DOOR_KEYED}) } },
     .costs = { .item = { ITEM_KEY }, .action = 1 },
@@ -133,7 +133,7 @@ RULE_DECL(SHIFTER_UNLOCK,
 RULE_DECL(SACRAMENT_FORGIVENESS_SET_PIETY,
 ({
     .matches = { .actor = { .roles={ROLE_SACRAMENT_FORGIVENESS} },
-                 .target = { .traits=makeTraitBits({TRAIT_ACTOR}) } },
+                 .target = { .required=makeTraitBits({TRAIT_ACTOR}) } },
     .conditions = { .target = { .restricted = makeTraitBits({TRAIT_UNDEAD, TRAIT_PIETY}) } },
     .costs = { .action = 1 },
     .effects = { .onSuccess = { ActivationAddTargetKeyframe{{.animation=ANIMATION_BOUNCE_FROM_FLOOR_TO_FLOOR, .act=ANIMATION_ACT_TARGET_TO_SUBJECT}},
@@ -142,12 +142,12 @@ RULE_DECL(SACRAMENT_FORGIVENESS_SET_PIETY,
 }))
 
 // --- Togglers ---
-// Grants PIETY to any non-undead actor character that uses the sacrament.
+// Toggles orange and blue switches everywhere within the dungeon.
 // Action cost is redirected to the target (actor has TRAIT_OBJECT).
 RULE_DECL(TOGGLER_TOGGLE,
 ({
     .matches = { .actor = { .roles={ROLE_TOGGLER_BLUE, ROLE_TOGGLER_ORANGE} },
-                 .target = { .traits = makeTraitBits({TRAIT_ACTOR}) } },
+                 .target = { .required = makeTraitBits({TRAIT_ACTOR}) } },
     .costs = { .action = 1 },
     .effects = { .onSuccess = {
         ActivationAddTargetKeyframe{{.animation=ANIMATION_BOUNCE_FROM_FLOOR_TO_LOCK, .act=ANIMATION_ACT_TARGET_TO_SUBJECT, .isDebug=false}},
