@@ -49,6 +49,7 @@
 #include "ActivatorInactiveItem.hpp"
 // role
 #include "ActivatorToggler.hpp"
+#include "DungeonRoleTransformer.hpp"
 
 #include "ActivationContext.hpp"
 
@@ -104,5 +105,6 @@ using ActivatorEffect = std::variant<
     // inventory
     ActivatorInactiveItem,
     // role
-    ActivatorToggler
+    ActivatorToggler,
+    DungeonRoleTransformer
 >;

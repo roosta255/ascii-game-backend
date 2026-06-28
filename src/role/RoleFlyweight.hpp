@@ -40,4 +40,5 @@ struct RoleFlyweight {
 
     static const Array<RoleFlyweight, ROLE_COUNT>& getFlyweights();
     static bool indexByString(const std::string& name, RoleEnum& output);
+    static bool findByTraits(const TraitBits& traits, RoleEnum& output);
 };

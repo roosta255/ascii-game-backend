@@ -98,6 +98,21 @@ const Array<RoleFlyweight, ROLE_COUNT>& RoleFlyweight::getFlyweights()
     return flyweights;
 }
 
+bool RoleFlyweight::findByTraits(const TraitBits& traits, RoleEnum& output) {
+    const auto& flyweights = getFlyweights();
+    for (int i = 0; i < ROLE_COUNT; i++) {
+        bool found = false;
+        flyweights.accessConst(i, [&](const RoleFlyweight& fw) {
+            if (fw.traitsSourced == traits) {
+                output = RoleEnum(i);
+                found = true;
+            }
+        });
+        if (found) return true;
+    }
+    return false;
+}
+
 bool RoleFlyweight::indexByString
 (
     const std::string& name,

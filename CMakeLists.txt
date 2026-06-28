@@ -164,6 +164,7 @@ add_library(core_backend STATIC
     src/play/ActivateNonPlayerCharacterNullTitan.cpp
     src/role/ActivatorCleanseAfflictions.cpp
     src/role/ActivatorToggler.cpp
+    src/role/DungeonRoleTransformer.cpp
     src/role/RoleFlyweight.cpp
     src/room/ChannelEnum.cpp
     src/room/Location.cpp
