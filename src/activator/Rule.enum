@@ -92,6 +92,46 @@ RULE_DECL(JAILER_UNLOCK,
                                                                 {EVENT_UNLOCK, {}, {EventComponentKind::ITEM, ITEM_KEY}} } } }
 }))
 
+// --- Latch ---
+// Open: LATCH_INGRESS_CLOSED -> LATCH_INGRESS_OPEN
+//       LATCH_EGRESS_CLOSED  -> LATCH_EGRESS_OPEN
+//   delta: clear IS_DOOR_BLOCKING, set DOOR_OPEN
+RULE_DECL(LATCH_OPEN,
+({
+    .matches = { .target = { .required = makeTraitBits({TRAIT_DOOR_LATCH, TRAIT_DOOR_INGRESS, TRAIT_IS_DOOR_BLOCKING}) } },
+    .conditions = { .actor = { .required = makeTraitBits({TRAIT_ACTOR, TRAIT_ACTION_READY}) } },
+    .costs = { .action = 1 },
+    .effects = { .onSuccess = {
+        ActivationAddTargetKeyframe{{ANIMATION_BOUNCE_FROM_FLOOR_TO_LOCK, ANIMATION_ACT_SUBJECT_TO_TARGET}},
+        ActivatorSetSharedDoorsByTrait{
+            makeTraitBits({TRAIT_DOOR_OPEN}),
+            makeTraitBits({TRAIT_IS_DOOR_BLOCKING}),
+            ANIMATION_SLIDE,
+            {EVENT_UNLOCK, {}, {}}
+        }
+    } }
+}))
+
+// Close: LATCH_INGRESS_OPEN -> LATCH_INGRESS_CLOSED
+//        LATCH_EGRESS_OPEN  -> LATCH_EGRESS_CLOSED
+//   delta: clear DOOR_OPEN, set IS_DOOR_BLOCKING
+RULE_DECL(LATCH_CLOSE,
+({
+    .matches = { .target = { .required = makeTraitBits({TRAIT_DOOR_LATCH, TRAIT_DOOR_INGRESS, TRAIT_DOOR_OPEN}) } },
+    .conditions = { .actor = { .required = makeTraitBits({TRAIT_ACTOR, TRAIT_ACTION_READY}) } },
+    .costs = { .action = 1 },
+    .effects = { .onSuccess = {
+        ActivationAddTargetKeyframe{{ANIMATION_BOUNCE_FROM_FLOOR_TO_LOCK, ANIMATION_ACT_SUBJECT_TO_TARGET}},
+        ActivatorValidateNotOccupied{},
+        ActivatorSetSharedDoorsByTrait{
+            makeTraitBits({TRAIT_IS_DOOR_BLOCKING}),
+            makeTraitBits({TRAIT_DOOR_OPEN}),
+            ANIMATION_CRUSH,
+            {EVENT_LOCK, {}, {}}
+        }
+    } }
+}))
+
 // --- Shifter ---
 // Lock (key-in): SHIFTER_EGRESS_KEYED    -> SHIFTER_EGRESS_KEYLESS
 //                SHIFTER_INGRESS_KEYLESS -> SHIFTER_INGRESS_KEYED   (neighbor is ingress when activating egress)
