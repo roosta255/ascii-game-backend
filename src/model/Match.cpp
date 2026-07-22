@@ -328,15 +328,6 @@ bool Match::leave(const std::string& playerId, CodeEnum& error) {
     });
 }
 
-bool Match::endTurn(const std::string& playerId, CodeEnum& error)
-{
-    return accessPlayer(playerId, error, [&](Titan& titan) {
-        turner.endTitanTurn(*this);
-    }, [&](Builder& builder) {
-        turner.endBuilderTurn(*this);
-    });
-}
-
 void Match::setFilename() {
     filename = make_filename("match-" + host.toString() + "-" + username.toString());
 }

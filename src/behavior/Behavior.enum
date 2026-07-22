@@ -1,5 +1,10 @@
 // BEHAVIOR_DECL(name_)
 // Optional per-state event handlers (follow immediately after BEHAVIOR_DECL).
+//
+// Transition hooks (fire on state entry/exit, no event matching):
+//   BEHAVIOR_ON_ENTER_DECL(effects_)   — executed when FSM transitions (or defaults) into this state
+//   BEHAVIOR_ON_EXIT_DECL(effects_)    — executed when FSM transitions out of this state
+//
 // Each event type has three role-specific slots:
 //   BEHAVIOR_ON_MOVE_AS_ACTOR_DECL(config_)       — FSM owner is the mover
 //   BEHAVIOR_ON_MOVE_AS_TARGET_DECL(config_)      — FSM owner is the move target
@@ -25,20 +30,27 @@
 //   BEHAVIOR_ON_ACT_DECL(config_)
 //
 // Effects write named ConductMemory variables (declared in ConductMemoryVariable.enum):
-//   TriggerEffectSetVar{var}            scannedCharacterId → memory[var]
-//   TriggerEffectSetVarFromObj{var}     scannedObjectId    → memory[var]
-//   TriggerEffectSetVarFromRoom{var}    scannedRoomId      → memory[var]
-//   TriggerEffectSetVarFromContext{var} context char id    → memory[var]
-//   TriggerEffectClearVar{var}          memory[var] = -1
-//   TriggerEffectSetBehavior{state}     memory.state = state
+//   TriggerEffectSetVar{var}              scannedCharacterId      → memory[var]
+//   TriggerEffectSetVarFromObj{var}       scannedObjectId         → memory[var]
+//   TriggerEffectSetVarFromRoom{var}      scannedRoomId           → memory[var]
+//   TriggerEffectSetVarFromContext{var}   context char id         → memory[var]
+//   TriggerEffectSetVarFromSelfRoom{var}  conducting NPC's room   → memory[var]
+//   TriggerEffectClearVar{var}            memory[var] = -1
+//   TriggerEffectSetBehavior{state}       memory.state = state
 //
 // Each config_ is a TriggerConfig aggregate initialiser wrapped in ({...}).
+// BEHAVIOR_ON_ENTER_DECL / BEHAVIOR_ON_EXIT_DECL take a BehaviorTransitionConfig
+// aggregate initialiser: ({.effects = {...}})  — no .matches field.
 
 BEHAVIOR_DECL(NIL)
 
 // ─── PICKPOCKET ───────────────────────────────────────────────────────────────
 //
 // Flow:
+//
+// INIT (entered once, on spawn)
+//     remember spawn room, compute return-trip door map
+//         -> SEARCHING
 //
 // SEARCHING
 //     observe victim
@@ -67,7 +79,29 @@ BEHAVIOR_DECL(NIL)
 //
 // STASH_DEPOSITING
 //     deposit loot
+//         -> PICKPOCKET_RETURN_TO_START
+//
+// PICKPOCKET_RETURN_TO_START
+//     walk the precomputed return path back to the spawn room
 //         -> PICKPOCKET_SEARCHING
+
+BEHAVIOR_DECL(PICKPOCKET_INIT)
+    // One-time setup: remember the spawn room and precompute the door map
+    // that leads back to it, then fall through to searching immediately.
+    BEHAVIOR_PROPOSER_DECL(({
+        .priority = 3,
+        .effects  = {
+            TriggerEffectSetVarFromSelfRoom{CONDUCT_MEMORY_ROOM_ID},
+            TriggerEffectComputeFloodPath{
+                .startRoomVar    = CONDUCT_MEMORY_ROOM_ID,
+                .againstNorthVar = CONDUCT_MEMORY_RETURN_DOOR_NORTH,
+                .againstEastVar  = CONDUCT_MEMORY_RETURN_DOOR_EAST,
+                .againstSouthVar = CONDUCT_MEMORY_RETURN_DOOR_SOUTH,
+                .againstWestVar  = CONDUCT_MEMORY_RETURN_DOOR_WEST
+            },
+            TriggerEffectSetBehavior{BEHAVIOR_PICKPOCKET_SEARCHING}
+        }
+    }))
 
 BEHAVIOR_DECL(PICKPOCKET_SEARCHING)
     // Monkey moved into a room containing a victim.
@@ -245,7 +279,28 @@ BEHAVIOR_DECL(STASH_DEPOSITING)
     }))
     BEHAVIOR_ON_DEPOSIT_AS_ACTOR_DECL(({
         .effects = {
-            TriggerEffectClearVar{CONDUCT_MEMORY_ROOM_ID},
+            TriggerEffectSetBehavior{BEHAVIOR_PICKPOCKET_RETURN_TO_START}
+        }
+    }))
+
+BEHAVIOR_DECL(PICKPOCKET_RETURN_TO_START)
+    // Follow the return-trip door map (computed once in PICKPOCKET_INIT)
+    // back toward the spawn room, stored in CONDUCT_MEMORY_ROOM_ID.
+    BEHAVIOR_PROPOSER_DECL(({
+        .priority = 3,
+        .effects  = {
+            TriggerEffectTraverseDoor{
+                .doorNorthVar = CONDUCT_MEMORY_RETURN_DOOR_NORTH,
+                .doorEastVar  = CONDUCT_MEMORY_RETURN_DOOR_EAST,
+                .doorSouthVar = CONDUCT_MEMORY_RETURN_DOOR_SOUTH,
+                .doorWestVar  = CONDUCT_MEMORY_RETURN_DOOR_WEST,
+            }
+        }
+    }))
+    // Arrived back at the spawn room; resume the search.
+    BEHAVIOR_ON_MOVE_AS_ACTOR_DECL(({
+        .matches = { TriggerMatchReachedTargetRoom{.var = CONDUCT_MEMORY_ROOM_ID} },
+        .effects = {
             TriggerEffectSetBehavior{BEHAVIOR_PICKPOCKET_SEARCHING}
         }
     }))

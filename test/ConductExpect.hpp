@@ -8,6 +8,7 @@
 #include <catch2/catch_all.hpp>
 
 #include "BehaviorEnum.hpp"
+#include "CodeEnum.hpp"
 #include "Conduct.hpp"
 #include "ConductEnum.hpp"
 #include "ConductMemory.hpp"
@@ -33,6 +34,21 @@ struct ConductExpect {
     // Indexed by ConductEnum (CONDUCT_NIL entry is ignored).
     std::array<std::optional<BehaviorEnum>, CONDUCT_COUNT> memoryState = {};
 
+    // When set, asserts conduct.memory[slot].previousState equals the value.
+    std::array<std::optional<BehaviorEnum>, CONDUCT_COUNT> memoryPreviousState = {};
+
+    // When set, asserts conduct.memory[slot].stateChangedTurn equals the value.
+    std::array<std::optional<int>, CONDUCT_COUNT> memoryStateChangedTurn = {};
+
+    // When set, asserts conduct.memory[slot].latestPriority equals the value.
+    std::array<std::optional<int>, CONDUCT_COUNT> memoryLatestPriority = {};
+
+    // When set, asserts conduct.memory[slot].lastEffectCode equals the value.
+    std::array<std::optional<CodeEnum>, CONDUCT_COUNT> memoryLastEffectCode = {};
+
+    // When set, asserts conduct.memory[slot].lastFailureEffectCode equals the value.
+    std::array<std::optional<CodeEnum>, CONDUCT_COUNT> memoryLastFailureEffectCode = {};
+
     // When a key is present, asserts conduct.get(var) equals the mapped value.
     std::map<ConductMemoryVariableEnum, int> vars;
 
@@ -41,6 +57,26 @@ struct ConductExpect {
 
     ConductExpect& expectState(ConductEnum slot, BehaviorEnum state) {
         memoryState[slot] = state;
+        return *this;
+    }
+    ConductExpect& expectPreviousState(ConductEnum slot, BehaviorEnum state) {
+        memoryPreviousState[slot] = state;
+        return *this;
+    }
+    ConductExpect& expectStateChangedTurn(ConductEnum slot, int turn) {
+        memoryStateChangedTurn[slot] = turn;
+        return *this;
+    }
+    ConductExpect& expectLatestPriority(ConductEnum slot, int priority) {
+        memoryLatestPriority[slot] = priority;
+        return *this;
+    }
+    ConductExpect& expectEffectCode(ConductEnum slot, CodeEnum code) {
+        memoryLastEffectCode[slot] = code;
+        return *this;
+    }
+    ConductExpect& expectFailureEffectCode(ConductEnum slot, CodeEnum code) {
+        memoryLastFailureEffectCode[slot] = code;
         return *this;
     }
     ConductExpect& expectVar(ConductMemoryVariableEnum var, int value) {
@@ -63,8 +99,13 @@ inline std::string formatConduct(const Conduct& c) {
     for (int i = CONDUCT_NIL + 1; i < CONDUCT_COUNT; i++) {
         const ConductEnum slot = ConductEnum(i);
         c.memory.accessConst(slot, [&](const ConductMemory& mem) {
-            ss << "    [" << conduct_to_text(slot) << "] = "
-               << behavior_to_text(mem.state) << "\n";
+            ss << "    [" << conduct_to_text(slot) << "] state=" << behavior_to_text(mem.state)
+               << " previousState=" << behavior_to_text(mem.previousState)
+               << " stateChangedTurn=" << mem.stateChangedTurn
+               << " latestPriority=" << mem.latestPriority
+               << " lastEffectCode=" << code_to_text(mem.lastEffectCode)
+               << " lastFailureEffectCode=" << code_to_text(mem.lastFailureEffectCode)
+               << "\n";
         });
     }
     ss << "  vars:\n";
@@ -104,6 +145,46 @@ public:
             });
             if (failed) return false;
         }
+        for (int i = CONDUCT_NIL + 1; i < CONDUCT_COUNT; i++) {
+            if (!_expect.memoryPreviousState[i]) continue;
+            bool failed = false;
+            actual.memory.accessConst(ConductEnum(i), [&](const ConductMemory& mem) {
+                failed = (mem.previousState != *_expect.memoryPreviousState[i]);
+            });
+            if (failed) return false;
+        }
+        for (int i = CONDUCT_NIL + 1; i < CONDUCT_COUNT; i++) {
+            if (!_expect.memoryStateChangedTurn[i]) continue;
+            bool failed = false;
+            actual.memory.accessConst(ConductEnum(i), [&](const ConductMemory& mem) {
+                failed = (mem.stateChangedTurn != *_expect.memoryStateChangedTurn[i]);
+            });
+            if (failed) return false;
+        }
+        for (int i = CONDUCT_NIL + 1; i < CONDUCT_COUNT; i++) {
+            if (!_expect.memoryLatestPriority[i]) continue;
+            bool failed = false;
+            actual.memory.accessConst(ConductEnum(i), [&](const ConductMemory& mem) {
+                failed = (mem.latestPriority != *_expect.memoryLatestPriority[i]);
+            });
+            if (failed) return false;
+        }
+        for (int i = CONDUCT_NIL + 1; i < CONDUCT_COUNT; i++) {
+            if (!_expect.memoryLastEffectCode[i]) continue;
+            bool failed = false;
+            actual.memory.accessConst(ConductEnum(i), [&](const ConductMemory& mem) {
+                failed = (mem.lastEffectCode != *_expect.memoryLastEffectCode[i]);
+            });
+            if (failed) return false;
+        }
+        for (int i = CONDUCT_NIL + 1; i < CONDUCT_COUNT; i++) {
+            if (!_expect.memoryLastFailureEffectCode[i]) continue;
+            bool failed = false;
+            actual.memory.accessConst(ConductEnum(i), [&](const ConductMemory& mem) {
+                failed = (mem.lastFailureEffectCode != *_expect.memoryLastFailureEffectCode[i]);
+            });
+            if (failed) return false;
+        }
         for (const auto& [var, expectedVal] : _expect.vars) {
             if (actual.get(var) != expectedVal)
                 return false;
@@ -118,8 +199,33 @@ public:
             ss << "  characterId = " << *_expect.characterId << "\n";
         for (int i = CONDUCT_NIL + 1; i < CONDUCT_COUNT; i++) {
             if (!_expect.memoryState[i]) continue;
-            ss << "  memory[" << conduct_to_text(ConductEnum(i)) << "] = "
+            ss << "  memory[" << conduct_to_text(ConductEnum(i)) << "].state = "
                << behavior_to_text(*_expect.memoryState[i]) << "\n";
+        }
+        for (int i = CONDUCT_NIL + 1; i < CONDUCT_COUNT; i++) {
+            if (!_expect.memoryPreviousState[i]) continue;
+            ss << "  memory[" << conduct_to_text(ConductEnum(i)) << "].previousState = "
+               << behavior_to_text(*_expect.memoryPreviousState[i]) << "\n";
+        }
+        for (int i = CONDUCT_NIL + 1; i < CONDUCT_COUNT; i++) {
+            if (!_expect.memoryStateChangedTurn[i]) continue;
+            ss << "  memory[" << conduct_to_text(ConductEnum(i)) << "].stateChangedTurn = "
+               << *_expect.memoryStateChangedTurn[i] << "\n";
+        }
+        for (int i = CONDUCT_NIL + 1; i < CONDUCT_COUNT; i++) {
+            if (!_expect.memoryLatestPriority[i]) continue;
+            ss << "  memory[" << conduct_to_text(ConductEnum(i)) << "].latestPriority = "
+               << *_expect.memoryLatestPriority[i] << "\n";
+        }
+        for (int i = CONDUCT_NIL + 1; i < CONDUCT_COUNT; i++) {
+            if (!_expect.memoryLastEffectCode[i]) continue;
+            ss << "  memory[" << conduct_to_text(ConductEnum(i)) << "].lastEffectCode = "
+               << code_to_text(*_expect.memoryLastEffectCode[i]) << "\n";
+        }
+        for (int i = CONDUCT_NIL + 1; i < CONDUCT_COUNT; i++) {
+            if (!_expect.memoryLastFailureEffectCode[i]) continue;
+            ss << "  memory[" << conduct_to_text(ConductEnum(i)) << "].lastFailureEffectCode = "
+               << code_to_text(*_expect.memoryLastFailureEffectCode[i]) << "\n";
         }
         for (const auto& [var, val] : _expect.vars)
             ss << "  var[" << conduct_memory_variable_to_text(var) << "] = " << val << "\n";

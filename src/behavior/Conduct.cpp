@@ -5,6 +5,7 @@
 #include "BehaviorFlyweight.hpp"
 #include "Cardinal.hpp"
 #include "CharacterAction.hpp"
+#include "Codeset.hpp"
 #include "ConductMemory.hpp"
 #include "ConductScanCharacters.hpp"
 #include "Match.hpp"
@@ -23,6 +24,12 @@ static void applyProposalEffect(const ProposalEffect& eff, Conduct& conduct, Con
         if constexpr (std::is_same_v<T, std::monostate>) {
         }
         else if constexpr (std::is_same_v<T, TriggerEffectSetBehavior>) {
+            if (conductMem.state != e.behavior) {
+                conductMem.previousState = conductMem.state;
+                ctx.request.access([&](RequestContext& req) {
+                    conductMem.stateChangedTurn = req.match.turner.turn;
+                });
+            }
             conductMem.state = e.behavior;
         }
         else if constexpr (std::is_same_v<T, TriggerEffectSetVar>) {
@@ -36,6 +43,9 @@ static void applyProposalEffect(const ProposalEffect& eff, Conduct& conduct, Con
         }
         else if constexpr (std::is_same_v<T, TriggerEffectSetVarFromContext>) {
             ctx.targetCharacter().access([&](Character& ch) { conduct.set(e.var, ch.characterId); });
+        }
+        else if constexpr (std::is_same_v<T, TriggerEffectSetVarFromSelfRoom>) {
+            conduct.set(e.var, ctx.character.location.roomId);
         }
         else if constexpr (std::is_same_v<T, TriggerEffectClearVar>) {
             conduct.set(e.var, -1);
@@ -160,10 +170,11 @@ static void applyProposalEffect(const ProposalEffect& eff, Conduct& conduct, Con
                     });
                 };
 
+                bool floodOk;
                 if (startRoom != -1)
-                    req.controller.floodFillRoom(startRoom, consumer);
+                    floodOk = req.controller.floodFillRoom(startRoom, consumer);
                 else
-                    req.controller.floodFillRoomBits(startBits, consumer);
+                    floodOk = req.controller.floodFillRoomBits(startBits, consumer);
 
                 auto writeVar = [&](ConductMemoryVariableEnum var, int val) {
                     if (var != CONDUCT_MEMORY_VARIABLE_COUNT) conduct.set(var, val);
@@ -286,10 +297,12 @@ bool Conduct::buildAndExecuteProposals(ActivationContext& ctx) {
     if (!best) return false;
 
     memory.access(bestSlot, [&](ConductMemory& conductMem) {
+        conductMem.latestPriority = best->priority;
         for (const ProposalEffect& eff : best->effects) {
             if (std::holds_alternative<std::monostate>(eff)) break;
             applyProposalEffect(eff, *this, conductMem, ctx);
         }
+        conductMem.lastEffectCode = ctx.codeset.error;
     });
     return true;
 }

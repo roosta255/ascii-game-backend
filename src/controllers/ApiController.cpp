@@ -452,11 +452,9 @@ void ApiController::endTurn
     if (!matchRepository.load(matchId, codeset.error, match))
         return invokeResponse404(codeset.describe("Failed to load match due to: "), std::move(callback));
 
-    if (!match.endTurn(accountId, codeset.error))
-        return invokeResponse409(codeset.describe("End turn rejected due to: "), std::move(callback));
-
     MatchController controller(match, codeset);
-    controller.tickNpcConducts();
+    if (!controller.endTurn(accountId, codeset.error))
+        return invokeResponse409(codeset.describe("End turn rejected due to: "), std::move(callback));
 
     if (codeset.addFailure(!matchRepository.save(match, codeset.error)))
         return invokeResponse409(codeset.describe("Failed to save match due to: "), std::move(callback));
@@ -496,12 +494,12 @@ void ApiController::performCharacterAction
     if (codeset.addFailure(!matchRepository.load(matchId, codeset.error, match)))
         return invokeResponse404(codeset.describe("Failed to load match due to: "), std::move(callback));
 
+    MatchController controller(match, codeset);
+
     if (json->isMember("isForcedTurnEnd") && (*json)["isForcedTurnEnd"].asBool()) {
-        if (codeset.addFailure(!match.endTurn(accountId, codeset.error)))
+        if (codeset.addFailure(!controller.endTurn(accountId, codeset.error)))
             return invokeResponse409(codeset.describe("Forced turn end rejected due to: "), std::move(callback));
     }
-
-    MatchController controller(match, codeset);
 
     if (!json->isMember("action"))
         return invokeResponse400("Missing action field", std::move(callback));

@@ -135,33 +135,7 @@ CodeEnum Turner::removeTitan() {
     }
 }
 
-CodeEnum Turner::endBuilderTurn(Match& match) {
-    const auto& endTurnProcess = [&](TurnEnum newState) {
-        for (auto& builder : match.builders) {
-            builder.endTurn(match);
-        }
-        turn++;
-        state = newState;
-        match.titan.startTurn(match);
-    };
-    switch (state) {
-        case TURN_BUILDER:
-            endTurnProcess(TURN_TITAN);
-            return CODE_SUCCESS;
-        case TURN_BUILDER_ONLY:
-            endTurnProcess(TURN_BUILDER_ONLY);
-            match.titan.endTurn(match);
-            turn++;
-            for (auto& builder : match.builders) {
-                builder.startTurn(match);
-            }
-            return CODE_SUCCESS;
-        default:
-            return CODE_BUILDER_TURN_NOT_STARTED;
-    }
-}
-
-CodeEnum Turner::endTitanTurn(Match& match) {
+CodeEnum Turner::advanceTitanTurnState(Match& match) {
     const auto& endTurnProcess = [&](TurnEnum newState) {
         match.titan.endTurn(match);
         turn++;
@@ -184,6 +158,44 @@ CodeEnum Turner::endTitanTurn(Match& match) {
             return CODE_SUCCESS;
         default:
             return CODE_TITAN_TURN_NOT_STARTED;
+    }
+}
+
+CodeEnum Turner::advanceBuilderTurnState(Match& match, bool& outTitanTurnEnded) {
+    outTitanTurnEnded = false;
+    const auto& endTurnProcess = [&](TurnEnum newState) {
+        for (auto& builder : match.builders) {
+            builder.endTurn(match);
+        }
+        turn++;
+        state = newState;
+        match.titan.startTurn(match);
+    };
+    switch (state) {
+        case TURN_BUILDER:
+            endTurnProcess(TURN_TITAN);
+            return CODE_SUCCESS;
+        case TURN_BUILDER_ONLY:
+            endTurnProcess(TURN_BUILDER_ONLY);
+            match.titan.endTurn(match);
+            turn++;
+            for (auto& builder : match.builders) {
+                builder.startTurn(match);
+            }
+            outTitanTurnEnded = true;
+            return CODE_SUCCESS;
+        default:
+            return CODE_BUILDER_TURN_NOT_STARTED;
+    }
+}
+
+void Turner::runNpcTurn(Match& match, std::function<void()> tickConducts) {
+    for (Character& character : match.dungeon.characters) {
+        character.startTurn(match);
+    }
+    tickConducts();
+    for (Character& character : match.dungeon.characters) {
+        character.endTurn(match);
     }
 }
 

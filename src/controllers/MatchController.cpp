@@ -278,6 +278,53 @@ bool MatchController::buildActivationContext(const Preactivation& preactivation,
     return isSuccess;
 }
 
+CodeEnum MatchController::advanceTitanTurnState(Match& match) {
+    return match.turner.advanceTitanTurnState(match);
+}
+
+CodeEnum MatchController::advanceBuilderTurnState(Match& match, bool& outTitanTurnEnded) {
+    return match.turner.advanceBuilderTurnState(match, outTitanTurnEnded);
+}
+
+bool MatchController::advanceTurnState(Match& match, const std::string& playerId, CodeEnum& error, bool& outTitanTurnEnded) {
+    outTitanTurnEnded = false;
+    return match.accessPlayer(playerId, error, [&](Titan&) {
+        advanceTitanTurnState(match);
+        outTitanTurnEnded = true;
+    }, [&](Builder&) {
+        advanceBuilderTurnState(match, outTitanTurnEnded);
+    });
+}
+
+CodeEnum MatchController::endTitanTurn() {
+    CodeEnum result = advanceTitanTurnState(match);
+    if (result == CODE_SUCCESS) {
+        match.turner.runNpcTurn(match, [&]{ tickNpcConducts(); });
+    }
+    return result;
+}
+
+CodeEnum MatchController::endBuilderTurn() {
+    bool titanTurnEnded = false;
+    CodeEnum result = advanceBuilderTurnState(match, titanTurnEnded);
+    if (result == CODE_SUCCESS && titanTurnEnded) {
+        match.turner.runNpcTurn(match, [&]{ tickNpcConducts(); });
+    }
+    return result;
+}
+
+bool MatchController::endTurn(const std::string& playerId, CodeEnum& error){
+    // TODO: handle end turn voting
+    bool titanTurnEnded = false;
+    if (!advanceTurnState(match, playerId, error, titanTurnEnded)) {
+        return false;
+    }
+    if (titanTurnEnded) {
+        match.turner.runNpcTurn(match, [&]{ tickNpcConducts(); });
+    }
+    return true;
+}
+
 bool MatchController::findCharacterPath(
     const std::string& playerId,
     int characterId,
@@ -337,7 +384,8 @@ bool MatchController::findCharacterPath(
             MatchController controller(tempMatch, codeset);
             controller.permuteCharacterActions(playerId, characterId, [&](const CharacterAction& action, const Match& permuted) {
                 Match next = permuted;
-                codeset.addFailure(!next.endTurn(playerId, codeset.error), CODE_PATHFINDING_FAILED_TO_FORWARD_TURN);
+                bool nextTitanTurnEnded = false; // discarded: pathfinding never ticks NPC conducts
+                codeset.addFailure(!advanceTurnState(next, playerId, codeset.error, nextTitanTurnEnded), CODE_PATHFINDING_FAILED_TO_FORWARD_TURN);
                 next.setPathfinding();
                 int new_cost = cost_so_far.getOrDefault(current, 0) + 1;
 
@@ -658,6 +706,12 @@ bool MatchController::permuteCharacterActions(const std::string& playerId, int m
             CharacterDigest digest;
             if (codeset.addFailure(!character.getDigest(codeset.error, digest, getTraitsComputed(character.characterId).final))) {
                 return;
+            }
+            if (character.role == ROLE_PATHFINDER) {
+                fprintf(stderr, "[DEBUG PF] room=%d locType=%d locData=%d moves=%d actions=%d movesRemaining=%d actionsRemaining=%d\n",
+                    roomId, (int)character.location.type, character.location.data,
+                    character.moves, character.actions,
+                    digest.movesRemaining.orElse(-999), digest.actionsRemaining.orElse(-999));
             }
 
             // out of actions/moves may be good time to end turn

@@ -2,6 +2,7 @@
 #include "Array.hpp"
 #include "ProposalEffect.hpp"
 #include "ProposerConfig.hpp"
+#include "TransitionConfig.hpp"
 #include "TriggerConfig.hpp"
 #include "TriggerWrapper.hpp"
 
@@ -106,6 +107,15 @@ const Array<BehaviorFlyweight, BEHAVIOR_COUNT>& BehaviorFlyweight::getFlyweights
                 fw.onDeposit.asObserver = TriggerWrapper{TriggerConfig config_}; \
             });
 
+        #define BEHAVIOR_ON_ENTER_DECL(effects_) \
+            flyweights.getPointer(lastBehavior).access([&](BehaviorFlyweight& fw){ \
+                fw.onEnter = TransitionConfig effects_; \
+            });
+        #define BEHAVIOR_ON_EXIT_DECL(effects_) \
+            flyweights.getPointer(lastBehavior).access([&](BehaviorFlyweight& fw){ \
+                fw.onExit = TransitionConfig effects_; \
+            });
+
         #define BEHAVIOR_ON_ACT_DECL(config_)
         #define BEHAVIOR_PROPOSER_DECL(config_) \
             flyweights.getPointer(lastBehavior).access([&](BehaviorFlyweight& fw){ \
@@ -136,6 +146,8 @@ const Array<BehaviorFlyweight, BEHAVIOR_COUNT>& BehaviorFlyweight::getFlyweights
         #undef BEHAVIOR_ON_DEPOSIT_AS_ACTOR_DECL
         #undef BEHAVIOR_ON_DEPOSIT_AS_TARGET_DECL
         #undef BEHAVIOR_ON_DEPOSIT_AS_OBSERVER_DECL
+        #undef BEHAVIOR_ON_ENTER_DECL
+        #undef BEHAVIOR_ON_EXIT_DECL
         #undef BEHAVIOR_ON_ACT_DECL
         #undef BEHAVIOR_PROPOSER_DECL
 

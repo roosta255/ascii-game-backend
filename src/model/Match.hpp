@@ -50,8 +50,6 @@ struct Match {
     bool setupSingleBuilder(CodeEnum& output);
     bool setupSingleTitan(CodeEnum& output);
 
-    bool endTurn(const std::string& playerId, CodeEnum& error);
-
     bool isStarted(CodeEnum& result) const;
     bool isCompleted(CodeEnum& result) const;
     bool isFull(CodeEnum& result) const;

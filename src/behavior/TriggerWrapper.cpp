@@ -332,8 +332,16 @@ static bool applyEffect(
     return std::visit([&](auto&& eff) -> bool {
         using T = std::decay_t<decltype(eff)>;
         if constexpr (std::is_same_v<T, std::monostate>) { return true; }
-        else if constexpr (std::is_same_v<T, TriggerEffectSetBehavior>)
-            { conductMem.state = eff.behavior; return true; }
+        else if constexpr (std::is_same_v<T, TriggerEffectSetBehavior>) {
+            if (conductMem.state != eff.behavior) {
+                conductMem.previousState = conductMem.state;
+                activation.request.access([&](RequestContext& req) {
+                    conductMem.stateChangedTurn = req.match.turner.turn;
+                });
+            }
+            conductMem.state = eff.behavior;
+            return true;
+        }
         else if constexpr (std::is_same_v<T, TriggerEffectSetVar>)
             { conduct.set(eff.var, scannedCharacterId); return true; }
         else if constexpr (std::is_same_v<T, TriggerEffectSetVarFromObj>)
@@ -342,6 +350,8 @@ static bool applyEffect(
             { conduct.set(eff.var, scannedRoomId); return true; }
         else if constexpr (std::is_same_v<T, TriggerEffectSetVarFromContext>)
             { activation.targetCharacter().access([&](Character& ch) { conduct.set(eff.var, ch.characterId); }); return true; }
+        else if constexpr (std::is_same_v<T, TriggerEffectSetVarFromSelfRoom>)
+            { conduct.set(eff.var, activation.character.location.roomId); return true; }
         else if constexpr (std::is_same_v<T, TriggerEffectClearVar>)
             { conduct.set(eff.var, -1); return true; }
         else if constexpr (std::is_same_v<T, TriggerEffectScanRoomForCharacter>) {
@@ -625,12 +635,14 @@ bool TriggerWrapper::activate(ActivationContext& activation) const {
                                      scannedCharacterId, scannedObjectId, scannedRoomId))
                         anyFailed = true;
                 }
+                conductMem.lastEffectCode = activation.codeset.error;
                 if (anyFailed) {
                     for (const TriggerEffect& e : _config.failureEffects) {
                         if (std::holds_alternative<std::monostate>(e)) break;
                         applyEffect(e, activation, conduct, conductMem,
                                     scannedCharacterId, scannedObjectId, scannedRoomId);
                     }
+                    conductMem.lastFailureEffectCode = activation.codeset.error;
                 }
             });
         });

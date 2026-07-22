@@ -195,6 +195,9 @@ struct TriggerEffectComputeFloodPath {
 // Writes -1 if direction is absent on the activation.
 struct TriggerEffectSetVarFromDirection { ConductMemoryVariableEnum var; };
 
+// Reads the conducting character's current room id → memory[var].
+struct TriggerEffectSetVarFromSelfRoom  { ConductMemoryVariableEnum var; };
+
 // Reads memory[var] as a Cardinal index and assigns it to activation.direction.
 // No-op if the stored value is outside [0, 3].
 struct TriggerEffectSetDirectionFromVar { ConductMemoryVariableEnum var; };
@@ -235,6 +238,7 @@ using TriggerEffect = std::variant<
     TriggerEffectComputeFloodPath,
     TriggerEffectTraverseDoor,
     TriggerEffectSetVarFromDirection,
+    TriggerEffectSetVarFromSelfRoom,
     TriggerEffectSetDirectionFromVar,
     TriggerEffectExecuteAction
 >;

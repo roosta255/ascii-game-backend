@@ -24,6 +24,8 @@ const char* behavior_to_text(int index) {
         #define BEHAVIOR_ON_DEPOSIT_AS_ACTOR_DECL(config_)
         #define BEHAVIOR_ON_DEPOSIT_AS_TARGET_DECL(config_)
         #define BEHAVIOR_ON_DEPOSIT_AS_OBSERVER_DECL(config_)
+        #define BEHAVIOR_ON_ENTER_DECL(effects_)
+        #define BEHAVIOR_ON_EXIT_DECL(effects_)
         #define BEHAVIOR_ON_ACT_DECL(config_)
         #define BEHAVIOR_PROPOSER_DECL(type_)
         #include "Behavior.enum"
@@ -49,6 +51,8 @@ const char* behavior_to_text(int index) {
         #undef BEHAVIOR_ON_DEPOSIT_AS_ACTOR_DECL
         #undef BEHAVIOR_ON_DEPOSIT_AS_TARGET_DECL
         #undef BEHAVIOR_ON_DEPOSIT_AS_OBSERVER_DECL
+        #undef BEHAVIOR_ON_ENTER_DECL
+        #undef BEHAVIOR_ON_EXIT_DECL
         #undef BEHAVIOR_ON_ACT_DECL
         #undef BEHAVIOR_PROPOSER_DECL
     };

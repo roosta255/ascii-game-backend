@@ -23,7 +23,7 @@ bool ActivateNonPlayerCharacterNullTitan::activate(ActivationContext& activation
             }
         }
 
-        result = (req.match.turner.endTitanTurn(req.match) == CODE_SUCCESS);
+        result = (req.controller.endTitanTurn() == CODE_SUCCESS);
     });
     return result;
 }

@@ -8,6 +8,7 @@
 #include "Maybe.hpp"
 #include "Pointer.hpp"
 #include "ProposerConfig.hpp"
+#include "TransitionConfig.hpp"
 #include "TriggerWrapper.hpp"
 
 struct BehaviorFlyweight {
@@ -18,6 +19,8 @@ struct BehaviorFlyweight {
     };
 
     const char* name = nullptr;
+    Maybe<TransitionConfig> onEnter;
+    Maybe<TransitionConfig> onExit;
     EventTriggers onMove;
     EventTriggers onAttack;
     EventTriggers onDamage;

@@ -29,6 +29,47 @@ TEST_CASE("Monkey steals ITEM_COIN from builder in shared room", "[match][GENERA
     // which is the condition that makes the builder pickpocketable.
     tc.builderCharacterPtr->actions = 2;
     tc.controller.updateTraits(*tc.builderCharacterPtr);
+    // Locate the monkey NPC.
+    int monkeyCharId    = -1;
+    int monkeyLocRoomId = -1;
+    for (auto& ch : tc.match.dungeon.characters) {
+        if (ch.role == ROLE_MONKEY) {
+            monkeyCharId    = ch.characterId;
+            monkeyLocRoomId = ch.location.roomId;
+            break;
+        }
+    }
+    REQUIRE(monkeyCharId != -1);
+    REQUIRE(monkeyLocRoomId == 7);
+
+    tc.controller.getConductByCharacterId(monkeyCharId).access([&](Conduct& conduct) {
+        REQUIRE_THAT(conduct, MatchesConductExpect(
+            ConductExpect{}
+                .expectState(CONDUCT_PICKPOCKET, BEHAVIOR_PICKPOCKET_INIT)
+        ));
+    });
+
+    const auto monkeyPtr = tc.controller.match.getCharacter(monkeyCharId, tc.codeset.error);
+    const auto getMonkeyRoomId = [&](){
+        return monkeyPtr.mapConst<int>([&](const Character& monkey){
+            return monkey.location.roomId;
+        }).orElse(-1);
+    };
+    REQUIRE(getMonkeyRoomId() == 7);
+    
+    // verify monkey return variables were setup
+    tc.endTurn();
+    tc.controller.getConductByCharacterId(monkeyCharId).access([&](Conduct& conduct) {
+        REQUIRE_THAT(conduct, MatchesConductExpect(
+            ConductExpect{}
+                .expectState(CONDUCT_PICKPOCKET, BEHAVIOR_PICKPOCKET_SEARCHING)
+                .expectVar(CONDUCT_MEMORY_ROOM_ID,           7)
+                .expectVar(CONDUCT_MEMORY_RETURN_DOOR_NORTH, 17)
+                .expectVar(CONDUCT_MEMORY_RETURN_DOOR_EAST,  8)
+                .expectVar(CONDUCT_MEMORY_RETURN_DOOR_SOUTH, 320)
+                .expectVar(CONDUCT_MEMORY_RETURN_DOOR_WEST,  38)
+        ));
+    });
 
     // Move builder north into the monkey's starting room {1,2,0,0}.
     //
@@ -46,20 +87,8 @@ TEST_CASE("Monkey steals ITEM_COIN from builder in shared room", "[match][GENERA
     REQUIRE(tc.isSuccess);
     tc.moveCharacterToFloor(4);
     REQUIRE(tc.isSuccess);
-    const int monkeyRoomId = tc.latestPosition;
-
-    // Locate the monkey NPC.
-    int monkeyCharId    = -1;
-    int monkeyLocRoomId = -1;
-    for (auto& ch : tc.match.dungeon.characters) {
-        if (ch.role == ROLE_MONKEY) {
-            monkeyCharId    = ch.characterId;
-            monkeyLocRoomId = ch.location.roomId;
-            break;
-        }
-    }
-    REQUIRE(monkeyCharId != -1);
-    REQUIRE(monkeyLocRoomId == monkeyRoomId);
+    tc.endTurn();
+    REQUIRE(tc.isSuccess);
 
     // Verify STASH_TRAVERSING + flood-fill path toward the stash chest (room 2).
     //
@@ -82,6 +111,7 @@ TEST_CASE("Monkey steals ITEM_COIN from builder in shared room", "[match][GENERA
     //   BFS step 4→E→5: againstBits[W] |= (1<<5)   → WEST  = 16+32 = 48
     //   BFS step 5→N→8: againstBits[S] |= (1<<8)
     //                                                  NORTH = 0
+    tc.endTurn();
     tc.controller.getConductByCharacterId(monkeyCharId).access([&](Conduct& conduct) {
         REQUIRE_THAT(conduct, MatchesConductExpect(
             ConductExpect{}
@@ -101,13 +131,37 @@ TEST_CASE("Monkey steals ITEM_COIN from builder in shared room", "[match][GENERA
     //   On arriving at room 2 the chest scan fires → STASH_DEPOSITING.
     //   STASH_DEPOSITING proposer fires ACTION_DEPOSIT inline → ON_DEPOSIT_AS_ACTOR
     //   → PICKPOCKET_SEARCHING.  All within this single tick.
+    REQUIRE(tc.isSuccess);
+    REQUIRE(getMonkeyRoomId() == 4);
+    
+    // Verify Monkey moving through rooms to chest
     tc.endTurn();
     REQUIRE(tc.isSuccess);
-
-    // Monkey has deposited the coin and reset to searching.
     tc.controller.getConductByCharacterId(monkeyCharId).access([&](Conduct& conduct) {
         REQUIRE_THAT(conduct, MatchesConductExpect(
-            ConductExpect{}.expectState(CONDUCT_PICKPOCKET, BEHAVIOR_PICKPOCKET_SEARCHING)
+            ConductExpect{}.expectState(CONDUCT_PICKPOCKET, BEHAVIOR_STASH_TRAVERSING)
+        ));
+    });
+    REQUIRE(getMonkeyRoomId() == 3);
+
+    tc.endTurn();
+    REQUIRE(tc.isSuccess);
+    REQUIRE(getMonkeyRoomId() == 0);
+
+    tc.endTurn();
+    REQUIRE(tc.isSuccess);
+    REQUIRE(getMonkeyRoomId() == 1);
+
+    tc.endTurn();
+    REQUIRE(tc.isSuccess);
+    REQUIRE(getMonkeyRoomId() == 2);
+
+    // Verify that monkey has returned to spawn point
+
+    // Monkey has deposited the coin and is returning to start.
+    tc.controller.getConductByCharacterId(monkeyCharId).access([&](Conduct& conduct) {
+        REQUIRE_THAT(conduct, MatchesConductExpect(
+            ConductExpect{}.expectState(CONDUCT_PICKPOCKET, BEHAVIOR_PICKPOCKET_RETURN_TO_START)
         ));
     });
 
@@ -115,4 +169,32 @@ TEST_CASE("Monkey steals ITEM_COIN from builder in shared room", "[match][GENERA
     int coinAfter = 0;
     tc.playerPtr->getInventory(tc.match.dungeon).accessItem(ITEM_COIN, [&](const auto& item) { coinAfter = item.stacks; });
     REQUIRE(coinAfter == 0);
+
+    // verify monkey is returning to start
+    tc.endTurn();
+    REQUIRE(tc.isSuccess);
+    REQUIRE(getMonkeyRoomId() == 1);
+
+    tc.endTurn();
+    REQUIRE(tc.isSuccess);
+    REQUIRE(getMonkeyRoomId() == 0);
+
+    tc.endTurn();
+    REQUIRE(tc.isSuccess);
+    REQUIRE(getMonkeyRoomId() == 3);
+
+    tc.endTurn();
+    REQUIRE(tc.isSuccess);
+    REQUIRE(getMonkeyRoomId() == 4);
+
+    tc.endTurn();
+    REQUIRE(tc.isSuccess);
+    REQUIRE(getMonkeyRoomId() == 7);
+
+    // verify monkey is searching again
+    tc.controller.getConductByCharacterId(monkeyCharId).access([&](Conduct& conduct) {
+        REQUIRE_THAT(conduct, MatchesConductExpect(
+            ConductExpect{}.expectState(CONDUCT_PICKPOCKET, BEHAVIOR_PICKPOCKET_SEARCHING)
+        ));
+    });
 }

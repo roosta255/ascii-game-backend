@@ -81,6 +81,23 @@ public:
     bool assignCharacterToFloor(int characterId, int roomId, ChannelEnum channel, int floorId);
     bool buildActivationContext(const Preactivation& preactivation, std::function<void(ActivationContext&)>);
 
+    // Ends playerId's turn (titan or builder) on this controller's match, and
+    // ticks NPC conducts once the titan's turn has actually completed for the
+    // round. This is the single entry point that owns that decision.
+    bool endTurn(const std::string& playerId, CodeEnum& error);
+    // Directly ends the titan's turn on this controller's match, bypassing
+    // playerId dispatch (for non-player-driven titans). Always ticks.
+    CodeEnum endTitanTurn();
+    // Directly ends a builder round on this controller's match, bypassing
+    // playerId dispatch. Ticks only if this also ended the titan's (possibly
+    // phantom, solo-mode) turn.
+    CodeEnum endBuilderTurn();
+    // Pure turn-state transition dispatched by playerId, with no tick side effect.
+    // Static so callers advancing a speculative/simulated Match (pathfinding's
+    // ACTION_END_TURN candidate, A* search) can do so without a MatchController
+    // and without ticking NPC conducts on a hypothetical state.
+    static bool advanceTurnState(Match& match, const std::string& playerId, CodeEnum& error, bool& outTitanTurnEnded);
+
     bool findFreeFloor(int roomId, ChannelEnum channel, int& output);
 
     // BFS flood fill over room connectivity using the dungeon's pathfinderCharacter.
@@ -156,4 +173,13 @@ public:
 
 private:
     void drainEventQueue(std::vector<PendingTrigger>& queue);
+
+    // Pure turn-state transitions (Turner's old endTitanTurn/endBuilderTurn), with
+    // no tick side effect. Static and match-agnostic so pathfinding's speculative
+    // Match copies can advance turn state without constructing a MatchController
+    // (and paying for its trait-computation setup) per candidate move.
+    static CodeEnum advanceTitanTurnState(Match& match);
+    // outTitanTurnEnded is set to true when this call also ended the titan's
+    // (possibly phantom, solo-mode) turn.
+    static CodeEnum advanceBuilderTurnState(Match& match, bool& outTitanTurnEnded);
 };

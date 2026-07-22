@@ -170,7 +170,7 @@ Remodel TestController::buildRemodel(int bossRoomId, std::function<bool(const Ma
 }
 
 void TestController::endTurn(){
-    codeset.addFailure(!(isSuccess = match.endTurn(BUILDER_ID, codeset.error)));
+    codeset.addFailure(!(isSuccess = controller.endTurn(BUILDER_ID, codeset.error)));
     updateEverything();
 }
 
@@ -274,7 +274,6 @@ void TestController::moveCharacterToWall(const Cardinal& dir){
 }
 
 void TestController::updateEverything() {
-    controller.tickNpcConducts();
     updateInventory();
     updateTable();
 }
