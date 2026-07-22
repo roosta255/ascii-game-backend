@@ -43,3 +43,10 @@ ROLE_DECL(SACRAMENT_FORGIVENESS,     1,       0,      0,        0,      Activato
 // Phantom character used exclusively for flood-fill room-connectivity queries.
 // Placed temporarily in a dungeon copy; never occupies a real match slot.
 ROLE_DECL(PATHFINDER,               1,       8,      8,        0,      iActivator,                   ( { TRAIT_ACTOR, TRAIT_MOBILE } ) )
+
+// Reference Processor/Receptacle pair for the multi-character relationship
+// system: identical traitsSourced except for the relationship trait, so
+// ActivationContext::resolveCharacter() can locate one from the other via
+// RoleFlyweight::findByTraits(). Designers add further pairs the same way.
+ROLE_DECL(PROCESSOR,  1,       0,      0,        0,      iActivator,       ( { TRAIT_OBJECT, TRAIT_PRIMARY } )   )
+ROLE_DECL(RECEPTACLE, 1,       0,      0,        0,      iActivator,       ( { TRAIT_OBJECT, TRAIT_SECONDARY } ) )

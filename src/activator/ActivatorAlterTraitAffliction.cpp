@@ -77,6 +77,43 @@ bool ActivatorAlterTraitAffliction::activate(ActivationContext& activation) cons
             }
         }
 
+        bool relatedFailed = false;
+        config.related.accessConst([&](const AlterTraitAfflictionRelatedSpec& relatedConfig) {
+            if (!relatedConfig.spec.set.isAny() && !relatedConfig.spec.clear.isAny())
+                return;
+
+            bool applied = false;
+            activation.resolveCharacter(relatedConfig.anchor, relatedConfig.relation).access([&](Character& related) {
+                applySpec(related, relatedConfig.spec);
+                controller.updateTraits(related);
+                for (int i = 0; i < TRAIT_COUNT; i++) {
+                    if (relatedConfig.spec.set[i].orElse(false)) {
+                        const auto event = LoggedEvent{
+                            EVENT_SET_TRAIT,
+                            { EventComponentKind::ROLE, (int)subject.role },
+                            { EventComponentKind::TRAIT, i },
+                            { EventComponentKind::ROLE, (int)related.role },
+                            -1
+                        };
+                        controller.addLoggedEvent(activation, activation.room.roomId, event);
+                        controller.addRequestLoggedEvent(activation, event);
+                    }
+                }
+                applied = true;
+            });
+
+            if (!applied) {
+                relatedFailed = true;
+                codeset.addFailure(true, CODE_ALTER_TRAIT_AFFLICTION_TARGET_NOT_CHARACTER);
+                controller.addRequestLoggedEvent(activation, LoggedEvent{
+                    EVENT_FAILS_BEING_CHARACTER,
+                    { EventComponentKind::ROLE, (int)subject.role },
+                    {}, {}, -1
+                });
+            }
+        });
+        if (relatedFailed) return;
+
         isSuccess = true;
     });
     return isSuccess;

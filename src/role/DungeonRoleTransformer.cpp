@@ -22,6 +22,13 @@ bool DungeonRoleTransformer::activate(ActivationContext& activation) const {
             });
         };
 
+        if (relation.isPresent()) {
+            relation.accessConst([&](CharacterRelation rel) {
+                activation.resolveCharacter(anchor, rel).access(applyToCharacter);
+            });
+            return;
+        }
+
         switch (scope) {
             case CharacterScope::Object:
                 applyToCharacter(activation.character);

@@ -2,6 +2,7 @@
 
 #include "Cardinal.hpp"
 #include "Character.hpp"
+#include "CharacterRelation.hpp"
 #include "Chest.hpp"
 #include "ConductEnum.hpp"
 #include "DamageTypeBits.hpp"
@@ -82,4 +83,11 @@ struct ActivationContext {
         });
         return result;
     }
+
+    // Resolves a character starting from `anchor` (actor/target) and moving to the
+    // related character described by `relation`. Self returns the anchor as-is;
+    // Primary/Secondary/Tertiary look up the complementary character via
+    // RoleFlyweight::findByTraits(), searching the anchor's chest if it is
+    // chest-contained, otherwise its room. See ActivationContext.cpp.
+    Pointer<Character> resolveCharacter(CharacterAnchor anchor, CharacterRelation relation) const;
 };

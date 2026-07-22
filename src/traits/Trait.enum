@@ -145,6 +145,15 @@ TRAIT_DECL(ENRAGED,   ({ TRAIT_TYPE_AFFLICTION, TRAIT_TYPE_CHARACTER, TRAIT_TYPE
 TRAIT_DECL(FROZEN,    ({ TRAIT_TYPE_AFFLICTION, TRAIT_TYPE_CHARACTER, TRAIT_TYPE_STATE }))
 TRAIT_DECL(ENFLAMED,  ({ TRAIT_TYPE_AFFLICTION, TRAIT_TYPE_CHARACTER, TRAIT_TYPE_STATE }))
 
+// --- MULTI-CHARACTER RELATIONSHIP TRAITS ---
+// Paired roles (Processor/Receptacle, Primary/Secondary, etc.) share every
+// TRAIT_DECL bit except one of these. ActivationContext::resolveCharacter()
+// swaps the relationship bit and re-resolves the role via
+// RoleFlyweight::findByTraits() to locate the complementary character.
+TRAIT_DECL(PRIMARY,   ({ TRAIT_TYPE_SOURCE, TRAIT_TYPE_CHARACTER }))
+TRAIT_DECL(SECONDARY, ({ TRAIT_TYPE_SOURCE, TRAIT_TYPE_CHARACTER }))
+TRAIT_DECL(TERTIARY,  ({ TRAIT_TYPE_SOURCE, TRAIT_TYPE_CHARACTER }))
+
 // --- DERIVED STATE (Life & Death Logic) ---
 TRAIT_DECL(IS_DEAD,    ({ TRAIT_TYPE_DERIVED, TRAIT_TYPE_CHARACTER, TRAIT_TYPE_DEBUFF, TRAIT_TYPE_STATE }))
     // clears all capability traits when organic and not undead

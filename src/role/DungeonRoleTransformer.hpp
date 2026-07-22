@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CharacterRelation.hpp"
+#include "Maybe.hpp"
 #include "RoleEnum.hpp"
 #include "TraitBits.hpp"
 #include "iActivator.hpp"
@@ -36,8 +38,18 @@ public:
     DungeonRoleTransformer() = default;
     DungeonRoleTransformer(CharacterScope scope, RoleAssignment assignment)
         : scope(scope), assignment(assignment) {}
+    DungeonRoleTransformer(CharacterAnchor anchor, CharacterRelation relation, RoleAssignment assignment)
+        : anchor(anchor), relation(relation), assignment(assignment) {}
 
     CharacterScope scope      = CharacterScope::Dungeon;
+
+    // When `relation` is set, the transformer resolves a single character via
+    // ActivationContext::resolveCharacter(anchor, *relation) instead of using
+    // `scope` — this is how the same activator reaches a paired
+    // Processor/Receptacle-style character without a dedicated activator class.
+    CharacterAnchor anchor = CharacterAnchor::Actor;
+    Maybe<CharacterRelation> relation;
+
     RoleAssignment assignment = {};
 
     bool activate(ActivationContext& activation) const override;

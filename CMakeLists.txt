@@ -62,6 +62,7 @@ add_library(core_backend STATIC
     src/behavior/TriggerWrapper.cpp
     src/activator/ActionEnum.cpp
     src/activator/ActionFlyweight.cpp
+    src/activator/ActivationContext.cpp
     src/activator/ActivatorAlterTraitAffliction.cpp
     src/activator/ActivatorDeposit.cpp
     src/activator/ActivatorEndTurn.cpp
@@ -219,6 +220,7 @@ add_executable(test_target
     test/maps/GeneratorTest4D.cpp
     test/maps/GeneratorTutorial.cpp
     test/ActivationAddTargetKeyframeTests.cpp
+    test/CharacterRelationTests.cpp
     test/TraitModifierTests.cpp
     test/CharacterSheetApiViewTests.cpp
     test/EventLogTests.cpp
