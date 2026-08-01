@@ -7,6 +7,7 @@
 #include "Character.hpp"
 #include "ChannelEnum.hpp"
 #include "Codeset.hpp"
+#include "CodesetExpect.hpp"
 #include "GeneratorEnum.hpp"
 #include "Keyframe.hpp"
 #include "Location.hpp"
@@ -29,17 +30,19 @@ static Maybe<Keyframe> queryKeyframes(Rack<Keyframe> keyframes, AnimationEnum an
 
 TEST_CASE("ActivationAddTargetKeyframe inserts into target character keyframes", "[activation][keyframe]") {
     TestController controller(GENERATOR_TUTORIAL);
+    Codeset& codeset = controller.codeset;
+
     controller.generate(0);
     REQUIRE(controller.match.start());
 
     // Move builder east to the shared door between room 0 and room 1
     controller.moveCharacterToWall(Cardinal::east());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     REQUIRE(controller.builderCharacterPtr->location == Location::makeSharedDoor(1, CHANNEL_CORPOREAL, Cardinal::west()));
 
     // End the turn so the builder has full actions
     controller.endTurn();
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     // Find the toggler in room 1
     int toggler1Offset = -1;

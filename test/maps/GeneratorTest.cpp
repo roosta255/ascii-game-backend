@@ -20,6 +20,7 @@
 #include "Preactivation.hpp"
 #include "RoleEnum.hpp"
 #include "Room.hpp"
+#include "CodesetExpect.hpp"
 #include "TestController.hpp"
 #include "TraitEnum.hpp"
 
@@ -38,12 +39,10 @@ TEST_CASE("Test jailer", "[match][test]") {
     REQUIRE(controller.inventory.keys == 0);
 
     controller.moveCharacterToWall(Cardinal::east());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.endTurn();
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     // ----------- OLD CODE ------------
 /*
@@ -120,7 +119,7 @@ TEST_CASE("Catalyst key chest: key not consumed, action taken", "[match][chest][
     REQUIRE(containerId != -1);
 
     static ActivatorChestLockKey activator;
-    tc.isSuccess = tc.controller.activate(activator, Preactivation{
+    tc.codeset.isLatestSuccessFlag = tc.controller.activate(activator, Preactivation{
         .action = {
             .characterId = tc.builderOffset,
             .roomId = tc.latestPosition,
@@ -130,8 +129,7 @@ TEST_CASE("Catalyst key chest: key not consumed, action taken", "[match][chest][
     });
     tc.updateInventory();
 
-    REQUIRE(tc.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(tc.isSuccess);
+    REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     REQUIRE(tc.inventory.keys == 1);                        // key NOT consumed
     REQUIRE(tc.builderCharacterPtr->actions == 1);          // one action taken
 
@@ -156,7 +154,7 @@ TEST_CASE("Consumer key chest: key consumed, action taken", "[match][chest][lock
     REQUIRE(containerId != -1);
 
     static ActivatorChestLockKey activator;
-    tc.isSuccess = tc.controller.activate(activator, Preactivation{
+    tc.codeset.isLatestSuccessFlag = tc.controller.activate(activator, Preactivation{
         .action = {
             .characterId = tc.builderOffset,
             .roomId = tc.latestPosition,
@@ -166,8 +164,7 @@ TEST_CASE("Consumer key chest: key consumed, action taken", "[match][chest][lock
     });
     tc.updateInventory();
 
-    REQUIRE(tc.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(tc.isSuccess);
+    REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     REQUIRE(tc.inventory.keys == 0);                        // key consumed
     REQUIRE(tc.builderCharacterPtr->actions == 1);          // one action taken
 
@@ -267,7 +264,7 @@ TEST_CASE("ChestLockKey: lock transition animation survives storeView round-trip
 
     // Activate chest lock with animations enabled (isSkippingAnimations = false)
     static ActivatorChestLockKey activator;
-    tc.isSuccess = tc.controller.activate(activator, Preactivation{
+    tc.codeset.isLatestSuccessFlag = tc.controller.activate(activator, Preactivation{
         .action = {
             .characterId = tc.builderOffset,
             .roomId = tc.latestPosition,
@@ -276,8 +273,7 @@ TEST_CASE("ChestLockKey: lock transition animation survives storeView round-trip
         .playerId = TestController::BUILDER_ID,
         .isSkippingAnimations = false,
     });
-    REQUIRE(tc.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(tc.isSuccess);
+    REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     // Verify ANIMATION_FALL transition was added to the chest
     bool chestFallFound = false;

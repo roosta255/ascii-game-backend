@@ -4,6 +4,7 @@
 #include "GeneratorEnum.hpp"
 #include "LocationEnum.hpp"
 #include "Match.hpp"
+#include "CodesetExpect.hpp"
 #include "TestController.hpp"
 
 TEST_CASE("GeneratorAtom: generates without errors", "[match][GENERATOR_ATOM]") {
@@ -11,16 +12,14 @@ TEST_CASE("GeneratorAtom: generates without errors", "[match][GENERATOR_ATOM]") 
 
     tc.generate(GeneratorAtom::CANONICAL_SEED);
 
-    REQUIRE(tc.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(tc.isSuccess);
+    REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 }
 
 TEST_CASE("GeneratorAtom: match starts and player is placed", "[match][GENERATOR_ATOM]") {
     TestController tc(GENERATOR_ATOM);
 
     tc.generate(GeneratorAtom::CANONICAL_SEED);
-    REQUIRE(tc.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(tc.isSuccess);
+    REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     REQUIRE(tc.match.start());
     REQUIRE(tc.codeset.getErrorTable() == Codeset::getEmptyTable());
@@ -58,7 +57,7 @@ TEST_CASE("GeneratorAtom: start room exists", "[match][GENERATOR_ATOM]") {
     TestController tc(GENERATOR_ATOM);
     tc.generate(GeneratorAtom::CANONICAL_SEED);
 
-    REQUIRE(tc.isSuccess);
+    REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     REQUIRE(tc.match.start());
 
     REQUIRE(tc.latestPosition == GeneratorAtom::START_ROOM);
@@ -91,8 +90,7 @@ TEST_CASE("GeneratorAtom: many seeds generate successfully", "[match][GENERATOR_
         TestController tc(GENERATOR_ATOM);
         tc.generate(seed);
 
-        REQUIRE(tc.isSuccess);
-        REQUIRE(tc.codeset.getErrorTable() == Codeset::getEmptyTable());
+        REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     }
 }
 
@@ -160,6 +158,6 @@ TEST_CASE("GeneratorAtom: fuzz generation", "[match][GENERATOR_ATOM][slow]") {
         TestController tc(GENERATOR_ATOM);
         tc.generate(seed);
 
-        REQUIRE(tc.isSuccess);
+        REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     }
 }

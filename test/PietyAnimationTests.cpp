@@ -3,6 +3,7 @@
 #include "Character.hpp"
 #include "CharacterAllocSpec.hpp"
 #include "ChannelEnum.hpp"
+#include "CodesetExpect.hpp"
 #include "GeneratorEnum.hpp"
 #include "Keyframe.hpp"
 #include "Preactivation.hpp"
@@ -23,7 +24,7 @@ TEST_CASE("SACRAMENT_FORGIVENESS grants PIETY and inserts eye color keyframe", "
     tc.generate(0);
     REQUIRE(tc.match.start());
     tc.endTurn();
-    REQUIRE(tc.isSuccess);
+    REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     // Place a SACRAMENT_FORGIVENESS character in the builder's current room
     int sacramentId = -1;
@@ -68,7 +69,7 @@ TEST_CASE("SACRAMENT_FORGIVENESS skips PIETY keyframe when animations are disabl
     tc.generate(0);
     REQUIRE(tc.match.start());
     tc.endTurn();
-    REQUIRE(tc.isSuccess);
+    REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     int sacramentId = -1;
     REQUIRE(tc.controller.allocate(

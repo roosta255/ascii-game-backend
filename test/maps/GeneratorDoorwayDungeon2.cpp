@@ -17,6 +17,7 @@
 #include "PathfindingCounter.hpp"
 #include "RoleEnum.hpp"
 #include "Room.hpp"
+#include "CodesetExpect.hpp"
 #include "TestController.hpp"
 
 TEST_CASE("Test elevator configuration", "[match][GENERATOR_ELEVATOR]") {
@@ -25,8 +26,7 @@ TEST_CASE("Test elevator configuration", "[match][GENERATOR_ELEVATOR]") {
 
     // Generate test layout
     controller.generate(0);
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     // Start the match
     REQUIRE(controller.match.start());
@@ -103,94 +103,73 @@ TEST_CASE("Test elevator configuration", "[match][GENERATOR_ELEVATOR]") {
         , DOOR_ELEVATOR_OPEN_KEYED });
 
     controller.moveCharacterToWall(Cardinal::east());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.moveCharacterToWall(Cardinal::north());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.endTurn();
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.moveCharacterToWall(Cardinal::north());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     // get the elevator key from chest
     REQUIRE(controller.inventory.elevatorKeys == 0);
     controller.lootInventory(chestOnFloor7, ITEM_KEY_ELEVATOR);
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     REQUIRE(controller.inventory.elevatorKeys == 1);
 
     controller.endTurn();
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.moveCharacterToFloor(1);
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.moveCharacterToWall(Cardinal::south());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.endTurn();
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.moveCharacterToWall(Cardinal::south());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.endTurn();
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.moveCharacterToWall(Cardinal::west());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.endTurn();
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.moveCharacterToWall(Cardinal::north());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.endTurn();
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.moveCharacterToWall(Cardinal::north());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.endTurn();
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.moveCharacterToWall(Cardinal::north());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     // should be within elevator
 
     controller.endTurn();
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.moveCharacterToFloor(0);
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     // pay below floor 5 cost
     controller.activateLock(Cardinal::south());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     REQUIRE(controller.inventory.elevatorKeys == 0);
     REQUIRE(getElevatorDoorEnums() == std::array<DoorEnum, 4>
         { DOOR_ELEVATOR_CLOSED_KEYED
@@ -208,13 +187,11 @@ TEST_CASE("Test elevator configuration", "[match][GENERATOR_ELEVATOR]") {
         , DOOR_ELEVATOR_OPEN_KEYED });
 
     controller.endTurn();
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     // move elevator down to floor 5
     controller.activateLock(Cardinal::south());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     REQUIRE(controller.inventory.elevatorKeys == 0);
     REQUIRE(getElevatorDoorEnums() == std::array<DoorEnum, 4>
         { DOOR_ELEVATOR_CLOSED_KEYED_MOVING_BUTTON
@@ -232,16 +209,13 @@ TEST_CASE("Test elevator configuration", "[match][GENERATOR_ELEVATOR]") {
         , DOOR_ELEVATOR_CLOSED_CALL_BUTTON });
 
     controller.endTurn();
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.endTurn();
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.moveCharacterToWall(Cardinal::south());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     REQUIRE(controller.latestPosition == 52);
 

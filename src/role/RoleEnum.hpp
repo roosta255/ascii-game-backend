@@ -1,5 +1,8 @@
 #pragma once
 
+#include <ostream>
+#include <string>
+
 // everything in this list exists
 // because it's a part of the 
 // player inventory thst other
@@ -32,3 +35,9 @@ ROLE_COUNT
 #undef ROLE_USE_WRAPPER
 #undef ROLE_CONDUCT_DECL
 #undef ROLE_INVENTORY_SIZE_DECL
+
+const char* role_to_text(int);
+
+inline std::ostream& operator<<(std::ostream& os, const RoleEnum& code) {
+    return os << std::string(role_to_text(code));
+}

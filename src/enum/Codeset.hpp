@@ -17,8 +17,11 @@ private:
 public:
     static const Array<int, CODE_COUNT>& getEmptyTable();
     Codeset();
+    Codeset(const Codeset& other);
+    Codeset& operator=(const Codeset& other);
     CodeEnum error = CODE_UNSET;
     bool isAnyOverflow = false, isAnyFailure = false;
+    bool isLatestSuccessFlag = false;
 
     // returns the input
     bool addFailure(const bool input, const CodeEnum code = CODE_UNSET);
@@ -35,6 +38,7 @@ public:
     std::string describe()const;
     std::string describe(const std::string& prefix)const;
     Array<int, CODE_COUNT> getErrorTable()const;
+    int getTableValue(const CodeEnum& code)const;
 
     void forEachTableEntry(const std::function<void(CodeEnum, int)>& fn) const;
     void forEachLog(const std::function<void(CodeEnum, int)>& fn) const;

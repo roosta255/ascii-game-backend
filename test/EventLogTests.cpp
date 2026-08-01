@@ -19,6 +19,7 @@
 #include "Preactivation.hpp"
 #include "Room.hpp"
 #include "RoleEnum.hpp"
+#include "CodesetExpect.hpp"
 #include "TestController.hpp"
 
 // ---- helpers ----
@@ -53,7 +54,7 @@ TEST_CASE("EventLog: MOVE_TO_DOOR", "[eventlog]") {
 
     const int startRoomId = tc.latestPosition;
     tc.moveCharacterToWall(Cardinal::east());
-    REQUIRE(tc.isSuccess);
+    REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     tc.match.dungeon.rooms.access(startRoomId, [&](Room& room) {
         auto event = requireLastEvent(room);
@@ -71,7 +72,7 @@ TEST_CASE("EventLog: KEEPER_LOCK", "[eventlog]") {
     Cardinal dir;
     REQUIRE(findRoomWithDoor(tc, DOOR_KEEPER_INGRESS_KEYED, roomId, dir));
 
-    tc.isSuccess = tc.controller.activate(Preactivation{
+    tc.codeset.isLatestSuccessFlag = tc.controller.activate(Preactivation{
         .action = {
             .type = ACTION_ACTIVATE_LOCK,
             .characterId = tc.builderOffset,
@@ -81,7 +82,7 @@ TEST_CASE("EventLog: KEEPER_LOCK", "[eventlog]") {
         .playerId = TestController::BUILDER_ID,
         .isSkippingAnimations = true,
     });
-    REQUIRE(tc.isSuccess);
+    REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     tc.match.dungeon.rooms.access(roomId, [&](Room& room) {
         auto event = requireLastEvent(room);
@@ -101,7 +102,7 @@ TEST_CASE("EventLog: JAILER_LOCK", "[eventlog]") {
     Cardinal dir;
     REQUIRE(findRoomWithDoor(tc, DOOR_JAILER_INGRESS_KEYLESS, roomId, dir));
 
-    tc.isSuccess = tc.controller.activate(Preactivation{
+    tc.codeset.isLatestSuccessFlag = tc.controller.activate(Preactivation{
         .action = {
             .type = ACTION_ACTIVATE_LOCK,
             .characterId = tc.builderOffset,
@@ -111,7 +112,7 @@ TEST_CASE("EventLog: JAILER_LOCK", "[eventlog]") {
         .playerId = TestController::BUILDER_ID,
         .isSkippingAnimations = true,
     });
-    REQUIRE(tc.isSuccess);
+    REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     tc.match.dungeon.rooms.access(roomId, [&](Room& room) {
         auto event = requireLastEvent(room);
@@ -131,7 +132,7 @@ TEST_CASE("EventLog: SHIFTER_LOCK", "[eventlog]") {
     Cardinal dir;
     REQUIRE(findRoomWithDoor(tc, DOOR_SHIFTER_INGRESS_KEYLESS, roomId, dir));
 
-    tc.isSuccess = tc.controller.activate(Preactivation{
+    tc.codeset.isLatestSuccessFlag = tc.controller.activate(Preactivation{
         .action = {
             .type = ACTION_ACTIVATE_LOCK,
             .characterId = tc.builderOffset,
@@ -141,7 +142,7 @@ TEST_CASE("EventLog: SHIFTER_LOCK", "[eventlog]") {
         .playerId = TestController::BUILDER_ID,
         .isSkippingAnimations = true,
     });
-    REQUIRE(tc.isSuccess);
+    REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     tc.match.dungeon.rooms.access(roomId, [&](Room& room) {
         auto event = requireLastEvent(room);
@@ -157,7 +158,7 @@ TEST_CASE("EventLog: ELEVATOR", "[eventlog]") {
 
     tc.giveItem(ITEM_KEY_ELEVATOR);
 
-    tc.isSuccess = tc.controller.activate(Preactivation{
+    tc.codeset.isLatestSuccessFlag = tc.controller.activate(Preactivation{
         .action = {
             .type = ACTION_ACTIVATE_LOCK,
             .characterId = tc.builderOffset,
@@ -167,7 +168,7 @@ TEST_CASE("EventLog: ELEVATOR", "[eventlog]") {
         .playerId = TestController::BUILDER_ID,
         .isSkippingAnimations = true,
     });
-    REQUIRE(tc.isSuccess);
+    REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     tc.match.dungeon.rooms.access(GeneratorElevator::ELEVATOR_ROOM_ID, [&](Room& room) {
         auto event = requireLastEvent(room);
@@ -183,7 +184,7 @@ TEST_CASE("EventLog: TOGGLE", "[eventlog]") {
 
     // Move builder east into a room that has a toggler
     tc.moveCharacterToWall(Cardinal::east());
-    REQUIRE(tc.isSuccess);
+    REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     const int currentRoomId = tc.latestPosition;
 
@@ -199,7 +200,7 @@ TEST_CASE("EventLog: TOGGLE", "[eventlog]") {
     REQUIRE(togglerId != -1);
 
     tc.activateObjectCharacter(togglerId);
-    REQUIRE(tc.isSuccess);
+    REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     tc.match.dungeon.rooms.access(currentRoomId, [&](Room& room) {
         auto event = requireLastEvent(room);
@@ -209,6 +210,8 @@ TEST_CASE("EventLog: TOGGLE", "[eventlog]") {
 
 TEST_CASE("EventLog: LOOT_CHEST", "[eventlog]") {
     TestController tc(GENERATOR_TEST);
+    Codeset& codeset = tc.codeset;
+
     tc.isSkippingAnimations = true;
     tc.generate(0);
     REQUIRE(tc.match.start());
@@ -235,7 +238,7 @@ TEST_CASE("EventLog: LOOT_CHEST", "[eventlog]") {
         .playerId = TestController::BUILDER_ID,
         .isSkippingAnimations = true,
     });
-    REQUIRE(tc.codeset.getErrorTable() == Codeset::getEmptyTable());
+    REQUIRE_THAT(codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     // Add a lootable key to the chest
     tc.match.dungeon.findChestByContainerId(containerId, tc.codeset.error).access([&](Chest& chest) {
@@ -244,10 +247,10 @@ TEST_CASE("EventLog: LOOT_CHEST", "[eventlog]") {
             containerChar.getInventory(tc.match.dungeon).giveItem(ITEM_KEY, tc.codeset.error);
         });
     });
-    REQUIRE(tc.codeset.getErrorTable() == Codeset::getEmptyTable());
+    REQUIRE_THAT(codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     tc.lootInventory(containerId, ITEM_KEY);
-    REQUIRE(tc.isSuccess);
+    REQUIRE_THAT(codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     // The loot triggers a critter bite, so LOOT_CHEST_SOURCE may not be last — scan the log
     tc.match.dungeon.rooms.access(tc.latestPosition, [&](Room& room) {
@@ -282,7 +285,7 @@ TEST_CASE("EventLog: CRITTER_BITE", "[eventlog]") {
     REQUIRE(critterId != -1);
 
     const int startRoomId = tc.latestPosition;
-    tc.isSuccess = tc.controller.activate(Preactivation{
+    tc.codeset.isLatestSuccessFlag = tc.controller.activate(Preactivation{
         .action = {
             .type = ACTION_CRITTER_BITE,
             .characterId = critterId,
@@ -292,7 +295,7 @@ TEST_CASE("EventLog: CRITTER_BITE", "[eventlog]") {
         .playerId = TestController::BUILDER_ID,
         .isSkippingAnimations = true,
     });
-    REQUIRE(tc.isSuccess);
+    REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     tc.match.dungeon.rooms.access(startRoomId, [&](Room& room) {
         auto event = requireLastEvent(room);

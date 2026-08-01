@@ -63,6 +63,14 @@ struct RemodelAuthorSetupKeeper : public RemodelAuthorBase {
     bool mutateMatch(Remodel&, const Match&, const PathfindingCounter&, std::function<bool(const Match&)>) const override;
 };
 
+struct RemodelAuthorSetupLatch : public RemodelAuthorBase {
+    int4 coords;
+    Cardinal dir;
+    bool isOpen;
+    RemodelAuthorSetupLatch(int4 coords, Cardinal dir, bool isOpen) : coords(coords), dir(dir), isOpen(isOpen) {}
+    bool mutateMatch(Remodel&, const Match&, const PathfindingCounter&, std::function<bool(const Match&)>) const override;
+};
+
 struct RemodelAuthorSetupLadderUp : public RemodelAuthorBase {
     int4 coords;
     Cardinal dir;

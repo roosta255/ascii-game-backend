@@ -119,7 +119,7 @@ bool RoleFlyweight::indexByString
     RoleEnum& output
 ) {
     int i = 0;
-    const auto& flyweights = getFlyweights(); 
+    const auto& flyweights = getFlyweights();
     for(const RoleFlyweight& flyweight: flyweights) {
         if(name == flyweight.name) {
             output = (RoleEnum)i;
@@ -128,4 +128,18 @@ bool RoleFlyweight::indexByString
         i++;
     }
     return false;
+}
+
+const char* role_to_text(int index) {
+    if (index < 0) {
+        return "ROLE_INDEX_NEGATIVE";
+    }
+    if (index >= ROLE_COUNT) {
+        return "ROLE_INDEX_OUT_OF_BOUNDS";
+    }
+    const char* result = "ROLE_UNKNOWN";
+    RoleFlyweight::getFlyweights().accessConst(index, [&](const RoleFlyweight& flyweight){
+        result = flyweight.name;
+    });
+    return result;
 }

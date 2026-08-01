@@ -34,6 +34,7 @@ TestController::TestController(const GeneratorEnum& generator): controller(match
 
 // functions
 void TestController::activateCharacter(int subjectCharacterId, int objectCharacterId){
+    codeset = Codeset();
     Preactivation preactivation{
         .action = {
             .type = ACTION_ACTIVATE_CHARACTER,
@@ -46,11 +47,12 @@ void TestController::activateCharacter(int subjectCharacterId, int objectCharact
         .isSkippingLogging = isSkippingLogging
     };
 
-    isSuccess = controller.activate(preactivation);
+    codeset.isLatestSuccessFlag = controller.activate(preactivation);
     updateEverything();
 }
 
 void TestController::activateChestLock(LockEnum lockType) {
+    codeset = Codeset();
     int containerCharacterId = -1;
     for (const Chest& chest : match.dungeon.chests) {
         if (chest.lock != lockType || chest.containerCharacterId == -1) continue;
@@ -71,11 +73,12 @@ void TestController::activateChestLock(LockEnum lockType) {
         .isSkippingAnimations = isSkippingAnimations,
         .isSkippingLogging = isSkippingLogging
     };
-    isSuccess = controller.activate(preactivation);
+    codeset.isLatestSuccessFlag = controller.activate(preactivation);
     updateEverything();
 }
 
 void TestController::activateContainedCharacter(LockEnum lockType, RoleEnum role) {
+    codeset = Codeset();
     int containedCharacterId = -1;
     for (const Chest& chest : match.dungeon.chests) {
         if (chest.lock != lockType || chest.containerCharacterId == -1) continue;
@@ -100,6 +103,7 @@ void TestController::activateContainedCharacter(LockEnum lockType, RoleEnum role
 }
 
 void TestController::activateDoor(Cardinal dir){
+    codeset = Codeset();
     Preactivation preactivation{
         .action = {
             .type = ACTION_ACTIVATE_DOOR,
@@ -112,12 +116,13 @@ void TestController::activateDoor(Cardinal dir){
         .isSkippingLogging = isSkippingLogging
     };
 
-    isSuccess = controller.activate(preactivation);
-    if (isSuccess) latestDirection = dir;
+    codeset.isLatestSuccessFlag = controller.activate(preactivation);
+    if (codeset.isLatestSuccessFlag) latestDirection = dir;
     updateEverything();
 }
 
 void TestController::activateLock(Cardinal dir){
+    codeset = Codeset();
     Preactivation preactivation{
         .action = {
             .type = ACTION_ACTIVATE_LOCK,
@@ -129,8 +134,8 @@ void TestController::activateLock(Cardinal dir){
         .isSkippingAnimations = isSkippingAnimations,
         .isSkippingLogging = isSkippingLogging
     };
-    isSuccess = controller.activate(preactivation);
-    if (isSuccess) latestDirection = dir;
+    codeset.isLatestSuccessFlag = controller.activate(preactivation);
+    if (codeset.isLatestSuccessFlag) latestDirection = dir;
     updateEverything();
 }
 
@@ -141,6 +146,7 @@ void TestController::activateObjectCharacter(RoleEnum role){
 }
 
 void TestController::activateObjectCharacter(int objectCharacterId){
+    codeset = Codeset();
     Preactivation preactivation{
         .action = {
             .type = ACTION_ACTIVATE_CHARACTER,
@@ -155,7 +161,7 @@ void TestController::activateObjectCharacter(int objectCharacterId){
     controller.buildActivationContext(preactivation, [&](ActivationContext& ctx){
         testKeyframe = Keyframe::buildTargetKeyframe(AnimationConfig{.animation=ANIMATION_BOUNCE_FROM_FLOOR_TO_LOCK, .act=ANIMATION_ACT_TARGET_TO_SUBJECT}, ctx);
     });
-    isSuccess = controller.activate(preactivation);
+    codeset.isLatestSuccessFlag = controller.activate(preactivation);
     updateEverything();
 }
 
@@ -170,7 +176,7 @@ Remodel TestController::buildRemodel(int bossRoomId, std::function<bool(const Ma
 }
 
 void TestController::endTurn(){
-    codeset.addFailure(!(isSuccess = controller.endTurn(BUILDER_ID, codeset.error)));
+    codeset.addFailure(!(codeset.isLatestSuccessFlag = controller.endTurn(BUILDER_ID, codeset.error)));
     updateEverything();
 }
 
@@ -183,13 +189,14 @@ Room* TestController::getLatestRoom() {
 }
 
 void TestController::generate(int seed) {
-    isSuccess = controller.generate(seed);
+    codeset = Codeset();
+    codeset.isLatestSuccessFlag = controller.generate(seed);
     latestPosition = builderCharacterPtr->location.roomId;
 }
 
 void TestController::giveItem(ItemEnum type) {
     auto inv = playerPtr->getInventory(match.dungeon);
-    isSuccess = inv.giveItem(type, codeset.error);
+    codeset.isLatestSuccessFlag = inv.giveItem(type, codeset.error);
     updateInventory();
 }
 
@@ -200,6 +207,7 @@ void TestController::lootInventory(RoleEnum role, const ItemEnum& targetItemType
 }
 
 void TestController::lootInventory(int containerCharacterId, const ItemEnum& targetItemType) {
+    codeset = Codeset();
     Preactivation preactivation{
         .action = {
             .type = ACTION_LOOT_CHEST,
@@ -221,11 +229,12 @@ void TestController::lootInventory(int containerCharacterId, const ItemEnum& tar
             }
         }
     });
-    isSuccess = controller.activate(preactivation);
+    codeset.isLatestSuccessFlag = controller.activate(preactivation);
     updateInventory();
 }
 
 void TestController::moveCharacterToFloor(int roomId, int floorId) {
+    codeset = Codeset();
     Preactivation preactivation{
         .action = {
             .type = ACTION_MOVE_TO_FLOOR,
@@ -237,7 +246,7 @@ void TestController::moveCharacterToFloor(int roomId, int floorId) {
         .isSkippingAnimations = isSkippingAnimations,
         .isSkippingLogging = isSkippingLogging
     };
-    isSuccess = controller.activate(preactivation);
+    codeset.isLatestSuccessFlag = controller.activate(preactivation);
     updateEverything();
 }
 
@@ -246,6 +255,7 @@ void TestController::moveCharacterToFloor(int floorId) {
 }
 
 void TestController::moveCharacterToWall(int roomId, const Cardinal& dir){
+    codeset = Codeset();
     Preactivation preactivation{
         .action = {
             .type = ACTION_MOVE_TO_DOOR,
@@ -257,10 +267,10 @@ void TestController::moveCharacterToWall(int roomId, const Cardinal& dir){
         .isSkippingAnimations = isSkippingAnimations,
         .isSkippingLogging = isSkippingLogging
     };
-    isSuccess = controller.activate(preactivation);
+    codeset.isLatestSuccessFlag = controller.activate(preactivation);
     // TODO: add test codes for this line
     match.dungeon.rooms.accessConst(roomId, [&](const Room& room){
-        if (isSuccess) {
+        if (codeset.isLatestSuccessFlag) {
             latestPosition = room.getWall(dir).adjacent;
         }
         // TODO: add test codes for this line

@@ -49,3 +49,17 @@ bool RoomFlyweight::indexByString
     }
     return false;
 }
+
+const char* room_to_text(int index) {
+    if (index < 0) {
+        return "ROOM_INDEX_NEGATIVE";
+    }
+    if (index >= ROOM_COUNT) {
+        return "ROOM_INDEX_OUT_OF_BOUNDS";
+    }
+    const char* result = "ROOM_UNKNOWN";
+    RoomFlyweight::getFlyweights().accessConst(index, [&](const RoomFlyweight& flyweight){
+        result = flyweight.name.c_str();
+    });
+    return result;
+}

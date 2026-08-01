@@ -33,7 +33,6 @@ public:
     InventoryDigest inventory;
     Maybe<Keyframe> testKeyframe;
 
-    bool isSuccess = false;
     int builderOffset = -1;
     int latestPosition = 0;
     Cardinal latestDirection = Cardinal::north();

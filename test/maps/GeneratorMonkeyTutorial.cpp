@@ -12,6 +12,7 @@
 #include "Match.hpp"
 #include "Preactivation.hpp"
 #include "RoleEnum.hpp"
+#include "CodesetExpect.hpp"
 #include "TestController.hpp"
 
 TEST_CASE("Monkey steals ITEM_COIN from builder in shared room", "[match][GENERATOR_MONKEY_TUTORIAL][monkey]") {
@@ -84,11 +85,11 @@ TEST_CASE("Monkey steals ITEM_COIN from builder in shared room", "[match][GENERA
     //   STASH_PATHING proposer fires → BFS flood-fill → writes door-direction bits
     //   → STASH_TRAVERSING.
     tc.moveCharacterToWall(Cardinal::north());
-    REQUIRE(tc.isSuccess);
+    REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     tc.moveCharacterToFloor(4);
-    REQUIRE(tc.isSuccess);
+    REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     tc.endTurn();
-    REQUIRE(tc.isSuccess);
+    REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     // Verify STASH_TRAVERSING + flood-fill path toward the stash chest (room 2).
     //
@@ -123,20 +124,12 @@ TEST_CASE("Monkey steals ITEM_COIN from builder in shared room", "[match][GENERA
                 .expectVar(CONDUCT_MEMORY_PATHFIND_DOOR_WEST,   48)
         ));
     });
-
-    // endTurn → tickNpcConducts.
-    //   STASH_TRAVERSING proposer fires ACTION_MOVE_TO_FLOOR into the adjacent room.
-    //   Each move's ON_MOVE_AS_ACTOR inline handler re-fires buildAndExecuteProposals,
-    //   chaining the full path 7→4→3→0→1→2.
-    //   On arriving at room 2 the chest scan fires → STASH_DEPOSITING.
-    //   STASH_DEPOSITING proposer fires ACTION_DEPOSIT inline → ON_DEPOSIT_AS_ACTOR
-    //   → PICKPOCKET_SEARCHING.  All within this single tick.
-    REQUIRE(tc.isSuccess);
+    REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true)));
     REQUIRE(getMonkeyRoomId() == 4);
     
     // Verify Monkey moving through rooms to chest
     tc.endTurn();
-    REQUIRE(tc.isSuccess);
+    REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true)));
     tc.controller.getConductByCharacterId(monkeyCharId).access([&](Conduct& conduct) {
         REQUIRE_THAT(conduct, MatchesConductExpect(
             ConductExpect{}.expectState(CONDUCT_PICKPOCKET, BEHAVIOR_STASH_TRAVERSING)
@@ -145,15 +138,15 @@ TEST_CASE("Monkey steals ITEM_COIN from builder in shared room", "[match][GENERA
     REQUIRE(getMonkeyRoomId() == 3);
 
     tc.endTurn();
-    REQUIRE(tc.isSuccess);
+    REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true)));
     REQUIRE(getMonkeyRoomId() == 0);
 
     tc.endTurn();
-    REQUIRE(tc.isSuccess);
+    REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true)));
     REQUIRE(getMonkeyRoomId() == 1);
 
     tc.endTurn();
-    REQUIRE(tc.isSuccess);
+    REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true)));
     REQUIRE(getMonkeyRoomId() == 2);
 
     // Verify that monkey has returned to spawn point
@@ -172,23 +165,23 @@ TEST_CASE("Monkey steals ITEM_COIN from builder in shared room", "[match][GENERA
 
     // verify monkey is returning to start
     tc.endTurn();
-    REQUIRE(tc.isSuccess);
+    REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true)));
     REQUIRE(getMonkeyRoomId() == 1);
 
     tc.endTurn();
-    REQUIRE(tc.isSuccess);
+    REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true)));
     REQUIRE(getMonkeyRoomId() == 0);
 
     tc.endTurn();
-    REQUIRE(tc.isSuccess);
+    REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true)));
     REQUIRE(getMonkeyRoomId() == 3);
 
     tc.endTurn();
-    REQUIRE(tc.isSuccess);
+    REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true)));
     REQUIRE(getMonkeyRoomId() == 4);
 
     tc.endTurn();
-    REQUIRE(tc.isSuccess);
+    REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true)));
     REQUIRE(getMonkeyRoomId() == 7);
 
     // verify monkey is searching again

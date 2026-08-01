@@ -707,12 +707,6 @@ bool MatchController::permuteCharacterActions(const std::string& playerId, int m
             if (codeset.addFailure(!character.getDigest(codeset.error, digest, getTraitsComputed(character.characterId).final))) {
                 return;
             }
-            if (character.role == ROLE_PATHFINDER) {
-                fprintf(stderr, "[DEBUG PF] room=%d locType=%d locData=%d moves=%d actions=%d movesRemaining=%d actionsRemaining=%d\n",
-                    roomId, (int)character.location.type, character.location.data,
-                    character.moves, character.actions,
-                    digest.movesRemaining.orElse(-999), digest.actionsRemaining.orElse(-999));
-            }
 
             // out of actions/moves may be good time to end turn
             if (digest.actionsRemaining == 0 || digest.movesRemaining == 0) {

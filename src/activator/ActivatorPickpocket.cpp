@@ -22,7 +22,7 @@ bool ActivatorPickpocket::activate(ActivationContext& activation) const {
         activation.targetCharacter().access([&](Character& victim) {
             const auto victimTraits = controller.getTraitsComputed(victim.characterId).final;
             if (!victimTraits[TRAIT_PICKPOCKETABLE].orElse(false)) return;
-            if (victimTraits[TRAIT_ACTION_READY].orElse(false)) return;
+            // if (victimTraits[TRAIT_ACTION_READY].orElse(false)) return;
 
             auto victimInventory = victim.getInventory(req.match.dungeon);
             if (!victimInventory.isValid()) return;

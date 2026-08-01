@@ -152,6 +152,15 @@ bool Match::findCharacter(int& characterId, std::function<bool(const Character&)
     return isFound;
 }
 
+Pointer<Character> Match::findCharacter(std::function<bool(const Character&)> predicate) {
+    int characterId = -1;
+    CodeEnum error;
+    if (findCharacter(characterId, predicate)) {
+        return getCharacter(characterId, error);
+    }
+    return Pointer<Character>::empty();
+}
+
 bool Match::accessPlayer
 (const std::string& player, CodeEnum& error, std::function<void(Titan&)> titanConsumer, std::function<void(Builder&)> builderConsumer) {
     if (titan.player.account == player) {

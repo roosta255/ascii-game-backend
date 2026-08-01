@@ -43,6 +43,7 @@ struct Match {
     bool allocatePlayerInventory(Player& player);
 
     bool findCharacter(int& characterId, std::function<bool(const Character&)> predicate)const;
+    Pointer<Character> findCharacter(std::function<bool(const Character&)> predicate);
 
     bool join(const std::string& joiner);
     bool leave(const std::string& leaver, CodeEnum& error);

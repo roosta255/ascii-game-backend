@@ -269,6 +269,10 @@ bool DungeonMutator::setupKeeper (const RoomRef& room, const Cardinal dir, const
     return !codeset.addFailure(!setSharedDoor(room, dir, isKeyed ? DOOR_KEEPER_INGRESS_KEYED : DOOR_KEEPER_INGRESS_KEYLESS, isKeyed ? DOOR_KEEPER_EGRESS_KEYED : DOOR_KEEPER_EGRESS_KEYLESS), CODE_GENERATOR_UTILITY_FAILED_TO_SETUP_KEEPER);
 }
 
+bool DungeonMutator::setupLatch (const RoomRef& room, const Cardinal dir, const bool isOpen) {
+    return !codeset.addFailure(!setSharedDoor(room, dir, isOpen ? DOOR_LATCH_INGRESS_OPEN : DOOR_LATCH_INGRESS_CLOSED, isOpen ? DOOR_LATCH_EGRESS_OPEN : DOOR_LATCH_EGRESS_CLOSED), CODE_GENERATOR_UTILITY_FAILED_TO_SETUP_LATCH);
+}
+
 bool DungeonMutator::setupLadderUp(const RoomRef& bottomRoom, const Cardinal dir) {
     return setSharedShaftAbove(bottomRoom, dir, DOOR_LADDER_1_BOTTOM, DOOR_LADDER_1_TOP);
 }

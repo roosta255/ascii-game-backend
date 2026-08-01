@@ -5,6 +5,42 @@ Codeset::Codeset(){
     rackLogs.setEmpty();
 }
 
+// rackLogs holds raw pointers into arrayLogs, so a memberwise copy would leave
+// it pointing at the source object's arrayLogs instead of this one's. Rebind
+// rackLogs to this object's own arrayLogs and replay the log entries instead.
+Codeset::Codeset(const Codeset& other)
+: arrayLogs(other.arrayLogs)
+, rackLogs(arrayLogs)
+, table(other.table)
+, error(other.error)
+, isAnyOverflow(other.isAnyOverflow)
+, isAnyFailure(other.isAnyFailure)
+, isLatestSuccessFlag(other.isLatestSuccessFlag)
+{
+    rackLogs.setEmpty();
+    other.forEachLog([&](CodeEnum code, int value){
+        rackLogs.push_back(std::make_pair(code, value));
+    });
+}
+
+Codeset& Codeset::operator=(const Codeset& other) {
+    if (this == &other) return *this;
+
+    arrayLogs = other.arrayLogs;
+    rackLogs.setEmpty();
+    other.forEachLog([&](CodeEnum code, int value){
+        rackLogs.push_back(std::make_pair(code, value));
+    });
+
+    table = other.table;
+    error = other.error;
+    isAnyOverflow = other.isAnyOverflow;
+    isAnyFailure = other.isAnyFailure;
+    isLatestSuccessFlag = other.isLatestSuccessFlag;
+
+    return *this;
+}
+
 bool Codeset::addDebugLine(const int line) {
     addLog(CODE_DEBUG_LINE_REACHED);
     setTable(CODE_DEBUG_LINE, line);
@@ -91,13 +127,13 @@ std::string Codeset::describe(const std::string& prefix) const {
     i = 0;
     for (const auto& value: table) {
         if (value != 0) {
-            output << " " << code_to_text(i) << "(" << value << ")";
+            output << " " << code_to_text(i) << "(" << code_to_value_text(i, value) << ")";
         }
         i++;
     }
     output << " }\n\tlogs {";
     for (const auto& entry: rackLogs) {
-        output << " " << code_to_text(entry.first) << (code_to_type(i) == CodeType::ERROR ? "(ERROR: " : "(") << entry.second << ")";
+        output << " " << code_to_text(entry.first) << (code_to_type(entry.first) == CodeType::ERROR ? "(ERROR: " : "(") << code_to_value_text(entry.first, entry.second) << ")";
     }
     output << " }";
 
@@ -118,6 +154,10 @@ Array<int, CODE_COUNT> Codeset::getErrorTable()const {
         i++;
     }
     return result;
+}
+
+int Codeset::getTableValue(const CodeEnum& code) const {
+    return table.getOrDefault(code, 0);
 }
 
 void Codeset::forEachTableEntry(const std::function<void(CodeEnum, int)>& fn) const {
@@ -146,7 +186,7 @@ std::ostream& operator<<(std::ostream& os, const Array<int, CODE_COUNT>& table) 
     os << "[";
     for (const auto& value: table) {
         if (value != 0) {
-            os << " " << code_to_text(i) << "(" << value << ")";
+            os << " " << code_to_text(i) << "(" << code_to_value_text(i, value) << ")";
         }
         i++;
     }

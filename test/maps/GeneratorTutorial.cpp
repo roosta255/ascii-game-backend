@@ -17,6 +17,7 @@
 #include "ItemEnum.hpp"
 #include "Keyframe.hpp"
 #include "Rack.hpp"
+#include "CodesetExpect.hpp"
 #include "TestController.hpp"
 
 static Maybe<Keyframe> queryKeyframes(Rack<Keyframe> keyframes, AnimationEnum animation) {
@@ -73,16 +74,14 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     // Execute the tutorial sequence
 
     controller.moveCharacterToWall(Cardinal::east());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     REQUIRE(controller.builderCharacterPtr->location == Location::makeSharedDoor(1, CHANNEL_CORPOREAL, Cardinal::west()));
     REQUIRE(controller.controller.isDoorOccupied(0, CHANNEL_CORPOREAL, Cardinal::east(), outCharacterId));
     REQUIRE(controller.controller.isDoorOccupied(1, CHANNEL_CORPOREAL, Cardinal::west(), outCharacterId));
     REQUIRE(outCharacterId == controller.builderOffset);
 
     controller.endTurn();
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     //  { 
 	//Keyframe{ animation=WALKING_FROM_FLOOR_TO_WALL, room0=0, t0=1775993139877,
@@ -115,8 +114,7 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
         .room0 = 1,
         .data = Array<int, KEYFRAME_DATA_ARRAY_SIZE>({3, 0})
     }));
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     REQUIRE(queryKeyframes(controller.builderCharacterPtr->keyframes, ANIMATION_BOUNCE_FROM_DOOR_TO_FLOOR).orElse(Keyframe{}).removeOffset() == (Keyframe{
         .t1 = Timestamp::buildTimestamp(2000),
         .animation = ANIMATION_BOUNCE_FROM_DOOR_TO_FLOOR,
@@ -136,47 +134,37 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     }
 
     controller.endTurn();
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.moveCharacterToWall(Cardinal::north());
     REQUIRE(controller.controller.isDoorOccupied(0, CHANNEL_CORPOREAL, Cardinal::east(), outCharacterId) == false);
     REQUIRE(controller.controller.isDoorOccupied(1, CHANNEL_CORPOREAL, Cardinal::west(), outCharacterId) == false);
     REQUIRE(outCharacterId == -1);
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.activateObjectCharacter(toggler9Offset);
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.endTurn();
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.moveCharacterToWall(Cardinal::east());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.endTurn();
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.moveCharacterToWall(Cardinal::south());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.endTurn();
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.moveCharacterToWall(Cardinal::east());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.moveCharacterToFloor(3);
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.activateObjectCharacter(toggler3Offset);
     REQUIRE(queryKeyframes(controller.builderCharacterPtr->keyframes, ANIMATION_BOUNCE_FROM_FLOOR_TO_FLOOR).orElse(Keyframe{}).removeOffset() == Keyframe{
@@ -184,44 +172,37 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
         .animation = ANIMATION_BOUNCE_FROM_FLOOR_TO_FLOOR,
         .room0 = 3,
         .data = Array<int, KEYFRAME_DATA_ARRAY_SIZE>({3, 0})});
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.endTurn();
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.moveCharacterToFloor(2);
     // (controller.codeset.describe() == "");
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.moveCharacterToWall(Cardinal::west());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     // Attempt to take keeper's key between rooms 2 and 3, but this should fail because character is in doorway
     REQUIRE(controller.builderCharacterPtr->location == Location::makeSharedDoor(2, CHANNEL_CORPOREAL, Cardinal::east()));
     REQUIRE(controller.controller.isDoorOccupied(2, CHANNEL_CORPOREAL, Cardinal::east(), nullCharacterId));
     controller.activateLock(Cardinal::east());
     REQUIRE(controller.codeset.getErrorTable() != Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess == false);
+    REQUIRE(controller.codeset.isLatestSuccessFlag == false);
     REQUIRE(controller.inventory.isEmpty);
     REQUIRE(controller.inventory.keys == 0);
     controller.codeset = Codeset();
 
     controller.endTurn();
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.moveCharacterToFloor(2);
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     // Take keeper's key between rooms 2 and 3
     controller.activateLock(Cardinal::east());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     REQUIRE(controller.inventory.isEmpty == false);
     REQUIRE(controller.inventory.keys == 1);
     REQUIRE(queryKeyframes(controller.builderCharacterPtr->keyframes, ANIMATION_BOUNCE_FROM_FLOOR_TO_LOCK).orElse(Keyframe{}).removeOffset() == Keyframe{
@@ -253,37 +234,30 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
             .data = Array<int, KEYFRAME_DATA_ARRAY_SIZE>({(int)DOOR_KEEPER_INGRESS_KEYED, (int)DOOR_KEEPER_INGRESS_KEYLESS})});
 
     controller.endTurn();
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.moveCharacterToWall(Cardinal::north());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.moveCharacterToFloor(2);
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     // Take key from room10's south keeper
     controller.activateLock(Cardinal::south());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     REQUIRE(controller.inventory.isEmpty == false);
     REQUIRE(controller.inventory.keys == 2);
 
     controller.endTurn();
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     // Move to room10's east wall (between room10 & room11)
     controller.moveCharacterToWall(Cardinal::east());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     // Give key to room11's north keeper to open it (keeper KEYLESS->KEYED = CRUSH)
     controller.activateLock(Cardinal::north());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     REQUIRE(controller.inventory.isEmpty == false);
     REQUIRE(controller.inventory.keys == 1);
     REQUIRE(queryKeyframes(controller.builderCharacterPtr->keyframes, ANIMATION_BOUNCE_FROM_DOOR_TO_LOCK).orElse(Keyframe{}).removeOffset() == Keyframe{
@@ -316,8 +290,7 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
 
     // Move to room11's north wall (between room11 & room19)
     controller.moveCharacterToWall(Cardinal::north());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     // Verify SLIDE keyframe on room 11's north wall survives after moving north out of room 11
     {
@@ -357,73 +330,59 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     }
 
     controller.endTurn();
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     // Give key to room19's west shifter to open it
     controller.activateLock(Cardinal::west());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     REQUIRE(controller.inventory.isEmpty == true);
     REQUIRE(controller.inventory.keys == 0);
 
     // Move west to room 18
     controller.moveCharacterToWall(Cardinal::west());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.endTurn();
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.moveCharacterToFloor(2);
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     // Take key from room18's east shifter (egress side)
     controller.activateLock(Cardinal::east());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     REQUIRE(controller.inventory.isEmpty == false);
     REQUIRE(controller.inventory.keys == 1);
 
     controller.endTurn();
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     // Give key to room18's south keeper to open it
     controller.activateLock(Cardinal::south());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     REQUIRE(controller.inventory.isEmpty);
     REQUIRE(controller.inventory.keys == 0);
 
     // Move south to room 10
     controller.moveCharacterToWall(Cardinal::south());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.endTurn();
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     // Move east to room 11
     controller.moveCharacterToWall(Cardinal::east());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.moveCharacterToFloor(2);
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.endTurn();
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     // Take key from room11's north keeper (keeper KEYED->KEYLESS = SLIDE)
     controller.activateLock(Cardinal::north());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     REQUIRE(controller.inventory.isEmpty == false);
     REQUIRE(controller.inventory.keys == 1);
 
@@ -439,8 +398,7 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     }
 
     controller.moveCharacterToWall(Cardinal::west());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     // Verify SLIDE keyframe on room 11's north wall survives after moving west
     {
@@ -480,70 +438,57 @@ TEST_CASE("Tutorial sequence completion", "[match][tutorial]") {
     }
 
     controller.endTurn();
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     // Move north to room 18
     controller.moveCharacterToWall(Cardinal::north());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.endTurn();
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     // Move character to room to allow closing of south keeper
     controller.moveCharacterToFloor(1);
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     // Take the second key from room18's south keeper
     controller.activateLock(Cardinal::south());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     REQUIRE(controller.inventory.isEmpty == false);
     REQUIRE(controller.inventory.keys == 2);
 
     controller.endTurn();
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     // Now with 2 keys, give key to room18's west keyless keeper
     controller.activateLock(Cardinal::west());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     REQUIRE(controller.inventory.isEmpty == false);
     REQUIRE(controller.inventory.keys == 1);
 
     // Move west to room 17
     controller.moveCharacterToWall(Cardinal::west());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.endTurn();
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     // Give key to room17's west keyless keeper
     controller.activateLock(Cardinal::west());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     REQUIRE(controller.inventory.isEmpty == true);
     REQUIRE(controller.inventory.keys == 0);
 
     // Move west to room 16
     controller.moveCharacterToWall(Cardinal::west());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     controller.endTurn();
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     // Move north to room 24
     controller.moveCharacterToWall(Cardinal::north());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     const Match restored = controller.saveAndLoadMatch();
     REQUIRE(restored == controller.match);
@@ -780,8 +725,7 @@ TEST_CASE("Match collapsing end turn", "[match][tutorial]") {
 
     processMatchCollapse(controller, [&](){
             controller.endTurn();
-            REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-            REQUIRE(controller.isSuccess);
+            REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
         }, [&](const Match& before, const Match& after){ REQUIRE(before == after); });
 }
 
@@ -800,22 +744,18 @@ TEST_CASE("Match collapsing from floor move to wall", "[match][tutorial]") {
     const auto ROOM_ID = 0;
     const auto FLOOR_ID = 3;
     controller.moveCharacterToFloor(ROOM_ID, FLOOR_ID);
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     processMatchCollapse(controller, [&](){
             controller.moveCharacterToWall(ROOM_ID, Cardinal::east());
-            REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-            REQUIRE(controller.isSuccess);
+            REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
             controller.endTurn();
-            REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-            REQUIRE(controller.isSuccess);
+            REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
             // this is not the correct room
             controller.moveCharacterToFloor(ROOM_ID, FLOOR_ID);
-            REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-            REQUIRE(controller.isSuccess);
+            REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
         }, [&](const Match& before, const Match& after){
             REQUIRE(before.dungeon == after.dungeon);
             REQUIRE(before == after);
@@ -836,23 +776,19 @@ TEST_CASE("Match collapsing from wall move to floor", "[match][tutorial]") {
 
     const auto ROOM_ID = 0;
     controller.moveCharacterToWall(ROOM_ID, Cardinal::east());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     const auto FLOOR_ID = 3;
     processMatchCollapse(controller, [&](){
             // this is not room 0, it's room 1
             controller.moveCharacterToFloor(ROOM_ID, FLOOR_ID);
-            REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-            REQUIRE(controller.isSuccess);
+            REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
             controller.endTurn();
-            REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-            REQUIRE(controller.isSuccess);
+            REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
             controller.moveCharacterToWall(ROOM_ID, Cardinal::east());
-            REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-            REQUIRE(controller.isSuccess);
+            REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
         }, [&](const Match& before, const Match& after){
             REQUIRE(before.dungeon == after.dungeon);
             REQUIRE(before == after);
@@ -881,8 +817,7 @@ TEST_CASE("Toggler switches from legacy TOGGLER to TOGGLER_ORANGE", "[match][tut
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
 
     controller.activateObjectCharacter(togglerOffset);
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     // All toggler switches must now be TOGGLER_ORANGE
     controller.match.accessAllCharacters([&](const Character& c) {
@@ -915,15 +850,13 @@ TEST_CASE("Toggler switches from TOGGLER_ORANGE to TOGGLER_BLUE", "[match][tutor
 
     // First activation: legacy TOGGLER → TOGGLER_ORANGE
     controller.activateObjectCharacter(togglerOffset);
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     controller.endTurn();
     REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
 
     // Second activation: TOGGLER_ORANGE → TOGGLER_BLUE
     controller.activateObjectCharacter(togglerOffset);
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
     // All toggler switches must now be TOGGLER_BLUE
     controller.match.accessAllCharacters([&](const Character& c) {

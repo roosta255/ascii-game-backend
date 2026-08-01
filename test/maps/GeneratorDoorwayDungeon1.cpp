@@ -19,6 +19,7 @@
 #include "RemodelTogglerSwitch.hpp"
 #include "RoleEnum.hpp"
 #include "Room.hpp"
+#include "CodesetExpect.hpp"
 #include "TestController.hpp"
 
 TEST_CASE("Verify empty dungeon is navigable manually", "[match][GENERATOR_DOORWAY_DUNGEON_1]") {
@@ -33,12 +34,10 @@ TEST_CASE("Verify empty dungeon is navigable manually", "[match][GENERATOR_DOORW
 
     const auto validateMovement = [&](Cardinal dir){
         controller.moveCharacterToWall(dir);
-        REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-        REQUIRE(controller.isSuccess);
+        REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
 
         controller.endTurn();
-        REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-        REQUIRE(controller.isSuccess);
+        REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     };
 
     validateMovement(Cardinal::east());
@@ -53,8 +52,7 @@ TEST_CASE("Verify empty dungeon is navigable manually", "[match][GENERATOR_DOORW
     const Match restored = controller.saveAndLoadMatch();
     REQUIRE(restored == controller.match);
     /*
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     controller.latestPosition = 37;
 
     validateMovement(Cardinal::east());
@@ -68,8 +66,7 @@ TEST_CASE("Verify empty dungeon is navigable manually", "[match][GENERATOR_DOORW
 
     // climb down ladder
     controller.activateDoor(Cardinal::north());
-    REQUIRE(controller.codeset.getErrorTable() == Codeset::getEmptyTable());
-    REQUIRE(controller.isSuccess);
+    REQUIRE_THAT(controller.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     controller.latestPosition = 7;
 
     validateMovement(Cardinal::east());

@@ -81,6 +81,7 @@ public:
     bool setupHorizontalWalls(std::vector<DoorEnum> row, int y, int z);
     bool setupJailer(const RoomRef& room, Cardinal dir, bool isKeyed);
     bool setupKeeper(const RoomRef& room, Cardinal dir, bool isKeyed);
+    bool setupLatch(const RoomRef& room, Cardinal dir, bool isOpen);
     bool setupLadderUp(const RoomRef& bottomRoom, Cardinal dir);
     bool setupLightningRodRoom(const RoomRef& room, bool isCubed, bool isAwakened);
     bool setupPoleUp(const RoomRef& bottomRoom, Cardinal dir);

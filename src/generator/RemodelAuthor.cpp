@@ -55,6 +55,10 @@ bool RemodelAuthorSetupKeeper::mutateMatch(Remodel& p, const Match& src, const P
     return withAuthor(p, src, [&](DungeonMutator& m){ return m.setupKeeper(coords, dir, isKeyed); }, accept);
 }
 
+bool RemodelAuthorSetupLatch::mutateMatch(Remodel& p, const Match& src, const PathfindingCounter&, std::function<bool(const Match&)> accept) const {
+    return withAuthor(p, src, [&](DungeonMutator& m){ return m.setupLatch(coords, dir, isOpen); }, accept);
+}
+
 bool RemodelAuthorSetupLadderUp::mutateMatch(Remodel& p, const Match& src, const PathfindingCounter&, std::function<bool(const Match&)> accept) const {
     return withAuthor(p, src, [&](DungeonMutator& m){ return m.setupLadderUp(coords, dir); }, accept);
 }
