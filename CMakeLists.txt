@@ -28,6 +28,7 @@ set(PROJECT_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/door
     ${CMAKE_CURRENT_SOURCE_DIR}/src/enum
     ${CMAKE_CURRENT_SOURCE_DIR}/src/event
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/field
     ${CMAKE_CURRENT_SOURCE_DIR}/src/generator
     ${CMAKE_CURRENT_SOURCE_DIR}/src/inventory
     ${CMAKE_CURRENT_SOURCE_DIR}/src/layout
@@ -130,6 +131,11 @@ add_library(core_backend STATIC
     src/enum/Codeset.cpp
     src/enum/CodeEnum.cpp
     src/enum/TurnEnum.cpp
+    src/field/FieldEnum.cpp
+    src/field/FieldFlyweight.cpp
+    src/field/FieldController.cpp
+    src/field/OxygenSourceProvider.cpp
+    src/field/ROOM_ACCUMULATIONFieldResolver.cpp
     src/inventory/ActivatorInactiveItem.cpp
     src/inventory/Inventory.cpp
     src/inventory/Item.cpp
@@ -224,6 +230,7 @@ add_executable(test_target
     test/ActivationAddTargetKeyframeTests.cpp
     test/CharacterRelationTests.cpp
     test/TraitModifierTests.cpp
+    test/FieldTests.cpp
     test/CharacterSheetApiViewTests.cpp
     test/EventLogTests.cpp
     test/PietyAnimationTests.cpp

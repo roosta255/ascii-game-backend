@@ -40,7 +40,11 @@
       "Bash(cmake --build build --target test_target -- -j4)",
       "Bash(ctest --test-dir build -R \"MONKEY_TUTORIAL\" -V)",
       "Bash(ctest --test-dir build -V)",
-      "Bash(ctest --test-dir /workspaces/backend/build -V)"
+      "Bash(ctest --test-dir /workspaces/backend/build -V)",
+      "Bash(./build/test_target \"[field]\")",
+      "Bash(./build/test_target)",
+      "Bash(./check_includes.sh)",
+      "Bash(bash check_includes.sh)"
     ]
   }
 }

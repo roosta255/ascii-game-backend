@@ -1,0 +1,2 @@
+// FIELD_DECL(name_, resolver_, sourceProvider_, invalidationMask_, minValue_, maxValue_)
+FIELD_DECL(OXYGEN, ROOM_ACCUMULATION, OxygenSourceProvider, 0, 0, 100)

@@ -9,6 +9,7 @@
 #include "Conduct.hpp"
 #include "DUNGEON_ROOM_COUNT.hpp"
 #include "EventFlyweight.hpp"
+#include "FieldController.hpp"
 #include "int2.hpp"
 #include "int3.hpp"
 #include "int4.hpp"
@@ -55,6 +56,7 @@ private:
     Map<int, Map<int2, int> > floors; // roomId -> <channel, floorId> -> characterId
     Map<int, Map<int2, int> > doors; // roomId -> <channel, direction> -> characterId
     Map<int, TraitModifier::TraitComputation> traitsComputed; // characterId -> computed traits (always fresh, never persisted)
+    FieldController fields; // room-indexed derived environmental state (always fresh, never persisted)
     Map<int, Pointer<Chest>> chestContainerMap; // containerCharacterId -> Chest
     Map<int, Pointer<Conduct>> conductMap; // characterId -> Conduct
     Pointer<std::vector<PendingTrigger>> eventQueuePtr; // set during activate()/tickNpcConducts(); used by pushTrigger()
@@ -154,6 +156,8 @@ public:
     void updateTraits(Character& character);
     TraitModifier::TraitComputation getTraitsComputed(int characterId) const;
     const Map<int, TraitModifier::TraitComputation>& getTraitsComputedMap() const;
+
+    int16_t getFieldValue(FieldEnum field, int roomId) const;
 
     // Appends a logged event to the specified room's event log and to activation.request.eventLog.
     void addLoggedEvent(ActivationContext& activation, int roomId, LoggedEvent event);

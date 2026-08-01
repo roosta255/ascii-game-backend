@@ -32,6 +32,7 @@ MatchController::MatchController(Match& match, Codeset& codeset): match(match), 
     match.accessUsedCharacters([&](const Character& character) {
         traitsComputed.set(character.characterId, TraitModifier::computeCharacterTraits(character).orElse(TraitModifier::TraitComputation{}));
     });
+    fields.recompute(match);
 }
 
 // functions
@@ -300,6 +301,7 @@ CodeEnum MatchController::endTitanTurn() {
     CodeEnum result = advanceTitanTurnState(match);
     if (result == CODE_SUCCESS) {
         match.turner.runNpcTurn(match, [&]{ tickNpcConducts(); });
+        fields.recompute(match);
     }
     return result;
 }
@@ -309,6 +311,9 @@ CodeEnum MatchController::endBuilderTurn() {
     CodeEnum result = advanceBuilderTurnState(match, titanTurnEnded);
     if (result == CODE_SUCCESS && titanTurnEnded) {
         match.turner.runNpcTurn(match, [&]{ tickNpcConducts(); });
+    }
+    if (result == CODE_SUCCESS) {
+        fields.recompute(match);
     }
     return result;
 }
@@ -322,6 +327,7 @@ bool MatchController::endTurn(const std::string& playerId, CodeEnum& error){
     if (titanTurnEnded) {
         match.turner.runNpcTurn(match, [&]{ tickNpcConducts(); });
     }
+    fields.recompute(match);
     return true;
 }
 
@@ -1162,6 +1168,10 @@ TraitModifier::TraitComputation MatchController::getTraitsComputed(int character
 
 const Map<int, TraitModifier::TraitComputation>& MatchController::getTraitsComputedMap() const {
     return traitsComputed;
+}
+
+int16_t MatchController::getFieldValue(FieldEnum field, int roomId) const {
+    return fields.get(field, roomId);
 }
 
 bool MatchController::validateCharacterWithinRoom(int characterId, int roomId) {
