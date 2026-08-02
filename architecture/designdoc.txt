@@ -12,4 +12,4 @@ The game i want built is a multiplayer turn-based puzzle dungeon. There would be
 
 I've built a lot of the classes already, so if you can tell me about a class you want created, i can give you its signature if i've already written it.
 
-DungeonRooms are themselves grids of 4 x 5 cells, where each cell can house a character. Each character is a type of character, with a preset amount 
+Rooms are themselves grids of 4 x 5 cells, where each cell can house a character. Each character is a type of character, with a preset amount 
