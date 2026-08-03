@@ -32,6 +32,7 @@ struct Character
     int characterId = -1;
     int itemStartIndex = -1;
     TraitBits traitsAfflicted;
+    int hypoxiaTimer = 0; // consecutive end-of-turns spent in a hypoxic room; see FieldController::isRoomHypoxic
 
     // there are two problems to solve:
     // 1) should the backend store animation data?

@@ -135,7 +135,11 @@ add_library(core_backend STATIC
     src/field/FieldFlyweight.cpp
     src/field/FieldController.cpp
     src/field/OxygenSourceProvider.cpp
+    src/field/HeatSourceProvider.cpp
+    src/field/SmokeSourceProvider.cpp
     src/field/ROOM_ACCUMULATIONFieldResolver.cpp
+    src/field/DISTANCE_FIELDFieldResolver.cpp
+    src/field/RELAXATIONFieldResolver.cpp
     src/inventory/ActivatorInactiveItem.cpp
     src/inventory/Inventory.cpp
     src/inventory/Item.cpp

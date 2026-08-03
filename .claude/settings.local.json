@@ -44,7 +44,21 @@
       "Bash(./build/test_target \"[field]\")",
       "Bash(./build/test_target)",
       "Bash(./check_includes.sh)",
-      "Bash(bash check_includes.sh)"
+      "Bash(bash check_includes.sh)",
+      "Bash(xxd)",
+      "Read(//tmp/**)",
+      "Bash(grep -v \"^[<>-]*$\")",
+      "Bash(grep -vE \"REQUIRE_THAT|REQUIRE\\\\\\(controller\\\\.codeset|REQUIRE\\\\\\(controller\\\\.isSuccess|CodesetExpect|^---$|^[0-9]\")",
+      "Bash(git checkout *)",
+      "Bash(git add *)",
+      "Bash(diff /tmp/conflict_triage/CMakeLists.txt.ours /tmp/conflict_triage/CMakeLists.txt.theirs)",
+      "Read(//tmp/conflict_triage/**)",
+      "Bash(cat -n /tmp/conflict_triage/CMakeLists.txt.ours)",
+      "Bash(diff /tmp/conflict_triage/src_controllers_MatchController.cpp.ours /tmp/conflict_triage/src_controllers_MatchController.cpp.theirs)",
+      "Bash(git push *)",
+      "Bash(GIT_COMMITTER_NAME=\"roosta255\" GIT_COMMITTER_EMAIL=\"42880051+roosta255@users.noreply.github.com\" git commit --amend --no-edit --author=\"roosta255 <42880051+roosta255@users.noreply.github.com>\")",
+      "Bash(git config *)",
+      "Bash(git -C /workspaces/backend log --oneline -- src/field)"
     ]
   }
 }

@@ -1,2 +1,4 @@
 // FIELD_DECL(name_, resolver_, sourceProvider_, invalidationMask_, minValue_, maxValue_)
 FIELD_DECL(OXYGEN, ROOM_ACCUMULATION, OxygenSourceProvider, 0, 0, 100)
+FIELD_DECL(HEAT,   DISTANCE_FIELD,    HeatSourceProvider,   0, -100, 100)
+FIELD_DECL(SMOKE,  RELAXATION,        SmokeSourceProvider,  0, 0, 255)

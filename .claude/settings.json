@@ -48,7 +48,32 @@
       "Bash(cmake --build /workspaces/backend/build --target match_backend)",
       "Bash(make -C /workspaces/backend/build -j4)",
       "Bash(g++ -std=c++20 -c /workspaces/backend/src/behavior/TriggerWrapper.cpp -I/workspaces/backend/src/behavior -I/workspaces/backend/src/activator -I/workspaces/backend/src/door -I/workspaces/backend/src -o /dev/null)",
-      "Bash(g++ -std=c++20 -c /workspaces/backend/src/behavior/TriggerWrapper.cpp -I/workspaces/backend/src/behavior -I/workspaces/backend/src/activator -I/workspaces/backend/src/door -I/workspaces/backend/src/chest -I/workspaces/backend/src -o /dev/null)"
+      "Bash(g++ -std=c++20 -c /workspaces/backend/src/behavior/TriggerWrapper.cpp -I/workspaces/backend/src/behavior -I/workspaces/backend/src/activator -I/workspaces/backend/src/door -I/workspaces/backend/src/chest -I/workspaces/backend/src -o /dev/null)",
+      "Read(//tmp/conflict_triage/**)",
+      "Bash(cd /tmp/conflict_triage *)",
+      "Bash(sed -n '29,40p;296,330p;1150,1166p' /tmp/conflict_triage/src_controllers_MatchController.cpp.ours)",
+      "Bash(cp /tmp/conflict_triage/src_controllers_MatchController.cpp.ours /workspaces/backend/src/controllers/MatchController.cpp *)",
+      "Bash(git add *)",
+      "Bash(awk '{print $2}')",
+      "Bash(cmake -S . -B build)",
+      "Bash(GIT_EDITOR=true git rebase --continue)",
+      "Bash(awk '{print $4}')",
+      "Bash(git rebase *)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(git status *)",
+      "Bash(awk '{print $3}')",
+      "Bash(git --version)",
+      "Bash(GIT_TRACE=1 git rebase --continue)",
+      "Bash(git symbolic-ref *)",
+      "Bash(env)",
+      "Bash(git commit *)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(git update-ref *)",
+      "Bash(rm -rf .git/rebase-merge)",
+      "Bash(git push *)"
+    ],
+    "additionalDirectories": [
+      "/tmp/conflict_triage"
     ]
   }
 }

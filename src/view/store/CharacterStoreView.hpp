@@ -23,6 +23,7 @@ struct CharacterStoreView
     LocationView location;
     int characterId = -1;
     TraitBits traitsAfflicted;
+    int hypoxiaTimer = 0;
 
     inline CharacterStoreView() = default;
     inline CharacterStoreView(const Character& model)
@@ -30,6 +31,7 @@ struct CharacterStoreView
     , itemStartIndex(model.itemStartIndex)
     , keyframes(model.keyframes.transform([&](const Keyframe& keyframe){return KeyframeView(keyframe);}))
     , location(model.location), characterId(model.characterId), traitsAfflicted(model.traitsAfflicted)
+    , hypoxiaTimer(model.hypoxiaTimer)
     {
         RoleFlyweight::getFlyweights().accessConst(model.role, [&](const RoleFlyweight& flyweight) {
             this->role = flyweight.name;
@@ -48,6 +50,7 @@ struct CharacterStoreView
             .characterId = this->characterId,
             .itemStartIndex = this->itemStartIndex,
             .traitsAfflicted = this->traitsAfflicted,
+            .hypoxiaTimer = this->hypoxiaTimer,
         };
         RoleFlyweight::indexByString(this->role, model.role);
         return model;
@@ -60,7 +63,8 @@ inline void to_json(nlohmann::json& j, const CharacterStoreView& v) {
         {"actions", v.actions}, {"moves", v.moves}, {"visibility", v.visibility},
         {"itemStartIndex", v.itemStartIndex},
         {"keyframes", v.keyframes}, {"location", v.location},
-        {"characterId", v.characterId}, {"traitsAfflicted", v.traitsAfflicted}
+        {"characterId", v.characterId}, {"traitsAfflicted", v.traitsAfflicted},
+        {"hypoxiaTimer", v.hypoxiaTimer}
     };
 }
 
@@ -76,4 +80,5 @@ inline void from_json(const nlohmann::json& j, CharacterStoreView& v) {
     j.at("location").get_to(v.location);
     j.at("characterId").get_to(v.characterId);
     if (j.contains("traitsAfflicted")) j.at("traitsAfflicted").get_to(v.traitsAfflicted);
+    if (j.contains("hypoxiaTimer")) j.at("hypoxiaTimer").get_to(v.hypoxiaTimer);
 }

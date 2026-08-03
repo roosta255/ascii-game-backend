@@ -1,4 +1,5 @@
 #include "FieldController.hpp"
+#include <algorithm>
 #include "DUNGEON_ROOM_COUNT.hpp"
 #include "FieldFlyweight.hpp"
 #include "iFieldResolver.hpp"
@@ -26,4 +27,16 @@ int16_t FieldController::get(FieldEnum field, int roomId) const {
         result = state.values[roomId];
     });
     return result;
+}
+
+bool FieldController::isRoomHypoxic(const Match& match, int roomId) {
+    if (roomId < 0 || roomId >= DUNGEON_ROOM_COUNT) return false;
+
+    int16_t oxygen = 0;
+    FieldFlyweight::getFlyweights().accessConst(FIELD_OXYGEN, [&](const FieldFlyweight& flyweight) {
+        flyweight.sourceProvider.accessConst([&](const iFieldSourceProvider& source) {
+            oxygen = std::clamp(source.getRoomBaseValue(match, roomId), flyweight.minValue, flyweight.maxValue);
+        });
+    });
+    return oxygen < HYPOXIA_THRESHOLD;
 }

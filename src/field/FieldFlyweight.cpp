@@ -1,6 +1,10 @@
 #include "FieldFlyweight.hpp"
+#include "DISTANCE_FIELDFieldResolver.hpp"
+#include "HeatSourceProvider.hpp"
 #include "OxygenSourceProvider.hpp"
+#include "RELAXATIONFieldResolver.hpp"
 #include "ROOM_ACCUMULATIONFieldResolver.hpp"
+#include "SmokeSourceProvider.hpp"
 
 const Array<FieldFlyweight, FIELD_COUNT>& FieldFlyweight::getFlyweights()
 {

@@ -1,6 +1,7 @@
 #include "Character.hpp"
 #include "CharacterDigest.hpp"
 #include "Dungeon.hpp"
+#include "FieldController.hpp"
 #include "Inventory.hpp"
 #include "JsonParameters.hpp"
 #include "Match.hpp"
@@ -142,7 +143,11 @@ void Character::startTurn(Match& match)
 
 void Character::endTurn(Match& match)
 {
-    // Currently no end-of-turn cleanup needed
+    if (location.roomId >= 0 && FieldController::isRoomHypoxic(match, location.roomId)) {
+        hypoxiaTimer++;
+    } else {
+        hypoxiaTimer = 0;
+    }
 }
 
 Inventory Character::getInventory(Dungeon& dungeon) const {
