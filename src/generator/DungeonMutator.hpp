@@ -49,6 +49,7 @@ public:
         RoleEnum critterRole = ROLE_EMPTY;
         Maybe<RoleEnum> containedRole = Maybe<RoleEnum>::empty();
         std::vector<ItemEnum> items;
+        RoleEnum role = ROLE_CHEST;
     };
 
     struct ElevatorProperties {
@@ -87,6 +88,7 @@ public:
     bool setupPoleUp(const RoomRef& bottomRoom, Cardinal dir);
     bool setupPowerGeneratorRoom(const RoomRef& room);
     bool setupCovenantDoor(const RoomRef& room, Cardinal dir);
+    bool setupSharer(const RoomRef& room, Cardinal dir, bool isKeyed);
     bool setupShifter(const RoomRef& room, Cardinal dir, bool isKeyed);
     bool setupTimeGateRoomToFuture(const RoomRef& presentRoom, bool isCubed, bool isAwakened);
     bool setupTogglerBlue(const RoomRef& room, Cardinal dir);

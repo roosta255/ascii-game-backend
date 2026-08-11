@@ -38,6 +38,9 @@ ROLE_DECL(MONKEY,    1,       1,      2,        0,      iActivator,       ( { TR
 ROLE_DECL(CHEST,     1,       0,      0,        0,      iActivator,       ( { TRAIT_OBJECT } )                                                                  )
     ROLE_INVENTORY_SIZE_DECL(6)
 
+ROLE_DECL(CADDY,     1,       0,      0,        0,      iActivator,       ( { TRAIT_OBJECT, TRAIT_STASH } )                                                                  )
+    ROLE_INVENTORY_SIZE_DECL(6)
+
 ROLE_DECL(SACRAMENT_FORGIVENESS,     1,       0,      0,        0,      ActivatorRuleExecution,       ( { TRAIT_OBJECT } ) )
 
 // Phantom character used exclusively for flood-fill room-connectivity queries.

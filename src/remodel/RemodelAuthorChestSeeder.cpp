@@ -10,6 +10,6 @@ bool RemodelAuthorChestSeeder::mutateMatch(
     std::function<bool(const Match&)> acceptance) const
 {
     return withAuthor(dst, source, [&](DungeonMutator& m) {
-        return m.setupChest(chest.room, {chest.lock, chest.critterRole, chest.containedRole, chest.items});
+        return m.setupChest(chest.room, {chest.lock, chest.critterRole, chest.containedRole, chest.items, chest.role});
     }, acceptance);
 }

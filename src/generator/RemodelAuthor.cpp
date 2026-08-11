@@ -79,6 +79,10 @@ bool RemodelAuthorSetupCovenantDoor::mutateMatch(Remodel& p, const Match& src, c
     return withAuthor(p, src, [&](DungeonMutator& m){ return m.setupCovenantDoor(coords, dir); }, accept);
 }
 
+bool RemodelAuthorSetupSharer::mutateMatch(Remodel& p, const Match& src, const PathfindingCounter&, std::function<bool(const Match&)> accept) const {
+    return withAuthor(p, src, [&](DungeonMutator& m){ return m.setupSharer(coords, dir, isKeyed); }, accept);
+}
+
 bool RemodelAuthorSetupShifter::mutateMatch(Remodel& p, const Match& src, const PathfindingCounter&, std::function<bool(const Match&)> accept) const {
     return withAuthor(p, src, [&](DungeonMutator& m){ return m.setupShifter(coords, dir, isKeyed); }, accept);
 }

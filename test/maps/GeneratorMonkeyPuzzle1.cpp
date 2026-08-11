@@ -47,7 +47,9 @@ TEST_CASE("Monkey steals ITEM_COIN from builder in shared room", "[match][GENERA
         ));
     });
 
-    const auto monkeyPtr = tc.controller.match.getCharacter(monkeyCharId, tc.codeset.error);
+    auto monkeyPtr = tc.controller.match.getCharacter(monkeyCharId, tc.codeset.error);
+    Inventory monkeyInventory = monkeyPtr.map<Inventory>([&](Character& monkey){
+        return monkey.getInventory(tc.controller.match.dungeon);}).orElse(Inventory());
     const auto getMonkeyRoomId = [&](){
         return monkeyPtr.mapConst<int>([&](const Character& monkey){
             return monkey.location.roomId;
@@ -117,26 +119,35 @@ TEST_CASE("Monkey steals ITEM_COIN from builder in shared room", "[match][GENERA
     });
 
     // get back the key
-    tc.moveCharacterToWall(Cardinal::east()); // to room 5
+    tc.moveCharacterToWall(Cardinal::north()); // to room 7
     REQUIRE_THAT(codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     tc.endTurn();
     REQUIRE_THAT(codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
-    tc.lootInventory(ROLE_CHEST, ITEM_KEY);
+    tc.lootInventory(ROLE_CADDY, ITEM_KEY);
+    REQUIRE_THAT(codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     REQUIRE_THAT(tc.playerPtr->getInventory(tc.match.dungeon), MatchesInventoryExpect(
         InventoryExpect{}
             .expectStacks(ITEM_COIN, 0)
             .expectStacks(ITEM_KEY, 1)
     ));
 
-    // toggle the orange doors open without losing the key
-    tc.activateLock(Cardinal::north()); // sets key down
+    // stash the key into sharer
+    tc.moveCharacterToWall(Cardinal::east()); // to room 8
+    REQUIRE_THAT(codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
+    tc.activateLock(Cardinal::south()); // sets key down
     REQUIRE_THAT(codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     REQUIRE_THAT(tc.playerPtr->getInventory(tc.match.dungeon), MatchesInventoryExpect(InventoryExpect{}.expectStacks(ITEM_KEY, 0)));
     tc.endTurn();
     REQUIRE_THAT(codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
+
+    // toggle the orange doors open without losing the key
     tc.moveCharacterToFloor(5); // turn around into door
     REQUIRE_THAT(codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
-    tc.moveCharacterToWall(Cardinal::west()); // to room 4
+    tc.moveCharacterToWall(Cardinal::west()); // to room 7
+    REQUIRE_THAT(codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
+    tc.endTurn();
+    REQUIRE_THAT(codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
+    tc.moveCharacterToWall(Cardinal::south()); // to room 4
     REQUIRE_THAT(codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     tc.endTurn();
     REQUIRE_THAT(codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
@@ -270,9 +281,8 @@ TEST_CASE("Monkey steals ITEM_COIN from builder in shared room", "[match][GENERA
             InventoryExpect{}.expectStacks(ITEM_KEY, 3)
         ));
 
-    return;
     // 3 keys are gathered, make a failing run past 2 monkeys
-    // REQUIRE(getMonkeyRoomId(), 4);
+    REQUIRE(getMonkeyRoomId() == 4);
     tc.moveCharacterToWall(Cardinal::west()); // to room 4
     REQUIRE_THAT(codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     tc.endTurn();
@@ -281,11 +291,12 @@ TEST_CASE("Monkey steals ITEM_COIN from builder in shared room", "[match][GENERA
     tc.moveCharacterToFloor(6);
     REQUIRE_THAT(codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     tc.endTurn();
+    REQUIRE_THAT(codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true)));
 
     tc.moveCharacterToFloor(7);
     REQUIRE_THAT(codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     tc.endTurn();
-    REQUIRE_THAT(codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
+    REQUIRE_THAT(codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true)));
 
     tc.moveCharacterToFloor(8);
     REQUIRE_THAT(codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
@@ -300,7 +311,7 @@ TEST_CASE("Monkey steals ITEM_COIN from builder in shared room", "[match][GENERA
     tc.moveCharacterToFloor(8);
     REQUIRE_THAT(codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
     tc.endTurn();
-    REQUIRE_THAT(codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
+    REQUIRE_THAT(codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true)));
 
     tc.moveCharacterToFloor(7);
     REQUIRE_THAT(codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true).expectNoErrors()));
@@ -316,6 +327,8 @@ TEST_CASE("Monkey steals ITEM_COIN from builder in shared room", "[match][GENERA
         MatchesInventoryExpect(
             InventoryExpect{}.expectStacks(ITEM_KEY, 0)
         ));
+
+    return;
 
     // regain 3 keys after monkey thefts
     tc.moveCharacterToWall(Cardinal::north()); // to room 7

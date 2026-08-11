@@ -192,7 +192,7 @@ BEHAVIOR_DECL(PICKPOCKET_ATTEMPT)
             TriggerEffectClearVar{CONDUCT_MEMORY_CHARACTER_ID},
             TriggerEffectScanCharacters{
                 .scanBuilders       = false,
-                .rolesAccepted      = { ROLE_CHEST },
+                .traitsRequired = makeTraitBits({TRAIT_STASH}),
                 .matchedRoomBitsVar = CONDUCT_MEMORY_SEARCH_TARGETS
             },
             TriggerEffectSetBehavior{BEHAVIOR_STASH_FINDING}
@@ -222,7 +222,7 @@ BEHAVIOR_DECL(STASH_FINDING)
         .effects = {
             TriggerEffectScanCharacters{
                 .scanBuilders       = false,
-                .rolesAccepted      = { ROLE_CHEST },
+                .traitsRequired = makeTraitBits({TRAIT_STASH}),
                 .matchedRoomBitsVar = CONDUCT_MEMORY_SEARCH_TARGETS
             },
             TriggerEffectSetBehavior{BEHAVIOR_STASH_PATHING}
@@ -263,7 +263,7 @@ BEHAVIOR_DECL(STASH_TRAVERSING)
     BEHAVIOR_ON_MOVE_AS_ACTOR_DECL(({
         .effects = {
             TriggerEffectScanRoomForCharacter{
-                .match   = { .roles = { ROLE_CHEST } },
+                .match = { .required = makeTraitBits({TRAIT_STASH}) },
                 .onFound = {
                     TriggerEffectSetVar{CONDUCT_MEMORY_CHARACTER_ID},
                     TriggerEffectSetBehavior{BEHAVIOR_STASH_DEPOSITING}

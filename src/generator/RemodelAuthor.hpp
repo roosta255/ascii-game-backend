@@ -104,6 +104,14 @@ struct RemodelAuthorSetupCovenantDoor : public RemodelAuthorBase {
     bool mutateMatch(Remodel&, const Match&, const PathfindingCounter&, std::function<bool(const Match&)>) const override;
 };
 
+struct RemodelAuthorSetupSharer : public RemodelAuthorBase {
+    int4 coords;
+    Cardinal dir;
+    bool isKeyed;
+    RemodelAuthorSetupSharer(int4 coords, Cardinal dir, bool isKeyed) : coords(coords), dir(dir), isKeyed(isKeyed) {}
+    bool mutateMatch(Remodel&, const Match&, const PathfindingCounter&, std::function<bool(const Match&)>) const override;
+};
+
 struct RemodelAuthorSetupShifter : public RemodelAuthorBase {
     int4 coords;
     Cardinal dir;

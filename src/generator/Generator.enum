@@ -197,7 +197,7 @@ GENERATOR_REMODEL_DECL(MONKEY_TUTORIAL,
     (RemodelAuthorSetupVerticalWalls{{DOOR_DOORWAY, DOOR_DOORWAY}, 1, 0}),
     (RemodelAuthorSetupVerticalWalls{{DOOR_DOORWAY, DOOR_DOORWAY}, 0 , 0}),
     (RemodelAuthorAllocateCharacter{{1,2,0,0}, ROLE_MONKEY}),
-    (RemodelAuthorChestSeeder{{.room = int4{2,0,0,0}}})
+    (RemodelAuthorChestSeeder{{.room = int4{2,0,0,0}, .role = ROLE_CADDY}})
 )
 GENERATOR_DECL(MONKEY_TUTORIAL, GeneratorNoop, true, LAYOUT_3_LEVEL_TOWER, 0, RemodelGroup{REMODEL_GROUP_MONKEY_TUTORIAL}, (RemodelAuthorSetBuilderStartingRoomId{0, {1,1,0,0}}), (RemodelAuthorSetupBuilderRole{0}))
 
@@ -208,16 +208,16 @@ GENERATOR_REMODEL_DECL(MONKEY_PUZZLE_1,
     (RemodelAuthorSetupVerticalWalls{{DOOR_DOORWAY, DOOR_DOORWAY}, 1, 0}),
     (RemodelAuthorSetupVerticalWalls{{DOOR_DOORWAY, DOOR_DOORWAY}, 0 , 0}),
     (RemodelAuthorAllocateCharacter{{1,1,0,0}, ROLE_MONKEY}),
-    (RemodelAuthorChestSeeder{{.room = int4{1,2,0,0}}}),
+    (RemodelAuthorChestSeeder{{.room = int4{1,2,0,0}, .role = ROLE_CADDY}}),
     (RemodelAuthorChestSeeder{{.room = int4{2,1,0,0}, .lock = LOCK_TOGGLER_BLUE_CLOSED, .items = {ITEM_KEY} } }),
     (RemodelAuthorChestSeeder{{.room = int4{1,0,0,0}, .lock = LOCK_TOGGLER_BLUE_CLOSED, .items = {ITEM_KEY} } }),
     (RemodelAuthorChestSeeder{{.room = int4{0,0,0,0}, .lock = LOCK_TOGGLER_ORANGE_OPEN, .items = {ITEM_KEY} } }),
     (RemodelAuthorSetupTogglerSwitch{{0,1,0,0}}),
     (RemodelAuthorSetupExitDoor{{0,2,0,0}, Cardinal::north()}),
     (RemodelAuthorSetupKeeper{{0,1,0,0}, Cardinal::north(), false}),
-    (RemodelAuthorSetupKeeper{{2,1,0,0}, Cardinal::north(), false}),
     (RemodelAuthorSetupKeeper{{1,0,0,0}, Cardinal::west(), false}),
     (RemodelAuthorSetupKeeper{{2,0,0,0}, Cardinal::west(), false}),
+    (RemodelAuthorSetupSharer{{2,2,0,0}, Cardinal::south(), false}),
     (RemodelAuthorSetupLatch{{1,0,0,0}, Cardinal::north(), false})
 )
 GENERATOR_DECL(MONKEY_PUZZLE_1_TEST, GeneratorNoop, true, LAYOUT_3_LEVEL_TOWER, 0, RemodelGroup{REMODEL_GROUP_MONKEY_PUZZLE_1}, (RemodelAuthorSetBuilderStartingRoomId{0, {0,1,0,0}}), (RemodelAuthorSetupBuilderRole{0}))

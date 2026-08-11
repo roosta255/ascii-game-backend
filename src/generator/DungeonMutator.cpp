@@ -180,7 +180,7 @@ bool DungeonMutator::setupChest(const RoomRef& room, const ChestSpec& spec) {
 
         int containerId = -1;
         return !codeset.addFailure(!controller.allocate(
-            CharacterAllocSpec{.role = ROLE_CHEST, .chest = chestAlloc},
+            CharacterAllocSpec{.role = spec.role, .chest = chestAlloc},
             AttachmentContext::floor(roomId),
             containerId
         ), CODE_DUNGEON_MUTATOR_FAILED_TO_ALLOCATE_CHARACTER);
@@ -292,6 +292,10 @@ bool DungeonMutator::setupPowerGeneratorRoom(const RoomRef& room) {
 
 bool DungeonMutator::setupCovenantDoor (const RoomRef& room, const Cardinal dir) {
     return !codeset.addFailure(!setSharedDoor(room, dir, DOOR_COVENANT_CLOSED, DOOR_COVENANT_CLOSED), CODE_GENERATOR_UTILITY_FAILED_TO_SETUP_COVENANT);
+}
+
+bool DungeonMutator::setupSharer (const RoomRef& room, const Cardinal dir, const bool isKeyed) {
+    return !codeset.addFailure(!setSharedDoor(room, dir, isKeyed ? DOOR_SHARER_KEYED : DOOR_SHARER_KEYLESS, isKeyed ? DOOR_SHARER_KEYED : DOOR_SHARER_KEYLESS), CODE_GENERATOR_UTILITY_FAILED_TO_SETUP_SHARER);
 }
 
 bool DungeonMutator::setupShifter (const RoomRef& room, const Cardinal dir, const bool isKeyed) {

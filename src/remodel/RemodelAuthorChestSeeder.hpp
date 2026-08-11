@@ -12,6 +12,7 @@ struct RemodelAuthorChestSeeder : public RemodelAuthorBase {
         RoleEnum critterRole = ROLE_EMPTY;
         Maybe<RoleEnum> containedRole = Maybe<RoleEnum>::empty();
         std::vector<ItemEnum> items;
+        RoleEnum role = ROLE_CHEST;
     };
 
     ChestSpec chest;

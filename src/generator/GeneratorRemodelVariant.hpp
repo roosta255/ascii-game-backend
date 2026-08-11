@@ -38,6 +38,7 @@ using GeneratorRemodelVariant = std::variant<
     RemodelAuthorSetupPoleUp,
     RemodelAuthorSetupPowerGeneratorRoom,
     RemodelAuthorSetupSacramentForgiveness,
+    RemodelAuthorSetupSharer,
     RemodelAuthorSetupShifter,
     RemodelAuthorSetupTimeGateRoomToFuture,
     RemodelAuthorSetupTogglerBlue,

@@ -7,6 +7,8 @@
 #include "ConductMemory.hpp"
 #include "ConductMemoryVariableEnum.hpp"
 #include "GeneratorEnum.hpp"
+#include "Inventory.hpp"
+#include "InventoryExpect.hpp"
 #include "ItemEnum.hpp"
 #include "LockEnum.hpp"
 #include "Match.hpp"
@@ -50,7 +52,14 @@ TEST_CASE("Monkey steals ITEM_COIN from builder in shared room", "[match][GENERA
         ));
     });
 
-    const auto monkeyPtr = tc.controller.match.getCharacter(monkeyCharId, tc.codeset.error);
+    auto monkeyPtr = tc.controller.match.getCharacter(monkeyCharId, tc.codeset.error);
+    Inventory monkeyInventory = monkeyPtr.map<Inventory>([&](Character& monkey){
+        return monkey.getInventory(tc.controller.match.dungeon);}).orElse(Inventory());
+    auto accessMonkeyInventory = [&](std::function<void(Inventory)> consumer){
+        return monkeyPtr.access([&](Character& monkey){
+            consumer(monkey.getInventory(tc.controller.match.dungeon));
+        });
+    };
     const auto getMonkeyRoomId = [&](){
         return monkeyPtr.mapConst<int>([&](const Character& monkey){
             return monkey.location.roomId;
@@ -71,6 +80,7 @@ TEST_CASE("Monkey steals ITEM_COIN from builder in shared room", "[match][GENERA
                 .expectVar(CONDUCT_MEMORY_RETURN_DOOR_WEST,  38)
         ));
     });
+    REQUIRE_THAT(monkeyInventory, MatchesInventoryExpect(InventoryExpect{}.expectStacks(ITEM_COIN, 0).expectStacks(ITEM_KEY, 0)));
 
     // Move builder north into the monkey's starting room {1,2,0,0}.
     //
@@ -113,6 +123,7 @@ TEST_CASE("Monkey steals ITEM_COIN from builder in shared room", "[match][GENERA
     //   BFS step 5→N→8: againstBits[S] |= (1<<8)
     //                                                  NORTH = 0
     tc.endTurn();
+    REQUIRE_THAT(monkeyInventory, MatchesInventoryExpect(InventoryExpect{}.expectStacks(ITEM_COIN, 1).expectStacks(ITEM_KEY, 0)));
     tc.controller.getConductByCharacterId(monkeyCharId).access([&](Conduct& conduct) {
         REQUIRE_THAT(conduct, MatchesConductExpect(
             ConductExpect{}
@@ -129,6 +140,7 @@ TEST_CASE("Monkey steals ITEM_COIN from builder in shared room", "[match][GENERA
     
     // Verify Monkey moving through rooms to chest
     tc.endTurn();
+    REQUIRE_THAT(monkeyInventory, MatchesInventoryExpect(InventoryExpect{}.expectStacks(ITEM_COIN, 1).expectStacks(ITEM_KEY, 0)));
     REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true)));
     tc.controller.getConductByCharacterId(monkeyCharId).access([&](Conduct& conduct) {
         REQUIRE_THAT(conduct, MatchesConductExpect(

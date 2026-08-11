@@ -132,6 +132,41 @@ RULE_DECL(LATCH_CLOSE,
     } }
 }))
 
+// --- Sharer ---
+// Lock (key-in): SHARER_INGRESS_KEYED   -> SHARER_INGRESS_KEYLESS
+//                SHARER_EGRESS_KEYED    -> SHARER_EGRESS_KEYLESS
+//   delta: clear DOOR_KEYED, set IS_DOOR_BLOCKING
+RULE_DECL(SHARER_LOCK,
+({
+    .matches = { .target = { .required = makeTraitBits({TRAIT_DOOR_SHARER, TRAIT_DOOR_KEYED}) } },
+    .conditions = { .actor = { .required = makeTraitBits({TRAIT_ACTOR, TRAIT_KEYER, TRAIT_ACTION_READY}) } },
+    .costs = { .action = 1 },
+    .effects = { .onSuccess = { ActivationAddTargetKeyframe{{ANIMATION_BOUNCE_FROM_FLOOR_TO_LOCK, ANIMATION_ACT_SUBJECT_TO_TARGET}},
+                                ActivatorValidateNotOccupied{},
+                                ActivatorGiveItem{ITEM_KEY},
+                                ActivatorSetSharedDoorsByTrait{ makeTraitBits({TRAIT_IS_DOOR_BLOCKING}),
+                                                                makeTraitBits({TRAIT_DOOR_KEYED}),
+                                                                ANIMATION_CRUSH,
+                                                                {EVENT_LOCK, {}, {EventComponentKind::ITEM, ITEM_KEY}} } } }
+}))
+
+// Unlock (key-out): SHARER_INGRESS_KEYLESS -> SHARER_INGRESS_KEYED
+//                   SHARER_EGRESS_KEYLESS  -> SHARER_EGRESS_KEYED
+//   delta: set DOOR_KEYED, clear IS_DOOR_BLOCKING
+RULE_DECL(SHARER_UNLOCK,
+({
+    .matches = { .target = { .required = makeTraitBits({TRAIT_DOOR_SHARER}), .restricted = makeTraitBits({TRAIT_DOOR_KEYED}) } },
+    .conditions = { .actor = { .required = makeTraitBits({TRAIT_ACTOR, TRAIT_KEYER, TRAIT_ACTION_READY}) },
+                    .target = { .restricted = makeTraitBits({TRAIT_DOOR_KEYED}) } },
+    .costs = { .item = { ITEM_KEY }, .action = 1 },
+    .effects = { .onSuccess = { ActivationAddTargetKeyframe{{ANIMATION_BOUNCE_FROM_FLOOR_TO_LOCK, ANIMATION_ACT_SUBJECT_TO_TARGET}},
+                                ActivatorValidateNotOccupied{},
+                                ActivatorSetSharedDoorsByTrait{ makeTraitBits({TRAIT_DOOR_KEYED}),
+                                                                makeTraitBits({TRAIT_IS_DOOR_BLOCKING}),
+                                                                ANIMATION_SLIDE,
+                                                                {EVENT_UNLOCK, {}, {EventComponentKind::ITEM, ITEM_KEY}} } } }
+}))
+
 // --- Shifter ---
 // Lock (key-in): SHIFTER_EGRESS_KEYED    -> SHIFTER_EGRESS_KEYLESS
 //                SHIFTER_INGRESS_KEYLESS -> SHIFTER_INGRESS_KEYED   (neighbor is ingress when activating egress)

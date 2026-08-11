@@ -23,11 +23,14 @@ DOOR_DECL(LATCH_EGRESS_CLOSED,                 ({TRAIT_IS_DOOR_BLOCKING, TRAIT_I
 DOOR_DECL(LATCH_EGRESS_OPEN,                   ({TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY, TRAIT_DOOR_LATCH, TRAIT_DOOR_OPEN, TRAIT_DOOR_EGRESS}),                             iActivator,             iActivator)
 DOOR_DECL(LATCH_INGRESS_CLOSED,                ({TRAIT_IS_DOOR_BLOCKING, TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY, TRAIT_DOOR_LATCH, TRAIT_DOOR_INGRESS}),                     iActivator,             ActivatorRuleExecution)
 DOOR_DECL(LATCH_INGRESS_OPEN,                  ({TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY, TRAIT_DOOR_LATCH, TRAIT_DOOR_OPEN, TRAIT_DOOR_INGRESS}),                            iActivator,             ActivatorRuleExecution)
+// sharer
+DOOR_DECL(SHARER_KEYED,                        ({                        TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY, TRAIT_DOOR_SHARER, TRAIT_DOOR_KEYED}),                      iActivator,             ActivatorRuleExecution)
+DOOR_DECL(SHARER_KEYLESS,                      ({TRAIT_IS_DOOR_BLOCKING, TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY, TRAIT_DOOR_SHARER}),                                        iActivator,             ActivatorRuleExecution)
 // shifter
 DOOR_DECL(SHIFTER_EGRESS_KEYED,                ({TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY, TRAIT_DOOR_SHIFTER, TRAIT_DOOR_KEYED, TRAIT_DOOR_EGRESS}),                          iActivator,             ActivatorRuleExecution)
-DOOR_DECL(SHIFTER_EGRESS_KEYLESS,              ({TRAIT_IS_DOOR_BLOCKING, TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY, TRAIT_DOOR_SHIFTER, TRAIT_DOOR_EGRESS}),                   iActivator,            iActivator)
-DOOR_DECL(SHIFTER_INGRESS_KEYED,               ({TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY, TRAIT_DOOR_SHIFTER, TRAIT_DOOR_KEYED, TRAIT_DOOR_INGRESS}),                         iActivator,            iActivator)
-DOOR_DECL(SHIFTER_INGRESS_KEYLESS,             ({TRAIT_IS_DOOR_BLOCKING, TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY, TRAIT_DOOR_SHIFTER, TRAIT_DOOR_INGRESS}),                  iActivator,            ActivatorRuleExecution)
+DOOR_DECL(SHIFTER_EGRESS_KEYLESS,              ({TRAIT_IS_DOOR_BLOCKING, TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY, TRAIT_DOOR_SHIFTER, TRAIT_DOOR_EGRESS}),                    iActivator,             iActivator)
+DOOR_DECL(SHIFTER_INGRESS_KEYED,               ({TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY, TRAIT_DOOR_SHIFTER, TRAIT_DOOR_KEYED, TRAIT_DOOR_INGRESS}),                         iActivator,             iActivator)
+DOOR_DECL(SHIFTER_INGRESS_KEYLESS,             ({TRAIT_IS_DOOR_BLOCKING, TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY, TRAIT_DOOR_SHIFTER, TRAIT_DOOR_INGRESS}),                   iActivator,             ActivatorRuleExecution)
 // dungeons start orange: open, blue: closed
 DOOR_DECL(TOGGLER_ORANGE_CLOSED,               ({TRAIT_IS_DOOR_BLOCKING, TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY}), iActivator,            iActivator)
 DOOR_DECL(TOGGLER_ORANGE_OPEN,                 ({TRAIT_IS_DOORWAY, TRAIT_IS_SHARED_DOORWAY}),                          iActivator,            iActivator)
