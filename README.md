@@ -70,14 +70,30 @@ Both environments use `docker-compose` to run two containers: the Drogon backend
 5. In [Cloudflare Zero Trust](https://one.dash.cloudflare.com) → Networks → Tunnels → Create a tunnel:
    - Connector: Docker
    - Copy the tunnel token → paste it as `CLOUDFLARE_TUNNEL_TOKEN` in your `.env`
-   - Public Hostname: your chosen subdomain (e.g. `game-backend-mac.yourdomain.com`) → Service: `HTTP` → `drogon_backend:8080`
 
-6. Start the containers:
+6. **Set up the application route.** Still on the tunnel's page in Zero Trust, go to the **Public Hostname** tab → Add a public hostname. This step is easy to miss and the tunnel gives no warning if you skip it — a tunnel with zero routes shows as "Connected" in the dashboard but returns a 502 for every request, because Cloudflare has nowhere to send traffic.
+   - Subdomain: your chosen subdomain (e.g. `game-backend-mac.yourdomain.com`)
+   - Service: `HTTP` → `drogon_backend_dev:8080`
+
+     > Note the container name is `drogon_backend_dev` here, not `drogon_backend` — that's the prod container name and only exists in the prod stack.
+
+7. Start the containers, explicitly using the dev compose file:
    ```bash
-   docker compose up
+   docker compose -f docker-compose.dev.yml up
    ```
+   > Don't run bare `docker compose up` — it silently picks up `docker-compose.yml` (the *prod* file) instead, which starts the tunnel on the wrong Docker network (`backend_default` instead of `backend-dev_default`) where it can't reach the dev backend container. Symptom: the tunnel connector shows "Connected" in Zero Trust, but every request 502s.
 
-7. The backend is now reachable at your Cloudflare tunnel URL.
+8. The backend is now reachable at your Cloudflare tunnel URL.
+
+#### Troubleshooting a 502 from the tunnel
+
+If the tunnel connector shows "Connected" in Zero Trust but requests still 502:
+- **Check the tunnel has a Public Hostname route.** Zero Trust → Networks → Tunnels → your tunnel → Public Hostname tab. A connected tunnel with zero routes will 502 every request — there's nothing telling Cloudflare where to send traffic.
+- **Check the tunnel container is on the same Docker network as the backend container.** Compare `docker inspect cloudflare_tunnel --format '{{json .NetworkSettings.Networks}}'` against `docker inspect drogon_backend_dev --format '{{json .NetworkSettings.Networks}}'` — they must share a network, or cloudflared can't resolve/reach `drogon_backend_dev:8080` as its origin. This usually happens if the tunnel container was started from the wrong compose file (see step 6 above); fix it by removing the container and recreating it via `docker-compose.dev.yml`:
+  ```bash
+  docker compose -f docker-compose.yml rm -sf cloudflare_tunnel
+  docker compose -f docker-compose.dev.yml up -d cloudflare_tunnel
+  ```
 
 ---
 
