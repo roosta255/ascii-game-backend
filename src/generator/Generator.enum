@@ -203,7 +203,7 @@ GENERATOR_DECL(MONKEY_TUTORIAL, GeneratorNoop, true, LAYOUT_3_LEVEL_TOWER, 0, Re
 
 GENERATOR_REMODEL_DECL(MONKEY_PUZZLE_1,
     (RemodelAuthorSetupHorizontalWalls{{DOOR_DOORWAY, DOOR_DOORWAY, DOOR_DOORWAY            }, 1, 0}),
-    (RemodelAuthorSetupHorizontalWalls{{DOOR_DOORWAY, DOOR_DOORWAY, DOOR_TOGGLER_ORANGE_OPEN}, 0, 0}),
+    (RemodelAuthorSetupHorizontalWalls{{DOOR_WALL, DOOR_DOORWAY, DOOR_TOGGLER_ORANGE_OPEN}, 0, 0}),
     (RemodelAuthorSetupVerticalWalls{{DOOR_WALL,    DOOR_DOORWAY   }, 2, 0}),
     (RemodelAuthorSetupVerticalWalls{{DOOR_DOORWAY, DOOR_DOORWAY}, 1, 0}),
     (RemodelAuthorSetupVerticalWalls{{DOOR_DOORWAY, DOOR_DOORWAY}, 0 , 0}),
