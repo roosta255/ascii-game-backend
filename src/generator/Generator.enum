@@ -199,7 +199,7 @@ GENERATOR_REMODEL_DECL(MONKEY_TUTORIAL,
     (RemodelAuthorAllocateCharacter{{1,2,0,0}, ROLE_MONKEY}),
     (RemodelAuthorChestSeeder{{.room = int4{2,0,0,0}, .role = ROLE_CADDY}})
 )
-GENERATOR_DECL(MONKEY_TUTORIAL, GeneratorNoop, true, LAYOUT_3_LEVEL_TOWER, 0, RemodelGroup{REMODEL_GROUP_MONKEY_TUTORIAL}, (RemodelAuthorSetBuilderStartingRoomId{0, {1,1,0,0}}), (RemodelAuthorSetupBuilderRole{0}))
+GENERATOR_DECL(MONKEY_TUTORIAL, GeneratorNoop, false, LAYOUT_3_LEVEL_TOWER, 0, RemodelGroup{REMODEL_GROUP_MONKEY_TUTORIAL}, (RemodelAuthorSetBuilderStartingRoomId{0, {1,1,0,0}}), (RemodelAuthorSetupBuilderRole{0}))
 
 GENERATOR_REMODEL_DECL(MONKEY_PUZZLE_1,
     (RemodelAuthorSetupHorizontalWalls{{DOOR_DOORWAY, DOOR_DOORWAY, DOOR_DOORWAY            }, 1, 0}),
@@ -222,6 +222,6 @@ GENERATOR_REMODEL_DECL(MONKEY_PUZZLE_1,
 )
 GENERATOR_DECL(MONKEY_PUZZLE_1_TEST, GeneratorNoop, true, LAYOUT_3_LEVEL_TOWER, 0, RemodelGroup{REMODEL_GROUP_MONKEY_PUZZLE_1}, (RemodelAuthorSetBuilderStartingRoomId{0, {0,1,0,0}}), (RemodelAuthorSetupBuilderRole{0}))
 
-GENERATOR_DECL(MONKEY_PUZZLE_1, GeneratorNoop, true, LAYOUT_3_LEVEL_TOWER, 0, RemodelGroup{REMODEL_GROUP_MONKEY_PUZZLE_1}, 
+GENERATOR_DECL(MONKEY_PUZZLE_1, GeneratorNoop, false, LAYOUT_3_LEVEL_TOWER, 0, RemodelGroup{REMODEL_GROUP_MONKEY_PUZZLE_1}, 
     (RemodelAuthorAllocateCharacter{{1,1,0,0}, ROLE_MONKEY}),
     (RemodelAuthorSetBuilderStartingRoomId{0, {0,1,0,0}}), (RemodelAuthorSetupBuilderRole{0}))
