@@ -1,6 +1,7 @@
 #include "Conduct.hpp"
 #include "ActionEnum.hpp"
 #include "ActivationContext.hpp"
+#include "Array.hpp"
 #include "BehaviorEnum.hpp"
 #include "BehaviorFlyweight.hpp"
 #include "Cardinal.hpp"
@@ -104,7 +105,7 @@ static void applyProposalEffect(const ProposalEffect& eff, Conduct& conduct, Con
 
                 int seenBits      = 0;
                 int traversedBits = 0;
-                int doorBits[4]   = {};
+                Array<int, 4> doorBits;
 
                 auto destination = [pathCharId, targetRoom, targetBits](const Match& m) -> bool {
                     int dummy = -1;
@@ -126,8 +127,7 @@ static void applyProposalEffect(const ProposalEffect& eff, Conduct& conduct, Con
                         traversedBits |= (1 << action.roomId);
                         action.direction.accessConst([&](const Cardinal& dir) {
                             const int idx = dir.getIndex();
-                            if (idx >= 0 && idx < 4)
-                                doorBits[idx] |= (1 << action.roomId);
+                            doorBits.access(idx, [&](int& bits) { bits |= (1 << action.roomId); });
                         });
                     }
                 };
@@ -143,10 +143,10 @@ static void applyProposalEffect(const ProposalEffect& eff, Conduct& conduct, Con
                 };
                 writeVar(e.seenRoomBitsVar,      seenBits);
                 writeVar(e.traversedRoomBitsVar, traversedBits);
-                writeVar(e.doorNorthVar,         doorBits[Cardinal::north().getIndex()]);
-                writeVar(e.doorEastVar,          doorBits[Cardinal::east().getIndex()]);
-                writeVar(e.doorSouthVar,         doorBits[Cardinal::south().getIndex()]);
-                writeVar(e.doorWestVar,          doorBits[Cardinal::west().getIndex()]);
+                writeVar(e.doorNorthVar,         doorBits.getOrDefault(Cardinal::north().getIndex(), 0));
+                writeVar(e.doorEastVar,          doorBits.getOrDefault(Cardinal::east().getIndex(), 0));
+                writeVar(e.doorSouthVar,         doorBits.getOrDefault(Cardinal::south().getIndex(), 0));
+                writeVar(e.doorWestVar,          doorBits.getOrDefault(Cardinal::west().getIndex(), 0));
             });
         }
         else if constexpr (std::is_same_v<T, TriggerEffectComputeFloodPath>) {
@@ -157,16 +157,16 @@ static void applyProposalEffect(const ProposalEffect& eff, Conduct& conduct, Con
                                       ? conduct.get(e.startBitsVar) : 0;
                 if (startRoom == -1 && startBits == 0) return;
 
-                int towardsBits[4] = {};
-                int againstBits[4] = {};
+                Array<int, 4> towardsBits;
+                Array<int, 4> againstBits;
 
                 auto consumer = [&](const CharacterAction& action, const Match& result) {
                     if (action.roomId < 0 || action.roomId >= 32) return;
                     action.direction.accessConst([&](const Cardinal& dir) {
-                        towardsBits[dir.getIndex()] |= (1 << action.roomId);
+                        towardsBits.access(dir.getIndex(), [&](int& bits) { bits |= (1 << action.roomId); });
                         const int destRoom = result.dungeon.pathfinderCharacter.location.roomId;
                         if (destRoom >= 0 && destRoom < 32)
-                            againstBits[dir.getFlip().getIndex()] |= (1 << destRoom);
+                            againstBits.access(dir.getFlip().getIndex(), [&](int& bits) { bits |= (1 << destRoom); });
                     });
                 };
 
@@ -179,14 +179,14 @@ static void applyProposalEffect(const ProposalEffect& eff, Conduct& conduct, Con
                 auto writeVar = [&](ConductMemoryVariableEnum var, int val) {
                     if (var != CONDUCT_MEMORY_VARIABLE_COUNT) conduct.set(var, val);
                 };
-                writeVar(e.towardsNorthVar, towardsBits[Cardinal::north().getIndex()]);
-                writeVar(e.towardsEastVar,  towardsBits[Cardinal::east().getIndex()]);
-                writeVar(e.towardsSouthVar, towardsBits[Cardinal::south().getIndex()]);
-                writeVar(e.towardsWestVar,  towardsBits[Cardinal::west().getIndex()]);
-                writeVar(e.againstNorthVar,  againstBits[Cardinal::north().getIndex()]);
-                writeVar(e.againstEastVar,   againstBits[Cardinal::east().getIndex()]);
-                writeVar(e.againstSouthVar,  againstBits[Cardinal::south().getIndex()]);
-                writeVar(e.againstWestVar,   againstBits[Cardinal::west().getIndex()]);
+                writeVar(e.towardsNorthVar, towardsBits.getOrDefault(Cardinal::north().getIndex(), 0));
+                writeVar(e.towardsEastVar,  towardsBits.getOrDefault(Cardinal::east().getIndex(), 0));
+                writeVar(e.towardsSouthVar, towardsBits.getOrDefault(Cardinal::south().getIndex(), 0));
+                writeVar(e.towardsWestVar,  towardsBits.getOrDefault(Cardinal::west().getIndex(), 0));
+                writeVar(e.againstNorthVar,  againstBits.getOrDefault(Cardinal::north().getIndex(), 0));
+                writeVar(e.againstEastVar,   againstBits.getOrDefault(Cardinal::east().getIndex(), 0));
+                writeVar(e.againstSouthVar,  againstBits.getOrDefault(Cardinal::south().getIndex(), 0));
+                writeVar(e.againstWestVar,   againstBits.getOrDefault(Cardinal::west().getIndex(), 0));
             });
         }
         else if constexpr (std::is_same_v<T, TriggerEffectTraverseDoor>) {
@@ -195,14 +195,15 @@ static void applyProposalEffect(const ProposalEffect& eff, Conduct& conduct, Con
                 if (currentRoom < 0 || currentRoom >= 32) return;
                 const int roomBit = 1 << currentRoom;
 
-                const ConductMemoryVariableEnum doorVars[4] = {
+                const Array<ConductMemoryVariableEnum, 4> doorVars = {
                     e.doorNorthVar, e.doorEastVar,
                     e.doorSouthVar, e.doorWestVar,
                 };
                 int dirIdx = -1;
                 for (int i = 0; i < 4; i++) {
-                    if (doorVars[i] == CONDUCT_MEMORY_VARIABLE_COUNT) continue;
-                    if (conduct.get(doorVars[i]) & roomBit) { dirIdx = i; break; }
+                    const ConductMemoryVariableEnum doorVar = doorVars.getOrDefault(i, CONDUCT_MEMORY_VARIABLE_COUNT);
+                    if (doorVar == CONDUCT_MEMORY_VARIABLE_COUNT) continue;
+                    if (conduct.get(doorVar) & roomBit) { dirIdx = i; break; }
                 }
                 if (dirIdx == -1) return;
 

@@ -4,6 +4,7 @@
 // TriggerWrapper (event-driven) and Conduct (tick-driven proposal effects).
 
 #include "ActivationContext.hpp"
+#include "Array.hpp"
 #include "Conduct.hpp"
 #include "ConductMemory.hpp"
 #include "ItemFlyweight.hpp"
@@ -51,14 +52,14 @@ inline bool applyScanCharacters(
                                      ? conduct.get(eff.roomsIgnoredVar) : 0;
         const int scannedBitMask = (eff.roomsScannedVar != CONDUCT_MEMORY_VARIABLE_COUNT)
                                      ? conduct.get(eff.roomsScannedVar) : -1;
-        const bool hasItemFilter = eff.itemAccepted[0] != ITEM_UNALLOCATED
-                                || eff.itemRejected[0] != ITEM_UNALLOCATED
+        const bool hasItemFilter = eff.itemAccepted.head() != ITEM_UNALLOCATED
+                                || eff.itemRejected.head() != ITEM_UNALLOCATED
                                 || eff.itemTraitsRequired.isAny()
                                 || eff.itemTraitsRestricted.isAny();
         const bool hasLockFilter = eff.lockTraitsRequired.isAny()
                                 || eff.lockTraitsRestricted.isAny()
-                                || eff.locksAccepted[0] != LOCK_COUNT
-                                || eff.locksRejected[0] != LOCK_COUNT;
+                                || eff.locksAccepted.head() != LOCK_COUNT
+                                || eff.locksRejected.head() != LOCK_COUNT;
 
         int firstMatchedChar      = -1, firstMatchedRoom  = -1;
         int firstRejectedChar     = -1, firstRejectedRoom = -1;
@@ -95,15 +96,15 @@ inline bool applyScanCharacters(
             bool passes = true;
             if (eff.traitsRequired.isAny()   && (eff.traitsRequired   - traits).isAny()) passes = false;
             if (eff.traitsRestricted.isAny() && (eff.traitsRestricted & traits).isAny()) passes = false;
-            if (passes && eff.rolesAccepted[0] != ROLE_COUNT) {
+            if (passes && eff.rolesAccepted.head() != ROLE_COUNT) {
                 bool roleMatched = false;
-                for (int i = 0; i < TriggerEffectScanCharacters::MAX_ROLE_FILTER && eff.rolesAccepted[i] != ROLE_COUNT; i++)
-                    if (role == eff.rolesAccepted[i]) { roleMatched = true; break; }
+                for (int i = 0; i < TriggerEffectScanCharacters::MAX_ROLE_FILTER && eff.rolesAccepted.getOrDefault(i, ROLE_COUNT) != ROLE_COUNT; i++)
+                    if (role == eff.rolesAccepted.getOrDefault(i, ROLE_COUNT)) { roleMatched = true; break; }
                 if (!roleMatched) passes = false;
             }
-            if (passes && eff.rolesRejected[0] != ROLE_COUNT) {
-                for (int i = 0; i < TriggerEffectScanCharacters::MAX_ROLE_FILTER && eff.rolesRejected[i] != ROLE_COUNT; i++)
-                    if (role == eff.rolesRejected[i]) { passes = false; break; }
+            if (passes && eff.rolesRejected.head() != ROLE_COUNT) {
+                for (int i = 0; i < TriggerEffectScanCharacters::MAX_ROLE_FILTER && eff.rolesRejected.getOrDefault(i, ROLE_COUNT) != ROLE_COUNT; i++)
+                    if (role == eff.rolesRejected.getOrDefault(i, ROLE_COUNT)) { passes = false; break; }
             }
 
             if (passes && hasItemFilter) {
@@ -114,16 +115,16 @@ inline bool applyScanCharacters(
                     for (int i = 0; i < inv.size && !hasMatchingItem; i++) {
                         const Item& item = inv.items[i];
                         if (item.type == ITEM_UNALLOCATED || item.stacks == 0) continue;
-                        if (eff.itemAccepted[0] != ITEM_UNALLOCATED) {
+                        if (eff.itemAccepted.head() != ITEM_UNALLOCATED) {
                             bool itemMatched = false;
-                            for (int j = 0; j < TriggerEffectScanCharacters::MAX_ITEM_FILTER && eff.itemAccepted[j] != ITEM_UNALLOCATED; j++)
-                                if (item.type == eff.itemAccepted[j]) { itemMatched = true; break; }
+                            for (int j = 0; j < TriggerEffectScanCharacters::MAX_ITEM_FILTER && eff.itemAccepted.getOrDefault(j, ITEM_UNALLOCATED) != ITEM_UNALLOCATED; j++)
+                                if (item.type == eff.itemAccepted.getOrDefault(j, ITEM_UNALLOCATED)) { itemMatched = true; break; }
                             if (!itemMatched) continue;
                         }
-                        if (eff.itemRejected[0] != ITEM_UNALLOCATED) {
+                        if (eff.itemRejected.head() != ITEM_UNALLOCATED) {
                             bool blocked = false;
-                            for (int j = 0; j < TriggerEffectScanCharacters::MAX_ITEM_FILTER && eff.itemRejected[j] != ITEM_UNALLOCATED; j++)
-                                if (item.type == eff.itemRejected[j]) { blocked = true; break; }
+                            for (int j = 0; j < TriggerEffectScanCharacters::MAX_ITEM_FILTER && eff.itemRejected.getOrDefault(j, ITEM_UNALLOCATED) != ITEM_UNALLOCATED; j++)
+                                if (item.type == eff.itemRejected.getOrDefault(j, ITEM_UNALLOCATED)) { blocked = true; break; }
                             if (blocked) continue;
                         }
                         if (eff.itemTraitsRequired.isAny() || eff.itemTraitsRestricted.isAny()) {
@@ -147,15 +148,15 @@ inline bool applyScanCharacters(
                         bool ok = true;
                         if (eff.lockTraitsRequired.isAny()   && (eff.lockTraitsRequired   - lf.lockAttributes).isAny()) ok = false;
                         if (eff.lockTraitsRestricted.isAny() && (eff.lockTraitsRestricted & lf.lockAttributes).isAny()) ok = false;
-                        if (ok && eff.locksAccepted[0] != LOCK_COUNT) {
+                        if (ok && eff.locksAccepted.head() != LOCK_COUNT) {
                             bool lockMatched = false;
-                            for (int i = 0; i < TriggerEffectScanCharacters::MAX_LOCK_ACCEPTED && eff.locksAccepted[i] != LOCK_COUNT; i++)
-                                if (chest.lock == eff.locksAccepted[i]) { lockMatched = true; break; }
+                            for (int i = 0; i < TriggerEffectScanCharacters::MAX_LOCK_ACCEPTED && eff.locksAccepted.getOrDefault(i, LOCK_COUNT) != LOCK_COUNT; i++)
+                                if (chest.lock == eff.locksAccepted.getOrDefault(i, LOCK_COUNT)) { lockMatched = true; break; }
                             if (!lockMatched) ok = false;
                         }
-                        if (ok && eff.locksRejected[0] != LOCK_COUNT) {
-                            for (int i = 0; i < TriggerEffectScanCharacters::MAX_LOCK_REJECTED && eff.locksRejected[i] != LOCK_COUNT; i++)
-                                if (chest.lock == eff.locksRejected[i]) { ok = false; break; }
+                        if (ok && eff.locksRejected.head() != LOCK_COUNT) {
+                            for (int i = 0; i < TriggerEffectScanCharacters::MAX_LOCK_REJECTED && eff.locksRejected.getOrDefault(i, LOCK_COUNT) != LOCK_COUNT; i++)
+                                if (chest.lock == eff.locksRejected.getOrDefault(i, LOCK_COUNT)) { ok = false; break; }
                         }
                         lockPasses = ok;
                     });

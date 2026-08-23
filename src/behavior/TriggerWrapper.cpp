@@ -1,5 +1,6 @@
 #include "TriggerWrapper.hpp"
 #include "ActivationContext.hpp"
+#include "Array.hpp"
 #include "BehaviorEnum.hpp"
 #include "Codeset.hpp"
 #include "ConductMemory.hpp"
@@ -89,29 +90,29 @@ static bool evaluateMatch(
                 || activation.character.location.roomId == targetRoom;
         }
         else if constexpr (std::is_same_v<T, TriggerMatchCharacter>) {
-            const bool hasItemFilter = cond.itemAccepted[0] != ITEM_UNALLOCATED
-                                    || cond.itemRejected[0] != ITEM_UNALLOCATED
+            const bool hasItemFilter = cond.itemAccepted.head() != ITEM_UNALLOCATED
+                                    || cond.itemRejected.head() != ITEM_UNALLOCATED
                                     || cond.itemTraitsRequired.isAny()
                                     || cond.itemTraitsRestricted.isAny();
             const bool hasLockFilter = cond.lockTraitsRequired.isAny()
                                     || cond.lockTraitsRestricted.isAny()
-                                    || cond.locksAccepted[0] != LOCK_COUNT
-                                    || cond.locksRejected[0] != LOCK_COUNT;
+                                    || cond.locksAccepted.head() != LOCK_COUNT
+                                    || cond.locksRejected.head() != LOCK_COUNT;
 
             // Tool source: check the activation tool item against item filters only.
             if (cond.source == TriggerMatchActivationSource::Tool) {
                 bool matched = false;
                 activation.sourceItem.access([&](Item& item) {
                     if (!hasItemFilter) { matched = true; return; }
-                    if (cond.itemAccepted[0] != ITEM_UNALLOCATED) {
+                    if (cond.itemAccepted.head() != ITEM_UNALLOCATED) {
                         bool found = false;
-                        for (int i = 0; i < TriggerMatchCharacter::MAX_ITEM_FILTER && cond.itemAccepted[i] != ITEM_UNALLOCATED; i++)
-                            if (item.type == cond.itemAccepted[i]) { found = true; break; }
+                        for (int i = 0; i < TriggerMatchCharacter::MAX_ITEM_FILTER && cond.itemAccepted.getOrDefault(i, ITEM_UNALLOCATED) != ITEM_UNALLOCATED; i++)
+                            if (item.type == cond.itemAccepted.getOrDefault(i, ITEM_UNALLOCATED)) { found = true; break; }
                         if (!found) return;
                     }
-                    if (cond.itemRejected[0] != ITEM_UNALLOCATED) {
-                        for (int i = 0; i < TriggerMatchCharacter::MAX_ITEM_FILTER && cond.itemRejected[i] != ITEM_UNALLOCATED; i++)
-                            if (item.type == cond.itemRejected[i]) return;
+                    if (cond.itemRejected.head() != ITEM_UNALLOCATED) {
+                        for (int i = 0; i < TriggerMatchCharacter::MAX_ITEM_FILTER && cond.itemRejected.getOrDefault(i, ITEM_UNALLOCATED) != ITEM_UNALLOCATED; i++)
+                            if (item.type == cond.itemRejected.getOrDefault(i, ITEM_UNALLOCATED)) return;
                     }
                     if (cond.itemTraitsRequired.isAny() || cond.itemTraitsRestricted.isAny()) {
                         bool traitPass = true;
@@ -131,15 +132,15 @@ static bool evaluateMatch(
                 const auto traits = controller.getTraitsComputed(ch.characterId).final;
                 if (cond.traitsRequired.isAny()   && (cond.traitsRequired   - traits).isAny()) return false;
                 if (cond.traitsRestricted.isAny() && (cond.traitsRestricted & traits).isAny()) return false;
-                if (cond.rolesAccepted[0] != ROLE_COUNT) {
+                if (cond.rolesAccepted.head() != ROLE_COUNT) {
                     bool found = false;
-                    for (int i = 0; i < TriggerMatchCharacter::MAX_ROLE_FILTER && cond.rolesAccepted[i] != ROLE_COUNT; i++)
-                        if (ch.role == cond.rolesAccepted[i]) { found = true; break; }
+                    for (int i = 0; i < TriggerMatchCharacter::MAX_ROLE_FILTER && cond.rolesAccepted.getOrDefault(i, ROLE_COUNT) != ROLE_COUNT; i++)
+                        if (ch.role == cond.rolesAccepted.getOrDefault(i, ROLE_COUNT)) { found = true; break; }
                     if (!found) return false;
                 }
-                if (cond.rolesRejected[0] != ROLE_COUNT) {
-                    for (int i = 0; i < TriggerMatchCharacter::MAX_ROLE_FILTER && cond.rolesRejected[i] != ROLE_COUNT; i++)
-                        if (ch.role == cond.rolesRejected[i]) return false;
+                if (cond.rolesRejected.head() != ROLE_COUNT) {
+                    for (int i = 0; i < TriggerMatchCharacter::MAX_ROLE_FILTER && cond.rolesRejected.getOrDefault(i, ROLE_COUNT) != ROLE_COUNT; i++)
+                        if (ch.role == cond.rolesRejected.getOrDefault(i, ROLE_COUNT)) return false;
                 }
 
                 bool passes = true;
@@ -153,16 +154,16 @@ static bool evaluateMatch(
                                 for (int i = 0; i < inv.size && !hasMatchingItem; i++) {
                                     const Item& item = inv.items[i];
                                     if (item.type == ITEM_UNALLOCATED || item.stacks == 0) continue;
-                                    if (cond.itemAccepted[0] != ITEM_UNALLOCATED) {
+                                    if (cond.itemAccepted.head() != ITEM_UNALLOCATED) {
                                         bool found = false;
-                                        for (int j = 0; j < TriggerMatchCharacter::MAX_ITEM_FILTER && cond.itemAccepted[j] != ITEM_UNALLOCATED; j++)
-                                            if (item.type == cond.itemAccepted[j]) { found = true; break; }
+                                        for (int j = 0; j < TriggerMatchCharacter::MAX_ITEM_FILTER && cond.itemAccepted.getOrDefault(j, ITEM_UNALLOCATED) != ITEM_UNALLOCATED; j++)
+                                            if (item.type == cond.itemAccepted.getOrDefault(j, ITEM_UNALLOCATED)) { found = true; break; }
                                         if (!found) continue;
                                     }
-                                    if (cond.itemRejected[0] != ITEM_UNALLOCATED) {
+                                    if (cond.itemRejected.head() != ITEM_UNALLOCATED) {
                                         bool blocked = false;
-                                        for (int j = 0; j < TriggerMatchCharacter::MAX_ITEM_FILTER && cond.itemRejected[j] != ITEM_UNALLOCATED; j++)
-                                            if (item.type == cond.itemRejected[j]) { blocked = true; break; }
+                                        for (int j = 0; j < TriggerMatchCharacter::MAX_ITEM_FILTER && cond.itemRejected.getOrDefault(j, ITEM_UNALLOCATED) != ITEM_UNALLOCATED; j++)
+                                            if (item.type == cond.itemRejected.getOrDefault(j, ITEM_UNALLOCATED)) { blocked = true; break; }
                                         if (blocked) continue;
                                     }
                                     if (cond.itemTraitsRequired.isAny() || cond.itemTraitsRestricted.isAny()) {
@@ -185,15 +186,15 @@ static bool evaluateMatch(
                                     bool ok = true;
                                     if (cond.lockTraitsRequired.isAny()   && (cond.lockTraitsRequired   - lf.lockAttributes).isAny()) ok = false;
                                     if (cond.lockTraitsRestricted.isAny() && (cond.lockTraitsRestricted & lf.lockAttributes).isAny()) ok = false;
-                                    if (ok && cond.locksAccepted[0] != LOCK_COUNT) {
+                                    if (ok && cond.locksAccepted.head() != LOCK_COUNT) {
                                         bool found = false;
-                                        for (int i = 0; i < TriggerMatchCharacter::MAX_LOCK_ACCEPTED && cond.locksAccepted[i] != LOCK_COUNT; i++)
-                                            if (chest.lock == cond.locksAccepted[i]) { found = true; break; }
+                                        for (int i = 0; i < TriggerMatchCharacter::MAX_LOCK_ACCEPTED && cond.locksAccepted.getOrDefault(i, LOCK_COUNT) != LOCK_COUNT; i++)
+                                            if (chest.lock == cond.locksAccepted.getOrDefault(i, LOCK_COUNT)) { found = true; break; }
                                         if (!found) ok = false;
                                     }
-                                    if (ok && cond.locksRejected[0] != LOCK_COUNT) {
-                                        for (int i = 0; i < TriggerMatchCharacter::MAX_LOCK_REJECTED && cond.locksRejected[i] != LOCK_COUNT; i++)
-                                            if (chest.lock == cond.locksRejected[i]) { ok = false; break; }
+                                    if (ok && cond.locksRejected.head() != LOCK_COUNT) {
+                                        for (int i = 0; i < TriggerMatchCharacter::MAX_LOCK_REJECTED && cond.locksRejected.getOrDefault(i, LOCK_COUNT) != LOCK_COUNT; i++)
+                                            if (chest.lock == cond.locksRejected.getOrDefault(i, LOCK_COUNT)) { ok = false; break; }
                                     }
                                     lockPasses = ok;
                                 });
@@ -411,7 +412,7 @@ static bool applyEffect(
 
                 int seenBits      = 0;
                 int traversedBits = 0;
-                int doorBits[4]   = {};
+                Array<int, 4> doorBits;
 
                 // Destination: character's simulated location matches target room or bits.
                 auto destination = [pathCharId, targetRoom, targetBits](const Match& m) -> bool {
@@ -438,8 +439,7 @@ static bool applyEffect(
                         traversedBits |= (1 << action.roomId);
                         action.direction.accessConst([&](const Cardinal& dir) {
                             const int idx = dir.getIndex();
-                            if (idx >= 0 && idx < 4)
-                                doorBits[idx] |= (1 << action.roomId);
+                            doorBits.access(idx, [&](int& bits) { bits |= (1 << action.roomId); });
                         });
                     }
                 };
@@ -455,10 +455,10 @@ static bool applyEffect(
                 };
                 writeVar(eff.seenRoomBitsVar,      seenBits);
                 writeVar(eff.traversedRoomBitsVar, traversedBits);
-                writeVar(eff.doorNorthVar,         doorBits[Cardinal::north().getIndex()]);
-                writeVar(eff.doorEastVar,          doorBits[Cardinal::east().getIndex()]);
-                writeVar(eff.doorSouthVar,         doorBits[Cardinal::south().getIndex()]);
-                writeVar(eff.doorWestVar,          doorBits[Cardinal::west().getIndex()]);
+                writeVar(eff.doorNorthVar,         doorBits.getOrDefault(Cardinal::north().getIndex(), 0));
+                writeVar(eff.doorEastVar,          doorBits.getOrDefault(Cardinal::east().getIndex(), 0));
+                writeVar(eff.doorSouthVar,         doorBits.getOrDefault(Cardinal::south().getIndex(), 0));
+                writeVar(eff.doorWestVar,          doorBits.getOrDefault(Cardinal::west().getIndex(), 0));
             });
             return true;
         }
@@ -471,19 +471,19 @@ static bool applyEffect(
 
                 if (startRoom == -1 && startBits == 0) return;
 
-                int towardsBits[4] = {};
-                int againstBits[4] = {};
+                Array<int, 4> towardsBits;
+                Array<int, 4> againstBits;
 
                 auto consumer = [&](const CharacterAction& action, const Match& result) {
                     if (action.roomId < 0 || action.roomId >= 32) return;
                     action.direction.accessConst([&](const Cardinal& dir) {
                         // Towards: source room gets a bit for the direction taken.
-                        towardsBits[dir.getIndex()] |= (1 << action.roomId);
+                        towardsBits.access(dir.getIndex(), [&](int& bits) { bits |= (1 << action.roomId); });
 
                         // Against: destination room gets a bit for the reversed direction.
                         const int destRoom = result.dungeon.pathfinderCharacter.location.roomId;
                         if (destRoom >= 0 && destRoom < 32)
-                            againstBits[dir.getFlip().getIndex()] |= (1 << destRoom);
+                            againstBits.access(dir.getFlip().getIndex(), [&](int& bits) { bits |= (1 << destRoom); });
                     });
                 };
 
@@ -495,14 +495,14 @@ static bool applyEffect(
                 auto writeVar = [&](ConductMemoryVariableEnum var, int val) {
                     if (var != CONDUCT_MEMORY_VARIABLE_COUNT) conduct.set(var, val);
                 };
-                writeVar(eff.towardsNorthVar, towardsBits[Cardinal::north().getIndex()]);
-                writeVar(eff.towardsEastVar,  towardsBits[Cardinal::east().getIndex()]);
-                writeVar(eff.towardsSouthVar, towardsBits[Cardinal::south().getIndex()]);
-                writeVar(eff.towardsWestVar,  towardsBits[Cardinal::west().getIndex()]);
-                writeVar(eff.againstNorthVar,  againstBits[Cardinal::north().getIndex()]);
-                writeVar(eff.againstEastVar,   againstBits[Cardinal::east().getIndex()]);
-                writeVar(eff.againstSouthVar,  againstBits[Cardinal::south().getIndex()]);
-                writeVar(eff.againstWestVar,   againstBits[Cardinal::west().getIndex()]);
+                writeVar(eff.towardsNorthVar, towardsBits.getOrDefault(Cardinal::north().getIndex(), 0));
+                writeVar(eff.towardsEastVar,  towardsBits.getOrDefault(Cardinal::east().getIndex(), 0));
+                writeVar(eff.towardsSouthVar, towardsBits.getOrDefault(Cardinal::south().getIndex(), 0));
+                writeVar(eff.towardsWestVar,  towardsBits.getOrDefault(Cardinal::west().getIndex(), 0));
+                writeVar(eff.againstNorthVar,  againstBits.getOrDefault(Cardinal::north().getIndex(), 0));
+                writeVar(eff.againstEastVar,   againstBits.getOrDefault(Cardinal::east().getIndex(), 0));
+                writeVar(eff.againstSouthVar,  againstBits.getOrDefault(Cardinal::south().getIndex(), 0));
+                writeVar(eff.againstWestVar,   againstBits.getOrDefault(Cardinal::west().getIndex(), 0));
             });
             return true;
         }
@@ -545,14 +545,15 @@ static bool applyEffect(
                 if (currentRoom < 0 || currentRoom >= 32) return;
                 const int roomBit = 1 << currentRoom;
 
-                const ConductMemoryVariableEnum doorVars[4] = {
+                const Array<ConductMemoryVariableEnum, 4> doorVars = {
                     eff.doorNorthVar, eff.doorEastVar,
                     eff.doorSouthVar, eff.doorWestVar,
                 };
                 int dirIdx = -1;
                 for (int i = 0; i < 4; i++) {
-                    if (doorVars[i] == CONDUCT_MEMORY_VARIABLE_COUNT) continue;
-                    if (conduct.get(doorVars[i]) & roomBit) { dirIdx = i; break; }
+                    const ConductMemoryVariableEnum doorVar = doorVars.getOrDefault(i, CONDUCT_MEMORY_VARIABLE_COUNT);
+                    if (doorVar == CONDUCT_MEMORY_VARIABLE_COUNT) continue;
+                    if (conduct.get(doorVar) & roomBit) { dirIdx = i; break; }
                 }
                 if (dirIdx == -1) return;
 

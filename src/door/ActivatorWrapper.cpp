@@ -1,5 +1,6 @@
 #include "ActivatorWrapper.hpp"
 #include <variant>
+#include "Array.hpp"
 #include "Character.hpp"
 #include "Codeset.hpp"
 #include "DoorEnum.hpp"
@@ -44,10 +45,10 @@ bool ActivatorWrapper::activate(ActivationContext& activation) const {
                     bool matched = true;
                     if (m.required.isAny())
                         matched = !(m.required - fw.itemAttributes).isAny();
-                    if (matched && m.items[0] != ITEM_NIL) {
+                    if (matched && m.items.head() != ITEM_NIL) {
                         bool found = false;
-                        for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && m.items[i] != ITEM_UNALLOCATED; i++) {
-                            if (item.type == m.items[i]) { found = true; break; }
+                        for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && m.items.getOrDefault(i, ITEM_UNALLOCATED) != ITEM_UNALLOCATED; i++) {
+                            if (item.type == m.items.getOrDefault(i, ITEM_UNALLOCATED)) { found = true; break; }
                         }
                         matched = found;
                     }
@@ -84,10 +85,10 @@ bool ActivatorWrapper::activate(ActivationContext& activation) const {
                         bool matched = true;
                         if (m.required.isAny())
                             matched = !(m.required - fw.itemAttributes).isAny();
-                        if (matched && m.items[0] != ITEM_NIL) {
+                        if (matched && m.items.head() != ITEM_NIL) {
                             bool found = false;
-                            for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && m.items[i] != ITEM_UNALLOCATED; i++) {
-                                if (item.type == m.items[i]) { found = true; break; }
+                            for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && m.items.getOrDefault(i, ITEM_UNALLOCATED) != ITEM_UNALLOCATED; i++) {
+                                if (item.type == m.items.getOrDefault(i, ITEM_UNALLOCATED)) { found = true; break; }
                             }
                             matched = found;
                         }
@@ -101,10 +102,10 @@ bool ActivatorWrapper::activate(ActivationContext& activation) const {
                         bool matched = true;
                         if (m.required.isAny())
                             matched = !(m.required - fw.doorAttributes).isAny();
-                        if (matched && m.doors[0] != DOOR_COUNT) {
+                        if (matched && m.doors.head() != DOOR_COUNT) {
                             bool found = false;
-                            for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && m.doors[i] != DOOR_COUNT; i++) {
-                                if (w.door == m.doors[i]) { found = true; break; }
+                            for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && m.doors.getOrDefault(i, DOOR_COUNT) != DOOR_COUNT; i++) {
+                                if (w.door == m.doors.getOrDefault(i, DOOR_COUNT)) { found = true; break; }
                             }
                             matched = found;
                         }
@@ -118,11 +119,12 @@ bool ActivatorWrapper::activate(ActivationContext& activation) const {
         // === Failure helper ===
         auto runOnFail = [&]() {
             for (int i = 0; i < WrapperConfig::MAX_EFFECTS; i++) {
-                if (std::holds_alternative<NoEffect>(_config.effects.onFail[i])) break;
-                bool effectResult = std::visit([&](auto& effect) { return effect.activate(activation); }, _config.effects.onFail[i]);
+                const ActivatorEffect& onFail = _config.effects.onFail.getOrDefault(i, {});
+                if (std::holds_alternative<NoEffect>(onFail)) break;
+                bool effectResult = std::visit([&](auto& effect) { return effect.activate(activation); }, onFail);
                 if (codeset.addFailure(!effectResult, CODE_WRAPPER_EFFECT_FAILED)) {
                     codeset.addError(CODE_WRAPPER_EFFECT_FAILED_LIST_INDEX, i);
-                    codeset.addError(CODE_WRAPPER_EFFECT_FAILED_TYPE_INDEX, (int)_config.effects.onFail[i].index());
+                    codeset.addError(CODE_WRAPPER_EFFECT_FAILED_TYPE_INDEX, (int)onFail.index());
                     codeset.addError(CODE_WRAPPER_FAIL_EFFECT_FAILED, 1);
                     return;
                 }
@@ -341,13 +343,14 @@ bool ActivatorWrapper::activate(ActivationContext& activation) const {
 
         auto inventory = req.player.getInventory(req.match.dungeon);
         for (int i = 0; i < WrapperConfig::MAX_COSTS; i++) {
-            if (_config.costs.item[i] == ITEM_UNALLOCATED) break;
-            if (codeset.addFailure(!controller.takeInventoryItem(inventory, _config.costs.item[i], true), CODE_WRAPPER_INSUFFICIENT_ITEM_COST)) {
+            const ItemEnum costItem = _config.costs.item.getOrDefault(i, ITEM_UNALLOCATED);
+            if (costItem == ITEM_UNALLOCATED) break;
+            if (codeset.addFailure(!controller.takeInventoryItem(inventory, costItem, true), CODE_WRAPPER_INSUFFICIENT_ITEM_COST)) {
                 controller.addRequestLoggedEvent(activation, LoggedEvent{
                     EVENT_MISSING_ITEM,
                     { EventComponentKind::ROLE, (int)character.role },
                     {},
-                    { EventComponentKind::ITEM, (int)_config.costs.item[i] },
+                    { EventComponentKind::ITEM, (int)costItem },
                     -1
                 });
                 return;
@@ -355,8 +358,9 @@ bool ActivatorWrapper::activate(ActivationContext& activation) const {
         }
 
         for (int i = 0; i < WrapperConfig::MAX_COSTS; i++) {
-            if (_config.costs.item[i] == ITEM_UNALLOCATED) break;
-            if (codeset.addFailure(!controller.takeInventoryItem(inventory, _config.costs.item[i], req.time, activation.room.roomId, req.isSkippingAnimations), CODE_WRAPPER_FAILED_TO_TAKE_ITEM)) return;
+            const ItemEnum costItem = _config.costs.item.getOrDefault(i, ITEM_UNALLOCATED);
+            if (costItem == ITEM_UNALLOCATED) break;
+            if (codeset.addFailure(!controller.takeInventoryItem(inventory, costItem, req.time, activation.room.roomId, req.isSkippingAnimations), CODE_WRAPPER_FAILED_TO_TAKE_ITEM)) return;
         }
 
         for (int i = 0; i < _config.costs.action; i++) {
@@ -388,13 +392,14 @@ bool ActivatorWrapper::activate(ActivationContext& activation) const {
         // === Success effects phase ===
 
         for (int i = 0; i < WrapperConfig::MAX_EFFECTS; i++) {
-            if (std::holds_alternative<NoEffect>(_config.effects.onSuccess[i])) break;
+            const ActivatorEffect& onSuccess = _config.effects.onSuccess.getOrDefault(i, {});
+            if (std::holds_alternative<NoEffect>(onSuccess)) break;
             bool effectResult = std::visit([&](auto& effect) {
                 return effect.activate(activation);
-            }, _config.effects.onSuccess[i]);
+            }, onSuccess);
             if (codeset.addFailure(!effectResult, CODE_WRAPPER_EFFECT_FAILED)) {
                 codeset.addError(CODE_WRAPPER_EFFECT_FAILED_LIST_INDEX, i);
-                codeset.addError(CODE_WRAPPER_EFFECT_FAILED_TYPE_INDEX, (int)_config.effects.onSuccess[i].index());
+                codeset.addError(CODE_WRAPPER_EFFECT_FAILED_TYPE_INDEX, (int)onSuccess.index());
                 codeset.addError(CODE_WRAPPER_SUCCESS_EFFECT_FAILED, 1);
                 return;
             }

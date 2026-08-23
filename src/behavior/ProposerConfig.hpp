@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Array.hpp"
 #include "ProposalEffect.hpp"
 
 // Data-driven replacement for iProposer. Stored directly in BehaviorFlyweight.
@@ -7,5 +8,5 @@
 struct ProposerConfig {
     static constexpr int MAX_EFFECTS = 8;
     int            priority = 0;
-    ProposalEffect effects[MAX_EFFECTS] = {};
+    Array<ProposalEffect, MAX_EFFECTS> effects = {};
 };

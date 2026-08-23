@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Array.hpp"
 #include "TriggerEffect.hpp"
 #include "TriggerMatch.hpp"
 
@@ -11,8 +12,8 @@ struct TriggerConfig {
     static constexpr int MAX_MATCHES = 4;
     static constexpr int MAX_EFFECTS = 8;
 
-    TriggerMatch matches[MAX_MATCHES] = {};
-    TriggerEffect effects[MAX_EFFECTS] = {};
+    Array<TriggerMatch, MAX_MATCHES> matches = {};
+    Array<TriggerEffect, MAX_EFFECTS> effects = {};
     // Applied when any entry in effects returns false (e.g. a scan finds nothing).
-    TriggerEffect failureEffects[MAX_EFFECTS] = {};
+    Array<TriggerEffect, MAX_EFFECTS> failureEffects = {};
 };

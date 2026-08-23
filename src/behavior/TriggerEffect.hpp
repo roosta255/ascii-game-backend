@@ -2,6 +2,7 @@
 
 #include <variant>
 #include "ActionEnum.hpp"
+#include "Array.hpp"
 #include "ConductMemoryVariableEnum.hpp"
 #include "LockEnum.hpp"
 #include "WrapperConfig.hpp"
@@ -47,7 +48,7 @@ struct TriggerEffectScanRoomForCharacter {
     static constexpr int MAX_ON_FOUND = 4;
     WrapperConfig::Match     match     = {};
     WrapperConfig::Condition condition = {};
-    TriggerInnerEffect       onFound[MAX_ON_FOUND] = {};
+    Array<TriggerInnerEffect, MAX_ON_FOUND> onFound = {};
 };
 
 // Full character scan across builders and/or dungeon character sets.
@@ -93,17 +94,17 @@ struct TriggerEffectScanCharacters {
     // ── character filter ───────────────────────────────────────────────────────
     TraitBits traitsRequired   = {};
     TraitBits traitsRestricted = {};
-    RoleEnum  rolesAccepted[MAX_ROLE_FILTER] = { ROLE_COUNT, ROLE_COUNT, ROLE_COUNT, ROLE_COUNT,
-                                                  ROLE_COUNT, ROLE_COUNT, ROLE_COUNT, ROLE_COUNT };
-    RoleEnum  rolesRejected[MAX_ROLE_FILTER] = { ROLE_COUNT, ROLE_COUNT, ROLE_COUNT, ROLE_COUNT,
-                                                  ROLE_COUNT, ROLE_COUNT, ROLE_COUNT, ROLE_COUNT };
+    Array<RoleEnum, MAX_ROLE_FILTER> rolesAccepted = { ROLE_COUNT, ROLE_COUNT, ROLE_COUNT, ROLE_COUNT,
+                                                        ROLE_COUNT, ROLE_COUNT, ROLE_COUNT, ROLE_COUNT };
+    Array<RoleEnum, MAX_ROLE_FILTER> rolesRejected = { ROLE_COUNT, ROLE_COUNT, ROLE_COUNT, ROLE_COUNT,
+                                                        ROLE_COUNT, ROLE_COUNT, ROLE_COUNT, ROLE_COUNT };
 
     // ── item filter (optional — any active field requires a matching carried item) ──
     // ITEM_UNALLOCATED-terminated; empty list = no item-type constraint.
-    ItemEnum  itemAccepted[MAX_ITEM_FILTER] = { ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED,
-                                                ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED };
-    ItemEnum  itemRejected[MAX_ITEM_FILTER] = { ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED,
-                                                ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED };
+    Array<ItemEnum, MAX_ITEM_FILTER> itemAccepted = { ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED,
+                                                       ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED };
+    Array<ItemEnum, MAX_ITEM_FILTER> itemRejected = { ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED,
+                                                       ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED };
     TraitBits itemTraitsRequired   = {};
     TraitBits itemTraitsRestricted = {};
 
@@ -112,10 +113,10 @@ struct TriggerEffectScanCharacters {
     // LOCK_COUNT-terminated; empty list = no lock-enum constraint.
     TraitBits lockTraitsRequired   = {};
     TraitBits lockTraitsRestricted = {};
-    LockEnum  locksAccepted[MAX_LOCK_ACCEPTED] = { LOCK_COUNT, LOCK_COUNT, LOCK_COUNT, LOCK_COUNT,
-                                                   LOCK_COUNT, LOCK_COUNT, LOCK_COUNT, LOCK_COUNT };
-    LockEnum  locksRejected[MAX_LOCK_REJECTED] = { LOCK_COUNT, LOCK_COUNT, LOCK_COUNT,
-                                                   LOCK_COUNT, LOCK_COUNT, LOCK_COUNT };
+    Array<LockEnum, MAX_LOCK_ACCEPTED> locksAccepted = { LOCK_COUNT, LOCK_COUNT, LOCK_COUNT, LOCK_COUNT,
+                                                          LOCK_COUNT, LOCK_COUNT, LOCK_COUNT, LOCK_COUNT };
+    Array<LockEnum, MAX_LOCK_REJECTED> locksRejected = { LOCK_COUNT, LOCK_COUNT, LOCK_COUNT,
+                                                          LOCK_COUNT, LOCK_COUNT, LOCK_COUNT };
 
     // ── outputs ────────────────────────────────────────────────────────────────
     // CONDUCT_MEMORY_VARIABLE_COUNT = don't write this slot.

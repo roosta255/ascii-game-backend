@@ -1,6 +1,7 @@
 #pragma once
 
 #include <variant>
+#include "Array.hpp"
 #include "ConductMemoryVariableEnum.hpp"
 #include "LockEnum.hpp"
 #include "WrapperConfig.hpp"
@@ -56,18 +57,18 @@ struct TriggerMatchCharacter {
     // ── character filter ──────────────────────────────────────────────────────
     TraitBits traitsRequired   = {};
     TraitBits traitsRestricted = {};
-    RoleEnum  rolesAccepted[MAX_ROLE_FILTER] = { ROLE_COUNT, ROLE_COUNT, ROLE_COUNT, ROLE_COUNT,
-                                                  ROLE_COUNT, ROLE_COUNT, ROLE_COUNT, ROLE_COUNT };
-    RoleEnum  rolesRejected[MAX_ROLE_FILTER] = { ROLE_COUNT, ROLE_COUNT, ROLE_COUNT, ROLE_COUNT,
-                                                  ROLE_COUNT, ROLE_COUNT, ROLE_COUNT, ROLE_COUNT };
+    Array<RoleEnum, MAX_ROLE_FILTER> rolesAccepted = { ROLE_COUNT, ROLE_COUNT, ROLE_COUNT, ROLE_COUNT,
+                                                        ROLE_COUNT, ROLE_COUNT, ROLE_COUNT, ROLE_COUNT };
+    Array<RoleEnum, MAX_ROLE_FILTER> rolesRejected = { ROLE_COUNT, ROLE_COUNT, ROLE_COUNT, ROLE_COUNT,
+                                                        ROLE_COUNT, ROLE_COUNT, ROLE_COUNT, ROLE_COUNT };
 
     // ── item filter ────────────────────────────────────────────────────────────
     // Actor/Target: character must carry at least one item satisfying all active item conditions.
     // Tool: the tool item itself must satisfy these conditions.
-    ItemEnum  itemAccepted[MAX_ITEM_FILTER] = { ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED,
-                                                ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED };
-    ItemEnum  itemRejected[MAX_ITEM_FILTER] = { ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED,
-                                                ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED };
+    Array<ItemEnum, MAX_ITEM_FILTER> itemAccepted = { ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED,
+                                                       ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED };
+    Array<ItemEnum, MAX_ITEM_FILTER> itemRejected = { ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED,
+                                                       ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED };
     TraitBits itemTraitsRequired   = {};
     TraitBits itemTraitsRestricted = {};
 
@@ -75,10 +76,10 @@ struct TriggerMatchCharacter {
     // Character must have an associated Chest. A character without a Chest fails when any lock filter is active.
     TraitBits lockTraitsRequired   = {};
     TraitBits lockTraitsRestricted = {};
-    LockEnum  locksAccepted[MAX_LOCK_ACCEPTED] = { LOCK_COUNT, LOCK_COUNT, LOCK_COUNT, LOCK_COUNT,
-                                                   LOCK_COUNT, LOCK_COUNT, LOCK_COUNT, LOCK_COUNT };
-    LockEnum  locksRejected[MAX_LOCK_REJECTED] = { LOCK_COUNT, LOCK_COUNT, LOCK_COUNT,
-                                                   LOCK_COUNT, LOCK_COUNT, LOCK_COUNT };
+    Array<LockEnum, MAX_LOCK_ACCEPTED> locksAccepted = { LOCK_COUNT, LOCK_COUNT, LOCK_COUNT, LOCK_COUNT,
+                                                          LOCK_COUNT, LOCK_COUNT, LOCK_COUNT, LOCK_COUNT };
+    Array<LockEnum, MAX_LOCK_REJECTED> locksRejected = { LOCK_COUNT, LOCK_COUNT, LOCK_COUNT,
+                                                          LOCK_COUNT, LOCK_COUNT, LOCK_COUNT };
 };
 
 // Checks that memory[var] character is currently in the actor's room.

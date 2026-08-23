@@ -8,7 +8,7 @@
 struct ActivationContext;
 
 struct Conduct {
-    int vars[CONDUCT_MEMORY_NPC_VARIABLE_COUNT];
+    Array<int, CONDUCT_MEMORY_NPC_VARIABLE_COUNT> vars;
     Array<ConductMemory, CONDUCT_COUNT> memory;
     int characterId = -1;
 
@@ -16,8 +16,8 @@ struct Conduct {
         for (int& v : vars) v = -1;
     }
 
-    int  get(ConductMemoryVariableEnum v) const { return vars[v - CONDUCT_MEMORY_NPC_VARIABLE_BASE]; }
-    void set(ConductMemoryVariableEnum v, int val) { vars[v - CONDUCT_MEMORY_NPC_VARIABLE_BASE] = val; }
+    int  get(ConductMemoryVariableEnum v) const { return vars.getOrDefault(v - CONDUCT_MEMORY_NPC_VARIABLE_BASE, -1); }
+    void set(ConductMemoryVariableEnum v, int val) { vars.assignValue(v - CONDUCT_MEMORY_NPC_VARIABLE_BASE, val); }
 
     bool buildAndExecuteProposals(ActivationContext& ctx);
 };

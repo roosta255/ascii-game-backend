@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ActivatorEffect.hpp"
+#include "Array.hpp"
 #include "DoorEnum.hpp"
 #include "ItemEnum.hpp"
 #include "RoleEnum.hpp"
@@ -20,21 +21,21 @@ struct WrapperConfig {
     struct Match {
         TraitBits required = {};
         TraitBits restricted = {};
-        DoorEnum  doors[MAX_MATCH_LIST] = { DOOR_COUNT, DOOR_COUNT, DOOR_COUNT, DOOR_COUNT,
-                                            DOOR_COUNT, DOOR_COUNT, DOOR_COUNT, DOOR_COUNT };
-        RoleEnum  roles[MAX_MATCH_LIST] = { ROLE_COUNT, ROLE_COUNT, ROLE_COUNT, ROLE_COUNT,
-                                            ROLE_COUNT, ROLE_COUNT, ROLE_COUNT, ROLE_COUNT };
-        ItemEnum  items[MAX_MATCH_LIST] = { ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED,
-                                            ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED };
+        Array<DoorEnum, MAX_MATCH_LIST> doors = { DOOR_COUNT, DOOR_COUNT, DOOR_COUNT, DOOR_COUNT,
+                                                   DOOR_COUNT, DOOR_COUNT, DOOR_COUNT, DOOR_COUNT };
+        Array<RoleEnum, MAX_MATCH_LIST> roles = { ROLE_COUNT, ROLE_COUNT, ROLE_COUNT, ROLE_COUNT,
+                                                   ROLE_COUNT, ROLE_COUNT, ROLE_COUNT, ROLE_COUNT };
+        Array<ItemEnum, MAX_MATCH_LIST> items = { ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED,
+                                                   ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED, ITEM_UNALLOCATED };
         // Chest lock match: all bits must be present in the target chest's lock's lockAttributes.
         TraitBits locks = {};
 
         bool isAny() const {
             return required.isAny()
                 || restricted.isAny()
-                || doors[0] != DOOR_COUNT
-                || roles[0] != ROLE_COUNT
-                || items[0] != ITEM_UNALLOCATED
+                || doors.head() != DOOR_COUNT
+                || roles.head() != ROLE_COUNT
+                || items.head() != ITEM_UNALLOCATED
                 || locks.isAny();
         }
 
@@ -72,14 +73,14 @@ struct WrapperConfig {
     };
 
     struct Costs {
-        ItemEnum item[MAX_COSTS] = { ITEM_UNALLOCATED, ITEM_UNALLOCATED };
+        Array<ItemEnum, MAX_COSTS> item = { ITEM_UNALLOCATED, ITEM_UNALLOCATED };
         int action = 0;
         int move = 0;
     };
 
     struct Effects {
-        ActivatorEffect onSuccess[MAX_EFFECTS] = {};
-        ActivatorEffect onFail[MAX_EFFECTS] = {};
+        Array<ActivatorEffect, MAX_EFFECTS> onSuccess = {};
+        Array<ActivatorEffect, MAX_EFFECTS> onFail = {};
     };
 
     int priority = 0;
@@ -89,8 +90,8 @@ struct WrapperConfig {
     Effects effects = {};
 
     bool isEmpty() const {
-        return std::holds_alternative<NoEffect>(effects.onSuccess[0])
-            && std::holds_alternative<NoEffect>(effects.onFail[0])
+        return std::holds_alternative<NoEffect>(effects.onSuccess.head())
+            && std::holds_alternative<NoEffect>(effects.onFail.head())
             && !matches.actor.isAny()
             && !matches.tool.isAny()
             && !matches.target.isAny()
@@ -100,7 +101,7 @@ struct WrapperConfig {
             && !conditions.tool.restricted.isAny()
             && !conditions.target.required.isAny()
             && !conditions.target.restricted.isAny()
-            && costs.item[0] == ITEM_UNALLOCATED
+            && costs.item.head() == ITEM_UNALLOCATED
             && costs.move == 0
             && costs.action == 0;
     }
@@ -109,10 +110,10 @@ struct WrapperConfig {
 inline bool WrapperConfig::Match::matchesCharacter(const TraitBits& computed, RoleEnum role) const {
     if (required.isAny() && (required - computed).isAny()) return false;
     if (restricted.isAny() && (restricted & computed).isAny()) return false;
-    if (roles[0] != ROLE_COUNT) {
+    if (roles.head() != ROLE_COUNT) {
         bool found = false;
-        for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && roles[i] != ROLE_COUNT; i++)
-            if (role == roles[i]) { found = true; break; }
+        for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && roles.getOrDefault(i, ROLE_COUNT) != ROLE_COUNT; i++)
+            if (role == roles.getOrDefault(i, ROLE_COUNT)) { found = true; break; }
         if (!found) return false;
     }
     return true;
@@ -121,10 +122,10 @@ inline bool WrapperConfig::Match::matchesCharacter(const TraitBits& computed, Ro
 inline bool WrapperConfig::Match::matchesItem(const TraitBits& attributes, ItemEnum type) const {
     if (required.isAny() && (required - attributes).isAny()) return false;
     if (restricted.isAny() && (restricted & attributes).isAny()) return false;
-    if (items[0] != ITEM_UNALLOCATED) {
+    if (items.head() != ITEM_UNALLOCATED) {
         bool found = false;
-        for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && items[i] != ITEM_UNALLOCATED; i++)
-            if (type == items[i]) { found = true; break; }
+        for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && items.getOrDefault(i, ITEM_UNALLOCATED) != ITEM_UNALLOCATED; i++)
+            if (type == items.getOrDefault(i, ITEM_UNALLOCATED)) { found = true; break; }
         if (!found) return false;
     }
     return true;
@@ -133,10 +134,10 @@ inline bool WrapperConfig::Match::matchesItem(const TraitBits& attributes, ItemE
 inline bool WrapperConfig::Match::matchesDoor(const TraitBits& attributes, DoorEnum door) const {
     if (required.isAny() && (required - attributes).isAny()) return false;
     if (restricted.isAny() && (restricted & attributes).isAny()) return false;
-    if (doors[0] != DOOR_COUNT) {
+    if (doors.head() != DOOR_COUNT) {
         bool found = false;
-        for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && doors[i] != DOOR_COUNT; i++)
-            if (door == doors[i]) { found = true; break; }
+        for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && doors.getOrDefault(i, DOOR_COUNT) != DOOR_COUNT; i++)
+            if (door == doors.getOrDefault(i, DOOR_COUNT)) { found = true; break; }
         if (!found) return false;
     }
     return true;

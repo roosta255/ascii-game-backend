@@ -20,14 +20,14 @@ struct ConductStoreView
     : characterId(model.characterId)
     , memory(model.memory.convert<ConductMemoryStoreView>())
     {
-        for (int i = 0; i < CONDUCT_MEMORY_NPC_VARIABLE_COUNT; i++) vars[i] = model.vars[i];
+        for (int i = 0; i < CONDUCT_MEMORY_NPC_VARIABLE_COUNT; i++) vars[i] = model.vars.getOrDefault(i, -1);
     }
 
     inline operator Conduct() const {
         Conduct model;
         model.characterId = this->characterId;
         model.memory = this->memory.convert<ConductMemory>();
-        for (int i = 0; i < CONDUCT_MEMORY_NPC_VARIABLE_COUNT; i++) model.vars[i] = vars[i];
+        for (int i = 0; i < CONDUCT_MEMORY_NPC_VARIABLE_COUNT; i++) model.vars.assignValue(i, vars[i]);
         return model;
     }
 };

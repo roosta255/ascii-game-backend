@@ -1,7 +1,8 @@
 #include "BehaviorEnum.hpp"
+#include "Array.hpp"
 
 const char* behavior_to_text(int index) {
-    static const char* names[] = {
+    static const Array<const char*, BEHAVIOR_COUNT> names = {
         #define BEHAVIOR_DECL(name_) #name_,
         #define BEHAVIOR_ON_MOVE_AS_ACTOR_DECL(config_)
         #define BEHAVIOR_ON_MOVE_AS_TARGET_DECL(config_)
@@ -62,5 +63,5 @@ const char* behavior_to_text(int index) {
     if (index >= BEHAVIOR_COUNT) {
         return "BEHAVIOR_INDEX_OUT_OF_BOUNDS";
     }
-    return names[index];
+    return names.getOrDefault(index, "BEHAVIOR_INDEX_OUT_OF_BOUNDS");
 }

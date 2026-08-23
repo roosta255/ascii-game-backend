@@ -43,14 +43,14 @@ private:
 
     static nlohmann::json serializeMatch(const WrapperConfig::Match& m) {
         nlohmann::json doorsArr = nlohmann::json::array();
-        for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && m.doors[i] != DOOR_COUNT; i++)
-            doorsArr.push_back((int)m.doors[i]);
+        for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && m.doors.getOrDefault(i, DOOR_COUNT) != DOOR_COUNT; i++)
+            doorsArr.push_back((int)m.doors.getOrDefault(i, DOOR_COUNT));
         nlohmann::json rolesArr = nlohmann::json::array();
-        for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && m.roles[i] != ROLE_COUNT; i++)
-            rolesArr.push_back((int)m.roles[i]);
+        for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && m.roles.getOrDefault(i, ROLE_COUNT) != ROLE_COUNT; i++)
+            rolesArr.push_back((int)m.roles.getOrDefault(i, ROLE_COUNT));
         nlohmann::json itemsArr = nlohmann::json::array();
-        for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && m.items[i] != ITEM_NIL; i++)
-            itemsArr.push_back(item_to_text(m.items[i]));
+        for (int i = 0; i < WrapperConfig::MAX_MATCH_LIST && m.items.getOrDefault(i, ITEM_UNALLOCATED) != ITEM_NIL; i++)
+            itemsArr.push_back(item_to_text(m.items.getOrDefault(i, ITEM_UNALLOCATED)));
         return {
             {"required",    traitsToJson(m.required)},
             {"restricted",  traitsToJson(m.restricted)},
@@ -79,8 +79,9 @@ private:
     static nlohmann::json serializeCosts(const WrapperConfig::Costs& costs) {
         nlohmann::json items = nlohmann::json::array();
         for (int i = 0; i < WrapperConfig::MAX_COSTS; i++) {
-            if (costs.item[i] == ITEM_UNALLOCATED) break;
-            items.push_back(item_to_text(costs.item[i]));
+            const ItemEnum costItem = costs.item.getOrDefault(i, ITEM_UNALLOCATED);
+            if (costItem == ITEM_UNALLOCATED) break;
+            items.push_back(item_to_text(costItem));
         }
         return {
             {"items",  items},
