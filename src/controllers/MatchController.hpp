@@ -62,6 +62,10 @@ private:
     Pointer<std::vector<PendingTrigger>> eventQueuePtr; // set during activate()/tickNpcConducts(); used by pushTrigger()
     Timestamp animationTime; // latest animation end time across all active activations
     bool isLocationsSetup = false;
+    // Counts nested activate() calls (TriggerEffectExecuteAction / TriggerEffectTraverseDoor
+    // re-enter activate() synchronously from proposal effects). Guards against unbounded
+    // recursion — e.g. a conduct that re-triggers a move every time it reaches a new room.
+    int activationDepth = 0;
 public:
     // Set to true for the duration of findCharacterPath(). Guards against re-entrant A* (TriggerEffectComputePath).
     bool isPathfindingActive = false;
@@ -72,6 +76,9 @@ public:
     // constants
     constexpr static long MOVE_ANIMATION_DURATION = 900;
     constexpr static long BOUNCE_LOCK_ANIMATION_DURATION = 2000;
+    // Max nested activate() depth (see activationDepth). Reached only via runaway
+    // proposal->action->trigger->proposal cascades; a legitimate call chain never gets close.
+    constexpr static int MAX_ACTIVATION_DEPTH = 512;
 
     // constructors
     MatchController(Match& match, Codeset& codeset);

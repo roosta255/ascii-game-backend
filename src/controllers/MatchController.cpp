@@ -47,6 +47,21 @@ bool MatchController::activate(const Preactivation& preactivation, Pointer<std::
 }
 
 bool MatchController::activate(const iActivator& activator, const Preactivation& preactivation, Pointer<std::vector<LoggedEvent>> outEventLog) {
+    // TriggerEffectExecuteAction / TriggerEffectTraverseDoor re-enter activate() synchronously
+    // from proposal effects, so a runaway conduct cascade (e.g. a move that keeps re-triggering
+    // itself) recurses through this function rather than looping. Bail out once nesting gets
+    // implausibly deep instead of overflowing the stack.
+    if (activationDepth >= MAX_ACTIVATION_DEPTH) {
+        codeset.addLog(CODE_ACTIVATION_DEPTH_LIMIT_EXCEEDED, activationDepth);
+        codeset.addFailure(true, CODE_ACTIVATION_DEPTH_LIMIT_EXCEEDED);
+        return false;
+    }
+    struct ActivationDepthGuard {
+        MatchController& c;
+        ~ActivationDepthGuard() { --c.activationDepth; }
+    } depthGuard{*this};
+    ++activationDepth;
+
     setupLocations();
 
     // Check if match has started
