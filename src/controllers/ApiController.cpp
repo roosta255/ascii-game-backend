@@ -22,6 +22,7 @@
 #include "MatchApiView.hpp"
 #include "RuleFlyweightApiView.hpp"
 #include "Preactivation.hpp"
+#include "StructuredLog.hpp"
 #include "Timestamp.hpp"
 #include <json/json.h>
 
@@ -41,31 +42,30 @@ static bool isValidMatchId(const std::string& s) {
     return true;
 }
 
-// Logs the start of a request. Emitted before any validation/processing so that a crash
-// mid-handler still leaves a trail of which endpoint/request was in flight.
-static void logRequestStarted(const char* handler, const drogon::HttpRequestPtr& req) {
-    LOG_INFO << handler << ": request started - " << req->methodString() << " " << req->path();
+// Structured event name for a completed character action, reusing the ActionEnum
+// vocabulary that already exists in Action.enum rather than inventing an unrelated one.
+// Falls back to a generic name for actions with no dedicated route today.
+static const char* actionEventName(ActionEnum action) {
+    switch (action) {
+        case ACTION_MOVE_TO_DOOR:
+        case ACTION_MOVE_TO_FLOOR:            return "character_moved";
+        case ACTION_ACTIVATE_CHARACTER:       return "character_activated";
+        case ACTION_ACTIVATE_DOOR:            return "door_activated";
+        case ACTION_ACTIVATE_LOCK:            return "lock_activated";
+        case ACTION_ACTIVATE_INVENTORY_ITEM:  return "item_activated";
+        default:                              return "action_performed";
+    }
 }
 
-// Logs the raw request body. Only called for POST endpoints, which are the only ones with one.
-static void logRequestBodyDebug(const char* handler, const drogon::HttpRequestPtr& req) {
-    LOG_DEBUG << handler << ": request body - " << req->getBody();
-}
-
-// Logs a successful request completion.
-static void logRequestReturned(const char* handler, const drogon::HttpRequestPtr& req, int statusCode, const std::string& message) {
-    LOG_INFO << handler << ": request returned - " << statusCode << " " << req->methodString() << " " << req->path() << " - " << message;
-}
-
-// Logs a failed request. statusCode/message describe the error response being sent back.
-static void logRequestError(const char* handler, const drogon::HttpRequestPtr& req, int statusCode, const std::string& message) {
-    LOG_ERROR << handler << ": request failed - " << statusCode << " " << req->methodString() << " " << req->path() << " - " << message;
-}
-
-// Emits the codeset's accumulated diagnostic trail to LOG_DEBUG. Called alongside the
-// LOG_INFO/LOG_ERROR request logs wherever a Codeset is available.
-static void logCodesetDebug(const char* handler, const Codeset& codeset) {
-    LOG_DEBUG << handler << ": codeset - " << codeset.describe();
+// Structured, queryable view of a Codeset's accumulated table/log counts, keyed by the
+// symbolic CodeEnum name (see Codeset::forEachTableEntry/forEachLog) rather than the
+// free-text blob Codeset::describe() produces.
+static nlohmann::json codesetFields(const Codeset& codeset) {
+    nlohmann::json table = nlohmann::json::object();
+    codeset.forEachTableEntry([&](CodeEnum code, int value) { table[code_to_text(code)] = value; });
+    nlohmann::json logs = nlohmann::json::object();
+    codeset.forEachLog([&](CodeEnum code, int value) { logs[code_to_text(code)] = value; });
+    return { {"table", table}, {"logs", logs} };
 }
 
 static FileStore matchStore("var/state/matches");
@@ -134,9 +134,8 @@ static AccountRepository accountRepository(accountStore);
 void ApiController::createMatch
 ( const drogon::HttpRequestPtr &req, std::function<void(const drogon::HttpResponsePtr &)> &&callback )
 {
-    static constexpr auto HANDLER = "createMatch";
-    logRequestStarted(HANDLER, req);
-    logRequestBodyDebug(HANDLER, req);
+    RequestLog rlog("createMatch", req);
+    rlog.debug("http_request_body", {{"body", std::string(req->getBody())}});
 
     CodeEnum error = CODE_UNKNOWN_ERROR;
     Match created;
@@ -145,89 +144,78 @@ void ApiController::createMatch
 
     auto json = req->getJsonObject();
     if (!json || !json->isMember("host")) {
-        logRequestError(HANDLER, req, 400, "Missing host field");
+        rlog.failed(400, "Missing host field", "missing_field", {{"field", "host"}});
         return invokeResponse400("Missing host field", std::move(callback));
     }
     const auto host = (*json)["host"].asString();
     if (!isValidInput(host)) {
-        logRequestError(HANDLER, req, 400, "Invalid host field");
+        rlog.failed(400, "Invalid host field", "invalid_field", {{"field", "host"}});
         return invokeResponse400("Invalid host field", std::move(callback));
     }
     created.host = host;
 
     if (!json || !json->isMember("name")) {
-        logRequestError(HANDLER, req, 400, "Missing name field");
+        rlog.failed(400, "Missing name field", "missing_field", {{"field", "name"}});
         return invokeResponse400("Missing name field", std::move(callback));
     }
     const auto name = (*json)["name"].asString();
     if (!isValidInput(name)) {
-        logRequestError(HANDLER, req, 400, "Invalid name field");
+        rlog.failed(400, "Invalid name field", "invalid_field", {{"field", "name"}});
         return invokeResponse400("Invalid name field", std::move(callback));
     }
     created.username = name;
 
     if (!json || !json->isMember("generator")) {
-        logRequestError(HANDLER, req, 400, "Missing generator field");
+        rlog.failed(400, "Missing generator field", "missing_field", {{"field", "generator"}});
         return invokeResponse400("Missing generator field", std::move(callback));
     }
 
     const auto generatorName = (*json)["generator"].asString();
     if (!GeneratorFlyweight::indexByString(generatorName, created.generator)) {
-        logRequestError(HANDLER, req, 400, "Failed to parse generator: " + generatorName);
+        rlog.failed(400, "Failed to parse generator: " + generatorName, "invalid_field",
+                    {{"field", "generator"}, {"value", generatorName}});
         return invokeResponse400("Failed to parse generator: " + generatorName, std::move(callback));
     }
 
     created.setFilename();
     if (codeset.addFailure(!controller.generate(19950111))) {
-        const auto message = codeset.describe("Failed to create match due to: ");
-        logRequestError(HANDLER, req, 500, message);
-        logCodesetDebug(HANDLER, codeset);
-        return invokeResponse500(message, std::move(callback));
+        rlog.failed(500, "Failed to create match", "", {{"error", slog::codeError(codeset.error)}, {"host", host}});
+        rlog.debug("codeset", codesetFields(codeset));
+        return invokeResponse500(codeset.describe("Failed to create match due to: "), std::move(callback));
     }
 
     if (!matchRepository.init(created, error)) {
-        const auto message = code_to_message(error, "Failed to save match due to: ");
-        logRequestError(HANDLER, req, 409, message);
-        logCodesetDebug(HANDLER, codeset);
-        return invokeResponse409(message, std::move(callback));
+        rlog.failed(409, "Failed to save match", "", {{"error", slog::codeError(error)}, {"host", host}});
+        rlog.debug("codeset", codesetFields(codeset));
+        return invokeResponse409(code_to_message(error, "Failed to save match due to: "), std::move(callback));
     }
 
     Json::Value out;
     out["match"] = created.filename.toString();
     auto resp = drogon::HttpResponse::newHttpJsonResponse(out);
-    logRequestReturned(HANDLER, req, 200, "Match created: " + created.filename.toString());
-    logCodesetDebug(HANDLER, codeset);
+    rlog.completed(200, "match_created", "Match created", {{"match_id", created.filename.toString()}, {"host", host}});
+    rlog.debug("codeset", codesetFields(codeset));
     return callback(resp);
 }
 
 void ApiController::getMatch
 ( const drogon::HttpRequestPtr &req, std::function<void(const drogon::HttpResponsePtr &)> &&callback, std::string matchId )
 {
-    static constexpr auto HANDLER = "getMatch";
-    logRequestStarted(HANDLER, req);
+    RequestLog rlog("getMatch", req);
 
     if (!isValidMatchId(matchId)) {
-        logRequestError(HANDLER, req, 400, "Invalid match id");
+        rlog.failed(400, "Invalid match id", "invalid_field", {{"field", "matchId"}});
         return invokeResponse400("Invalid match id", std::move(callback));
     }
     CodeEnum error = CODE_UNKNOWN_ERROR;
     Match match;
     if (!matchRepository.load(matchId, error, match)) {
-        const auto message = code_to_message(error, "Failed to load match due to: ");
-        logRequestError(HANDLER, req, 404, message);
-        return invokeResponse404(message, std::move(callback));
+        rlog.failed(404, "Failed to load match", "", {{"match_id", matchId}, {"error", slog::codeError(error)}});
+        return invokeResponse404(code_to_message(error, "Failed to load match due to: "), std::move(callback));
     }
 
     Codeset codeset;
     MatchController controller(match, codeset);
-
-    // try {
-    //     if (!matchRepository.load(matchId, error, match))
-    //         return invokeResponse404(code_to_message(error, "Failed to load match due to: "), std::move(callback));
-    //     return invokeResponse200("Here", std::move(callback));
-    // } catch (const std::exception& e) {
-    //     return invokeResponse500(e.what(), std::move(callback));
-    // }
 
     MatchApiParameters params{
         .mask = ~0x0,
@@ -239,16 +227,16 @@ void ApiController::getMatch
     MatchApiView view(params);
     nlohmann::json body(view);
     auto resp = drogon::HttpResponse::newHttpJsonResponse(body.dump());
-    logRequestReturned(HANDLER, req, 200, "Match loaded: " + matchId);
-    logCodesetDebug(HANDLER, codeset);
+    rlog.completed(200, "match_loaded", "Match loaded",
+                   {{"match_id", matchId}, {"turn", match.turner.turn}});
+    rlog.debug("codeset", codesetFields(codeset));
     return callback(resp);
 }
 
 void ApiController::getMatchList
 ( const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr &)> &&callback )
 {
-    static constexpr auto HANDLER = "getMatchList";
-    logRequestStarted(HANDLER, req);
+    RequestLog rlog("getMatchList", req);
 
     CodeEnum error = CODE_UNKNOWN_ERROR;
 
@@ -268,9 +256,8 @@ void ApiController::getMatchList
     });
 
     if (!success) {
-        const auto message = code_to_message(error, "Failed to list matches due to: ");
-        logRequestError(HANDLER, req, 500, message);
-        return invokeResponse500(message, std::move(callback));
+        rlog.failed(500, "Failed to list matches", "", {{"error", slog::codeError(error)}});
+        return invokeResponse500(code_to_message(error, "Failed to list matches due to: "), std::move(callback));
     }
 
     Json::Value response;
@@ -279,15 +266,15 @@ void ApiController::getMatchList
     response["offset"] = offset;
     response["matches"] = matches;
 
-    logRequestReturned(HANDLER, req, 200, "Listed " + std::to_string(matches.size()) + " matches");
+    rlog.completed(200, "http_request_completed", "Matches listed",
+                   {{"count", (int)matches.size()}, {"limit", limit}, {"offset", offset}, {"total", total}});
     callback(drogon::HttpResponse::newHttpJsonResponse(response));
 }
 
 void ApiController::getGeneratorList
 ( const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr &)> &&callback )
 {
-    static constexpr auto HANDLER = "getGeneratorList";
-    logRequestStarted(HANDLER, req);
+    RequestLog rlog("getGeneratorList", req);
 
     Json::Value generators(Json::arrayValue);
 
@@ -299,97 +286,91 @@ void ApiController::getGeneratorList
     Json::Value response;
     response["generators"] = generators;
 
-    logRequestReturned(HANDLER, req, 200, "Listed " + std::to_string(generators.size()) + " generators");
+    rlog.completed(200, "http_request_completed", "Generators listed", {{"count", (int)generators.size()}});
     callback(drogon::HttpResponse::newHttpJsonResponse(response));
 }
 
 void ApiController::joinMatch
 ( const drogon::HttpRequestPtr &req, std::function<void(const drogon::HttpResponsePtr &)> &&callback, std::string matchId )
 {
-    static constexpr auto HANDLER = "joinMatch";
-    logRequestStarted(HANDLER, req);
-    logRequestBodyDebug(HANDLER, req);
+    RequestLog rlog("joinMatch", req);
+    rlog.debug("http_request_body", {{"body", std::string(req->getBody())}});
 
     if (!isValidMatchId(matchId)) {
-        logRequestError(HANDLER, req, 400, "Invalid match id");
+        rlog.failed(400, "Invalid match id", "invalid_field", {{"field", "matchId"}});
         return invokeResponse400("Invalid match id", std::move(callback));
     }
     auto json = req->getJsonObject();
     if (!json || !json->isMember("account")) {
-        logRequestError(HANDLER, req, 400, "Missing account field");
+        rlog.failed(400, "Missing account field", "missing_field", {{"field", "account"}});
         return invokeResponse400("Missing account field", std::move(callback));
     }
 
     std::string builder = (*json)["account"].asString();
     if (!isValidInput(builder)) {
-        logRequestError(HANDLER, req, 400, "Invalid account field");
+        rlog.failed(400, "Invalid account field", "invalid_field", {{"field", "account"}});
         return invokeResponse400("Invalid account field", std::move(callback));
     }
     CodeEnum error = CODE_UNKNOWN_ERROR;
     Match match;
     if (!matchRepository.load(matchId, error, match)) {
-        const auto message = code_to_message(error, "Failed to load match due to: ");
-        logRequestError(HANDLER, req, 404, message);
-        return invokeResponse404(message, std::move(callback));
+        rlog.failed(404, "Failed to load match", "", {{"match_id", matchId}, {"error", slog::codeError(error)}});
+        return invokeResponse404(code_to_message(error, "Failed to load match due to: "), std::move(callback));
     }
 
     if (!match.join(builder)) {
-        logRequestError(HANDLER, req, 500, "Failed to join");
+        rlog.failed(500, "Failed to join", "join_rejected", {{"match_id", matchId}, {"account_id", builder}});
         return invokeResponse500("Failed to join", std::move(callback));
     }
 
     if (!matchRepository.save(match, error)) {
-        const auto message = code_to_message(error, "Failed to save match due to: ");
-        logRequestError(HANDLER, req, 409, message);
-        return invokeResponse409(message, std::move(callback));
+        rlog.failed(409, "Failed to save match", "", {{"match_id", matchId}, {"account_id", builder}, {"error", slog::codeError(error)}});
+        return invokeResponse409(code_to_message(error, "Failed to save match due to: "), std::move(callback));
     }
 
-    logRequestReturned(HANDLER, req, 200, "Joined match");
+    rlog.completed(200, "player_joined", "Joined match", {{"match_id", matchId}, {"account_id", builder}});
     return invokeResponse200("Joined match", std::move(callback));
 }
 
 void ApiController::leaveMatch
 ( const drogon::HttpRequestPtr &req, std::function<void(const drogon::HttpResponsePtr &)> &&callback, std::string matchId )
 {
-    static constexpr auto HANDLER = "leaveMatch";
-    logRequestStarted(HANDLER, req);
-    logRequestBodyDebug(HANDLER, req);
+    RequestLog rlog("leaveMatch", req);
+    rlog.debug("http_request_body", {{"body", std::string(req->getBody())}});
 
     if (!isValidMatchId(matchId)) {
-        logRequestError(HANDLER, req, 400, "Invalid match id");
+        rlog.failed(400, "Invalid match id", "invalid_field", {{"field", "matchId"}});
         return invokeResponse400("Invalid match id", std::move(callback));
     }
     auto json = req->getJsonObject();
     if (!json || !json->isMember("account")) {
-        logRequestError(HANDLER, req, 400, "Missing account field");
+        rlog.failed(400, "Missing account field", "missing_field", {{"field", "account"}});
         return invokeResponse400("Missing account field", std::move(callback));
     }
 
     std::string builder = (*json)["account"].asString();
     if (!isValidInput(builder)) {
-        logRequestError(HANDLER, req, 400, "Invalid account field");
+        rlog.failed(400, "Invalid account field", "invalid_field", {{"field", "account"}});
         return invokeResponse400("Invalid account field", std::move(callback));
     }
     CodeEnum error = CODE_UNKNOWN_ERROR;
     Match match;
     if (!matchRepository.load(matchId, error, match)) {
-        const auto message = code_to_message(error, "Failed to load match due to: ");
-        logRequestError(HANDLER, req, 404, message);
-        return invokeResponse404(message, std::move(callback));
+        rlog.failed(404, "Failed to load match", "", {{"match_id", matchId}, {"error", slog::codeError(error)}});
+        return invokeResponse404(code_to_message(error, "Failed to load match due to: "), std::move(callback));
     }
 
     if (!match.leave(builder, error)) {
-        logRequestError(HANDLER, req, 500, "Failed to leave");
+        rlog.failed(500, "Failed to leave", "", {{"match_id", matchId}, {"account_id", builder}, {"error", slog::codeError(error)}});
         return invokeResponse500("Failed to leave", std::move(callback));
     }
 
     if (!matchRepository.save(match, error)) {
-        const auto message = code_to_message(error, "Failed to save match due to: ");
-        logRequestError(HANDLER, req, 409, message);
-        return invokeResponse409(message, std::move(callback));
+        rlog.failed(409, "Failed to save match", "", {{"match_id", matchId}, {"account_id", builder}, {"error", slog::codeError(error)}});
+        return invokeResponse409(code_to_message(error, "Failed to save match due to: "), std::move(callback));
     }
 
-    logRequestReturned(HANDLER, req, 200, "Left match");
+    rlog.completed(200, "player_left", "Left match", {{"match_id", matchId}, {"account_id", builder}});
     return invokeResponse200("Left match", std::move(callback));
 }
 
@@ -397,34 +378,31 @@ void ApiController::startMatch
 ( const drogon::HttpRequestPtr &req, std::function<void(const drogon::HttpResponsePtr &)> &&callback, std::string matchId
 )
 {
-    static constexpr auto HANDLER = "startMatch";
-    logRequestStarted(HANDLER, req);
-    logRequestBodyDebug(HANDLER, req);
+    RequestLog rlog("startMatch", req);
+    rlog.debug("http_request_body", {{"body", std::string(req->getBody())}});
 
     if (!isValidMatchId(matchId)) {
-        logRequestError(HANDLER, req, 400, "Invalid match id");
+        rlog.failed(400, "Invalid match id", "invalid_field", {{"field", "matchId"}});
         return invokeResponse400("Invalid match id", std::move(callback));
     }
     CodeEnum error = CODE_UNKNOWN_ERROR;
     Match match;
     if (!matchRepository.load(matchId, error, match)) {
-        const auto message = code_to_message(error, "Failed to load match due to: ");
-        logRequestError(HANDLER, req, 404, message);
-        return invokeResponse404(message, std::move(callback));
+        rlog.failed(404, "Failed to load match", "", {{"match_id", matchId}, {"error", slog::codeError(error)}});
+        return invokeResponse404(code_to_message(error, "Failed to load match due to: "), std::move(callback));
     }
 
     if (!match.start()) {
-        logRequestError(HANDLER, req, 500, "Failed to start");
+        rlog.failed(500, "Failed to start", "match_start_rejected", {{"match_id", matchId}});
         return invokeResponse500("Failed to start", std::move(callback));
     }
 
     if (!matchRepository.save(match, error)) {
-        const auto message = code_to_message(error, "Failed to save match due to: ");
-        logRequestError(HANDLER, req, 409, message);
-        return invokeResponse409(message, std::move(callback));
+        rlog.failed(409, "Failed to save match", "", {{"match_id", matchId}, {"error", slog::codeError(error)}});
+        return invokeResponse409(code_to_message(error, "Failed to save match due to: "), std::move(callback));
     }
 
-    logRequestReturned(HANDLER, req, 200, "Match started");
+    rlog.completed(200, "match_started", "Match started", {{"match_id", matchId}});
     return invokeResponse200("Match started", std::move(callback));
 }
 
@@ -432,298 +410,305 @@ void ApiController::moveCharacterToDoor
 ( const drogon::HttpRequestPtr& req, std::function<void (const drogon::HttpResponsePtr &)> &&callback, std::string matchId
 )
 {
-    static constexpr auto HANDLER = "moveCharacterToDoor";
-    logRequestStarted(HANDLER, req);
-    logRequestBodyDebug(HANDLER, req);
+    RequestLog rlog("moveCharacterToDoor", req);
+    rlog.debug("http_request_body", {{"body", std::string(req->getBody())}});
 
     auto json = req->getJsonObject();
 
     if (!json) {
-        logRequestError(HANDLER, req, 400, "Missing json");
+        rlog.failed(400, "Missing json", "missing_field", {{"field", "body"}});
         return invokeResponse400("Missing json", std::move(callback));
     }
 
     if (!json->isMember("account")) {
-        logRequestError(HANDLER, req, 400, "Missing account field");
+        rlog.failed(400, "Missing account field", "missing_field", {{"field", "account"}});
         return invokeResponse400("Missing account field", std::move(callback));
     }
 
     if (!json->isMember("character")) {
-        logRequestError(HANDLER, req, 400, "Missing character field");
+        rlog.failed(400, "Missing character field", "missing_field", {{"field", "character"}});
         return invokeResponse400("Missing character field", std::move(callback));
     }
 
     if (!json->isMember("room")) {
-        logRequestError(HANDLER, req, 400, "Missing room field");
+        rlog.failed(400, "Missing room field", "missing_field", {{"field", "room"}});
         return invokeResponse400("Missing room field", std::move(callback));
     }
 
     if (!json->isMember("direction") && !json->isMember("floor")) {
-        logRequestError(HANDLER, req, 400, "Missing direction and floor field");
+        rlog.failed(400, "Missing direction and floor field", "missing_field", {{"field", "direction|floor"}});
         return invokeResponse400("Missing direction and floor field", std::move(callback));
     }
 
     if (json->isMember("direction") && json->isMember("floor")) {
-        logRequestError(HANDLER, req, 400, "Both floor and direction fields set, but must choose one");
+        rlog.failed(400, "Both floor and direction fields set, but must choose one", "invalid_field",
+                    {{"field", "direction|floor"}});
         return invokeResponse400("Both floor and direction fields set, but must choose one", std::move(callback));
     }
 
     (*json)["action"] = json->isMember("direction") ? action_to_text(ACTION_MOVE_TO_DOOR): action_to_text(ACTION_MOVE_TO_FLOOR);
-    return performCharacterAction(req, std::move(callback), matchId);
+    return performCharacterActionImpl(rlog, req, std::move(callback), matchId);
 }
 
 void ApiController::activateCharacter
 ( const drogon::HttpRequestPtr& req, std::function<void (const drogon::HttpResponsePtr &)> &&callback, std::string matchId
 )
 {
-    static constexpr auto HANDLER = "activateCharacter";
-    logRequestStarted(HANDLER, req);
-    logRequestBodyDebug(HANDLER, req);
+    RequestLog rlog("activateCharacter", req);
+    rlog.debug("http_request_body", {{"body", std::string(req->getBody())}});
 
     auto json = req->getJsonObject();
 
     if (!json) {
-        logRequestError(HANDLER, req, 400, "Missing json");
+        rlog.failed(400, "Missing json", "missing_field", {{"field", "body"}});
         return invokeResponse400("Missing json", std::move(callback));
     }
 
     if (!json->isMember("account")) {
-        logRequestError(HANDLER, req, 400, "Missing account field");
+        rlog.failed(400, "Missing account field", "missing_field", {{"field", "account"}});
         return invokeResponse400("Missing account field", std::move(callback));
     }
 
     if (!json->isMember("character")) {
-        logRequestError(HANDLER, req, 400, "Missing character field");
+        rlog.failed(400, "Missing character field", "missing_field", {{"field", "character"}});
         return invokeResponse400("Missing character field", std::move(callback));
     }
 
     if (!json->isMember("room")) {
-        logRequestError(HANDLER, req, 400, "Missing room field");
+        rlog.failed(400, "Missing room field", "missing_field", {{"field", "room"}});
         return invokeResponse400("Missing room field", std::move(callback));
     }
 
     if (!json->isMember("target")) {
-        logRequestError(HANDLER, req, 400, "Missing target field");
+        rlog.failed(400, "Missing target field", "missing_field", {{"field", "target"}});
         return invokeResponse400("Missing target field", std::move(callback));
     }
 
     (*json)["action"] = action_to_text(ACTION_ACTIVATE_CHARACTER);
-    return performCharacterAction(req, std::move(callback), matchId);
+    return performCharacterActionImpl(rlog, req, std::move(callback), matchId);
 }
 
 void ApiController::activateInventoryItem
 ( const drogon::HttpRequestPtr& req, std::function<void (const drogon::HttpResponsePtr &)> &&callback, std::string matchId
 )
 {
-    static constexpr auto HANDLER = "activateInventoryItem";
-    logRequestStarted(HANDLER, req);
-    logRequestBodyDebug(HANDLER, req);
+    RequestLog rlog("activateInventoryItem", req);
+    rlog.debug("http_request_body", {{"body", std::string(req->getBody())}});
 
     auto json = req->getJsonObject();
 
     if (!json) {
-        logRequestError(HANDLER, req, 400, "Missing json");
+        rlog.failed(400, "Missing json", "missing_field", {{"field", "body"}});
         return invokeResponse400("Missing json", std::move(callback));
     }
 
     if (!json->isMember("account")) {
-        logRequestError(HANDLER, req, 400, "Missing account field");
+        rlog.failed(400, "Missing account field", "missing_field", {{"field", "account"}});
         return invokeResponse400("Missing account field", std::move(callback));
     }
 
     if (!json->isMember("character")) {
-        logRequestError(HANDLER, req, 400, "Missing character field");
+        rlog.failed(400, "Missing character field", "missing_field", {{"field", "character"}});
         return invokeResponse400("Missing character field", std::move(callback));
     }
 
     if (!json->isMember("room")) {
-        logRequestError(HANDLER, req, 400, "Missing room field");
+        rlog.failed(400, "Missing room field", "missing_field", {{"field", "room"}});
         return invokeResponse400("Missing room field", std::move(callback));
     }
 
     if (!json->isMember("item") && !json->isMember("source_item") && !json->isMember("target_item")) {
-        logRequestError(HANDLER, req, 400, "Missing item field");
+        rlog.failed(400, "Missing item field", "missing_field", {{"field", "item"}});
         return invokeResponse400("Missing item field", std::move(callback));
     }
 
     (*json)["action"] = action_to_text(ACTION_ACTIVATE_INVENTORY_ITEM);
-    return performCharacterAction(req, std::move(callback), matchId);
+    return performCharacterActionImpl(rlog, req, std::move(callback), matchId);
 }
 
 void ApiController::activateDoor
 ( const drogon::HttpRequestPtr& req, std::function<void (const drogon::HttpResponsePtr &)> &&callback, std::string matchId
 )
 {
-    static constexpr auto HANDLER = "activateDoor";
-    logRequestStarted(HANDLER, req);
-    logRequestBodyDebug(HANDLER, req);
+    RequestLog rlog("activateDoor", req);
+    rlog.debug("http_request_body", {{"body", std::string(req->getBody())}});
 
     auto json = req->getJsonObject();
 
     if (!json) {
-        logRequestError(HANDLER, req, 400, "Missing json");
+        rlog.failed(400, "Missing json", "missing_field", {{"field", "body"}});
         return invokeResponse400("Missing json", std::move(callback));
     }
 
     if (!json->isMember("account")) {
-        logRequestError(HANDLER, req, 400, "Missing account field");
+        rlog.failed(400, "Missing account field", "missing_field", {{"field", "account"}});
         return invokeResponse400("Missing account field", std::move(callback));
     }
 
     if (!json->isMember("character")) {
-        logRequestError(HANDLER, req, 400, "Missing character field");
+        rlog.failed(400, "Missing character field", "missing_field", {{"field", "character"}});
         return invokeResponse400("Missing character field", std::move(callback));
     }
 
     if (!json->isMember("room")) {
-        logRequestError(HANDLER, req, 400, "Missing room field");
+        rlog.failed(400, "Missing room field", "missing_field", {{"field", "room"}});
         return invokeResponse400("Missing room field", std::move(callback));
     }
 
     if (!json->isMember("direction")) {
-        logRequestError(HANDLER, req, 400, "Missing direction field");
+        rlog.failed(400, "Missing direction field", "missing_field", {{"field", "direction"}});
         return invokeResponse400("Missing direction field", std::move(callback));
     }
 
     (*json)["action"] = action_to_text(ACTION_ACTIVATE_DOOR);
-    return performCharacterAction(req, std::move(callback), matchId);
+    return performCharacterActionImpl(rlog, req, std::move(callback), matchId);
 }
 
 void ApiController::activateLock
 ( const drogon::HttpRequestPtr& req, std::function<void (const drogon::HttpResponsePtr &)> &&callback, std::string matchId
 )
 {
-    static constexpr auto HANDLER = "activateLock";
-    logRequestStarted(HANDLER, req);
-    logRequestBodyDebug(HANDLER, req);
+    RequestLog rlog("activateLock", req);
+    rlog.debug("http_request_body", {{"body", std::string(req->getBody())}});
 
     auto json = req->getJsonObject();
 
     if (!json) {
-        logRequestError(HANDLER, req, 400, "Missing json");
+        rlog.failed(400, "Missing json", "missing_field", {{"field", "body"}});
         return invokeResponse400("Missing json", std::move(callback));
     }
 
     if (!json->isMember("account")) {
-        logRequestError(HANDLER, req, 400, "Missing account field");
+        rlog.failed(400, "Missing account field", "missing_field", {{"field", "account"}});
         return invokeResponse400("Missing account field", std::move(callback));
     }
 
     if (!json->isMember("character")) {
-        logRequestError(HANDLER, req, 400, "Missing character field");
+        rlog.failed(400, "Missing character field", "missing_field", {{"field", "character"}});
         return invokeResponse400("Missing character field", std::move(callback));
     }
 
     if (!json->isMember("room")) {
-        logRequestError(HANDLER, req, 400, "Missing room field");
+        rlog.failed(400, "Missing room field", "missing_field", {{"field", "room"}});
         return invokeResponse400("Missing room field", std::move(callback));
     }
 
     if (!json->isMember("direction")) {
-        logRequestError(HANDLER, req, 400, "Missing direction field");
+        rlog.failed(400, "Missing direction field", "missing_field", {{"field", "direction"}});
         return invokeResponse400("Missing direction field", std::move(callback));
     }
 
     (*json)["action"] = action_to_text(ACTION_ACTIVATE_LOCK);
-    return performCharacterAction(req, std::move(callback), matchId);
+    return performCharacterActionImpl(rlog, req, std::move(callback), matchId);
 }
 
 void ApiController::endTurn
 ( const drogon::HttpRequestPtr& req, std::function<void (const drogon::HttpResponsePtr &)> &&callback, std::string matchId
 )
 {
-    static constexpr auto HANDLER = "endTurn";
-    logRequestStarted(HANDLER, req);
-    logRequestBodyDebug(HANDLER, req);
+    RequestLog rlog("endTurn", req);
+    rlog.debug("http_request_body", {{"body", std::string(req->getBody())}});
 
     if (!isValidMatchId(matchId)) {
-        logRequestError(HANDLER, req, 400, "Invalid match id");
+        rlog.failed(400, "Invalid match id", "invalid_field", {{"field", "matchId"}});
         return invokeResponse400("Invalid match id", std::move(callback));
     }
     auto json = req->getJsonObject();
 
     if (!json) {
-        logRequestError(HANDLER, req, 400, "Missing json");
+        rlog.failed(400, "Missing json", "missing_field", {{"field", "body"}});
         return invokeResponse400("Missing json", std::move(callback));
     }
 
     if (!json->isMember("account")) {
-        logRequestError(HANDLER, req, 400, "Missing account field");
+        rlog.failed(400, "Missing account field", "missing_field", {{"field", "account"}});
         return invokeResponse400("Missing account field", std::move(callback));
     }
 
     std::string accountId = (*json)["account"].asString();
     if (!isValidInput(accountId)) {
-        logRequestError(HANDLER, req, 400, "Invalid account field");
+        rlog.failed(400, "Invalid account field", "invalid_field", {{"field", "account"}});
         return invokeResponse400("Invalid account field", std::move(callback));
     }
     Codeset codeset;
     Match match;
     if (!matchRepository.load(matchId, codeset.error, match)) {
-        const auto message = codeset.describe("Failed to load match due to: ");
-        logRequestError(HANDLER, req, 404, message);
-        logCodesetDebug(HANDLER, codeset);
-        return invokeResponse404(message, std::move(callback));
+        rlog.failed(404, "Failed to load match", "",
+                    {{"match_id", matchId}, {"account_id", accountId}, {"error", slog::codeError(codeset.error)}});
+        rlog.debug("codeset", codesetFields(codeset));
+        return invokeResponse404(codeset.describe("Failed to load match due to: "), std::move(callback));
     }
 
     MatchController controller(match, codeset);
     if (!controller.endTurn(accountId, codeset.error)) {
-        const auto message = codeset.describe("End turn rejected due to: ");
-        logRequestError(HANDLER, req, 409, message);
-        logCodesetDebug(HANDLER, codeset);
-        return invokeResponse409(message, std::move(callback));
+        rlog.failed(409, "End turn rejected", "",
+                    {{"match_id", matchId}, {"account_id", accountId}, {"turn", match.turner.turn}, {"error", slog::codeError(codeset.error)}});
+        rlog.debug("codeset", codesetFields(codeset));
+        return invokeResponse409(codeset.describe("End turn rejected due to: "), std::move(callback));
     }
 
     if (codeset.addFailure(!matchRepository.save(match, codeset.error))) {
-        const auto message = codeset.describe("Failed to save match due to: ");
-        logRequestError(HANDLER, req, 409, message);
-        logCodesetDebug(HANDLER, codeset);
-        return invokeResponse409(message, std::move(callback));
+        rlog.failed(409, "Failed to save match", "",
+                    {{"match_id", matchId}, {"account_id", accountId}, {"error", slog::codeError(codeset.error)}});
+        rlog.debug("codeset", codesetFields(codeset));
+        return invokeResponse409(codeset.describe("Failed to save match due to: "), std::move(callback));
     }
 
-    logRequestReturned(HANDLER, req, 200, "Turn ended");
-    logCodesetDebug(HANDLER, codeset);
+    rlog.completed(200, "turn_ended", "Turn ended",
+                   {{"match_id", matchId}, {"account_id", accountId}, {"turn", match.turner.turn}});
+    rlog.debug("codeset", codesetFields(codeset));
     return invokeResponse200("Turn ended", std::move(callback));
 }
 
+// Direct route for POST .../perform_character_action: constructs its own RequestLog since
+// it's a genuine entry point (not reached via one of the validating wrappers above).
 void ApiController::performCharacterAction
 ( const drogon::HttpRequestPtr& req, std::function<void (const drogon::HttpResponsePtr &)> &&callback, std::string matchId
 )
 {
-    static constexpr auto HANDLER = "performCharacterAction";
-    logRequestStarted(HANDLER, req);
-    logRequestBodyDebug(HANDLER, req);
+    RequestLog rlog("performCharacterAction", req);
+    rlog.debug("http_request_body", {{"body", std::string(req->getBody())}});
+    performCharacterActionImpl(rlog, req, std::move(callback), matchId);
+}
 
+// Shared worker for performCharacterAction and its validating wrappers (moveCharacterToDoor,
+// activateCharacter, activateInventoryItem, activateDoor, activateLock). Takes the caller's
+// RequestLog rather than constructing its own, so every log line for one incoming HTTP
+// request - whichever route it arrived through - shares the same request_id.
+void ApiController::performCharacterActionImpl
+( RequestLog& rlog, const drogon::HttpRequestPtr& req, std::function<void (const drogon::HttpResponsePtr &)> &&callback, std::string matchId
+)
+{
     if (!isValidMatchId(matchId)) {
-        logRequestError(HANDLER, req, 400, "Invalid match id");
+        rlog.failed(400, "Invalid match id", "invalid_field", {{"field", "matchId"}});
         return invokeResponse400("Invalid match id", std::move(callback));
     }
     Codeset codeset;
     auto json = req->getJsonObject();
 
     if (!json) {
-        logRequestError(HANDLER, req, 400, "Missing json");
+        rlog.failed(400, "Missing json", "missing_field", {{"field", "body"}});
         return invokeResponse400("Missing json", std::move(callback));
     }
 
     if (!json->isMember("account")) {
-        logRequestError(HANDLER, req, 400, "Missing account field");
+        rlog.failed(400, "Missing account field", "missing_field", {{"field", "account"}});
         return invokeResponse400("Missing account field", std::move(callback));
     }
 
     if (!json->isMember("character")) {
-        logRequestError(HANDLER, req, 400, "Missing character field");
+        rlog.failed(400, "Missing character field", "missing_field", {{"field", "character"}});
         return invokeResponse400("Missing character field", std::move(callback));
     }
 
     if (!json->isMember("room")) {
-        logRequestError(HANDLER, req, 400, "Missing room field");
+        rlog.failed(400, "Missing room field", "missing_field", {{"field", "room"}});
         return invokeResponse400("Missing room field", std::move(callback));
     }
 
     std::string accountId = (*json)["account"].asString();
     if (!isValidInput(accountId)) {
-        logRequestError(HANDLER, req, 400, "Invalid account field");
+        rlog.failed(400, "Invalid account field", "invalid_field", {{"field", "account"}});
         return invokeResponse400("Invalid account field", std::move(callback));
     }
 
@@ -732,32 +717,33 @@ void ApiController::performCharacterAction
 
     Match match;
     if (codeset.addFailure(!matchRepository.load(matchId, codeset.error, match))) {
-        const auto message = codeset.describe("Failed to load match due to: ");
-        logRequestError(HANDLER, req, 404, message);
-        logCodesetDebug(HANDLER, codeset);
-        return invokeResponse404(message, std::move(callback));
+        rlog.failed(404, "Failed to load match", "",
+                    {{"match_id", matchId}, {"account_id", accountId}, {"error", slog::codeError(codeset.error)}});
+        rlog.debug("codeset", codesetFields(codeset));
+        return invokeResponse404(codeset.describe("Failed to load match due to: "), std::move(callback));
     }
 
     MatchController controller(match, codeset);
 
     if (json->isMember("isForcedTurnEnd") && (*json)["isForcedTurnEnd"].asBool()) {
         if (codeset.addFailure(!controller.endTurn(accountId, codeset.error))) {
-            const auto message = codeset.describe("Forced turn end rejected due to: ");
-            logRequestError(HANDLER, req, 409, message);
-            logCodesetDebug(HANDLER, codeset);
-            return invokeResponse409(message, std::move(callback));
+            rlog.failed(409, "Forced turn end rejected", "",
+                        {{"match_id", matchId}, {"account_id", accountId}, {"error", slog::codeError(codeset.error)}});
+            rlog.debug("codeset", codesetFields(codeset));
+            return invokeResponse409(codeset.describe("Forced turn end rejected due to: "), std::move(callback));
         }
     }
 
     if (!json->isMember("action")) {
-        logRequestError(HANDLER, req, 400, "Missing action field");
+        rlog.failed(400, "Missing action field", "missing_field", {{"field", "action"}});
         return invokeResponse400("Missing action field", std::move(callback));
     }
     std::string actionString = (*json)["action"].asString();
     ActionEnum actionEnum;
     if (codeset.addFailure(!ActionFlyweight::indexByString(actionString, actionEnum))) {
-        logRequestError(HANDLER, req, 404, "Failed to parse action: " + actionString);
-        logCodesetDebug(HANDLER, codeset);
+        rlog.failed(404, "Failed to parse action: " + actionString, "invalid_field",
+                    {{"field", "action"}, {"value", actionString}});
+        rlog.debug("codeset", codesetFields(codeset));
         return invokeResponse404("Failed to parse action: " + actionString, std::move(callback));
     }
 
@@ -803,10 +789,10 @@ void ApiController::performCharacterAction
 
     // Save the updated match state (only on success)
     if (activated && codeset.addFailure(!matchRepository.save(match, codeset.error))) {
-        const auto message = codeset.describe("Failed to save match due to: ");
-        logRequestError(HANDLER, req, 409, message);
-        logCodesetDebug(HANDLER, codeset);
-        return invokeResponse409(message, std::move(callback));
+        rlog.failed(409, "Failed to save match", "",
+                    {{"match_id", matchId}, {"account_id", accountId}, {"error", slog::codeError(codeset.error)}});
+        rlog.debug("codeset", codesetFields(codeset));
+        return invokeResponse409(codeset.describe("Failed to save match due to: "), std::move(callback));
     }
 
     nlohmann::json eventLogJson = nlohmann::json::array();
@@ -818,12 +804,18 @@ void ApiController::performCharacterAction
         {"codeset",  nlohmann::json(CodesetApiView(codeset))}
     };
     const auto status = activated ? drogon::k200OK : drogon::k409Conflict;
+
+    const nlohmann::json actionFields = {
+        {"match_id", matchId}, {"account_id", accountId}, {"character_id", characterId},
+        {"room_id", roomId}, {"action", actionString}, {"turn", match.turner.turn},
+        {"event_count", (int)eventLog.size()}
+    };
     if (activated) {
-        logRequestReturned(HANDLER, req, (int)status, "Action performed: " + actionString);
+        rlog.completed((int)status, actionEventName(actionEnum), "Action performed: " + actionString, actionFields);
     } else {
-        logRequestError(HANDLER, req, (int)status, "Action rejected: " + actionString);
+        rlog.failed((int)status, "Action rejected: " + actionString, "action_rejected", actionFields);
     }
-    logCodesetDebug(HANDLER, codeset);
+    rlog.debug("codeset", codesetFields(codeset));
     return invokeResponseJson(status, body.dump(), std::move(callback));
 }
 
@@ -831,27 +823,25 @@ void ApiController::getCharacterSheet
 ( const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr &)> &&callback, std::string matchId, std::string characterIdStr
 )
 {
-    static constexpr auto HANDLER = "getCharacterSheet";
-    logRequestStarted(HANDLER, req);
+    RequestLog rlog("getCharacterSheet", req);
 
     if (!isValidMatchId(matchId)) {
-        logRequestError(HANDLER, req, 400, "Invalid match id");
+        rlog.failed(400, "Invalid match id", "invalid_field", {{"field", "matchId"}});
         return invokeResponse400("Invalid match id", std::move(callback));
     }
 
     int characterId = 0;
     try { characterId = std::stoi(characterIdStr); }
     catch (...) {
-        logRequestError(HANDLER, req, 400, "Invalid character id");
+        rlog.failed(400, "Invalid character id", "invalid_field", {{"field", "characterId"}, {"value", characterIdStr}});
         return invokeResponse400("Invalid character id", std::move(callback));
     }
 
     CodeEnum error = CODE_UNKNOWN_ERROR;
     Match match;
     if (!matchRepository.load(matchId, error, match)) {
-        const auto message = code_to_message(error, "Failed to load match due to: ");
-        logRequestError(HANDLER, req, 404, message);
-        return invokeResponse404(message, std::move(callback));
+        rlog.failed(404, "Failed to load match", "", {{"match_id", matchId}, {"error", slog::codeError(error)}});
+        return invokeResponse404(code_to_message(error, "Failed to load match due to: "), std::move(callback));
     }
 
     Codeset codeset;
@@ -863,8 +853,8 @@ void ApiController::getCharacterSheet
     });
 
     if (!found) {
-        logRequestError(HANDLER, req, 404, "Character not found");
-        logCodesetDebug(HANDLER, codeset);
+        rlog.failed(404, "Character not found", "not_found", {{"match_id", matchId}, {"character_id", characterId}});
+        rlog.debug("codeset", codesetFields(codeset));
         return invokeResponse404("Character not found", std::move(callback));
     }
 
@@ -872,8 +862,9 @@ void ApiController::getCharacterSheet
     CharacterSheetApiView view(*found, computed);
     nlohmann::json body(view);
     auto resp = drogon::HttpResponse::newHttpJsonResponse(body.dump());
-    logRequestReturned(HANDLER, req, 200, "Character sheet loaded: " + characterIdStr);
-    logCodesetDebug(HANDLER, codeset);
+    rlog.completed(200, "http_request_completed", "Character sheet loaded",
+                   {{"match_id", matchId}, {"character_id", characterId}});
+    rlog.debug("codeset", codesetFields(codeset));
     return callback(resp);
 }
 
@@ -883,8 +874,7 @@ void ApiController::getCharacterSheet
 void ApiController::getFlyweights
 ( const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr &)> &&callback )
 {
-    static constexpr auto HANDLER = "getFlyweights";
-    logRequestStarted(HANDLER, req);
+    RequestLog rlog("getFlyweights", req);
 
     Json::Value roles(Json::arrayValue);
     int roleIndex = 0;
@@ -956,23 +946,22 @@ void ApiController::getFlyweights
     response["items"] = items;
     response["animations"] = animations;
 
-    logRequestReturned(HANDLER, req, 200, "Flyweights listed");
+    rlog.completed(200, "http_request_completed", "Flyweights listed");
     callback(drogon::HttpResponse::newHttpJsonResponse(response));
 }
 
 void ApiController::getFlyweight
 ( const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr &)> &&callback, std::string name )
 {
-    static constexpr auto HANDLER = "getFlyweight";
-    logRequestStarted(HANDLER, req);
+    RequestLog rlog("getFlyweight", req);
 
     if (name == "rules") {
         nlohmann::json body = RuleFlyweightApiView::buildAll();
         auto resp = drogon::HttpResponse::newHttpJsonResponse(body.dump());
-        logRequestReturned(HANDLER, req, 200, "Flyweight loaded: " + name);
+        rlog.completed(200, "http_request_completed", "Flyweight loaded", {{"name", name}});
         return callback(resp);
     }
-    logRequestError(HANDLER, req, 404, "Unknown flyweight: " + name);
+    rlog.failed(404, "Unknown flyweight: " + name, "not_found", {{"name", name}});
     return invokeResponse404("Unknown flyweight: " + name, std::move(callback));
 }
 

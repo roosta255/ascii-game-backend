@@ -32,6 +32,7 @@ set(PROJECT_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/generator
     ${CMAKE_CURRENT_SOURCE_DIR}/src/inventory
     ${CMAKE_CURRENT_SOURCE_DIR}/src/layout
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/logging
     ${CMAKE_CURRENT_SOURCE_DIR}/src/macro
     ${CMAKE_CURRENT_SOURCE_DIR}/src/math
     ${CMAKE_CURRENT_SOURCE_DIR}/src/model
@@ -149,6 +150,7 @@ add_library(core_backend STATIC
     src/layout/iLayout.cpp
     src/layout/LayoutFlyweight.cpp
     src/layout/LayoutGrid.cpp
+    src/logging/StructuredLog.cpp
     src/model/Account.cpp
     src/model/Builder.cpp
     src/model/Character.cpp
@@ -196,7 +198,7 @@ add_library(core_backend STATIC
 # 👇 CRITICAL: Apply include dirs to the library
 target_include_directories(core_backend PUBLIC ${PROJECT_INCLUDE_DIRS})
 
-target_link_libraries(core_backend PUBLIC jsoncpp)
+target_link_libraries(core_backend PUBLIC jsoncpp Drogon::Drogon)
 
 # ------------ Main Executable ------------
 add_executable(match_backend
@@ -238,6 +240,7 @@ add_executable(test_target
     test/CharacterSheetApiViewTests.cpp
     test/EventLogTests.cpp
     test/PietyAnimationTests.cpp
+    test/StructuredLogTests.cpp
 )
 
 target_include_directories(test_target PRIVATE ${PROJECT_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/test)

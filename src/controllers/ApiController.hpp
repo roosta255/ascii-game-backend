@@ -1,6 +1,8 @@
 #pragma once
 #include <drogon/HttpController.h>
 
+class RequestLog;
+
 class ApiController : public drogon::HttpController<ApiController> {
 public:
     METHOD_LIST_BEGIN
@@ -78,6 +80,15 @@ public:
                            std::string characterId);
 
     void performCharacterAction(const drogon::HttpRequestPtr& req,
+                               std::function<void (const drogon::HttpResponsePtr &)> &&callback,
+                               std::string matchId);
+
+    // Shared worker behind performCharacterAction and its validating wrapper routes
+    // (moveCharacterToDoor, activateCharacter, activateInventoryItem, activateDoor,
+    // activateLock) - see ApiController.cpp. Takes the caller's RequestLog so one incoming
+    // HTTP request keeps one request_id no matter which route it arrived through.
+    static void performCharacterActionImpl(RequestLog& rlog,
+                               const drogon::HttpRequestPtr& req,
                                std::function<void (const drogon::HttpResponsePtr &)> &&callback,
                                std::string matchId);
 
