@@ -5,13 +5,11 @@
       "port": 8080
     }
   ],
-  "logging": {
-    "log_path": "./logs",
-    "log_level": "WARN",
-    "log_to_console": false
-  },
   "app": {
-    "threads": 1
+    "threads": 1,
+    "log": {
+      "log_level": "INFO"
+    }
   },
   "filters": {
     "CORSFilter": {

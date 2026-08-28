@@ -3,3 +3,4 @@ build/
 build_ninja/
 *.tar
 var/state/matches/
+var/output/logs/
