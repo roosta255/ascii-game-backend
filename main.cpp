@@ -1,5 +1,6 @@
 #include <drogon/drogon.h>
 #include "CORSFilter.hpp"
+#include "StructuredLog.hpp"
 #include <cstdlib>
 #include <cstdio>
 #include <ctime>
@@ -88,6 +89,14 @@ int main() {
 
     const char* configFile = std::getenv("CONFIG_FILE");
     drogon::app().loadConfigFile(configFile ? configFile : "config.json");
+
+    // app.custom_config.sync_logging = true makes *every* request log synchronously (direct
+    // write + fdatasync per line, mirrored to stderr) so lines survive a crash. Individual
+    // requests can still opt in on their own with the `X-Sync-Log: 1` header regardless of
+    // this default. See src/logging/StructuredLog.hpp.
+    if (drogon::app().getCustomConfig().get("sync_logging", false).asBool()) {
+        slog::setGlobalSyncLogging(true);
+    }
 
     // File logging: var/output/logs/server_log.txt, rotated into its own timestamped
     // file at the top of every hour. Console output (docker logs) keeps working too.

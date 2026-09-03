@@ -25,6 +25,7 @@
 #include <drogon/HttpRequest.h>
 #include <nlohmann/json.hpp>
 #include <chrono>
+#include <optional>
 #include <string>
 
 namespace slog {
@@ -59,6 +60,49 @@ void emit(Level level,
 // A short opaque id correlating every log line belonging to one request.
 std::string newRequestId();
 
+// ---------------------------------------------------------------------------
+// Synchronous ("blocking") logging
+// ---------------------------------------------------------------------------
+//
+// By default emit() only hands the line to trantor's AsyncFileLogger, which appends it to a
+// 4 MiB in-memory buffer that a background thread drains at most once per second. If the
+// process dies before that drain - segfault, abort(), OOM kill - the last second of lines,
+// typically the request that caused the crash, is lost, and nothing about it ever reaches
+// the log file.
+//
+// When sync logging is enabled, emit() additionally writes each finished line straight to
+// fd 2 (stderr - unbuffered, so `docker logs` keeps it) and to var/output/logs/server_sync.log
+// with an fdatasync() before returning. The line is durable before the next statement runs.
+// It also bypasses the level threshold, so a request opted into sync logging emits its DEBUG
+// lines (e.g. the request-body dump) even when the process runs at INFO. The cost is one
+// synchronous disk write per line, which is why it is opt-in rather than the default.
+//
+// Turn it on per request with the `X-Sync-Log: 1` request header (RequestLog reads it), or
+// process-wide via app.custom_config.sync_logging (main.cpp calls setGlobalSyncLogging).
+
+// Process-wide default, consulted by every thread that has no thread-local override. Set
+// once at startup from config; safe to call from any thread afterwards.
+void setGlobalSyncLogging(bool enabled);
+
+// True when the calling thread should log synchronously - i.e. a ThreadSyncLoggingGuard is
+// active on this thread, or (absent that) the process-wide default is on.
+bool syncLoggingEnabled();
+
+// Scoped thread-local override: forces sync logging on (or off) for the calling thread until
+// destroyed, then restores whatever was in effect before. RequestLog holds one for the span
+// of a request whose header asks for it; construct one directly only to wrap some other
+// block. Not movable - it is a strict stack-scoped guard.
+class ThreadSyncLoggingGuard {
+public:
+    explicit ThreadSyncLoggingGuard(bool enabled);
+    ~ThreadSyncLoggingGuard();
+    ThreadSyncLoggingGuard(const ThreadSyncLoggingGuard&) = delete;
+    ThreadSyncLoggingGuard& operator=(const ThreadSyncLoggingGuard&) = delete;
+
+private:
+    int previous_;
+};
+
 }  // namespace slog
 
 // Binds one HTTP request's method/path/request_id/start-time so a handler never repeats
@@ -72,6 +116,7 @@ class RequestLog {
 public:
     RequestLog(const char* function, const drogon::HttpRequestPtr& req,
                slog::SourceLoc loc = slog::SourceLoc());
+    ~RequestLog();
 
     // event defaults to the generic completion event; pass a more specific vocabulary
     // name (e.g. "match_loaded", "door_activated") when this outcome has one.
@@ -109,4 +154,7 @@ private:
     std::string path_;
     std::string requestId_;
     std::chrono::steady_clock::time_point startTime_;
+    // Present only when this request's `X-Sync-Log` header asked for synchronous logging;
+    // its lifetime pins sync logging on for the handling of this one request.
+    std::optional<slog::ThreadSyncLoggingGuard> syncGuard_;
 };

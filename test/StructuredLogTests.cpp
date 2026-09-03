@@ -213,3 +213,39 @@ TEST_CASE("slog::emit respects the configured log level threshold", "[structured
 
     trantor::Logger::setLogLevel(originalLevel);
 }
+
+TEST_CASE("sync logging bypasses the level threshold for the opted-in scope", "[structured-log]") {
+    const auto originalLevel = trantor::Logger::logLevel();
+    trantor::Logger::setLogLevel(trantor::Logger::kInfo);
+
+    // Without the guard a DEBUG line is dropped at kInfo (as the test above proves).
+    {
+        const auto before = bufferSize();
+        slog::ThreadSyncLoggingGuard guard(true);
+        REQUIRE(slog::syncLoggingEnabled());
+        slog::emit(slog::Level::Debug, "unitTest", "sync_debug_line");
+        const auto lines = linesSince(before);
+        REQUIRE(lines.size() == 1);
+        REQUIRE(nlohmann::json::parse(lines[0])["event"] == "sync_debug_line");
+    }
+
+    // ...and the guard restores the prior state on the way out.
+    REQUIRE_FALSE(slog::syncLoggingEnabled());
+    const auto before = bufferSize();
+    slog::emit(slog::Level::Debug, "unitTest", "filtered_again");
+    REQUIRE(linesSince(before).empty());
+
+    trantor::Logger::setLogLevel(originalLevel);
+}
+
+TEST_CASE("X-Sync-Log request header turns on sync logging for that request only", "[structured-log]") {
+    auto req = makeRequest(drogon::Post, "/api/match/m1/move_character", "{}");
+    req->addHeader("X-Sync-Log", "1");
+
+    REQUIRE_FALSE(slog::syncLoggingEnabled());
+    {
+        RequestLog rlog("performCharacterAction", req);
+        REQUIRE(slog::syncLoggingEnabled());
+    }
+    REQUIRE_FALSE(slog::syncLoggingEnabled());
+}

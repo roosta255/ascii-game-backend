@@ -93,7 +93,7 @@ static AccountRepository accountRepository(accountStore);
 
 // curl -X POST http://localhost:8081/api/match/match_1/move_character \
   -H "Content-Type: application/json" \
-  -d '{ "account": "host_1", "character": 144, "room": 0, "direction": 1 }'
+  -d '{ "account": "iacalla", "character": 1060, "room": 4, "floor": 4 }'
 
 // curl -X POST http://localhost:8081/api/match/match_1/activate_character \
   -H "Content-Type: application/json" \

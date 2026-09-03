@@ -4,6 +4,7 @@
 #include <atomic>
 #include <cstdio>
 #include <ctime>
+#include <fcntl.h>
 #include <random>
 #include <sys/syscall.h>
 #include <unistd.h>
@@ -70,14 +71,74 @@ const char* baseName(const char* path) {
     return base;
 }
 
+// --- Synchronous ("blocking") logging sink -------------------------------------------------
+//
+// See the header for why this exists. `g_globalSyncLogging` is the process-wide default;
+// `t_threadSyncLogging` is a per-thread tri-state override (-1 = inherit the global, 0 =
+// force off, 1 = force on) that ThreadSyncLoggingGuard pushes and pops.
+
+std::atomic<bool> g_globalSyncLogging{false};
+thread_local int t_threadSyncLogging = -1;
+
+// Opened lazily on the first sync write and never closed - it lives for the life of the
+// process, like stderr. O_APPEND keeps the two sinks (this file and any concurrent writer)
+// from clobbering each other; O_CLOEXEC stops it leaking into child processes.
+int syncLogFd() {
+    static int fd = ::open("var/output/logs/server_sync.log",
+                           O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, 0644);
+    return fd;
+}
+
+void writeAll(int fd, const char* data, size_t len) {
+    while (len > 0) {
+        const ssize_t n = ::write(fd, data, len);
+        if (n <= 0) return;  // best effort: nothing useful to do about a failed log write
+        data += n;
+        len -= static_cast<size_t>(n);
+    }
+}
+
+// Makes `line` durable before returning: to stderr (unbuffered, captured by `docker logs`)
+// and to the dedicated sync file with an fdatasync(). Called only when sync logging is on.
+void syncWriteLine(const std::string& line) {
+    writeAll(STDERR_FILENO, line.data(), line.size());
+    const int fd = syncLogFd();
+    if (fd >= 0) {
+        writeAll(fd, line.data(), line.size());
+        ::fdatasync(fd);
+    }
+}
+
 }  // namespace
+
+void setGlobalSyncLogging(bool enabled) {
+    g_globalSyncLogging.store(enabled, std::memory_order_relaxed);
+}
+
+bool syncLoggingEnabled() {
+    if (t_threadSyncLogging >= 0) return t_threadSyncLogging == 1;
+    return g_globalSyncLogging.load(std::memory_order_relaxed);
+}
+
+ThreadSyncLoggingGuard::ThreadSyncLoggingGuard(bool enabled)
+    : previous_(t_threadSyncLogging)
+{
+    t_threadSyncLogging = enabled ? 1 : 0;
+}
+
+ThreadSyncLoggingGuard::~ThreadSyncLoggingGuard() {
+    t_threadSyncLogging = previous_;
+}
 
 nlohmann::json codeError(int code) {
     return { {"type", code_to_text(code)}, {"code", code} };
 }
 
 void emit(Level level, const char* function, const char* event, const nlohmann::json& fields, SourceLoc loc) {
-    if (toTrantorLevel(level) < trantor::Logger::logLevel()) return;
+    // Sync logging deliberately overrides the level threshold: if a request explicitly asked
+    // for synchronous logging, it wants everything it emits, DEBUG lines included.
+    const bool sync = syncLoggingEnabled();
+    if (!sync && toTrantorLevel(level) < trantor::Logger::logLevel()) return;
 
     nlohmann::json out;
     out["timestamp"] = isoTimestampNow();
@@ -95,7 +156,9 @@ void emit(Level level, const char* function, const char* event, const nlohmann::
     // dump() with no arguments produces compact, single-line JSON - never pretty-printed -
     // which is exactly what NDJSON requires. LOG_RAW writes the stream verbatim with no
     // extra formatting of its own.
-    LOG_RAW << out.dump() << "\n";
+    const std::string line = out.dump() + "\n";
+    LOG_RAW << line;
+    if (sync) syncWriteLine(line);
 }
 
 std::string newRequestId() {
@@ -112,6 +175,17 @@ std::string newRequestId() {
 
 }  // namespace slog
 
+namespace {
+
+// A request opts into synchronous logging (see StructuredLog.hpp) with `X-Sync-Log: 1`.
+// Anything else - including a missing header - leaves the process-wide default in charge.
+bool requestWantsSyncLogging(const drogon::HttpRequestPtr& req) {
+    const std::string& value = req->getHeader("x-sync-log");
+    return value == "1" || value == "true" || value == "yes";
+}
+
+}  // namespace
+
 RequestLog::RequestLog(const char* function, const drogon::HttpRequestPtr& req, slog::SourceLoc loc)
     : function_(function),
       method_(req->methodString()),
@@ -119,9 +193,14 @@ RequestLog::RequestLog(const char* function, const drogon::HttpRequestPtr& req, 
       requestId_(slog::newRequestId()),
       startTime_(std::chrono::steady_clock::now())
 {
+    // Install the guard before the first emit() so http_request_started is synced too.
+    if (requestWantsSyncLogging(req)) syncGuard_.emplace(true);
+
     slog::emit(slog::Level::Info, function_, "http_request_started",
                { {"method", method_}, {"path", path_}, {"request_id", requestId_} }, loc);
 }
+
+RequestLog::~RequestLog() = default;
 
 void RequestLog::emitLifecycle(slog::Level level, const char* event, const std::string& message,
                                 const nlohmann::json& fields, slog::SourceLoc loc) const
