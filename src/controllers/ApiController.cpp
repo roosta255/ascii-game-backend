@@ -725,13 +725,24 @@ void ApiController::performCharacterActionImpl
 
     MatchController controller(match, codeset);
 
+    // Diagnostic breadcrumbs: each engine call below can crash on state this handler never
+    // sees locally. They are DEBUG (silent at prod's INFO) unless the request carries
+    // `X-Sync-Log: 1`, in which case each line is fdatasync'd before the next call runs - so
+    // the last breadcrumb in server_sync.log names the phase that died.
+    const nlohmann::json phaseCtx = {
+        {"match_id", matchId}, {"account_id", accountId},
+        {"character_id", characterId}, {"room_id", roomId}, {"turn", match.turner.turn}
+    };
+
     if (json->isMember("isForcedTurnEnd") && (*json)["isForcedTurnEnd"].asBool()) {
+        rlog.debug("action_phase", {{"phase", "forced_turn_end:begin"}, {"ctx", phaseCtx}});
         if (codeset.addFailure(!controller.endTurn(accountId, codeset.error))) {
             rlog.failed(409, "Forced turn end rejected", "",
                         {{"match_id", matchId}, {"account_id", accountId}, {"error", slog::codeError(codeset.error)}});
             rlog.debug("codeset", codesetFields(codeset));
             return invokeResponse409(codeset.describe("Forced turn end rejected due to: "), std::move(callback));
         }
+        rlog.debug("action_phase", {{"phase", "forced_turn_end:done"}, {"ctx", phaseCtx}});
     }
 
     if (!json->isMember("action")) {
@@ -783,17 +794,25 @@ void ApiController::performCharacterActionImpl
 
     // Attempt to perform the character action
     std::vector<LoggedEvent> eventLog;
+    rlog.debug("action_phase", {{"phase", "activate:begin"}, {"action", actionString}, {"ctx", phaseCtx}});
     const bool activated = controller.activate(preactivation, Pointer<std::vector<LoggedEvent>>(eventLog));
+    rlog.debug("action_phase", {{"phase", "activate:done"}, {"activated", activated}, {"event_count", (int)eventLog.size()}});
 
-    if (activated) controller.tickNpcConducts();
+    if (activated) {
+        rlog.debug("action_phase", {{"phase", "tick_npc_conducts:begin"}, {"ctx", phaseCtx}});
+        controller.tickNpcConducts();
+        rlog.debug("action_phase", {{"phase", "tick_npc_conducts:done"}, {"ctx", phaseCtx}});
+    }
 
     // Save the updated match state (only on success)
+    if (activated) rlog.debug("action_phase", {{"phase", "save:begin"}, {"ctx", phaseCtx}});
     if (activated && codeset.addFailure(!matchRepository.save(match, codeset.error))) {
         rlog.failed(409, "Failed to save match", "",
                     {{"match_id", matchId}, {"account_id", accountId}, {"error", slog::codeError(codeset.error)}});
         rlog.debug("codeset", codesetFields(codeset));
         return invokeResponse409(codeset.describe("Failed to save match due to: "), std::move(callback));
     }
+    if (activated) rlog.debug("action_phase", {{"phase", "save:done"}, {"ctx", phaseCtx}});
 
     nlohmann::json eventLogJson = nlohmann::json::array();
     for (int i = 0; i < (int)eventLog.size(); ++i) {
