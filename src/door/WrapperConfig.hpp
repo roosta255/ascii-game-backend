@@ -79,6 +79,11 @@ struct WrapperConfig {
     };
 
     struct Effects {
+        // Silent gate evaluated after matches but before conditions/costs — any decider
+        // returning false aborts the activation exactly like a match miss (no codeset
+        // failure, no logged event, no cost spent). Deciders may also resolve dynamic
+        // data (e.g. ActivationContext::resolvedItem) for onSuccess effects to consume.
+        Array<ActivatorEffect, MAX_EFFECTS> deciders = {};
         Array<ActivatorEffect, MAX_EFFECTS> onSuccess = {};
         Array<ActivatorEffect, MAX_EFFECTS> onFail = {};
     };
@@ -90,7 +95,8 @@ struct WrapperConfig {
     Effects effects = {};
 
     bool isEmpty() const {
-        return std::holds_alternative<NoEffect>(effects.onSuccess.head())
+        return std::holds_alternative<NoEffect>(effects.deciders.head())
+            && std::holds_alternative<NoEffect>(effects.onSuccess.head())
             && std::holds_alternative<NoEffect>(effects.onFail.head())
             && !matches.actor.isAny()
             && !matches.tool.isAny()

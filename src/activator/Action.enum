@@ -1,3 +1,18 @@
+// ACTION_DECL( NAME, iActivatorSubclass, ACTION_TYPE ) — activator is a
+//   hand-written iActivator subclass instantiated as a global.
+//
+// ACTION_WRAPPER_DECL( NAME, ACTION_TYPE, ({ WrapperConfig initializer }) ) —
+//   activator is an ActivatorWrapper configured inline with the same
+//   matches/conditions/costs/effects vocabulary as Rule.enum / Door.enum.
+//   Example:
+//     ACTION_WRAPPER_DECL(SMASH_POT, ACTION_TYPE_USAGE, ({
+//         .matches = { .target = { .required = makeTraitBits({TRAIT_IS_DOOR_BLOCKING}) } },
+//         .conditions = { .actor = { .required = makeTraitBits({TRAIT_ACTOR, TRAIT_ACTION_READY}) } },
+//         .costs = { .action = 1 },
+//         .effects = { .onSuccess = {
+//             ActivatorSetDoor{ /* ... */ } } }
+//     }))
+
 ACTION_DECL(NIL,                     iActivator,                ACTION_TYPE_NOTHING)
 
 // activations
@@ -7,7 +22,30 @@ ACTION_DECL(ACTIVATE_INVENTORY_ITEM, ActivatorUseInventoryItem, ACTION_TYPE_USAG
 ACTION_DECL(ACTIVATE_LOCK,           ActivatorUseLock,          ACTION_TYPE_USAGE)
 
 ACTION_DECL(CRITTER_BITE,            ActivatorCritterBite,      ACTION_TYPE_USAGE)
-ACTION_DECL(PICKPOCKET,              ActivatorPickpocket,        ACTION_TYPE_USAGE)
+
+// Steals an eligible item (TRAIT_ITEM_TRANSFERABLE + TRAIT_PICKPOCKETABLE) from the
+// target and deposits it into the actor's own inventory. Requires the actor to have
+// TRAIT_PICKPOCKETER + TRAIT_HANDS and the target to have TRAIT_PICKPOCKETABLE. The
+// decider runs (and can silently decline, e.g. victim has nothing to steal) before
+// the action cost is spent.
+ACTION_WRAPPER_DECL(PICKPOCKET, ACTION_TYPE_USAGE, ({
+    .matches = {
+        .actor  = { .required = makeTraitBits({TRAIT_PICKPOCKETER, TRAIT_HANDS}) },
+        .target = { .required = makeTraitBits({TRAIT_PICKPOCKETABLE}) },
+    },
+    .costs = { .action = 1 },
+    .effects = {
+        .deciders = {
+            ActivatorFindInventoryItemByTraits{ CharacterAnchor::Target, makeTraitBits({TRAIT_ITEM_TRANSFERABLE, TRAIT_PICKPOCKETABLE}) }
+        },
+        .onSuccess = {
+            ActivatorTransferItem::resolved(CharacterAnchor::Target, CharacterAnchor::Actor),
+            ActivatorLogResolvedItemEvent{ EVENT_PICKPOCKET },
+            ActivatorPushBehaviorTrigger{ BEHAVIOR_EVENT_PICKPOCKET }
+        }
+    }
+}))
+
 ACTION_DECL(DEPOSIT,                 ActivatorDeposit,           ACTION_TYPE_USAGE)
 ACTION_DECL(DAMAGE,                  ActivatorDamage,           ACTION_TYPE_USAGE)
 ACTION_DECL(ATTACK,                  ActivatorAttack,           ACTION_TYPE_USAGE)

@@ -69,10 +69,13 @@ add_library(core_backend STATIC
     src/activator/ActivatorAlterTraitAffliction.cpp
     src/activator/ActivatorDeposit.cpp
     src/activator/ActivatorEndTurn.cpp
+    src/activator/ActivatorFindInventoryItemByTraits.cpp
+    src/activator/ActivatorLogResolvedItemEvent.cpp
     src/activator/ActivatorNpcAct.cpp
-    src/activator/ActivatorPickpocket.cpp
     src/activator/ActivatorMoveToDoor.cpp
     src/activator/ActivatorMoveToFloor.cpp
+    src/activator/ActivatorPushBehaviorTrigger.cpp
+    src/activator/ActivatorTransferItem.cpp
     src/activator/ActivatorUseCharacter.cpp
     src/activator/ActivatorUseDoor.cpp
     src/activator/ActivatorUseInventoryItem.cpp

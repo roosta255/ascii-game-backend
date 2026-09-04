@@ -116,6 +116,17 @@ bool ActivatorWrapper::activate(ActivationContext& activation) const {
             if (!targetMatched) return;
         }
 
+        // === Decider phase (silent — no failure logged on a "no" decision) ===
+        // Runs before conditions/costs so a decider that declines (e.g. nothing eligible
+        // to steal) spends nothing. Deciders may stash resolved data onto `activation`
+        // (e.g. resolvedItem) for onSuccess effects to consume.
+        for (int i = 0; i < WrapperConfig::MAX_EFFECTS; i++) {
+            const ActivatorEffect& decider = _config.effects.deciders.getOrDefault(i, {});
+            if (std::holds_alternative<NoEffect>(decider)) break;
+            bool decided = std::visit([&](auto& effect) { return effect.activate(activation); }, decider);
+            if (!decided) return;
+        }
+
         // === Failure helper ===
         auto runOnFail = [&]() {
             for (int i = 0; i < WrapperConfig::MAX_EFFECTS; i++) {

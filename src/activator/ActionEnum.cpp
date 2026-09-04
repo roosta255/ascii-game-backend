@@ -3,8 +3,10 @@
 const char* action_to_text(const ActionEnum& index) {
     static const char* names[] = {
         #define ACTION_DECL( name_text, activation_intf__, action_type__ ) #name_text,
+        #define ACTION_WRAPPER_DECL( name_text, action_type__, ... ) #name_text,
         #include "Action.enum"
         #undef ACTION_DECL
+        #undef ACTION_WRAPPER_DECL
     };
     if (index < 0) {
         return "ACTION_INDEX_NEGATIVE";

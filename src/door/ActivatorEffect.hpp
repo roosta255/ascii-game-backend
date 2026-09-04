@@ -5,9 +5,13 @@
 // activator
 #include "ActivatorAlterTraitAffliction.hpp"
 #include "ActivatorEndTurn.hpp"
+#include "ActivatorFindInventoryItemByTraits.hpp"
+#include "ActivatorLogResolvedItemEvent.hpp"
 #include "ActivatorMoveToDoor.hpp"
 #include "ActivatorMoveToFloor.hpp"
+#include "ActivatorPushBehaviorTrigger.hpp"
 #include "ActivatorRuleExecution.hpp"
+#include "ActivatorTransferItem.hpp"
 #include "ActivatorUseCharacter.hpp"
 #include "ActivatorUseDoor.hpp"
 #include "ActivatorUseInventoryItem.hpp"
@@ -62,9 +66,13 @@ using ActivatorEffect = std::variant<
     // activator
     ActivatorAlterTraitAffliction,
     ActivatorEndTurn,
+    ActivatorFindInventoryItemByTraits,
+    ActivatorLogResolvedItemEvent,
     ActivatorMoveToDoor,
     ActivatorMoveToFloor,
+    ActivatorPushBehaviorTrigger,
     ActivatorRuleExecution,
+    ActivatorTransferItem,
     ActivatorUseCharacter,
     ActivatorUseDoor,
     ActivatorUseInventoryItem,

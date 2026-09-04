@@ -32,6 +32,12 @@ struct ActivationContext {
     Pointer<Item> sourceItem;
     Maybe<int> targetItemIndex;  // absolute index into dungeon.items[], for actions like LOOT_CHEST
 
+    // Scratch slot for handing dynamically-resolved data between the steps of a single
+    // activation — e.g. a decider effect (ActivatorFindInventoryItemByTraits) resolves
+    // which item is eligible, and a later effect (ActivatorTransferItem) consumes it.
+    // Not persisted beyond the activation that set it.
+    Maybe<ItemEnum> resolvedItem;
+
     TargetEntity targetEntity;
 
     Maybe<Cardinal> direction;

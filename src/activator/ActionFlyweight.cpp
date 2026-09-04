@@ -3,7 +3,6 @@
 #include "ActivatorCritterBite.hpp"
 #include "ActivatorNpcAct.hpp"
 #include "ActivatorDeposit.hpp"
-#include "ActivatorPickpocket.hpp"
 #include "ActivatorDamage.hpp"
 #include "ActivatorEndTurn.hpp"
 #include "ActivatorLootChest.hpp"
@@ -19,6 +18,8 @@
 #include "Match.hpp"
 #include "iActivator.hpp"
 #include "ActivatorToggler.hpp"
+#include "ActivatorWrapper.hpp"
+#include "WrapperConfig.hpp"
 #include <unordered_map>
 
 const Array<ActionFlyweight, ACTION_COUNT>& ActionFlyweight::getFlyweights()
@@ -33,8 +34,27 @@ const Array<ActionFlyweight, ACTION_COUNT>& ActionFlyweight::getFlyweights()
                 flyweight.activator = GLOBAL_##name_##activation_intf_; \
                 flyweight.type = action_type_; \
             });
+
+        // Declare an action whose activator is an ActivatorWrapper configured
+        // inline with a WrapperConfig — same matches/conditions/costs/effects
+        // vocabulary used by Rule.enum and Door.enum. The trailing arg is the
+        // WrapperConfig initializer, e.g.:
+        //   ACTION_WRAPPER_DECL(MY_ACTION, ACTION_TYPE_USAGE, ({
+        //       .conditions = { .actor = { .required = makeTraitBits({TRAIT_ACTOR}) } },
+        //       .costs = { .action = 1 },
+        //       .effects = { .onSuccess = { /* ActivatorEffect... */ } }
+        //   }))
+        #define ACTION_WRAPPER_DECL( name_, action_type_, ... ) \
+            static ActivatorWrapper GLOBAL_WRAPPER_##name_; \
+            GLOBAL_WRAPPER_##name_.init( WrapperConfig __VA_ARGS__ ); \
+            flyweights.getPointer( ACTION_##name_ ).access([&](ActionFlyweight& flyweight){ \
+                flyweight.name = #name_; \
+                flyweight.activator = GLOBAL_WRAPPER_##name_; \
+                flyweight.type = action_type_; \
+            });
         #include "Action.enum"
         #undef ACTION_DECL
+        #undef ACTION_WRAPPER_DECL
 
         return flyweights;
     }();
