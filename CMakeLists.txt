@@ -241,6 +241,7 @@ add_executable(test_target
     test/EventLogTests.cpp
     test/PietyAnimationTests.cpp
     test/StructuredLogTests.cpp
+    test/MapTests.cpp
 )
 
 target_include_directories(test_target PRIVATE ${PROJECT_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/test)

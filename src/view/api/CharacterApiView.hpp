@@ -56,7 +56,7 @@ struct CharacterApiView
         // offset
         params.match.containsCharacter(model, this->offset);
 
-        const auto computed = params.traitsComputed.getOrDefault(model.characterId, TraitModifier::TraitComputation{});
+        const auto computed = params.traitsComputed.getOr(model.characterId, TraitModifier::TraitComputation{});
         this->isObject = model.isObject(computed.final);
         this->sheet = CharacterSheetApiView(model, computed);
 

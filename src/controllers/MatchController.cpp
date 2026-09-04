@@ -27,6 +27,7 @@
 #include "TargetPreactivationEntity.hpp"
 #include "RoleFlyweight.hpp"
 #include "TraitModifier.hpp"
+#include "StructuredLog.hpp"
 
 MatchController::MatchController(Match& match, Codeset& codeset): match(match), codeset(codeset) {
     match.accessUsedCharacters([&](const Character& character) {
@@ -408,9 +409,9 @@ bool MatchController::findCharacterPath(
                 bool nextTitanTurnEnded = false; // discarded: pathfinding never ticks NPC conducts
                 codeset.addFailure(!advanceTurnState(next, playerId, codeset.error, nextTitanTurnEnded), CODE_PATHFINDING_FAILED_TO_FORWARD_TURN);
                 next.setPathfinding();
-                int new_cost = cost_so_far.getOrDefault(current, 0) + 1;
+                int new_cost = cost_so_far.getOr(current, 0) + 1;
 
-                if (!cost_so_far.containsKey(next) || new_cost < cost_so_far.getOrDefault(next, 0)) {
+                if (!cost_so_far.containsKey(next) || new_cost < cost_so_far.getOr(next, 0)) {
                     cost_so_far.set(next, new_cost);
                     int priority = new_cost + heuristic(action, next);
                     frontier.push(priority, next);
@@ -422,25 +423,23 @@ bool MatchController::findCharacterPath(
         });
 
         if (isFound) {
-            // Path Reconstruction using Pointers
-            std::vector<const Match*> path_sequence;
-            const Match* step = &goalMatch;
+            // Path reconstruction: walk parent links back to `start`, collecting states by
+            // value (came_from/action_from hand back copies), then replay forwards.
+            std::vector<Match> path_sequence;
+            Match step = goalMatch;
 
-            while (step && !(*step == start)) {
+            while (!(step == start)) {
                 path_sequence.push_back(step);
-
-                // Jump to the next parent pointer
-                // came_from.get_ptr returns the pointer to the Match stored in the map
-                came_from.getPointer(*step).access([&](Match& matchCamedFrom){
-                    step = &matchCamedFrom;
-                });
+                Maybe<Match> parent = came_from.get(step);
+                if (parent.isEmpty()) break;
+                parent.copy(step);
             }
 
             // Execute in chronological order
             for (auto it = path_sequence.rbegin(); it != path_sequence.rend(); ++it) {
-                const Match* m = *it;
-                action_from.accessConst(*m, [&](const CharacterAction& actionFrom){
-                    consumer(actionFrom, *m);
+                const Match& m = *it;
+                action_from.get(m).access([&](const CharacterAction& actionFrom){
+                    consumer(actionFrom, m);
                 });
             }
 
@@ -623,12 +622,12 @@ const Map<int, Map<int2, int> >& MatchController::getFloors() {
 
 Pointer<Chest> MatchController::getChestByContainerId(int characterId) {
     setupLocations(false);
-    return chestContainerMap.getOrDefault(characterId, Pointer<Chest>::empty());
+    return chestContainerMap.getOr(characterId, Pointer<Chest>::empty());
 }
 
 Pointer<Conduct> MatchController::getConductByCharacterId(int characterId) {
     setupLocations(false);
-    return conductMap.getOrDefault(characterId, Pointer<Conduct>::empty());
+    return conductMap.getOr(characterId, Pointer<Conduct>::empty());
 }
 
 bool MatchController::giveInventoryItem(Inventory& inventory, const ItemEnum type, const bool isDryrun) {
@@ -674,8 +673,8 @@ bool MatchController::isCharacterWithinRoom(int characterId, int roomId, bool& r
 
 bool MatchController::isDoorOccupied(int roomId, ChannelEnum channel, Cardinal dir, int& outCharacterId, const Match& match, const Map<int, Map<int2, int> >& doors) {
     outCharacterId = -1;
-    doors.accessConst(roomId, [&](const Map<int2, int>& mapping){
-        outCharacterId = mapping.getOrDefault(int2{channel, dir.getIndex()}, -1);
+    doors.get(roomId).access([&](const Map<int2, int>& mapping){
+        outCharacterId = mapping.getOr(int2{channel, dir.getIndex()}, -1);
     });
     return match.containsOffset(outCharacterId);
 }
@@ -686,8 +685,8 @@ bool MatchController::isDoorOccupied(int roomId, ChannelEnum channel, Cardinal d
 
 bool MatchController::isFloorOccupied(int roomId, ChannelEnum channel, int floorId, int& outCharacterId, const Match& match, const Map<int, Map<int2, int> >& floors) {
     outCharacterId = -1;
-    floors.accessConst(roomId, [&](const Map<int2, int>& mapping){
-        outCharacterId = mapping.getOrDefault(int2{channel, floorId}, -1);
+    floors.get(roomId).access([&](const Map<int2, int>& mapping){
+        outCharacterId = mapping.getOr(int2{channel, floorId}, -1);
     });
     return match.containsOffset(outCharacterId);
 }
@@ -770,15 +769,15 @@ bool MatchController::permuteCharacterActions(const std::string& playerId, int m
             // character actions
             if (digest.actionsRemaining.orElse(0) > 0) {
                 
-                for (const auto it: floors.getOrDefault(roomId, Map<int2, int>())) { // floors
-                    const auto key = it.first;
-                    processTargetCharacter(CharacterAction{ .type = ACTION_ACTIVATE_CHARACTER, .characterId = mainCharacterId, .roomId = roomId }, it.second);
-                }
-
-                for (const auto it: doors.getOrDefault(roomId, Map<int2, int>())) { // doors
-                    const auto key = it.first;
-                    processTargetCharacter(CharacterAction{ .type = ACTION_ACTIVATE_CHARACTER, .characterId = mainCharacterId, .roomId = roomId }, it.second);
-                }
+                const auto activateOccupants = [&](const Map<int, Map<int2, int> >& cells) {
+                    cells.get(roomId).access([&](const Map<int2, int>& cellMap) {
+                        cellMap.forEach([&](const int2&, const int& offset) {
+                            processTargetCharacter(CharacterAction{ .type = ACTION_ACTIVATE_CHARACTER, .characterId = mainCharacterId, .roomId = roomId }, offset);
+                        });
+                    });
+                };
+                activateOccupants(floors);
+                activateOccupants(doors);
 
                 // chest interactions
                 for (Chest& chest : match.dungeon.chests) {
@@ -1062,30 +1061,40 @@ void MatchController::drainEventQueue(std::vector<PendingTrigger>& eventQueue) {
 
         if (suppressNpcEventResponse) continue;
         setupLocations();
-        floors.accessConst(roomId, [&](const Map<int2, int>& floorMap) {
-            for (const auto& [key, agentId] : floorMap) {
-                getConductByCharacterId(agentId).access([&](Conduct& conduct) {
-                    for (int c = CONDUCT_NIL + 1; c < CONDUCT_COUNT; c++) {
-                        conduct.memory.accessConst(ConductEnum(c), [&](const ConductMemory& mem) {
-                            if (mem.state == BEHAVIOR_NIL) return;
-                            BehaviorFlyweight::getFlyweights().accessConst(mem.state, [&](const BehaviorFlyweight& fw) {
-                                const BehaviorFlyweight::EventTriggers* triggers = fw.getTriggersForEvent(trigger.eventType);
-                                if (!triggers) return;
-                                const bool isObserver = (agentId != trigger.characterId && agentId != trigger.targetId);
-                                const Maybe<TriggerWrapper>& slot = (agentId == trigger.characterId)
-                                    ? triggers->asActor
-                                    : (agentId == trigger.targetId)
-                                        ? triggers->asTarget
-                                        : triggers->asObserver;
-                                slot.accessConst([&](const TriggerWrapper& wrapper) {
-                                    runBehaviorTrigger(agentId, wrapper, ConductEnum(c), isObserver ? agentId : -1, trigger.characterId);
-                                });
+
+        // Nested-map case (see Map::forEach's note): runBehaviorTrigger() below can relocate a
+        // character - even clear() and rebuild floors - so snapshot the room's occupant ids
+        // into a local. floors.get() already hands back a detached copy of the inner map.
+        std::vector<int> roomAgentIds;
+        floors.get(roomId).access([&](const Map<int2, int>& floorMap) {
+            floorMap.forEach([&](const int2&, const int& agentId) { roomAgentIds.push_back(agentId); });
+        });
+        slog::emit(slog::Level::Debug, "drainEventQueue", "drain:dispatch",
+                   {{"trigger_char", trigger.characterId}, {"room_id", roomId},
+                    {"event_type", (int)trigger.eventType}, {"agent_count", (int)roomAgentIds.size()}});
+
+        for (int agentId : roomAgentIds) {
+            getConductByCharacterId(agentId).access([&](Conduct& conduct) {
+                for (int c = CONDUCT_NIL + 1; c < CONDUCT_COUNT; c++) {
+                    conduct.memory.accessConst(ConductEnum(c), [&](const ConductMemory& mem) {
+                        if (mem.state == BEHAVIOR_NIL) return;
+                        BehaviorFlyweight::getFlyweights().accessConst(mem.state, [&](const BehaviorFlyweight& fw) {
+                            const BehaviorFlyweight::EventTriggers* triggers = fw.getTriggersForEvent(trigger.eventType);
+                            if (!triggers) return;
+                            const bool isObserver = (agentId != trigger.characterId && agentId != trigger.targetId);
+                            const Maybe<TriggerWrapper>& slot = (agentId == trigger.characterId)
+                                ? triggers->asActor
+                                : (agentId == trigger.targetId)
+                                    ? triggers->asTarget
+                                    : triggers->asObserver;
+                            slot.accessConst([&](const TriggerWrapper& wrapper) {
+                                runBehaviorTrigger(agentId, wrapper, ConductEnum(c), isObserver ? agentId : -1, trigger.characterId);
                             });
                         });
-                    }
-                });
-            }
-        });
+                    });
+                }
+            });
+        }
     }
 }
 
@@ -1104,8 +1113,16 @@ void MatchController::tickNpcConducts() {
     std::vector<PendingTrigger> eventQueue;
     eventQueuePtr = eventQueue;
 
-    for (const auto& [charId, conductPtr] : conductMap) {
-        conductPtr.access([&](Conduct& conduct) {
+    // buildAndExecuteProposals()/drainEventQueue() below can relocate characters and rebuild
+    // conductMap from inside the loop, so iterate it reentrancy-safely (see Map::forEach).
+    // The breadcrumbs are DEBUG, sync-flushed under X-Sync-Log: a crash between two of them
+    // names the conduct and sub-phase it died in.
+    slog::emit(slog::Level::Debug, "tickNpcConducts", "npc_tick:loop_begin",
+               {{"conduct_count", (int)conductMap.size()}});
+
+    conductMap.forEach([&](int charId, const Pointer<Conduct>& conductSlot) {
+        slog::emit(slog::Level::Debug, "tickNpcConducts", "npc_tick:conduct_begin", {{"char_id", charId}});
+        conductSlot.access([&](Conduct& conduct) {
             match.getCharacter(charId, codeset.error).access([&](Character& character) {
                 match.dungeon.getRoom(character.location.roomId, codeset.error).access([&](Room& room) {
                     RequestContext request{
@@ -1127,8 +1144,10 @@ void MatchController::tickNpcConducts() {
                 });
             });
         });
+        slog::emit(slog::Level::Debug, "tickNpcConducts", "npc_tick:drain_begin", {{"char_id", charId}});
         drainEventQueue(eventQueue);
-    }
+        slog::emit(slog::Level::Debug, "tickNpcConducts", "npc_tick:conduct_done", {{"char_id", charId}});
+    });
 
     eventQueuePtr = nullptr;
 }
@@ -1178,7 +1197,7 @@ void MatchController::updateTraits(Character& character) {
 }
 
 TraitModifier::TraitComputation MatchController::getTraitsComputed(int characterId) const {
-    return traitsComputed.getOrDefault(characterId, TraitModifier::TraitComputation{});
+    return traitsComputed.getOr(characterId, TraitModifier::TraitComputation{});
 }
 
 const Map<int, TraitModifier::TraitComputation>& MatchController::getTraitsComputedMap() const {

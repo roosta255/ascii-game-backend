@@ -97,7 +97,7 @@ void Location::apply(int offset, const Array<Room, DUNGEON_ROOM_COUNT>& rooms, M
 ) const {
     const auto setDoor = [&](int setDoorRoomId, Cardinal dir){
         const int2 key{channel, dir.getIndex()};
-        if (!doors.access(setDoorRoomId, [&](Map<int2, int>& mapping){ mapping.set(key, offset); })) {
+        if (!doors.update(setDoorRoomId, [&](Map<int2, int>& mapping){ mapping.set(key, offset); })) {
             doors.set(setDoorRoomId, Map<int2, int>(key, offset));
         }
     };
@@ -105,7 +105,7 @@ void Location::apply(int offset, const Array<Room, DUNGEON_ROOM_COUNT>& rooms, M
     const int2 key{channel, data};
     switch(type){
         case LOCATION_FLOOR:
-            if (!floors.access(roomId, [&](Map<int2, int>& mapping){ mapping.set(key, offset); })) {
+            if (!floors.update(roomId, [&](Map<int2, int>& mapping){ mapping.set(key, offset); })) {
                 floors.set(roomId, Map<int2, int>(key, offset));
             }
             return;
