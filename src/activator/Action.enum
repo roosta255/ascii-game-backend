@@ -41,7 +41,8 @@ ACTION_WRAPPER_DECL(PICKPOCKET, ACTION_TYPE_USAGE, ({
         .onSuccess = {
             ActivatorTransferItem::resolved(CharacterAnchor::Target, CharacterAnchor::Actor),
             ActivatorLogResolvedItemEvent{ EVENT_PICKPOCKET },
-            ActivatorPushBehaviorTrigger{ BEHAVIOR_EVENT_PICKPOCKET }
+            ActivatorPushBehaviorTrigger{ BEHAVIOR_EVENT_PICKPOCKET },
+            ActivationAddTargetKeyframe{{ANIMATION_BOUNCE_FROM_FLOOR_TO_LOCK, ANIMATION_ACT_SUBJECT_TO_TARGET}}
         }
     }
 }))
