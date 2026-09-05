@@ -964,7 +964,7 @@ void MatchController::runBehaviorTrigger(int agentId, const iActivator& wrapper,
                 .codeset = codeset,
                 .controller = *this,
                 .time = animationTime,
-                .isSkippingAnimations = true,
+                .isSkippingAnimations = false,
                 .isSkippingLogging = true,
             };
 
@@ -1131,7 +1131,7 @@ void MatchController::tickNpcConducts() {
                         .codeset = codeset,
                         .controller = *this,
                         .time = animationTime,
-                        .isSkippingAnimations = true,
+                        .isSkippingAnimations = false,
                         .isSkippingLogging = true,
                     };
                     ActivationContext activation{

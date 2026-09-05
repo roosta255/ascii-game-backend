@@ -1,7 +1,9 @@
 #include <catch2/catch_test_macros.hpp>
 #include "ActionEnum.hpp"
+#include "AnimationEnum.hpp"
 #include "BehaviorEnum.hpp"
 #include "Cardinal.hpp"
+#include "Character.hpp"
 #include "ConductEnum.hpp"
 #include "ConductExpect.hpp"
 #include "ConductMemory.hpp"
@@ -10,12 +12,51 @@
 #include "Inventory.hpp"
 #include "InventoryExpect.hpp"
 #include "ItemEnum.hpp"
+#include "Keyframe.hpp"
 #include "LockEnum.hpp"
 #include "Match.hpp"
 #include "Preactivation.hpp"
 #include "RoleEnum.hpp"
 #include "CodesetExpect.hpp"
 #include "TestController.hpp"
+
+// Matches any of the walking-family animations (the exact variant depends on
+// whether the monkey is transitioning between doors and/or floors).
+static bool hasWalkingKeyframe(const Array<Keyframe, Character::MAX_KEYFRAMES>& keyframes) {
+    for (const auto& kf : keyframes) {
+        switch (kf.animation) {
+            case ANIMATION_WALKING_FROM_WALL_TO_WALL:
+            case ANIMATION_WALKING_FROM_WALL_TO_FLOOR:
+            case ANIMATION_WALKING_FROM_FLOOR_TO_WALL:
+            case ANIMATION_WALKING_FROM_FLOOR_TO_FLOOR:
+                return true;
+            default:
+                break;
+        }
+    }
+    return false;
+}
+
+// Matches any of the bounce-family animations. ACTION_PICKPOCKET's onSuccess
+// effect queries ANIMATION_BOUNCE_FROM_FLOOR_TO_LOCK as a seed (see Action.enum),
+// but ActivationAddTargetKeyframe/buildTargetKeyframe re-resolves it via
+// AnimationFlyweight::queryAnimation against the subject/target's actual
+// FLOOR/DOOR semantics — with both monkey and victim on the floor, it resolves
+// to ANIMATION_BOUNCE_FROM_FLOOR_TO_FLOOR, not the literal seed value.
+static bool hasBounceKeyframe(const Array<Keyframe, Character::MAX_KEYFRAMES>& keyframes) {
+    for (const auto& kf : keyframes) {
+        switch (kf.animation) {
+            case ANIMATION_BOUNCE_FROM_DOOR_TO_LOCK:
+            case ANIMATION_BOUNCE_FROM_DOOR_TO_FLOOR:
+            case ANIMATION_BOUNCE_FROM_FLOOR_TO_LOCK:
+            case ANIMATION_BOUNCE_FROM_FLOOR_TO_FLOOR:
+                return true;
+            default:
+                break;
+        }
+    }
+    return false;
+}
 
 TEST_CASE("Monkey steals ITEM_COIN from builder in shared room", "[match][GENERATOR_MONKEY_TUTORIAL][monkey]") {
     TestController tc(GENERATOR_MONKEY_TUTORIAL);
@@ -124,6 +165,14 @@ TEST_CASE("Monkey steals ITEM_COIN from builder in shared room", "[match][GENERA
     //                                                  NORTH = 0
     tc.endTurn();
     REQUIRE_THAT(monkeyInventory, MatchesInventoryExpect(InventoryExpect{}.expectStacks(ITEM_COIN, 1).expectStacks(ITEM_KEY, 0)));
+
+    // The successful ACTION_PICKPOCKET writes a bounce keyframe onto the acting
+    // monkey (ANIMATION_ACT_SUBJECT_TO_TARGET targets the subject, i.e. the
+    // monkey itself, not the victim) — see Action.enum's PICKPOCKET onSuccess.
+    monkeyPtr.accessConst([&](const Character& monkey) {
+        REQUIRE(hasBounceKeyframe(monkey.keyframes));
+    });
+
     tc.controller.getConductByCharacterId(monkeyCharId).access([&](Conduct& conduct) {
         REQUIRE_THAT(conduct, MatchesConductExpect(
             ConductExpect{}
@@ -148,6 +197,12 @@ TEST_CASE("Monkey steals ITEM_COIN from builder in shared room", "[match][GENERA
         ));
     });
     REQUIRE(getMonkeyRoomId() == 3);
+
+    // The monkey's own move (room 4 -> 3) should have written a walking
+    // keyframe onto itself instead of leaving the array at ANIMATION_NIL.
+    monkeyPtr.accessConst([&](const Character& monkey) {
+        REQUIRE(hasWalkingKeyframe(monkey.keyframes));
+    });
 
     tc.endTurn();
     REQUIRE_THAT(tc.codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true)));
