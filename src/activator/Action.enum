@@ -57,5 +57,23 @@ ACTION_DECL(MOVE_TO_FLOOR,           ActivatorMoveToFloor,      ACTION_TYPE_MOVE
 
 // misc
 ACTION_DECL(END_TURN,                ActivatorEndTurn,          ACTION_TYPE_MOVEMENT)
-ACTION_DECL(LOOT_CHEST,              ActivatorLootChest,        ACTION_TYPE_USAGE)
-ACTION_DECL(USE_CHEST_LOCK,          ActivatorUseChestLock,     ACTION_TYPE_USAGE)
+
+// Runs the existing chest activator, then bounces the actor toward the chest on
+// success. All validation, cost, and the critter-bite follow-up stay inside
+// ActivatorLootChest — the wrapper only appends the animation, and skips it if
+// the loot fails (the onSuccess list stops at the first effect that returns false).
+ACTION_WRAPPER_DECL(LOOT_CHEST, ACTION_TYPE_USAGE, ({
+    .effects = { .onSuccess = {
+        ActivatorLootChest{},
+        ActivationAddTargetKeyframe{{ANIMATION_BOUNCE_FROM_FLOOR_TO_LOCK, ANIMATION_ACT_SUBJECT_TO_TARGET}}
+    } }
+}))
+
+// Runs the chest lock activator (which delegates to the lock's own activator),
+// then bounces the actor toward the chest lock on success.
+ACTION_WRAPPER_DECL(USE_CHEST_LOCK, ACTION_TYPE_USAGE, ({
+    .effects = { .onSuccess = {
+        ActivatorUseChestLock{},
+        ActivationAddTargetKeyframe{{ANIMATION_BOUNCE_FROM_FLOOR_TO_LOCK, ANIMATION_ACT_SUBJECT_TO_TARGET}}
+    } }
+}))
