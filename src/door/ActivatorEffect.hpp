@@ -33,6 +33,7 @@
 #include "ActivatorDamagePierce.hpp"
 // activator (additional)
 #include "ActivationAddTargetKeyframe.hpp"
+#include "ActivatorDeposit.hpp"
 // door
 #include "ActivatorExitDungeon.hpp"
 #include "ActivatorSetAllDoorsByTrait.hpp"
@@ -65,6 +66,7 @@ using ActivatorEffect = std::variant<
     NoEffect,
     // activator
     ActivatorAlterTraitAffliction,
+    ActivatorDeposit,
     ActivatorEndTurn,
     ActivatorFindInventoryItemByTraits,
     ActivatorLogResolvedItemEvent,
