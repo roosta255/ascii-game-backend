@@ -47,7 +47,13 @@ ACTION_WRAPPER_DECL(PICKPOCKET, ACTION_TYPE_USAGE, ({
     }
 }))
 
-ACTION_DECL(DEPOSIT,                 ActivatorDeposit,           ACTION_TYPE_USAGE)
+ACTION_WRAPPER_DECL(DEPOSIT, ACTION_TYPE_USAGE, ({
+    .effects = { .onSuccess = {
+        ActivatorDeposit{},
+        ActivationAddTargetKeyframe{{ANIMATION_BOUNCE_FROM_FLOOR_TO_LOCK, ANIMATION_ACT_SUBJECT_TO_TARGET}}
+    } }
+}))
+
 ACTION_DECL(DAMAGE,                  ActivatorDamage,           ACTION_TYPE_USAGE)
 ACTION_DECL(ATTACK,                  ActivatorAttack,           ACTION_TYPE_USAGE)
 
