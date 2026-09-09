@@ -1,5 +1,6 @@
 #include "ActivatorMoveToFloor.hpp"
 #include "BehaviorEventEnum.hpp"
+#include "Cardinal.hpp"
 #include "Codeset.hpp"
 #include "Match.hpp"
 #include "MatchController.hpp"
@@ -46,7 +47,29 @@ bool ActivatorMoveToFloor::activate(ActivationContext& activation) const {
 
         if (!req.isSkippingAnimations) {
             auto rack = Rack<Keyframe>::buildFromArray<Character::MAX_KEYFRAMES>(subject.keyframes);
-            const auto keyframe = Keyframe::buildWalking(req.time, MatchController::MOVE_ANIMATION_DURATION, room.roomId, oldLocation, newLocation, codeset);
+
+            // TriggerEffectTraverseDoor jumps an NPC straight into an adjacent room with a
+            // single ACTION_MOVE_TO_FLOOR, skipping the door position a player's
+            // floor->door->floor pair would normally pass through. When that happens,
+            // oldLocation is still LOCATION_FLOOR but belongs to a different room than
+            // room0/newLocation, so Keyframe::buildWalking's Location-overload can't tell
+            // this apart from an ordinary same-room floor move and emits a meaningless (or
+            // degenerate) WALKING_FROM_FLOOR_TO_FLOOR keyframe. Detect the room change and
+            // recover the crossing direction from room0's own wall that leads back to
+            // oldLocation's room, rendering the move as a door -> floor walk instead.
+            Maybe<Cardinal> crossedThrough;
+            if (oldLocation.roomId != room.roomId) {
+                for (const Cardinal dir : Cardinal::getAllCardinals()) {
+                    if (room.getWall(dir).adjacent == oldLocation.roomId) {
+                        crossedThrough = Maybe<Cardinal>(dir);
+                        break;
+                    }
+                }
+            }
+
+            const auto keyframe = crossedThrough.isPresent()
+                ? Keyframe::buildWalking(req.time, MatchController::MOVE_ANIMATION_DURATION, room.roomId, crossedThrough.orElse(Cardinal::north()), floorId)
+                : Keyframe::buildWalking(req.time, MatchController::MOVE_ANIMATION_DURATION, room.roomId, oldLocation, newLocation, codeset);
             if(!Keyframe::insertKeyframe(rack, keyframe)) {
                 codeset.addLog(CODE_ANIMATION_OVERFLOW_IN_MOVE_CHARACTER_TO_FLOOR);
             }

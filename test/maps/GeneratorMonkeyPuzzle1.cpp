@@ -1,7 +1,9 @@
 #include <catch2/catch_test_macros.hpp>
 #include "ActionEnum.hpp"
+#include "AnimationEnum.hpp"
 #include "BehaviorEnum.hpp"
 #include "Cardinal.hpp"
+#include "Character.hpp"
 #include "CodesetExpect.hpp"
 #include "ConductEnum.hpp"
 #include "ConductExpect.hpp"
@@ -10,11 +12,73 @@
 #include "GeneratorEnum.hpp"
 #include "InventoryExpect.hpp"
 #include "ItemEnum.hpp"
+#include "Keyframe.hpp"
 #include "LockEnum.hpp"
 #include "Match.hpp"
 #include "Preactivation.hpp"
 #include "RoleEnum.hpp"
 #include "TestController.hpp"
+
+// Finds the most recently inserted WALKING_FROM_FLOOR_TO_FLOOR keyframe (highest t0),
+// i.e. the one the monkey's *last* move actually wrote. Keyframe::insertKeyframe only
+// evicts a slot once it has expired (see isAvailable()), so with MAX_KEYFRAMES slots a
+// stale keyframe from an earlier hop can still be sitting in the array; scanning for
+// "any" match would risk pairing a stale keyframe with the wrong hop's previousRoomId.
+static Maybe<Keyframe> latestFloorToFloorKeyframe(const Array<Keyframe, Character::MAX_KEYFRAMES>& keyframes) {
+    Maybe<Keyframe> latest;
+    for (const auto& kf : keyframes) {
+        if (kf.animation != ANIMATION_WALKING_FROM_FLOOR_TO_FLOOR) continue;
+        if (latest.isEmpty() || kf.t0 > latest.orElse(Keyframe{}).t0) {
+            latest = Maybe<Keyframe>(kf);
+        }
+    }
+    return latest;
+}
+
+// A WALKING_FROM_FLOOR_TO_FLOOR keyframe whose source and destination cell are the
+// same id is a no-op: AnimatedCharacter lerps cell N -> cell N on the frontend, so the
+// walk animation plays but nothing visibly moves. See Keyframe::buildWalking's
+// Location-overload (Keyframe.cpp) and its "floor -> floor, character passes 1 room"
+// comment in Keyframe.hpp — this animation is only meant to represent motion within a
+// single room, so a degenerate [N, N] means the two cell ids came from unrelated frames
+// of reference (see hasMislabeledWallToFloorKeyframe below).
+static bool hasDegenerateFloorToFloorKeyframe(const Array<Keyframe, Character::MAX_KEYFRAMES>& keyframes) {
+    bool result = false;
+    latestFloorToFloorKeyframe(keyframes).accessConst([&](const Keyframe& kf) {
+        result = kf.data.begin()[0] == kf.data.begin()[1];
+    });
+    return result;
+}
+
+// TriggerEffectTraverseDoor (TriggerWrapper.cpp) moves an NPC across a room boundary by
+// issuing a single ACTION_MOVE_TO_FLOOR straight into a free floor cell of the adjacent
+// room, without ever placing the character in a LOCATION_DOOR position. Because
+// ActivatorMoveToFloor's oldLocation is snapshotted from the character's location in the
+// room it just left (MatchController::updateCharacterLocation), and that location is
+// LOCATION_FLOOR, Keyframe::buildWalking's Location-overload sees FLOOR -> FLOOR on both
+// ends and emits ANIMATION_WALKING_FROM_FLOOR_TO_FLOOR instead of
+// ANIMATION_WALKING_FROM_WALL_TO_FLOOR — even though the character actually crossed a
+// door into a different room.
+//
+// Detect this by comparing the latest FLOOR_TO_FLOOR keyframe's room0 against the room
+// the character was in immediately before the move. room0 isn't a guess about where the
+// monkey is headed: TriggerEffectTraverseDoor always issues ACTION_MOVE_TO_FLOOR with
+// roomId = the destination room, and buildActivationContext resolves activation.room
+// (and therefore Keyframe::room0) directly from that — true for both directions of
+// travel (BEHAVIOR_STASH_TRAVERSING and BEHAVIOR_PICKPOCKET_RETURN_TO_START both route
+// through the same handler). So a real same-room floor move has room0 == previousRoomId;
+// a mislabeled cross-room hop never does.
+//
+// (In this map the monkey spawns in room 4 and its stash chest is in room 7 — see
+// Generator.enum's MONKEY_PUZZLE_1 RemodelAuthorAllocateCharacter/ChestSeeder — so in
+// practice previousRoomId only ever alternates between 4 and 7 here.)
+static bool hasMislabeledWallToFloorKeyframe(const Array<Keyframe, Character::MAX_KEYFRAMES>& keyframes, int previousRoomId) {
+    bool result = false;
+    latestFloorToFloorKeyframe(keyframes).accessConst([&](const Keyframe& kf) {
+        result = kf.room0 != previousRoomId;
+    });
+    return result;
+}
 
 TEST_CASE("Monkey steals ITEM_COIN from builder in shared room", "[match][GENERATOR_MONKEY_PUZZLE_1]") {
     TestController tc(GENERATOR_MONKEY_PUZZLE_1_TEST);
@@ -108,6 +172,15 @@ TEST_CASE("Monkey steals ITEM_COIN from builder in shared room", "[match][GENERA
         InventoryExpect{}.expectStacks(ITEM_KEY, 0)
     ));
 
+    // This turn drives BEHAVIOR_STASH_TRAVERSING's TriggerEffectTraverseDoor, which
+    // crosses a room boundary in a single ACTION_MOVE_TO_FLOOR call (see
+    // hasMislabeledWallToFloorKeyframe above). That reproduces the frontend-reported
+    // "monkey teleports at a door" bug: the server should emit
+    // ANIMATION_WALKING_FROM_WALL_TO_FLOOR for a door crossing, and never a
+    // FLOOR_TO_FLOOR walk whose data is degenerate ([N, N], zero displacement on the
+    // client). Both checks are expected to hold; either failing reproduces the bug
+    // reported from the frontend animation log.
+    const int monkeyRoomIdBeforeStashTraversal = getMonkeyRoomId();
     tc.endTurn();
     REQUIRE_THAT(codeset, MatchesCodesetExpect(CodesetExpect{}.expectIsLatestSuccessFlag(true)));
 
@@ -116,6 +189,10 @@ TEST_CASE("Monkey steals ITEM_COIN from builder in shared room", "[match][GENERA
             ConductExpect{}
                 .expectState(CONDUCT_PICKPOCKET, BEHAVIOR_PICKPOCKET_RETURN_TO_START)
         ));
+    });
+    monkeyPtr.accessConst([&](const Character& monkey) {
+        REQUIRE_FALSE(hasDegenerateFloorToFloorKeyframe(monkey.keyframes));
+        REQUIRE_FALSE(hasMislabeledWallToFloorKeyframe(monkey.keyframes, monkeyRoomIdBeforeStashTraversal));
     });
 
     // get back the key
