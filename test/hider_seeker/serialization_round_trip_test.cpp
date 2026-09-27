@@ -1,7 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <vector>
-#include "hider_seeker/domain/state.hpp"
-#include "hider_seeker/domain/serialization.hpp"
+#include "state.hpp"
+#include "serialization.hpp"
 
 using namespace hider_seeker;
 

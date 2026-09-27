@@ -58,13 +58,13 @@ namespace {
     uint64_t readUint64(const std::vector<uint8_t>& in, size_t& pos) {
         uint64_t value = 0;
         value |= static_cast<uint64_t>(in[pos++]);
-        value |= static_cast<uint64_t>(in[pos++] << 8);
-        value |= static_cast<uint64_t>(in[pos++] << 16);
-        value |= static_cast<uint64_t>(in[pos++] << 24);
-        value |= static_cast<uint64_t>(in[pos++] << 32);
-        value |= static_cast<uint64_t>(in[pos++] << 40);
-        value |= static_cast<uint64_t>(in[pos++] << 48);
-        value |= static_cast<uint64_t>(in[pos++] << 56);
+        value |= static_cast<uint64_t>(in[pos++]) << 8;
+        value |= static_cast<uint64_t>(in[pos++]) << 16;
+        value |= static_cast<uint64_t>(in[pos++]) << 24;
+        value |= static_cast<uint64_t>(in[pos++]) << 32;
+        value |= static_cast<uint64_t>(in[pos++]) << 40;
+        value |= static_cast<uint64_t>(in[pos++]) << 48;
+        value |= static_cast<uint64_t>(in[pos++]) << 56;
         return value;
     }
 
