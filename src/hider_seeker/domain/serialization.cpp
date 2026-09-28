@@ -293,8 +293,10 @@ bool loadMatchState(const std::vector<uint8_t>& in, MatchState& state) {
         return false;
     }
     
-    // Read the header fields - these are all the actual data values, not markers
-    state.schema_version = readUint32(in, pos);
+    // schema_version was already consumed (and validated) above as the
+    // leading marker -- do not read it a second time, which would desync
+    // pos by 4 bytes relative to what saveMatchState actually wrote.
+    state.schema_version = schema_version;
     state.ruleset_version = readUint32(in, pos);
     state.revision = readUint64(in, pos);
     state.tick = readUint32(in, pos);
@@ -302,6 +304,26 @@ bool loadMatchState(const std::vector<uint8_t>& in, MatchState& state) {
     state.phase = readUint8(in, pos);
     state.hider_count = readUint8(in, pos);
     state.server_count = readUint8(in, pos);
+    
+    // Bounds-check the remaining bulk sections before reading any of them
+    // -- each read*() helper below indexes in[] unchecked, so a
+    // truncated-but-non-empty, correctly-marked buffer must be rejected
+    // here rather than relied on to fail safely on its own.
+    constexpr size_t kHiderStateSize = 4 + RESOURCE_TYPE_COUNT * 2 + MAX_GOALS;
+    constexpr size_t kServerStateSize = 5 + 7 + HISTORY_TICKS * 7 + 1;
+    constexpr size_t kSeekerStateSize = 5 + 2 * MAX_SERVERS + MAX_SEEKER_TARGETS;
+    constexpr size_t kGoalStateSize = 10 + MAX_REQUIREMENTS_PER_GOAL * 6;
+    constexpr size_t kEventSize = 5;
+    constexpr size_t kExpectedBulkSize =
+        MAX_HIDERS * kHiderStateSize
+        + MAX_SERVERS * kServerStateSize
+        + kSeekerStateSize
+        + MAX_GOALS * kGoalStateSize
+        + MAX_EVENTS * kEventSize
+        + 2; // event_head + event_count
+    if (pos + kExpectedBulkSize > in.size()) {
+        return false;
+    }
     
     // Read hiders
     for (int i = 0; i < MAX_HIDERS; ++i) {
