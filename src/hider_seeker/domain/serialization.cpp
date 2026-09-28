@@ -297,12 +297,25 @@ bool loadMatchState(const std::vector<uint8_t>& in, MatchState& state) {
     state.server_count = readUint8(in, pos);
     
     // Check if we have enough data for all hiders
-    size_t expected_size = 4 + 4 + 4 + 8 + 4 + 8 + 1 + 1 + 1; // header size
+    // Note: pos is already past the header (35 bytes), so don't re-add it
+    size_t expected_size = 0; // Don't add header size again since pos already accounts for it
+    
+    // Calculate size of hiders section
     expected_size += MAX_HIDERS * (1 + 1 + 1 + 1 + RESOURCE_TYPE_COUNT * 2 + MAX_GOALS); // hiders
+    
+    // Calculate size of servers section  
     expected_size += MAX_SERVERS * (1 + 1 + 1 + 1 + 1 + 7 + HISTORY_TICKS * 7 + 1); // servers
+    
+    // Calculate size of seeker section
     expected_size += 1 + 1 + 1 + MAX_SERVERS + MAX_SEEKER_TARGETS + 1 + 1 + MAX_SERVERS; // seeker
-    expected_size += MAX_GOALS * (1 + 1 + 1 + 1 + 2 + 1 + MAX_REQUIREMENTS_PER_GOAL * 4 + 1 + 2); // goals
+    
+    // Calculate size of goals section (each requirement is 6 bytes, not 4)
+    expected_size += MAX_GOALS * (1 + 1 + 1 + 1 + 2 + 1 + MAX_REQUIREMENTS_PER_GOAL * 6 + 1 + 2); // goals
+    
+    // Calculate size of events section
     expected_size += MAX_EVENTS * (1 + 4); // events
+    
+    // Calculate size of event_head and event_count
     expected_size += 1 + 1; // event_head and event_count
     
     if (pos + expected_size > in.size()) {
