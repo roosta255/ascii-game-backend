@@ -293,12 +293,7 @@ bool loadMatchState(const std::vector<uint8_t>& in, MatchState& state) {
         return false;
     }
     
-    // Validate that we have enough data for the fixed-size header before reading any fields
-    // Header size: 4(schema_version) + 4(ruleset_version) + 8(revision) + 4(tick) + 8(rng_state) + 1(phase) + 1(hider_count) + 1(server_count) = 31 bytes
-    if (pos + 31 > in.size()) {
-        return false;
-    }
-    
+    // Read the header fields - these are all the actual data values, not markers
     state.schema_version = readUint32(in, pos);
     state.ruleset_version = readUint32(in, pos);
     state.revision = readUint64(in, pos);
@@ -308,48 +303,32 @@ bool loadMatchState(const std::vector<uint8_t>& in, MatchState& state) {
     state.hider_count = readUint8(in, pos);
     state.server_count = readUint8(in, pos);
     
-    // Check if we have enough data for all hiders
-    // Note: pos is already past the header (35 bytes), so don't re-add it
-    size_t expected_size = 0; // Don't add header size again since pos already accounts for it
-    
-    // Calculate size of hiders section
-    expected_size += MAX_HIDERS * (1 + 1 + 1 + 1 + RESOURCE_TYPE_COUNT * 2 + MAX_GOALS); // hiders
-    
-    // Calculate size of servers section  
-    expected_size += MAX_SERVERS * (1 + 1 + 1 + 1 + 1 + 7 + HISTORY_TICKS * 7 + 1); // servers
-    
-    // Calculate size of seeker section
-    expected_size += 1 + 1 + 1 + MAX_SERVERS + MAX_SEEKER_TARGETS + 1 + 1 + MAX_SERVERS; // seeker
-    
-    // Calculate size of goals section (each requirement is 6 bytes, not 4)
-    expected_size += MAX_GOALS * (1 + 1 + 1 + 1 + 2 + 1 + MAX_REQUIREMENTS_PER_GOAL * 6 + 1 + 2); // goals
-    
-    // Calculate size of events section
-    expected_size += MAX_EVENTS * (1 + 4); // events
-    
-    // Calculate size of event_head and event_count
-    expected_size += 1 + 1; // event_head and event_count
-    
-    if (pos + expected_size > in.size()) {
-        return false;
-    }
-    
+    // Read hiders
     for (int i = 0; i < MAX_HIDERS; ++i) {
         state.hiders[i] = readHiderState(in, pos);
     }
     
+    // Read servers
     for (int i = 0; i < MAX_SERVERS; ++i) {
         state.servers[i] = readServerState(in, pos);
     }
     
+    // Read seeker
     state.seeker = readSeekerState(in, pos);
     
+    // Read goals
     for (int i = 0; i < MAX_GOALS; ++i) {
         state.goals[i] = readGoalState(in, pos);
     }
     
+    // Read events
     for (int i = 0; i < MAX_EVENTS; ++i) {
         state.events[i] = readEvent(in, pos);
+    }
+    
+    // Read event_head and event_count
+    if (pos + 2 > in.size()) {
+        return false;
     }
     
     state.event_head = readUint8(in, pos);
