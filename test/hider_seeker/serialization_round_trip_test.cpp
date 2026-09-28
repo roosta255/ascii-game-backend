@@ -9,7 +9,7 @@ TEST_CASE("hider_seeker serialization round-trip", "[hider_seeker][serialization
     MatchState original;
     
     // Initialize with non-default values
-    original.schema_version = 12345;
+    original.schema_version = 1;
     original.ruleset_version = 67890;
     original.revision = 9876543210ULL;
     original.tick = 50000;
