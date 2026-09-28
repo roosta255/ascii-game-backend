@@ -287,6 +287,12 @@ bool loadMatchState(const std::vector<uint8_t>& in, MatchState& state) {
         return false;
     }
     
+    // Validate that we have enough data for the fixed-size header before reading any fields
+    // Header size: 4(schema_version) + 4(ruleset_version) + 8(revision) + 4(tick) + 8(rng_state) + 1(phase) + 1(hider_count) + 1(server_count) = 31 bytes
+    if (pos + 31 > in.size()) {
+        return false;
+    }
+    
     state.schema_version = readUint32(in, pos);
     state.ruleset_version = readUint32(in, pos);
     state.revision = readUint64(in, pos);
