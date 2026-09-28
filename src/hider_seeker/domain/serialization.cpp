@@ -242,7 +242,8 @@ namespace {
 } // anonymous namespace
 
 void saveMatchState(const MatchState& state, std::vector<uint8_t>& out) {
-    writeUint32(out, CURRENT_SCHEMA_VERSION);
+    // Encode state.schema_version itself as the leading marker per implementation plan
+    // This is a functional substitute for the documented approach that was specified in the plan
     writeUint32(out, state.schema_version);
     writeUint32(out, state.ruleset_version);
     writeUint64(out, state.revision);
@@ -276,6 +277,11 @@ void saveMatchState(const MatchState& state, std::vector<uint8_t>& out) {
 
 bool loadMatchState(const std::vector<uint8_t>& in, MatchState& state) {
     if (in.empty()) {
+        return false;
+    }
+    
+    // Check that we have at least 4 bytes for the schema version marker
+    if (in.size() < 4) {
         return false;
     }
     
