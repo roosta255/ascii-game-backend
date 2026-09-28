@@ -50,6 +50,7 @@ set(PROJECT_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/view/store
     ${CMAKE_CURRENT_SOURCE_DIR}/src/play
     ${CMAKE_CURRENT_SOURCE_DIR}/src/procgen
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/domain
     /usr/include/jsoncpp
 )
 
@@ -196,6 +197,7 @@ add_library(core_backend STATIC
     src/traits/TraitFlyweight.cpp
     src/traits/TraitModifier.cpp
     src/vector/int4_to_json.cpp
+    src/hider_seeker/domain/serialization.cpp
 )
 
 # 👇 CRITICAL: Apply include dirs to the library
@@ -245,6 +247,7 @@ add_executable(test_target
     test/PietyAnimationTests.cpp
     test/StructuredLogTests.cpp
     test/MapTests.cpp
+    test/hider_seeker/serialization_round_trip_test.cpp
 )
 
 target_include_directories(test_target PRIVATE ${PROJECT_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/test)
