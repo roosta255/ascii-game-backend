@@ -293,6 +293,14 @@ bool loadMatchState(const std::vector<uint8_t>& in, MatchState& state) {
         return false;
     }
     
+    // Bounds-check the fixed header fields before reading any of them --
+    // ruleset_version(4) + revision(8) + tick(4) + rng_state(8) + phase(1)
+    // + hider_count(1) + server_count(1) = 27 bytes.
+    constexpr size_t kHeaderRemainderSize = 4 + 8 + 4 + 8 + 1 + 1 + 1;
+    if (pos + kHeaderRemainderSize > in.size()) {
+        return false;
+    }
+
     // schema_version was already consumed (and validated) above as the
     // leading marker -- do not read it a second time, which would desync
     // pos by 4 bytes relative to what saveMatchState actually wrote.
