@@ -241,6 +241,10 @@ namespace {
     }
 } // anonymous namespace
 
+uint32_t currentSchemaVersion() {
+    return CURRENT_SCHEMA_VERSION;
+}
+
 void saveMatchState(const MatchState& state, std::vector<uint8_t>& out) {
     // Encode state.schema_version itself as the leading marker per implementation plan
     // This is a functional substitute for the documented approach that was specified in the plan

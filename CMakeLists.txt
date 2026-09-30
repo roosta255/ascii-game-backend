@@ -51,6 +51,7 @@ set(PROJECT_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/play
     ${CMAKE_CURRENT_SOURCE_DIR}/src/procgen
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/domain
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/api
     /usr/include/jsoncpp
 )
 
@@ -198,6 +199,8 @@ add_library(core_backend STATIC
     src/traits/TraitModifier.cpp
     src/vector/int4_to_json.cpp
     src/hider_seeker/domain/serialization.cpp
+    src/hider_seeker/api/MatchStore.cpp
+    src/hider_seeker/api/MatchStateJson.cpp
 )
 
 # 👇 CRITICAL: Apply include dirs to the library
@@ -211,6 +214,7 @@ add_executable(match_backend
     src/controllers/ApiController.cpp
     src/controllers/MatchRepository.cpp
     src/controllers/AccountRepository.cpp
+    src/hider_seeker/api/HiderSeekerApiController.cpp
 )
 
 target_include_directories(match_backend PRIVATE ${PROJECT_INCLUDE_DIRS})
@@ -248,6 +252,7 @@ add_executable(test_target
     test/StructuredLogTests.cpp
     test/MapTests.cpp
     test/hider_seeker/serialization_round_trip_test.cpp
+    test/hider_seeker/api/match_store_test.cpp
 )
 
 target_include_directories(test_target PRIVATE ${PROJECT_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/test)
