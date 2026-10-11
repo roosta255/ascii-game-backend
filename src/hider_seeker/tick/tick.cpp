@@ -117,8 +117,8 @@ TickOutput runTick(MatchState& state,
     for (int i = 0; i < MAX_SERVERS; ++i) {
         if (state.servers[i].active) {
             MetricFrame frame = state.servers[i].current;
-            if (frame.errors > 0) {
-                frame.errors++; // increment trace_age by 1 when trace_strength > 0
+            if (state.servers[i].trace_strength > 0) {
+                state.servers[i].trace_age++; // increment trace_age by 1 when trace_strength > 0
             }
             pushMetricFrame(state.servers[i], frame);
         }
@@ -135,8 +135,7 @@ TickOutput runTick(MatchState& state,
         seekerPolicy->rankTargets(state, candidates);
         
         // Process up to connection_tokens number of probes
-        int tokens = state.seeker.connection_tokens;
-        for (int i = 0; i < candidates.size() && i < tokens; ++i) {
+        for (int i = 0; i < candidates.size(); ++i) {
             ProbeResult result{};
             ProbeCandidate defaultCandidate{NO_SERVER_ID, 0};
             const ProbeCandidate& candidate = candidates.getOrDefault(i, defaultCandidate);
@@ -146,15 +145,28 @@ TickOutput runTick(MatchState& state,
                 continue;
             }
             
+            // Before each candidate, check state.seeker.connection_tokens
+            if (state.seeker.connection_tokens <= 0) {
+                break; // No more tokens to spend
+            }
+            
             RuleOutcome probeOutcome = applyProbe(state, candidate.serverId, result);
 
-            if (probeOutcome == RuleOutcome::ACCEPTED) {
-                ProbeConsequences consequences = resolveProbeConsequences(state, result);
+            // Unconditionally call resolveProbeConsequences for every policy-selected candidate processed within the token budget
+            ProbeConsequences consequences = resolveProbeConsequences(state, result);
 
+            if (probeOutcome == RuleOutcome::ACCEPTED) {
                 output.probeResults.assignValue(output.probeCount, result);
                 output.probeConsequences.assignValue(output.probeCount, consequences);
                 output.probeCount++;
+            } else {
+                // Even when not ACCEPTED, we still record the consequences
+                output.probeConsequences.assignValue(output.probeCount, consequences);
+                output.probeCount++;
             }
+            
+            // Decrement token count after processing a candidate (even if not accepted)
+            state.seeker.connection_tokens--;
         }
     }
     
