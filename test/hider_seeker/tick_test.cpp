@@ -13,8 +13,7 @@ using namespace hider_seeker;
 namespace {
     struct StubPolicy : public iTargetRankingPolicy {
         void rankTargets(const MatchState&, Array<ProbeCandidate, MAX_SERVERS>& outCandidates) const override {
-            // Return no candidates
-            outCandidates.size() = 0;
+            // Return no candidates - do nothing (leave array as is)
         }
     };
 }
@@ -125,7 +124,7 @@ TEST_CASE("Tick engine eligibility filtering", "[tick]") {
     
     // Create consumed key set that contains the first intent's key
     ConsumedKeySet alreadyConsumed{};
-    alreadyConsumed.keys[0] = 12345;
+    alreadyConsumed.keys.assignValue(0, 12345);
     alreadyConsumed.count = 1;
     
     // Run tick

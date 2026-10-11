@@ -1,9 +1,9 @@
 #include "tick.hpp"
-#include "../../ruleset/intent_ordering.hpp"
-#include "../../ruleset/action_rules.hpp"
-#include "../../ruleset/loa_rules.hpp"
-#include "../../ruleset/probe_rules.hpp"
-#include "../../ruleset/ring_buffers.hpp"
+#include "../ruleset/intent_ordering.hpp"
+#include "../ruleset/action_rules.hpp"
+#include "../ruleset/loa_rules.hpp"
+#include "../ruleset/probe_rules.hpp"
+#include "../ruleset/ring_buffers.hpp"
 
 namespace hider_seeker {
 

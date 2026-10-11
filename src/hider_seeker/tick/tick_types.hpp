@@ -35,7 +35,7 @@ struct ConsumedKeySet {
     
     bool contains(IdempotencyKeyT key) const {
         for (int i = 0; i < count; ++i) {
-            if (keys[i] == key) {
+            if (keys.getOrDefault(i, 0) == key) {
                 return true;
             }
         }
