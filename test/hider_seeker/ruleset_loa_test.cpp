@@ -65,13 +65,14 @@ TEST_CASE("applyRemoveServer atomically relocates an occupant or is fully reject
     
     // Add server first
     applyAddServer(match, 0);
-    
+    REQUIRE(match.hiders[0].resources[0] == 1);
+
     // Remove server should succeed (placeholder - actual relocation logic not implemented)
     RuleOutcome outcome = applyRemoveServer(match, 0, 0);
     REQUIRE(outcome == RuleOutcome::ACCEPTED);
-    
-    // Check that 1 LOA was spent
-    REQUIRE(match.hiders[0].resources[0] == 1);
+
+    // Check that the removal itself spent exactly 1 LOA (REMOVE_SERVER costs 1 LOA per design §4.2)
+    REQUIRE(match.hiders[0].resources[0] == 0);
     
     // Check that slot was deactivated
     REQUIRE(match.servers[0].active == 0);
