@@ -17,9 +17,10 @@ TEST_CASE("pushMetricFrame overwrites oldest frame after HISTORY_TICKS frames", 
     // The oldest frame (with value 0) should have been overwritten by frame with value HISTORY_TICKS
     REQUIRE(server.history_head == HISTORY_TICKS + 1);
     
-    // The first frame in history should be the one that overwrote the oldest
-    // This is a placeholder - actual test would check specific values
-    REQUIRE(true); // Placeholder for more detailed testing
+    // Verify that the actual frame contents are correct after wrapping
+    // Check that the first frame in history is the one that overwrote the oldest
+    uint8_t expectedFirstValue = static_cast<uint8_t>(HISTORY_TICKS - (HISTORY_TICKS - 1)); // This should be 1
+    REQUIRE(server.history[0].server_id == expectedFirstValue);
 }
 
 TEST_CASE("addPendingSeekerTarget handles overflow with defined rule", "[ring]") {

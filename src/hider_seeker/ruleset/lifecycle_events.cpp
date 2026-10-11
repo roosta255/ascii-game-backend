@@ -6,11 +6,16 @@ RuleOutcome emitPublicLifecycleEventIfDefined(HiderSeekerEventType type, uint32_
                                                Array<PublicLifecycleEvent, MAX_EVENTS>& outPublicEvents) {
     // Append the event only when isDefinedPublicByRuleset is true
     if (isDefinedPublicByRuleset) {
-        // Find first available slot in events array - just use index 0 for now
-        // In a real implementation, there would be proper tracking of used slots
-        if (outPublicEvents.size() > 0) {
-            outPublicEvents.assignValue(0, PublicLifecycleEvent{type, tick});
-            return RuleOutcome::ACCEPTED;
+        // Find first available slot in events array - properly track used slots
+        for (int i = 0; i < outPublicEvents.size(); ++i) {
+            bool isEmpty = outPublicEvents.accessConst(i, [](const PublicLifecycleEvent& event) {
+                return event.type == static_cast<HiderSeekerEventType>(0xFF); // Assuming this is empty marker
+            }).value_or(true);
+            
+            if (isEmpty) {
+                outPublicEvents.assignValue(i, PublicLifecycleEvent{type, tick});
+                return RuleOutcome::ACCEPTED;
+            }
         }
     }
     

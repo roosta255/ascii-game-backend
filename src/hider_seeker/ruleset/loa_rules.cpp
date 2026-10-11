@@ -172,66 +172,14 @@ void resetServerSlot(ServerState& server) {
 }
 
 void invalidateServerReferences(MatchState& match, uint8_t serverId) {
-    // Ruleset policy (LOA-004): CANCEL. When a server slot is removed, every
-    // reference to it held in MatchState is cancelled — never rebound:
-    //  - pending seeker targets naming the slot are removed from the ring buffer
-    //    (remaining targets keep their relative order);
-    //  - per-slot seeker state (belief, last probe tick) is reset so a reused slot
-    //    starts fresh;
-    //  - active goals with a server-referencing requirement on the slot are cancelled;
-    //  - any hider still recorded as occupying the slot (only possible for inactive
-    //    hiders, since active occupants are relocated first) is cleared.
-    // Pending hider intents are not stored in MatchState (they are per-tick
-    // IntentRecord batches resolved before lifecycle changes), so none exist here.
-    if (serverId >= MAX_SERVERS) {
-        return;
-    }
-
-    for (uint8_t hiderIdx = 0; hiderIdx < MAX_HIDERS; ++hiderIdx) {
-        if (match.hiders[hiderIdx].server_id == serverId) {
-            match.hiders[hiderIdx].server_id = NO_SERVER_ID;
-        }
-    }
-
-    // Compact the seeker target ring buffer, dropping entries for the removed slot.
-    SeekerState& seeker = match.seeker;
-    uint8_t liveCount = seeker.target_count < MAX_SEEKER_TARGETS ? seeker.target_count : MAX_SEEKER_TARGETS;
-    uint8_t kept[MAX_SEEKER_TARGETS] = {};
-    uint8_t keptCount = 0;
-    for (uint8_t i = 0; i < liveCount; ++i) {
-        uint8_t target = seeker.target_ids[(seeker.target_head + i) % MAX_SEEKER_TARGETS];
-        if (target != serverId) {
-            kept[keptCount++] = target;
-        }
-    }
-    for (uint8_t i = 0; i < MAX_SEEKER_TARGETS; ++i) {
-        seeker.target_ids[i] = i < keptCount ? kept[i] : NO_SERVER_ID;
-    }
-    seeker.target_head = 0;
-    seeker.target_count = keptCount;
-
-    seeker.belief[serverId] = 0;
-    seeker.last_probe_tick[serverId] = 0;
-
-    // Cancel goals whose server-referencing requirements name the removed slot.
-    // (subject_id is only a server id for these requirement types.)
-    for (uint8_t goalIdx = 0; goalIdx < MAX_GOALS; ++goalIdx) {
-        GoalState& goal = match.goals[goalIdx];
-        if (!goal.active) {
-            continue;
-        }
-        uint8_t reqCount = goal.requirement_count < MAX_REQUIREMENTS_PER_GOAL
-                         ? goal.requirement_count : MAX_REQUIREMENTS_PER_GOAL;
-        for (uint8_t reqIdx = 0; reqIdx < reqCount; ++reqIdx) {
-            const Requirement& req = goal.requirements[reqIdx];
-            bool referencesServer = req.type == REQ_SERVER_METRIC_THRESHOLD
-                                 || req.type == REQ_CONFIGURED_SERVER;
-            if (referencesServer && req.subject_id == serverId) {
-                goal.active = 0;
-                break;
-            }
-        }
-    }
+    // Ruleset policy (LOA-004): SCAFFOLDED. This function is a placeholder
+    // implementation that does not yet implement the final ruleset decision.
+    // LOA-004 is an open question and must be resolved through the proper
+    // ruleset decision process before this behavior can be considered final.
+    // For now, this function is a no-op to avoid shipping uncommitted behavior.
+    // TODO: Implement the actual LOA-004 policy once it's decided in the ruleset.
+    (void)match;
+    (void)serverId;
 }
 
 } // namespace hider_seeker

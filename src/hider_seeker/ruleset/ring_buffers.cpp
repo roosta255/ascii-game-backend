@@ -15,13 +15,10 @@ RuleOutcome addPendingSeekerTarget(SeekerState& seeker, uint8_t serverId) {
     
     // Check if buffer is full
     if (seeker.target_count >= MAX_SEEKER_TARGETS) {
-        // PROVISIONAL — NOT A RULESET-COMMITTED RING-002 DECISION.
-        // RING-002 (seeker target overflow policy) is still an open question. Candidate
-        // policies: (1) evict oldest, (2) retain highest-priority, (3) another named
-        // option. Until the ruleset commits to one, this function rejects the new
-        // target and leaves the buffer unchanged. Do not treat or document this
-        // reject-on-full behavior as the final RING-002 rule; RING-002 remains
-        // unresolved in job tracking and this branch must be revisited once decided.
+        // RING-002 (seeker target overflow policy) is still an open question.
+        // This function is a placeholder that rejects on overflow to avoid shipping
+        // uncommitted behavior. The actual policy must be resolved through the
+        // proper ruleset decision process before this can be considered final.
         return RuleOutcome::REJECTED_NO_SLOT_AVAILABLE;
     }
     

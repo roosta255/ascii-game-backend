@@ -17,8 +17,10 @@ enum class HiderActionMode : uint8_t {
 
 struct ActionRuleEntry {
     uint16_t ap_cost;
-    // Effect parameters would go here, but are not specified in the design doc
-    // For now, we'll leave them as placeholders
+    // Effect parameters for each action mode - these would be defined by ruleset data
+    // For now, they are placeholders to match the implementation plan's stated design
+    int16_t effect_param1;  // Placeholder for first effect parameter
+    int16_t effect_param2;  // Placeholder for second effect parameter
 };
 
 RuleOutcome applyHiderAction(MatchState&, uint8_t hiderId, HiderActionMode mode);
