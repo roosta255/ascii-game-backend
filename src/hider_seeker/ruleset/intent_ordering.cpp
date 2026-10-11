@@ -21,9 +21,9 @@ bool isIntentAlreadyApplied(const Array<uint64_t, MAX_INTENTS_PER_TICK>& consume
     
     // Iterate through all elements in the array
     for (int i = 0; i < consumedKeys.size(); ++i) {
-        // The original code was correct - just needed to make sure includes are right
-        // The error was about const qualifier, but that's not the main issue here
-        if (consumedKeys[i].isPresent() && consumedKeys[i].getOrDefault(0) == idempotencyKey) {
+        // Use getOrDefault directly on the array - this is const-correct
+        uint64_t value = consumedKeys.getOrDefault(i, 0);
+        if (value == idempotencyKey) {
             return true;
         }
     }
