@@ -54,7 +54,7 @@ TEST_CASE("Tick engine runs without crashing", "[tick]") {
     intent1.intent.idempotencyKey = 12345;
     intent1.intent.hiderId = 0;
     intent1.intent.receiptSequence = 1;
-    intents[intentCount++] = intent1;
+    intents.assignValue(intentCount++, intent1);
     
     // Add an ADD_SERVER intent
     TickIntent intent2{};
@@ -63,7 +63,7 @@ TEST_CASE("Tick engine runs without crashing", "[tick]") {
     intent2.intent.idempotencyKey = 12346;
     intent2.intent.hiderId = 0;
     intent2.intent.receiptSequence = 2;
-    intents[intentCount++] = intent2;
+    intents.assignValue(intentCount++, intent2);
     
     // Create consumed key set
     ConsumedKeySet alreadyConsumed{};
@@ -111,7 +111,7 @@ TEST_CASE("Tick engine eligibility filtering", "[tick]") {
     intent1.intent.idempotencyKey = 12345;
     intent1.intent.hiderId = 0;
     intent1.intent.receiptSequence = 1;
-    intents[0] = intent1;
+    intents.assignValue(0, intent1);
     
     // Add another intent with same idempotency key (should be filtered out)
     TickIntent intent2{};
@@ -120,7 +120,7 @@ TEST_CASE("Tick engine eligibility filtering", "[tick]") {
     intent2.intent.idempotencyKey = 12345; // Same key as intent1
     intent2.intent.hiderId = 0;
     intent2.intent.receiptSequence = 2;
-    intents[1] = intent2;
+    intents.assignValue(1, intent2);
     
     // Create consumed key set that contains the first intent's key
     ConsumedKeySet alreadyConsumed{};
@@ -169,7 +169,7 @@ TEST_CASE("Tick engine ordering and deduplication", "[tick]") {
     intent1.intent.idempotencyKey = 12345;
     intent1.intent.hiderId = 0;
     intent1.intent.receiptSequence = 1;
-    intents[0] = intent1;
+    intents.assignValue(0, intent1);
     
     TickIntent intent2{};
     intent2.kind = TickActionKind::HIDER_ACTION;
@@ -177,7 +177,7 @@ TEST_CASE("Tick engine ordering and deduplication", "[tick]") {
     intent2.intent.idempotencyKey = 12345; // Same key as intent1
     intent2.intent.hiderId = 0;
     intent2.intent.receiptSequence = 2;
-    intents[1] = intent2;
+    intents.assignValue(1, intent2);
     
     // Create empty consumed key set
     ConsumedKeySet alreadyConsumed{};
@@ -224,7 +224,7 @@ TEST_CASE("Tick engine action dispatch", "[tick]") {
     intent1.intent.idempotencyKey = 1001;
     intent1.intent.hiderId = 0;
     intent1.intent.receiptSequence = 1;
-    intents[0] = intent1;
+    intents.assignValue(0, intent1);
     
     // SUPPRESS_ERROR
     TickIntent intent2{};
@@ -233,7 +233,7 @@ TEST_CASE("Tick engine action dispatch", "[tick]") {
     intent2.intent.idempotencyKey = 1002;
     intent2.intent.hiderId = 0;
     intent2.intent.receiptSequence = 2;
-    intents[1] = intent2;
+    intents.assignValue(1, intent2);
     
     // BOOST_CPU
     TickIntent intent3{};
@@ -242,7 +242,7 @@ TEST_CASE("Tick engine action dispatch", "[tick]") {
     intent3.intent.idempotencyKey = 1003;
     intent3.intent.hiderId = 0;
     intent3.intent.receiptSequence = 3;
-    intents[2] = intent3;
+    intents.assignValue(2, intent3);
     
     // ROTATE_ROUTE
     TickIntent intent4{};
@@ -251,7 +251,7 @@ TEST_CASE("Tick engine action dispatch", "[tick]") {
     intent4.intent.idempotencyKey = 1004;
     intent4.intent.hiderId = 0;
     intent4.intent.receiptSequence = 4;
-    intents[3] = intent4;
+    intents.assignValue(3, intent4);
     
     // PAY_GOAL
     TickIntent intent5{};
@@ -260,7 +260,7 @@ TEST_CASE("Tick engine action dispatch", "[tick]") {
     intent5.intent.idempotencyKey = 1005;
     intent5.intent.hiderId = 0;
     intent5.intent.receiptSequence = 5;
-    intents[4] = intent5;
+    intents.assignValue(4, intent5);
     
     // Create empty consumed key set
     ConsumedKeySet alreadyConsumed{};

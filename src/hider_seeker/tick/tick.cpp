@@ -19,12 +19,22 @@ TickOutput runTick(MatchState& state,
     uint8_t eligibleCount = 0;
     
     for (int i = 0; i < candidateIntentCount; ++i) {
-        if (!alreadyConsumed.contains(candidateIntents[i].intent.idempotencyKey)) {
-            eligibleIntentRecords[eligibleCount] = candidateIntents[i].intent;
-            eligibleCount++;
-        }
+        candidateIntents.accessConst(i, [&](const TickIntent& candidate) {
+            if (!alreadyConsumed.contains(candidate.intent.idempotencyKey)) {
+                eligibleIntentRecords.assignValue(eligibleCount, candidate.intent);
+                eligibleCount++;
+            }
+        });
     }
-    
+
+    // Unused slots must sort after every eligible record so the eligible
+    // records occupy [0, eligibleCount) after ordering.
+    for (int i = eligibleCount; i < eligibleIntentRecords.size(); ++i) {
+        eligibleIntentRecords.access(i, [](IntentRecord& unused) {
+            unused.receiptSequence = UINT64_MAX;
+        });
+    }
+
     // Step 2 (ORDERING): order the eligible intents using the existing function
     orderAcceptedIntents(eligibleIntentRecords);
     
@@ -34,14 +44,16 @@ TickOutput runTick(MatchState& state,
     
     for (int i = 0; i < eligibleCount; ++i) {
         // Find the original TickIntent that corresponds to this IntentRecord
-        const IntentRecord& intentRecord = eligibleIntentRecords[i];
-        TickIntent* matchingIntent = nullptr;
-        
-        for (int j = 0; j < candidateIntentCount; ++j) {
-            if (candidateIntents[j].intent.idempotencyKey == intentRecord.idempotencyKey) {
-                matchingIntent = &candidateIntents[j];
-                break;
-            }
+        IntentRecord defaultRecord{};
+        const IntentRecord& intentRecord = eligibleIntentRecords.getOrDefault(i, defaultRecord);
+        const TickIntent* matchingIntent = nullptr;
+
+        for (int j = 0; j < candidateIntentCount && matchingIntent == nullptr; ++j) {
+            candidateIntents.accessConst(j, [&](const TickIntent& candidate) {
+                if (candidate.intent.idempotencyKey == intentRecord.idempotencyKey) {
+                    matchingIntent = &candidate;
+                }
+            });
         }
         
         if (!matchingIntent) {
@@ -86,16 +98,16 @@ TickOutput runTick(MatchState& state,
         IntentOutcomeRecord record;
         record.idempotencyKey = intentRecord.idempotencyKey;
         record.outcome = outcome;
-        output.intentOutcomes[output.intentOutcomeCount] = record;
+        output.intentOutcomes.assignValue(output.intentOutcomeCount, record);
         output.intentOutcomeCount++;
-        
+
         // If accepted, add to consumed keys
         if (outcome == RuleOutcome::ACCEPTED) {
-            output.consumedKeys[output.consumedKeyCount] = intentRecord.idempotencyKey;
+            output.consumedKeys.assignValue(output.consumedKeyCount, intentRecord.idempotencyKey);
             output.consumedKeyCount++;
-            
+
             // Also track in this tick's consumed keys for idempotency checking
-            consumedKeysInThisTick[consumedKeyCountInThisTick] = intentRecord.idempotencyKey;
+            consumedKeysInThisTick.assignValue(consumedKeyCountInThisTick, intentRecord.idempotencyKey);
             consumedKeyCountInThisTick++;
         }
     }
@@ -120,14 +132,16 @@ TickOutput runTick(MatchState& state,
         // Process up to connection_tokens number of probes
         int tokens = state.seeker.connection_tokens;
         for (int i = 0; i < candidates.size() && i < tokens; ++i) {
-            ProbeResult result;
-            RuleOutcome probeOutcome = applyProbe(state, candidates[i].serverId, result);
-            
+            ProbeResult result{};
+            ProbeCandidate defaultCandidate{NO_SERVER_ID, 0};
+            const uint8_t serverId = candidates.getOrDefault(i, defaultCandidate).serverId;
+            RuleOutcome probeOutcome = applyProbe(state, serverId, result);
+
             if (probeOutcome == RuleOutcome::ACCEPTED) {
                 ProbeConsequences consequences = resolveProbeConsequences(state, result);
-                
-                output.probeResults[output.probeCount] = result;
-                output.probeConsequences[output.probeCount] = consequences;
+
+                output.probeResults.assignValue(output.probeCount, result);
+                output.probeConsequences.assignValue(output.probeCount, consequences);
                 output.probeCount++;
             }
         }
