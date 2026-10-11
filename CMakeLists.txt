@@ -52,6 +52,7 @@ set(PROJECT_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/procgen
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/domain
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/ruleset
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/tick
     /usr/include/jsoncpp
 )
 
@@ -206,6 +207,7 @@ add_library(core_backend STATIC
     src/hider_seeker/ruleset/ring_buffers.cpp
     src/hider_seeker/ruleset/rng.cpp
     src/hider_seeker/ruleset/lifecycle_events.cpp
+    src/hider_seeker/tick/tick.cpp
 )
 
 # 👇 CRITICAL: Apply include dirs to the library
@@ -263,6 +265,7 @@ add_executable(test_target
     test/hider_seeker/ruleset_ring_buffer_test.cpp
     test/hider_seeker/ruleset_rng_test.cpp
     test/hider_seeker/ruleset_lifecycle_events_test.cpp
+    test/hider_seeker/tick_test.cpp
 )
 
 target_include_directories(test_target PRIVATE ${PROJECT_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/test)
