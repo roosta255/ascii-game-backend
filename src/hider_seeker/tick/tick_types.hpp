@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../../hider_seeker/domain/state.hpp"
-#include "../../../data/Array.hpp"
+#include "Array.hpp"
 #include "../ruleset/intent_ordering.hpp"
 #include "../ruleset/rule_types.hpp"
 #include "../ruleset/action_rules.hpp"
