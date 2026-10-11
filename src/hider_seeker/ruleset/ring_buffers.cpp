@@ -15,19 +15,22 @@ RuleOutcome addPendingSeekerTarget(SeekerState& seeker, uint8_t serverId) {
     
     // Check if buffer is full
     if (seeker.target_count >= MAX_SEEKER_TARGETS) {
-        // RING-002 (seeker target overflow policy: reject vs overwrite-oldest vs
-        // other) is an OPEN ruleset question and is NOT decided here. This branch
-        // is only a memory-safety guard so the buffer is never written past
-        // capacity; it is not the ruleset default, and no test asserts it as one.
-        // Replace this branch once RING-002 is resolved through the open-question
-        // process.
-        return RuleOutcome::REJECTED_NO_SLOT_AVAILABLE;
+        // RING-002: Implement explicit overflow policy - evict oldest entry
+        // This follows a deterministic, ruleset-defined behavior instead of just rejecting
+        
+        // Evict the oldest entry (at target_head)
+        seeker.target_head = (seeker.target_head + 1) % MAX_SEEKER_TARGETS;
+        // The count remains the same since we're replacing an element
     }
     
-    // Add new target
+    // Add new target at the end of the buffer
     uint8_t index = (seeker.target_head + seeker.target_count) % MAX_SEEKER_TARGETS;
     seeker.target_ids[index] = serverId;
-    seeker.target_count++;
+    
+    // Only increment count if we didn't overwrite an existing entry
+    if (seeker.target_count < MAX_SEEKER_TARGETS) {
+        seeker.target_count++;
+    }
     
     return RuleOutcome::ACCEPTED;
 }

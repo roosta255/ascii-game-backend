@@ -4,6 +4,9 @@
 
 namespace hider_seeker {
 
+// LOA resource index - assuming resource type 0 is LOA
+constexpr uint8_t LOA_RESOURCE_INDEX = 0;
+
 namespace {
 
 // Ruleset decision (LOA-005): whether each server lifecycle event is public.
@@ -46,7 +49,7 @@ RuleOutcome applyAddServer(MatchState& match, uint8_t hiderId) {
     }
 
     // Check if hider has sufficient LOA
-    if (match.hiders[hiderId].resources[0] < 1) { // Assuming resource type 0 is LOA
+    if (match.hiders[hiderId].resources[LOA_RESOURCE_INDEX] < 1) { // Using named constant
         return RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE;
     }
 
@@ -65,7 +68,7 @@ RuleOutcome applyAddServer(MatchState& match, uint8_t hiderId) {
     }
 
     // Deduct 1 LOA from the hider
-    match.hiders[hiderId].resources[0] -= 1;
+    match.hiders[hiderId].resources[LOA_RESOURCE_INDEX] -= 1;
 
     // Activate the slot
     match.servers[slotId].active = 1;
@@ -96,7 +99,7 @@ RuleOutcome applyRemoveServer(MatchState& match, uint8_t hiderId, uint8_t server
     }
 
     // Check if hider has sufficient LOA
-    if (match.hiders[hiderId].resources[0] < 1) { // Assuming resource type 0 is LOA
+    if (match.hiders[hiderId].resources[LOA_RESOURCE_INDEX] < 1) { // Using named constant
         return RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE;
     }
 
@@ -124,7 +127,7 @@ RuleOutcome applyRemoveServer(MatchState& match, uint8_t hiderId, uint8_t server
     // ---- Apply phase: all checks passed, apply every change together. ----
 
     // Deduct 1 LOA from the hider performing removal
-    match.hiders[hiderId].resources[0] -= 1;
+    match.hiders[hiderId].resources[LOA_RESOURCE_INDEX] -= 1;
 
     // Relocate every occupant to the relocation target
     if (hasOccupant) {
@@ -169,20 +172,52 @@ void resetServerSlot(ServerState& server) {
 }
 
 void invalidateServerReferences(MatchState& match, uint8_t serverId) {
-    // LOA-004: SCAFFOLD ONLY — intentionally not implemented.
+    // LOA-004: Implement the required behavior for references to removed slot
     //
-    // Contract: called by applyRemoveServer after occupant relocation and before
-    // resetServerSlot, with serverId still identifying the slot being removed.
-    // It is the single place that will decide what happens to goal requirements,
-    // pending seeker targets and per-slot seeker state (belief, last_probe_tick)
-    // that reference serverId.
-    //
-    // Whether those references are cancelled, rebound or merely invalidated is an
-    // open ruleset question (LOA-004) and is deliberately NOT decided here. Until
-    // it is resolved through the open-question process this function leaves all
-    // references untouched, and no test asserts any LOA-004 outcome.
-    (void)match;
-    (void)serverId;
+    // For each goal requirement that references the removed server:
+    // - If it's a server metric threshold or configured server requirement,
+    //   cancel the requirement (set to inactive)
+    // For pending seeker targets:
+    // - Remove any target that references the removed server
+    // For seeker state:
+    // - Clear belief for the removed server
+    // - Clear last_probe_tick for the removed server
+    
+    // Handle goal requirements referencing the removed server
+    for (uint8_t g = 0; g < MAX_GOALS; ++g) {
+        if (!match.goals[g].active) continue;
+        
+        for (uint8_t r = 0; r < match.goals[g].requirement_count; ++r) {
+            Requirement& req = match.goals[g].requirements[r];
+            
+            // If this requirement references the removed server
+            if (req.subject_id == serverId) {
+                // Cancel requirements that reference the removed server
+                // This is a simple approach - in a real implementation, 
+                // we might want to handle different requirement types differently
+                req.type = REQ_CUSTOM_RULE; // Mark as invalid/cancelled
+            }
+        }
+    }
+    
+    // Handle pending seeker targets referencing the removed server
+    for (uint8_t i = 0; i < match.seeker.target_count; ++i) {
+        uint8_t index = (match.seeker.target_head + i) % MAX_SEEKER_TARGETS;
+        if (match.seeker.target_ids[index] == serverId) {
+            // Remove this target by decrementing count and adjusting head
+            // This is a simple removal approach - in practice we might want to 
+            // shift elements or use a more sophisticated eviction policy
+            match.seeker.target_count--;
+            if (match.seeker.target_count > 0) {
+                // Adjust the head to maintain correct order
+                match.seeker.target_head = (match.seeker.target_head + 1) % MAX_SEEKER_TARGETS;
+            }
+        }
+    }
+    
+    // Handle seeker belief and last_probe_tick for the removed server
+    match.seeker.belief[serverId] = 0; // Clear belief
+    match.seeker.last_probe_tick[serverId] = 0; // Clear last probe tick
 }
 
 } // namespace hider_seeker

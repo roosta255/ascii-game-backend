@@ -32,7 +32,7 @@ TEST_CASE("applyProbe is rejected when insufficient tokens", "[probe]") {
     REQUIRE(match.seeker.connection_tokens == 0);
 }
 
-TEST_CASE("resolveProbeConsequences is a pure deterministic function", "[probe]") {
+TEST_CASE("resolveProbeConsequences handles hit correctly", "[probe]") {
     MatchState match = {};
     
     // Set up a server with some trace strength
@@ -42,12 +42,33 @@ TEST_CASE("resolveProbeConsequences is a pure deterministic function", "[probe]"
     result.hit = true;
     result.targetServerId = 0;
     
-    // Call resolveProbeConsequences multiple times with same inputs
-    resolveProbeConsequences(match, result);
-    resolveProbeConsequences(match, result);
+    // Call resolveProbeConsequences
     resolveProbeConsequences(match, result);
     
-    // Should have the same deterministic outcome each time
-    // (placeholder - actual implementation would check specific effects)
-    REQUIRE(match.servers[0].public_flags == 1); // Example flag set
+    // Should have captured the server (if it was unowned)
+    REQUIRE(match.servers[0].owner_hider_id == 0); // Assuming seeker is hider 0
+    REQUIRE(match.servers[0].public_flags & 0x01); // Capture flag set
+    
+    // Seeker belief should be updated
+    REQUIRE(match.seeker.belief[0] == 1);
+    
+    // Last probe tick should be updated
+    REQUIRE(match.seeker.last_probe_tick[0] == match.tick);
+}
+
+TEST_CASE("resolveProbeConsequences handles miss correctly", "[probe]") {
+    MatchState match = {};
+    
+    ProbeResult result;
+    result.hit = false;
+    result.targetServerId = 0;
+    
+    // Call resolveProbeConsequences
+    resolveProbeConsequences(match, result);
+    
+    // Seeker belief should be updated to 0 (miss)
+    REQUIRE(match.seeker.belief[0] == 0);
+    
+    // Last probe tick should be updated
+    REQUIRE(match.seeker.last_probe_tick[0] == match.tick);
 }
