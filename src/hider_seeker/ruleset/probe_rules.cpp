@@ -10,24 +10,27 @@ constexpr uint8_t PLACEHOLDER_TOKEN_COST_PER_PROBE = 1;
 constexpr uint8_t PLACEHOLDER_PROBE_HIT_THRESHOLD = 50; // Example threshold
 
 RuleOutcome applyProbe(MatchState& match, uint8_t serverId, ProbeResult& outResult) {
+    if (serverId >= MAX_SERVERS) {
+        return RuleOutcome::REJECTED_INVALID_TARGET;
+    }
+
     // Deduct the backend-defined per-probe connection-token cost first
     if (match.seeker.connection_tokens < PLACEHOLDER_TOKEN_COST_PER_PROBE) {
         return RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE;
     }
-    
+
     match.seeker.connection_tokens -= PLACEHOLDER_TOKEN_COST_PER_PROBE;
 
-    // Compute hit/miss result as a deterministic function of MatchState plus seeded RNG
-    // This is now properly implemented using the RNG module
-    
-    // Create an RNG state based on current match state and serverId for determinism
+    // Compute hit/miss result as a deterministic function of MatchState plus the
+    // server-held seeded RNG (rng.hpp). The draw consumes the match's RNG stream
+    // (match.rng_state is advanced), so the sequence of probe results is fully
+    // reproducible from the initial seed and the ordered action log.
     RngState rng;
-    rng.state = match.rng_state + serverId;  // Simple hash to make it dependent on server
-    rng.counter = match.tick;                // Tick ensures different results over time
-    
-    // Generate a random value using the RNG module
+    rng.state = match.rng_state;
+    rng.counter = match.tick;
     uint32_t randomValue = nextRandomValue(rng);
-    
+    match.rng_state = rng.state;
+
     // Use the random value to determine hit/miss result
     // Simple approach: use lower bits of random value as probability
     uint8_t traceStrength = match.servers[serverId].trace_strength;
