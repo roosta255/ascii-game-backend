@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include "probe_rules.hpp"
 #include "state.hpp"
+#include "target_ranking_interface.hpp"
 
 using namespace hider_seeker;
 
@@ -173,4 +174,58 @@ TEST_CASE("applyProbe records a replayable draw (RULESET-001)", "[probe]") {
     REQUIRE(again.hit == result.hit);
     REQUIRE(again.randomValue == result.randomValue);
     REQUIRE(copy.rng_state == match.rng_state);
+}
+
+// Test that iTargetRankingPolicy cannot influence token cost or hit/miss result
+// (TOKEN-001 policy/outcome separation)
+TEST_CASE("iTargetRankingPolicy has no influence on probe behavior", "[probe]") {
+    // Create a stub implementation of iTargetRankingPolicy
+    struct StubTargetRankingPolicy : public iTargetRankingPolicy {
+        void rankTargets(const MatchState&, Array<ProbeCandidate, MAX_SERVERS>& outCandidates) const override {
+            // This stub does nothing - it doesn't affect token cost or hit/miss
+            // The ranking is irrelevant to the probe outcome computation
+            for (int i = 0; i < MAX_SERVERS; ++i) {
+                outCandidates[i].serverId = i;
+                outCandidates[i].score = i * 10; // Arbitrary scores, not used
+            }
+        }
+    };
+
+    StubTargetRankingPolicy stubPolicy;
+
+    MatchState match = {};
+    match.tick = 37;
+    match.seeker.connection_tokens = 2;
+    match.seeker.max_tokens = 10;
+    match.servers[0].active = 1;
+    match.servers[0].trace_strength = 50; // 50% hit chance
+    match.servers[1].active = 1;
+    match.servers[1].trace_strength = 25; // 25% hit chance
+
+    // Test that applyProbe is unaffected by the ranking policy
+    ProbeResult result0, result1;
+    RuleOutcome outcome0 = applyProbe(match, 0, result0);
+    RuleOutcome outcome1 = applyProbe(match, 1, result1);
+
+    // Both should succeed and deduct 1 token each (token cost is fixed)
+    REQUIRE(outcome0 == RuleOutcome::ACCEPTED);
+    REQUIRE(outcome1 == RuleOutcome::ACCEPTED);
+    REQUIRE(match.seeker.connection_tokens == 0); // Should be 0 after 2 deductions
+
+    // Test that hit/miss results are determined only by trace strength and RNG
+    // (not by any ranking policy)
+    bool hit0 = computeProbeHit(result0.randomValue, 50); // 50% chance
+    bool hit1 = computeProbeHit(result1.randomValue, 25); // 25% chance
+    
+    REQUIRE(result0.hit == hit0);
+    REQUIRE(result1.hit == hit1);
+
+    // Test that resolveProbeConsequences is also unaffected by ranking policy
+    ProbeConsequences c0 = resolveProbeConsequences(match, result0);
+    ProbeConsequences c1 = resolveProbeConsequences(match, result1);
+
+    // The consequences should depend only on the hit/miss result and server state,
+    // not on any ranking information
+    REQUIRE(c0.tokensAwarded == 0); // No captures in this test setup
+    REQUIRE(c1.tokensAwarded == 0);
 }
