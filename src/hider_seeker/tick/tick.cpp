@@ -137,7 +137,10 @@ TickOutput runTick(MatchState& state,
         // Step 7 (PROBES): process candidates in policy order within the token budget
         // Snapshot the initial connection_tokens balance to prevent mid-tick token awards
         // from allowing more applyProbe calls than permitted by the start-of-tick balance.
-        uint8_t initialTokens = state.seeker.connection_tokens;
+        // The snapshot is never refreshed inside the loop: tokens awarded by
+        // resolveProbeConsequences during this tick do not raise the bound.
+        const uint8_t initialTokens = state.seeker.connection_tokens;
+        uint8_t probesIssued = 0;
         for (int i = 0; i < candidates.size(); ++i) {
             ProbeCandidate defaultCandidate{NO_SERVER_ID, 0};
             const ProbeCandidate& candidate = candidates.getOrDefault(i, defaultCandidate);
@@ -148,8 +151,8 @@ TickOutput runTick(MatchState& state,
             }
 
             // Check against the initial token balance, not the current one
-            if (initialTokens == 0) {
-                break; // No more tokens to spend
+            if (probesIssued >= initialTokens) {
+                break; // Start-of-probe-resolution budget exhausted
             }
 
             // A result applyProbe does not fill (rejected probe) is a miss against
@@ -161,6 +164,7 @@ TickOutput runTick(MatchState& state,
 
             // applyProbe deducts the per-probe token cost itself.
             applyProbe(state, candidate.serverId, result);
+            probesIssued++;
 
             // Unconditionally resolve consequences for every policy-selected
             // candidate processed within the token budget (architecture plan).
@@ -169,9 +173,6 @@ TickOutput runTick(MatchState& state,
             output.probeResults.assignValue(output.probeCount, result);
             output.probeConsequences.assignValue(output.probeCount, consequences);
             output.probeCount++;
-            
-            // Update the token balance for subsequent checks
-            initialTokens = state.seeker.connection_tokens;
         }
     }
     
