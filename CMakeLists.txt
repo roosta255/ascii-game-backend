@@ -51,6 +51,7 @@ set(PROJECT_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/play
     ${CMAKE_CURRENT_SOURCE_DIR}/src/procgen
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/domain
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/ruleset
     /usr/include/jsoncpp
 )
 
@@ -198,6 +199,13 @@ add_library(core_backend STATIC
     src/traits/TraitModifier.cpp
     src/vector/int4_to_json.cpp
     src/hider_seeker/domain/serialization.cpp
+    src/hider_seeker/ruleset/loa_rules.cpp
+    src/hider_seeker/ruleset/action_rules.cpp
+    src/hider_seeker/ruleset/probe_rules.cpp
+    src/hider_seeker/ruleset/intent_ordering.cpp
+    src/hider_seeker/ruleset/ring_buffers.cpp
+    src/hider_seeker/ruleset/rng.cpp
+    src/hider_seeker/ruleset/lifecycle_events.cpp
 )
 
 # 👇 CRITICAL: Apply include dirs to the library
@@ -248,6 +256,13 @@ add_executable(test_target
     test/StructuredLogTests.cpp
     test/MapTests.cpp
     test/hider_seeker/serialization_round_trip_test.cpp
+    test/hider_seeker/ruleset_loa_test.cpp
+    test/hider_seeker/ruleset_action_test.cpp
+    test/hider_seeker/ruleset_probe_test.cpp
+    test/hider_seeker/ruleset_ordering_test.cpp
+    test/hider_seeker/ruleset_ring_buffer_test.cpp
+    test/hider_seeker/ruleset_rng_test.cpp
+    test/hider_seeker/ruleset_lifecycle_events_test.cpp
 )
 
 target_include_directories(test_target PRIVATE ${PROJECT_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/test)
