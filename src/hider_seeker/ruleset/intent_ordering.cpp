@@ -23,7 +23,10 @@ bool isIntentAlreadyApplied(const Array<uint64_t, MAX_INTENTS_PER_TICK>& consume
     for (int i = 0; i < consumedKeys.size(); ++i) {
         // Use getOrDefault directly on the array - this is const-correct
         uint64_t value = consumedKeys.getOrDefault(i, 0);
-        if (value == idempotencyKey) {
+        // Only consider non-zero values as legitimate idempotency keys
+        // A zero value could either be an unused slot or a legitimate key of 0,
+        // so we must avoid treating the former as the latter
+        if (value != 0 && value == idempotencyKey) {
             return true;
         }
     }

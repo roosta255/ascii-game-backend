@@ -6,8 +6,8 @@ namespace hider_seeker {
 
 // Placeholder constants for AP costs and effects - TODO: replace with final values
 // These are placeholders as the design doc only gives hedged examples
-constexpr uint16_t PLACEHOLDER_AP_ADD_SERVER = 5;
-constexpr uint16_t PLACEHOLDER_AP_REMOVE_SERVER = 3;
+constexpr uint16_t PLACEHOLDER_AP_ADD_SERVER = 0; // No extra cost - 1 LOA is already charged by loa_rules.cpp
+constexpr uint16_t PLACEHOLDER_AP_REMOVE_SERVER = 0; // No extra cost - 1 LOA is already charged by loa_rules.cpp
 constexpr uint16_t PLACEHOLDER_AP_CONFIGURE_SERVER = 5;
 constexpr uint16_t PLACEHOLDER_AP_SUPPRESS_ERROR = 3;
 constexpr uint16_t PLACEHOLDER_AP_BOOST_CPU = 2;
