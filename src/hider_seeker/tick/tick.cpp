@@ -135,6 +135,9 @@ TickOutput runTick(MatchState& state,
         seekerPolicy->rankTargets(state, candidates);
         
         // Step 7 (PROBES): process candidates in policy order within the token budget
+        // Snapshot the initial connection_tokens balance to prevent mid-tick token awards
+        // from allowing more applyProbe calls than permitted by the start-of-tick balance.
+        uint8_t initialTokens = state.seeker.connection_tokens;
         for (int i = 0; i < candidates.size(); ++i) {
             ProbeCandidate defaultCandidate{NO_SERVER_ID, 0};
             const ProbeCandidate& candidate = candidates.getOrDefault(i, defaultCandidate);
@@ -144,9 +147,8 @@ TickOutput runTick(MatchState& state,
                 continue;
             }
 
-            // Before each candidate, re-read state.seeker.connection_tokens
-            // (applyProbe spends tokens and resolveProbeConsequences may award them).
-            if (state.seeker.connection_tokens == 0) {
+            // Check against the initial token balance, not the current one
+            if (initialTokens == 0) {
                 break; // No more tokens to spend
             }
 
@@ -167,6 +169,9 @@ TickOutput runTick(MatchState& state,
             output.probeResults.assignValue(output.probeCount, result);
             output.probeConsequences.assignValue(output.probeCount, consequences);
             output.probeCount++;
+            
+            // Update the token balance for subsequent checks
+            initialTokens = state.seeker.connection_tokens;
         }
     }
     
