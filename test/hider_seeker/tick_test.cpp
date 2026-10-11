@@ -202,9 +202,10 @@ TEST_CASE("Tick engine action dispatch", "[tick]") {
     
     // Set up hider
     state.hiders[0].active = 1;
-    state.hiders[0].action_points = 10;
+    // Enough AP to afford all five actions below (placeholder costs 5+3+2+4+10 = 24)
+    state.hiders[0].action_points = 24;
     state.hiders[0].server_id = 1;
-    
+
     // Set up servers
     state.servers[0].active = 1;
     state.servers[0].current.cpu = 50;
@@ -212,7 +213,7 @@ TEST_CASE("Tick engine action dispatch", "[tick]") {
     state.servers[1].active = 1;
     state.servers[1].current.cpu = 60;
     state.servers[1].current.memory = 60;
-    
+
     // Create candidate intents
     Array<TickIntent, MAX_INTENTS_PER_TICK> intents;
     uint8_t intentCount = 5; // Test all HiderActionMode values

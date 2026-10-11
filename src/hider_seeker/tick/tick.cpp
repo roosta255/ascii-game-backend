@@ -126,7 +126,12 @@ TickOutput runTick(MatchState& state,
     
     // Step 6 (SEEKER-POLICY): resolve probes based on policy
     if (seekerPolicy != nullptr) {
+        // Every slot starts as "no candidate" so slots the policy leaves
+        // untouched are skipped below (a zeroed slot would mean server 0).
         Array<ProbeCandidate, MAX_SERVERS> candidates;
+        for (auto& slot : candidates) {
+            slot = ProbeCandidate{NO_SERVER_ID, 0};
+        }
         seekerPolicy->rankTargets(state, candidates);
         
         // Process up to connection_tokens number of probes
