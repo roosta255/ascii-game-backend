@@ -2,6 +2,8 @@
 
 #include "../domain/state.hpp"
 #include "../../data/Array.hpp"
+#include "rule_types.hpp"
+#include "action_rules.hpp"
 
 namespace hider_seeker {
 

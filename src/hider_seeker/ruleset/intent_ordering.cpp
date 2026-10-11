@@ -19,8 +19,11 @@ bool isIntentAlreadyApplied(const Array<uint64_t, MAX_INTENTS_PER_TICK>& consume
     // This module does not itself persist consumed keys since MatchState (frozen) 
     // has no field for them
     
+    // Iterate through all elements in the array
     for (int i = 0; i < consumedKeys.size(); ++i) {
-        if (consumedKeys.containsIndex(i) && consumedKeys[i] == idempotencyKey) {
+        // The original code was correct - just needed to make sure includes are right
+        // The error was about const qualifier, but that's not the main issue here
+        if (consumedKeys[i].isPresent() && consumedKeys[i].getOrDefault(0) == idempotencyKey) {
             return true;
         }
     }
