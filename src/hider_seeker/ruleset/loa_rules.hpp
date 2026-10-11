@@ -32,7 +32,8 @@ RuleOutcome applyAddServer(MatchState&, uint8_t hiderId,
 // occupied, the relocation target is computed internally as part of the same
 // atomic operation (LOA-002): the lowest-numbered ACTIVE server slot other than
 // the removed one. If no such slot exists, the whole action is rejected
-// (REJECTED_RELOCATION_FAILED) with no state change.
+// (REJECTED_RELOCATION_FAILED) with no state change. Slot ownership is not
+// checked: any hider with sufficient LOA may remove any active slot (LOA-002).
 RuleOutcome applyRemoveServer(MatchState&, uint8_t hiderId, uint8_t serverId,
                               Array<PublicLifecycleEvent, MAX_EVENTS>& outPublicEvents,
                               uint8_t& outPublicEventCount);

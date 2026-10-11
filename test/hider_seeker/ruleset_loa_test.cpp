@@ -135,29 +135,27 @@ TEST_CASE("applyRemoveServer on an occupied slot relocates atomically or is full
     }
 
     SECTION("non-owning hider can remove server with sufficient LOA (LOA-002 acceptance criteria)") {
-        // Set up two hiders, where hider 0 owns slot 0 and hider 1 has sufficient LOA
-        match.hiders[0].active = 1;
-        match.hiders[0].resources[LOA_RESOURCE_INDEX] = 1; // hider 0 owns the server
+        // Fixture: hider 0 owns slots 0 and 1 and occupies slot 0.
+        // Hider 1 owns nothing but has sufficient LOA.
         match.hiders[1].active = 1;
-        match.hiders[1].resources[LOA_RESOURCE_INDEX] = 2; // hider 1 has enough LOA to remove
-        
-        REQUIRE(addServer(match, 0) == RuleOutcome::ACCEPTED); // slot 0 owned by hider 0
-        match.hiders[0].server_id = 0; // hider 0 occupies slot 0
-        REQUIRE(match.server_count == 1);
-        
-        // Non-owning hider 1 should be able to remove the server (LOA-002)
-        RuleOutcome outcome = removeServer(match, 1, 0);
-        REQUIRE(outcome == RuleOutcome::ACCEPTED);
-        
-        // Check that hider 1 spent 1 LOA
+        match.hiders[1].server_id = 1;
+        match.hiders[1].resources[LOA_RESOURCE_INDEX] = 2;
+        REQUIRE(match.servers[0].owner_hider_id == 0);
+
+        // Non-owning hider 1 removes hider 0's slot 0 (LOA-002).
+        REQUIRE(removeServer(match, 1, 0) == RuleOutcome::ACCEPTED);
+
+        // Only the submitting hider pays the LOA cost.
         REQUIRE(match.hiders[1].resources[LOA_RESOURCE_INDEX] == 1);
-        
-        // Check that the server was properly removed
+        REQUIRE(match.hiders[0].resources[LOA_RESOURCE_INDEX] == 1);
+
+        // The slot is removed and its occupant relocated to the remaining active slot.
         REQUIRE(match.servers[0].active == 0);
-        REQUIRE(match.server_count == 0);
-        
-        // Check that hider 0 was relocated to slot 1 (the only available slot)
+        REQUIRE(match.servers[0].owner_hider_id == 0xFF);
+        REQUIRE(match.servers[1].active == 1);
+        REQUIRE(match.server_count == 1);
         REQUIRE(match.hiders[0].server_id == 1);
+        REQUIRE(match.hiders[1].server_id == 1);
     }
 }
 

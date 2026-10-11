@@ -95,10 +95,8 @@ RuleOutcome applyRemoveServer(MatchState& match, uint8_t hiderId, uint8_t server
         return RuleOutcome::REJECTED_INVALID_TARGET;
     }
 
-    // Check if the hider owns this server - REMOVED: LOA-002 acceptance criteria only conditions rejection on relocation feasibility for an occupant, not ownership
-    // if (match.servers[serverId].owner_hider_id != hiderId) {
-    //     return RuleOutcome::REJECTED_INVALID_TARGET;
-    // }
+    // No ownership check: per LOA-002, any hider with sufficient LOA may remove
+    // any active slot; rejection depends only on relocation feasibility.
 
     // Check if hider has sufficient LOA
     if (match.hiders[hiderId].resources[LOA_RESOURCE_INDEX] < 1) { // Using named constant
