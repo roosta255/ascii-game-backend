@@ -31,6 +31,20 @@ namespace {
         }
     };
 
+    // Returns the recorded outcome for the given idempotency key; fails the
+    // test if no outcome was recorded for it.
+    RuleOutcome outcomeForKey(const TickOutput& output, IdempotencyKeyT key) {
+        for (int i = 0; i < output.intentOutcomeCount; ++i) {
+            IntentOutcomeRecord defaultRecord{};
+            const IntentOutcomeRecord& record = output.intentOutcomes.getOrDefault(i, defaultRecord);
+            if (record.idempotencyKey == key) {
+                return record.outcome;
+            }
+        }
+        FAIL("no outcome recorded for idempotency key " << key);
+        return RuleOutcome::REJECTED_INVALID_TARGET;
+    }
+
     bool sameFrame(const MetricFrame& a, const MetricFrame& b) {
         return std::memcmp(&a, &b, sizeof(MetricFrame)) == 0;
     }
@@ -117,9 +131,14 @@ TEST_CASE("Tick engine runs without crashing", "[tick]") {
     StubPolicy policy;
     TickOutput output = runTick(state, intents, intentCount, alreadyConsumed, &policy);
     
-    // Basic sanity check - should not crash and should return valid output
-    REQUIRE(output.consumedKeyCount >= 0);
-    REQUIRE(output.intentOutcomeCount >= 0);
+    // CONFIGURE_SERVER is affordable (10 AP >= 5); ADD_SERVER is dispatched to
+    // applyAddServer and rejected because the hider has no LOA.
+    REQUIRE(output.intentOutcomeCount == 2);
+    REQUIRE(output.consumedKeyCount == 1);
+    REQUIRE(outcomeForKey(output, 12345) == RuleOutcome::ACCEPTED);
+    REQUIRE(outcomeForKey(output, 12346) == RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE);
+    REQUIRE(state.server_count == 2);
+    REQUIRE(state.servers[2].active == 0);
     REQUIRE(output.probeCount == 0); // No probes since policy returns no candidates
 }
 
@@ -132,10 +151,11 @@ TEST_CASE("Tick engine ADD_SERVER dispatch and activation", "[tick]") {
     state.server_count = 2;
     state.seeker.connection_tokens = 2;
     
-    // Set up hider with enough AP to afford ADD_SERVER (cost is 10)
+    // Set up hider with enough LOA to afford ADD_SERVER (costs 1 LOA)
     state.hiders[0].active = 1;
     state.hiders[0].action_points = 10;
     state.hiders[0].server_id = 1;
+    state.hiders[0].resources[LOA_RESOURCE_INDEX] = 2;
     
     // Set up servers
     state.servers[0].active = 1;
@@ -172,12 +192,16 @@ TEST_CASE("Tick engine ADD_SERVER dispatch and activation", "[tick]") {
     REQUIRE(output.consumedKeyCount == 1);
     
     // The outcome should be ACCEPTED
-    IntentOutcomeRecord defaultRecord{};
-    const IntentOutcomeRecord& record = output.intentOutcomes.getOrDefault(0, defaultRecord);
-    REQUIRE(record.outcome == RuleOutcome::ACCEPTED);
-    
-    // Server count should remain the same (ADD_SERVER doesn't change server_count)
-    REQUIRE(state.server_count == 2);
+    REQUIRE(outcomeForKey(output, 12346) == RuleOutcome::ACCEPTED);
+
+    // applyAddServer claimed the lowest inactive slot (2) for the hider
+    REQUIRE(state.servers[2].active == 1);
+    REQUIRE(state.servers[2].owner_hider_id == 0);
+    REQUIRE(state.servers[3].active == 0);
+    REQUIRE(state.server_count == 3);
+    // Exactly 1 LOA was spent; AP is untouched
+    REQUIRE(state.hiders[0].resources[LOA_RESOURCE_INDEX] == 1);
+    REQUIRE(state.hiders[0].action_points == 10);
 }
 
 TEST_CASE("Tick engine REMOVE_SERVER dispatch and slot freeing", "[tick]") {
@@ -189,10 +213,12 @@ TEST_CASE("Tick engine REMOVE_SERVER dispatch and slot freeing", "[tick]") {
     state.server_count = 3;
     state.seeker.connection_tokens = 2;
     
-    // Set up hider with enough AP to afford REMOVE_SERVER (cost is 5)
+    // Set up hider with enough LOA to afford REMOVE_SERVER (costs 1 LOA);
+    // the hider occupies the slot being removed, so it must be relocated.
     state.hiders[0].active = 1;
     state.hiders[0].action_points = 5;
     state.hiders[0].server_id = 1;
+    state.hiders[0].resources[LOA_RESOURCE_INDEX] = 1;
     
     // Set up servers - all active
     state.servers[0].active = 1;
@@ -233,16 +259,20 @@ TEST_CASE("Tick engine REMOVE_SERVER dispatch and slot freeing", "[tick]") {
     REQUIRE(output.consumedKeyCount == 1);
     
     // The outcome should be ACCEPTED
-    IntentOutcomeRecord defaultRecord{};
-    const IntentOutcomeRecord& record = output.intentOutcomes.getOrDefault(0, defaultRecord);
-    REQUIRE(record.outcome == RuleOutcome::ACCEPTED);
-    
-    // Server 1 should now be inactive (freed)
+    REQUIRE(outcomeForKey(output, 12347) == RuleOutcome::ACCEPTED);
+
+    // applyRemoveServer freed exactly the named slot (1) and reset it
     REQUIRE(state.servers[1].active == 0);
-    
-    // Server count should remain the same since we removed one and added one
-    // (but in this case, we're just removing an existing server slot)
-    REQUIRE(state.server_count == 3);
+    REQUIRE(state.servers[1].owner_hider_id == 0xFF);
+    REQUIRE(state.servers[1].current.cpu == 0);
+    REQUIRE(state.servers[0].active == 1);
+    REQUIRE(state.servers[2].active == 1);
+    REQUIRE(state.server_count == 2);
+    // The occupant was relocated to the lowest other active slot (0)
+    REQUIRE(state.hiders[0].server_id == 0);
+    // Exactly 1 LOA was spent; AP is untouched
+    REQUIRE(state.hiders[0].resources[LOA_RESOURCE_INDEX] == 0);
+    REQUIRE(state.hiders[0].action_points == 5);
 }
 
 TEST_CASE("Tick engine eligibility filtering", "[tick]") {
