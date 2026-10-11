@@ -5,6 +5,8 @@ namespace hider_seeker {
 
 // Placeholder constants for AP costs and effects - TODO: replace with final values
 // These are placeholders as the design doc only gives hedged examples
+constexpr uint16_t PLACEHOLDER_AP_ADD_SERVER = 5;
+constexpr uint16_t PLACEHOLDER_AP_REMOVE_SERVER = 3;
 constexpr uint16_t PLACEHOLDER_AP_CONFIGURE_SERVER = 5;
 constexpr uint16_t PLACEHOLDER_AP_SUPPRESS_ERROR = 3;
 constexpr uint16_t PLACEHOLDER_AP_BOOST_CPU = 2;
@@ -13,11 +15,13 @@ constexpr uint16_t PLACEHOLDER_AP_PAY_GOAL = 10;
 
 // Static table of action rules - populated with placeholder values
 static const ActionRuleEntry ACTION_RULES[] = {
-    {PLACEHOLDER_AP_CONFIGURE_SERVER},   // CONFIGURE_SERVER
-    {PLACEHOLDER_AP_SUPPRESS_ERROR},     // SUPPRESS_ERROR
-    {PLACEHOLDER_AP_BOOST_CPU},          // BOOST_CPU
-    {PLACEHOLDER_AP_ROTATE_ROUTE},       // ROTATE_ROUTE
-    {PLACEHOLDER_AP_PAY_GOAL}            // PAY_GOAL
+    {PLACEHOLDER_AP_ADD_SERVER},         // ADD_SERVER (index 0)
+    {PLACEHOLDER_AP_REMOVE_SERVER},      // REMOVE_SERVER (index 1) 
+    {PLACEHOLDER_AP_CONFIGURE_SERVER},   // CONFIGURE_SERVER (index 2)
+    {PLACEHOLDER_AP_SUPPRESS_ERROR},     // SUPPRESS_ERROR (index 3)
+    {PLACEHOLDER_AP_BOOST_CPU},          // BOOST_CPU (index 4)
+    {PLACEHOLDER_AP_ROTATE_ROUTE},       // ROTATE_ROUTE (index 5)
+    {PLACEHOLDER_AP_PAY_GOAL}            // PAY_GOAL (index 6)
 };
 
 RuleOutcome applyHiderAction(MatchState& match, uint8_t hiderId, HiderActionMode mode) {

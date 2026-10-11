@@ -6,13 +6,13 @@
 namespace hider_seeker {
 
 enum class HiderActionMode : uint8_t {
-    ADD_SERVER,
-    REMOVE_SERVER,
-    CONFIGURE_SERVER,
-    SUPPRESS_ERROR,
-    BOOST_CPU,
-    ROTATE_ROUTE,
-    PAY_GOAL
+    ADD_SERVER,         // index 0
+    REMOVE_SERVER,      // index 1
+    CONFIGURE_SERVER,   // index 2
+    SUPPRESS_ERROR,     // index 3
+    BOOST_CPU,          // index 4
+    ROTATE_ROUTE,       // index 5  
+    PAY_GOAL            // index 6
 };
 
 struct ActionRuleEntry {
