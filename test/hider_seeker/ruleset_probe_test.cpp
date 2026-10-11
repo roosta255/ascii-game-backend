@@ -176,56 +176,89 @@ TEST_CASE("applyProbe records a replayable draw (RULESET-001)", "[probe]") {
     REQUIRE(copy.rng_state == match.rng_state);
 }
 
-// Test that iTargetRankingPolicy cannot influence token cost or hit/miss result
-// (TOKEN-001 policy/outcome separation)
-TEST_CASE("iTargetRankingPolicy has no influence on probe behavior", "[probe]") {
-    // Create a stub implementation of iTargetRankingPolicy
-    struct StubTargetRankingPolicy : public iTargetRankingPolicy {
-        void rankTargets(const MatchState&, Array<ProbeCandidate, MAX_SERVERS>& outCandidates) const override {
-            // This stub does nothing - it doesn't affect token cost or hit/miss
-            // The ranking is irrelevant to the probe outcome computation
-            for (int i = 0; i < MAX_SERVERS; ++i) {
-                outCandidates[i].serverId = i;
-                outCandidates[i].score = i * 10; // Arbitrary scores, not used
-            }
+namespace {
+
+// Stub ranking policy (TOKEN-001). Its only output channel is the
+// Array<ProbeCandidate, MAX_SERVERS> it fills (serverId + score): it has no
+// field through which it could express a token cost or a hit/miss decision.
+// It deliberately ranks servers adversarially (descending server id, huge
+// scores) and counts its invocations.
+struct StubTargetRankingPolicy : public iTargetRankingPolicy {
+    mutable int calls = 0;
+    void rankTargets(const MatchState&, Array<ProbeCandidate, MAX_SERVERS>& outCandidates) const override {
+        ++calls;
+        for (int i = 0; i < outCandidates.size(); ++i) {
+            ProbeCandidate candidate = {};
+            candidate.serverId = static_cast<uint8_t>(MAX_SERVERS - 1 - i);
+            candidate.score = 1000000 - i;
+            outCandidates.assignValue(i, candidate);
         }
-    };
+    }
+};
 
+MatchState makePolicySeparationMatch() {
+    MatchState match = makeProbeConsequenceMatch();
+    match.rng_state = 0xC0FFEE1234ULL;
+    match.servers[0].trace_strength = 60;
+    match.hiders[0].action_points = 0;
+    match.hiders[1].action_points = 5;
+    return match;
+}
+
+} // namespace
+
+TEST_CASE("iTargetRankingPolicy cannot influence probe token cost, hit/miss or consequences (TOKEN-001)", "[probe]") {
     StubTargetRankingPolicy stubPolicy;
+    const iTargetRankingPolicy& policy = stubPolicy;
 
-    MatchState match = {};
-    match.tick = 37;
-    match.seeker.connection_tokens = 2;
-    match.seeker.max_tokens = 10;
-    match.servers[0].active = 1;
-    match.servers[0].trace_strength = 50; // 50% hit chance
-    match.servers[1].active = 1;
-    match.servers[1].trace_strength = 25; // 25% hit chance
+    // Baseline: no policy involved at all.
+    MatchState baseline = makePolicySeparationMatch();
+    ProbeResult baselineResult = {};
+    RuleOutcome baselineOutcome = applyProbe(baseline, 0, baselineResult);
+    ProbeConsequences baselineConsequences = resolveProbeConsequences(baseline, baselineResult);
 
-    // Test that applyProbe is unaffected by the ranking policy
-    ProbeResult result0, result1;
-    RuleOutcome outcome0 = applyProbe(match, 0, result0);
-    RuleOutcome outcome1 = applyProbe(match, 1, result1);
+    // Same pre-state, but the stub policy is consulted first and ranks a
+    // different server on top. It only sees a const MatchState and only
+    // writes ProbeCandidate{serverId, score}.
+    MatchState withPolicy = makePolicySeparationMatch();
+    Array<ProbeCandidate, MAX_SERVERS> candidates;
+    policy.rankTargets(withPolicy, candidates);
+    REQUIRE(stubPolicy.calls == 1);
+    const ProbeCandidate fallback = {};
+    const Array<ProbeCandidate, MAX_SERVERS>& constCandidates = candidates;
+    REQUIRE(constCandidates.getOrDefault(0, fallback).serverId == MAX_SERVERS - 1);
 
-    // Both should succeed and deduct 1 token each (token cost is fixed)
-    REQUIRE(outcome0 == RuleOutcome::ACCEPTED);
-    REQUIRE(outcome1 == RuleOutcome::ACCEPTED);
-    REQUIRE(match.seeker.connection_tokens == 0); // Should be 0 after 2 deductions
+    ProbeResult policyResult = {};
+    RuleOutcome policyOutcome = applyProbe(withPolicy, 0, policyResult);
+    ProbeConsequences policyConsequences = resolveProbeConsequences(withPolicy, policyResult);
 
-    // Test that hit/miss results are determined only by trace strength and RNG
-    // (not by any ranking policy)
-    bool hit0 = computeProbeHit(result0.randomValue, 50); // 50% chance
-    bool hit1 = computeProbeHit(result1.randomValue, 25); // 25% chance
-    
-    REQUIRE(result0.hit == hit0);
-    REQUIRE(result1.hit == hit1);
+    // applyProbe/resolveProbeConsequences take no policy and never invoke it.
+    REQUIRE(stubPolicy.calls == 1);
 
-    // Test that resolveProbeConsequences is also unaffected by ranking policy
-    ProbeConsequences c0 = resolveProbeConsequences(match, result0);
-    ProbeConsequences c1 = resolveProbeConsequences(match, result1);
+    // Token cost is identical (fixed deduction before the draw).
+    REQUIRE(baselineOutcome == RuleOutcome::ACCEPTED);
+    REQUIRE(policyOutcome == baselineOutcome);
+    REQUIRE(withPolicy.seeker.connection_tokens == baseline.seeker.connection_tokens);
 
-    // The consequences should depend only on the hit/miss result and server state,
-    // not on any ranking information
-    REQUIRE(c0.tokensAwarded == 0); // No captures in this test setup
-    REQUIRE(c1.tokensAwarded == 0);
+    // Hit/miss result and its RNG record are identical.
+    REQUIRE(policyResult.hit == baselineResult.hit);
+    REQUIRE(policyResult.targetServerId == baselineResult.targetServerId);
+    REQUIRE(policyResult.rngStateBefore == baselineResult.rngStateBefore);
+    REQUIRE(policyResult.rngCounter == baselineResult.rngCounter);
+    REQUIRE(policyResult.randomValue == baselineResult.randomValue);
+    REQUIRE(policyResult.hit == computeProbeHit(policyResult.randomValue, 60));
+    REQUIRE(withPolicy.rng_state == baseline.rng_state);
+
+    // Consequences are identical.
+    REQUIRE(policyConsequences.capturedHiderMask == baselineConsequences.capturedHiderMask);
+    REQUIRE(policyConsequences.escapedHiderMask == baselineConsequences.escapedHiderMask);
+    REQUIRE(policyConsequences.disqualifiedGoalProgressCount == baselineConsequences.disqualifiedGoalProgressCount);
+    REQUIRE(policyConsequences.tokensAwarded == baselineConsequences.tokensAwarded);
+    for (uint8_t h = 0; h < MAX_HIDERS; ++h) {
+        REQUIRE(withPolicy.hiders[h].status == baseline.hiders[h].status);
+        REQUIRE(withPolicy.hiders[h].server_id == baseline.hiders[h].server_id);
+        REQUIRE(withPolicy.hiders[h].action_points == baseline.hiders[h].action_points);
+    }
+    REQUIRE(withPolicy.seeker.belief[0] == baseline.seeker.belief[0]);
+    REQUIRE(withPolicy.seeker.last_probe_tick[0] == baseline.seeker.last_probe_tick[0]);
 }
