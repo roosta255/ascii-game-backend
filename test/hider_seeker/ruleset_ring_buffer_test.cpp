@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
-#include "hider_seeker/ruleset/ring_buffers.hpp"
-#include "hider_seeker/domain/state.hpp"
+#include "ring_buffers.hpp"
+#include "state.hpp"
 
 using namespace hider_seeker;
 

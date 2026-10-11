@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
-#include "hider_seeker/ruleset/lifecycle_events.hpp"
-#include "hider_seeker/domain/state.hpp"
+#include "lifecycle_events.hpp"
+#include "state.hpp"
 
 using namespace hider_seeker;
 
@@ -24,8 +24,13 @@ TEST_CASE("PublicLifecycleEvent has no field capable of carrying hider ID", "[li
     // This is a compile-time check - the struct definition should not contain
     // any field that could carry hider identity information
     
-    PublicLifecycleEvent event;
-    static_assert(sizeof(event) == sizeof(HiderSeekerEventType) + sizeof(uint32_t), 
+    // Compare against a struct with exactly the two allowed fields so that
+    // alignment padding is accounted for identically on both sides.
+    struct TypeAndTickOnly {
+        HiderSeekerEventType type;
+        uint32_t tick;
+    };
+    static_assert(sizeof(PublicLifecycleEvent) == sizeof(TypeAndTickOnly),
                   "PublicLifecycleEvent should only contain type and tick fields");
     
     REQUIRE(true); // Placeholder - compile-time check is sufficient
