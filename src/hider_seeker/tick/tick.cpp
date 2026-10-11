@@ -16,12 +16,14 @@ TickOutput runTick(MatchState& state,
     
     // Step 1 (ELIGIBILITY): filter eligible candidate intents
     Array<IntentRecord, MAX_INTENTS_PER_TICK> eligibleIntentRecords;
+    Array<uint8_t, MAX_INTENTS_PER_TICK> originalIndices; // Track original indices for correlation
     uint8_t eligibleCount = 0;
     
     for (int i = 0; i < candidateIntentCount; ++i) {
         candidateIntents.accessConst(i, [&](const TickIntent& candidate) {
             if (!alreadyConsumed.contains(candidate.intent.idempotencyKey)) {
                 eligibleIntentRecords.assignValue(eligibleCount, candidate.intent);
+                originalIndices.assignValue(eligibleCount, i);
                 eligibleCount++;
             }
         });
@@ -46,19 +48,10 @@ TickOutput runTick(MatchState& state,
         // Find the original TickIntent that corresponds to this IntentRecord
         IntentRecord defaultRecord{};
         const IntentRecord& intentRecord = eligibleIntentRecords.getOrDefault(i, defaultRecord);
-        const TickIntent* matchingIntent = nullptr;
-
-        for (int j = 0; j < candidateIntentCount && matchingIntent == nullptr; ++j) {
-            candidateIntents.accessConst(j, [&](const TickIntent& candidate) {
-                if (candidate.intent.idempotencyKey == intentRecord.idempotencyKey) {
-                    matchingIntent = &candidate;
-                }
-            });
-        }
         
-        if (!matchingIntent) {
-            continue; // Should not happen, but just in case
-        }
+        // Get the original index from our tracking array
+        uint8_t originalIndex = originalIndices.getOrDefault(i, 0);
+        const TickIntent& matchingIntent = candidateIntents.getOrDefault(originalIndex, candidateIntents.getOrDefault(0, TickIntent{}));
         
         // Check if this intent was already applied in this tick (idempotency)
         // Using the existing isIntentAlreadyApplied function
@@ -70,9 +63,9 @@ TickOutput runTick(MatchState& state,
         
         RuleOutcome outcome;
         
-        switch (matchingIntent->kind) {
+        switch (matchingIntent.kind) {
             case TickActionKind::HIDER_ACTION:
-                outcome = applyHiderAction(state, intentRecord.hiderId, matchingIntent->action_mode);
+                outcome = applyHiderAction(state, intentRecord.hiderId, matchingIntent.action_mode);
                 break;
                 
             case TickActionKind::ADD_SERVER:
@@ -89,7 +82,7 @@ TickOutput runTick(MatchState& state,
                 {
                     Array<PublicLifecycleEvent, MAX_EVENTS> dummyEvents;
                     uint8_t dummyCount = 0;
-                    outcome = applyRemoveServer(state, intentRecord.hiderId, matchingIntent->target_server_id, dummyEvents, dummyCount);
+                    outcome = applyRemoveServer(state, intentRecord.hiderId, matchingIntent.target_server_id, dummyEvents, dummyCount);
                 }
                 break;
         }
