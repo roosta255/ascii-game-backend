@@ -16,83 +16,75 @@ TickOutput runTick(MatchState& state,
                     const iTargetRankingPolicy* seekerPolicy) {
     TickOutput output;
     
-    // Step 1 (ELIGIBILITY): record the candidateIntents index of every
-    // eligible candidate. Each later step works on these indices, so every
-    // dispatched record stays tied to the exact TickIntent it came from (never
-    // re-matched by idempotencyKey, which duplicates may share).
+    // Step 1 (ELIGIBILITY): copy every eligible candidate's embedded
+    // IntentRecord into eligibleRecords, with its candidateIntents index in the
+    // parallel eligibleIndices array.
+    Array<IntentRecord, MAX_INTENTS_PER_TICK> eligibleRecords;
     Array<uint8_t, MAX_INTENTS_PER_TICK> eligibleIndices;
     uint8_t eligibleCount = 0;
 
     for (int i = 0; i < candidateIntentCount; ++i) {
         candidateIntents.accessConst(i, [&](const TickIntent& candidate) {
             if (!alreadyConsumed.contains(candidate.intent.idempotencyKey)) {
+                eligibleRecords.assignValue(eligibleCount, candidate.intent);
                 eligibleIndices.assignValue(eligibleCount, static_cast<uint8_t>(i));
                 eligibleCount++;
             }
         });
     }
 
-    // Step 2 (ORDERING): order the eligible intents using orderAcceptedIntents
-    // Create an array of IntentRecords for ordering
-    Array<IntentRecord, MAX_INTENTS_PER_TICK> orderedRecords;
-    Array<uint8_t, MAX_INTENTS_PER_TICK> originalIndices; // parallel array to track original indices
-    
-    for (int i = 0; i < eligibleCount; ++i) {
-        const uint8_t originalIndex = eligibleIndices.getOrDefault(i, 0);
-        const TickIntent defaultIntent{};
-        const TickIntent& matchingIntent = candidateIntents.getOrDefault(originalIndex, defaultIntent);
-        
-        // Copy the IntentRecord into orderedRecords
-        orderedRecords.assignValue(i, matchingIntent.intent);
-        originalIndices.assignValue(i, originalIndex);
+    // Step 2 (ORDERING): order the eligible records with orderAcceptedIntents.
+    // It sorts every slot of the array, so the unused slots past eligibleCount
+    // are filled with a maximal receiptSequence to keep them sorted after
+    // every real record (zeroed slots would otherwise sort first).
+    Array<IntentRecord, MAX_INTENTS_PER_TICK> orderedRecords = eligibleRecords;
+    for (int i = eligibleCount; i < orderedRecords.size(); ++i) {
+        orderedRecords.assignValue(i, IntentRecord{UINT64_MAX, 0, 0, HiderActionMode{}});
     }
-    
-    // Order the records using the existing function
     orderAcceptedIntents(orderedRecords);
 
     // Step 3 (ACTIONS): process ordered intents
     Array<IdempotencyKeyT, MAX_INTENTS_PER_TICK> consumedKeysInThisTick;
     uint8_t consumedKeyCountInThisTick = 0;
 
-    // Track which original indices have been claimed to ensure each is used exactly once
-    Array<bool, MAX_INTENTS_PER_TICK> claimedIndices;
-    for (int i = 0; i < MAX_INTENTS_PER_TICK; ++i) {
-        claimedIndices.assignValue(i, false);
+    // Eligible slots already matched to an ordered record, so each eligible
+    // TickIntent is dispatched exactly once.
+    Array<bool, MAX_INTENTS_PER_TICK> claimed;
+    for (auto& slot : claimed) {
+        slot = false;
     }
+    uint8_t dispatchedCount = 0;
 
-    for (int i = 0; i < eligibleCount; ++i) {
-        const IntentRecord& orderedRecord = orderedRecords.getOrDefault(i, IntentRecord{0, 0, 0, HiderActionMode::INVALID});
-        
-        // Find the original TickIntent that matches this record exactly
-        uint8_t originalIndex = 0;
-        bool found = false;
-        
+    for (int i = 0; i < orderedRecords.size() && dispatchedCount < eligibleCount; ++i) {
+        const IntentRecord defaultRecord{};
+        const IntentRecord& orderedRecord = orderedRecords.getOrDefault(i, defaultRecord);
+
+        // Map the ordered record back to the first unclaimed eligible
+        // candidate (in candidate order) whose embedded record is identical.
+        int matchedSlot = -1;
         for (int j = 0; j < eligibleCount; ++j) {
-            if (!claimedIndices.getOrDefault(j, false)) {
-                const uint8_t candidateIndex = originalIndices.getOrDefault(j, 0);
-                const TickIntent defaultIntent{};
-                const TickIntent& candidateIntent = candidateIntents.getOrDefault(candidateIndex, defaultIntent);
-                
-                // Check if this is the exact same intent record
-                if (candidateIntent.intent.receiptSequence == orderedRecord.receiptSequence &&
-                    candidateIntent.intent.idempotencyKey == orderedRecord.idempotencyKey &&
-                    candidateIntent.intent.hiderId == orderedRecord.hiderId &&
-                    candidateIntent.intent.mode == orderedRecord.mode) {
-                    
-                    originalIndex = candidateIndex;
-                    claimedIndices.assignValue(j, true); // Mark as claimed
-                    found = true;
-                    break;
-                }
+            if (claimed.getOrDefault(j, true)) {
+                continue;
+            }
+            const IntentRecord& candidateRecord = eligibleRecords.getOrDefault(j, defaultRecord);
+            if (candidateRecord.receiptSequence == orderedRecord.receiptSequence &&
+                candidateRecord.idempotencyKey == orderedRecord.idempotencyKey &&
+                candidateRecord.hiderId == orderedRecord.hiderId &&
+                candidateRecord.mode == orderedRecord.mode) {
+                matchedSlot = j;
+                break;
             }
         }
-        
-        if (!found) {
-            continue; // Skip if we couldn't find the matching intent
+
+        if (matchedSlot < 0) {
+            continue; // padding slot: no eligible candidate behind it
         }
-        
+        claimed.assignValue(matchedSlot, true);
+        dispatchedCount++;
+
+        const uint8_t candidateIndex = eligibleIndices.getOrDefault(matchedSlot, 0);
         const TickIntent defaultIntent{};
-        const TickIntent& matchingIntent = candidateIntents.getOrDefault(originalIndex, defaultIntent);
+        const TickIntent& matchingIntent = candidateIntents.getOrDefault(candidateIndex, defaultIntent);
         const IntentRecord& intentRecord = matchingIntent.intent;
 
         // Check if this intent was already applied in this tick (idempotency)
