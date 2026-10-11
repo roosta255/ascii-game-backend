@@ -123,6 +123,128 @@ TEST_CASE("Tick engine runs without crashing", "[tick]") {
     REQUIRE(output.probeCount == 0); // No probes since policy returns no candidates
 }
 
+TEST_CASE("Tick engine ADD_SERVER dispatch and activation", "[tick]") {
+    MatchState state{};
+    
+    // Initialize a basic state for testing
+    state.tick = 1;
+    state.hider_count = 1;
+    state.server_count = 2;
+    state.seeker.connection_tokens = 2;
+    
+    // Set up hider with enough AP to afford ADD_SERVER (cost is 10)
+    state.hiders[0].active = 1;
+    state.hiders[0].action_points = 10;
+    state.hiders[0].server_id = 1;
+    
+    // Set up servers
+    state.servers[0].active = 1;
+    state.servers[0].current.cpu = 50;
+    state.servers[0].current.memory = 50;
+    state.servers[1].active = 1;
+    state.servers[1].current.cpu = 60;
+    state.servers[1].current.memory = 60;
+    
+    // Set up seeker
+    state.seeker.max_tokens = 5;
+    
+    // Create candidate intents
+    Array<TickIntent, MAX_INTENTS_PER_TICK> intents;
+    uint8_t intentCount = 1;
+    
+    // Add an ADD_SERVER intent
+    TickIntent intent{};
+    intent.kind = TickActionKind::ADD_SERVER;
+    intent.intent.idempotencyKey = 12346;
+    intent.intent.hiderId = 0;
+    intent.intent.receiptSequence = 1;
+    intents.assignValue(0, intent);
+    
+    // Create consumed key set
+    ConsumedKeySet alreadyConsumed{};
+    
+    // Run tick
+    StubPolicy policy;
+    TickOutput output = runTick(state, intents, intentCount, alreadyConsumed, &policy);
+    
+    // Should have one outcome (the ADD_SERVER action)
+    REQUIRE(output.intentOutcomeCount == 1);
+    REQUIRE(output.consumedKeyCount == 1);
+    
+    // The outcome should be ACCEPTED
+    IntentOutcomeRecord defaultRecord{};
+    const IntentOutcomeRecord& record = output.intentOutcomes.getOrDefault(0, defaultRecord);
+    REQUIRE(record.outcome == RuleOutcome::ACCEPTED);
+    
+    // Server count should remain the same (ADD_SERVER doesn't change server_count)
+    REQUIRE(state.server_count == 2);
+}
+
+TEST_CASE("Tick engine REMOVE_SERVER dispatch and slot freeing", "[tick]") {
+    MatchState state{};
+    
+    // Initialize a basic state for testing
+    state.tick = 1;
+    state.hider_count = 1;
+    state.server_count = 3;
+    state.seeker.connection_tokens = 2;
+    
+    // Set up hider with enough AP to afford REMOVE_SERVER (cost is 5)
+    state.hiders[0].active = 1;
+    state.hiders[0].action_points = 5;
+    state.hiders[0].server_id = 1;
+    
+    // Set up servers - all active
+    state.servers[0].active = 1;
+    state.servers[0].current.cpu = 50;
+    state.servers[0].current.memory = 50;
+    state.servers[1].active = 1;
+    state.servers[1].current.cpu = 60;
+    state.servers[1].current.memory = 60;
+    state.servers[2].active = 1;
+    state.servers[2].current.cpu = 70;
+    state.servers[2].current.memory = 70;
+    
+    // Set up seeker
+    state.seeker.max_tokens = 5;
+    
+    // Create candidate intents
+    Array<TickIntent, MAX_INTENTS_PER_TICK> intents;
+    uint8_t intentCount = 1;
+    
+    // Add a REMOVE_SERVER intent - target an active slot (server 1)
+    TickIntent intent{};
+    intent.kind = TickActionKind::REMOVE_SERVER;
+    intent.target_server_id = 1; // Remove server 1 which is active
+    intent.intent.idempotencyKey = 12347;
+    intent.intent.hiderId = 0;
+    intent.intent.receiptSequence = 1;
+    intents.assignValue(0, intent);
+    
+    // Create consumed key set
+    ConsumedKeySet alreadyConsumed{};
+    
+    // Run tick
+    StubPolicy policy;
+    TickOutput output = runTick(state, intents, intentCount, alreadyConsumed, &policy);
+    
+    // Should have one outcome (the REMOVE_SERVER action)
+    REQUIRE(output.intentOutcomeCount == 1);
+    REQUIRE(output.consumedKeyCount == 1);
+    
+    // The outcome should be ACCEPTED
+    IntentOutcomeRecord defaultRecord{};
+    const IntentOutcomeRecord& record = output.intentOutcomes.getOrDefault(0, defaultRecord);
+    REQUIRE(record.outcome == RuleOutcome::ACCEPTED);
+    
+    // Server 1 should now be inactive (freed)
+    REQUIRE(state.servers[1].active == 0);
+    
+    // Server count should remain the same since we removed one and added one
+    // (but in this case, we're just removing an existing server slot)
+    REQUIRE(state.server_count == 3);
+}
+
 TEST_CASE("Tick engine eligibility filtering", "[tick]") {
     MatchState state{};
     
