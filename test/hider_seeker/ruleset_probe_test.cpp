@@ -32,43 +32,145 @@ TEST_CASE("applyProbe is rejected when insufficient tokens", "[probe]") {
     REQUIRE(match.seeker.connection_tokens == 0);
 }
 
-TEST_CASE("resolveProbeConsequences handles hit correctly", "[probe]") {
+namespace {
+
+// Two active servers (0 = probed, 2 = escape destination); hiders 0 and 1
+// occupy server 0, hider 2 occupies server 2.
+MatchState makeProbeConsequenceMatch() {
     MatchState match = {};
-    
-    // Set up a server with some trace strength
-    match.servers[0].trace_strength = 60; // High enough to be hit
-    
-    ProbeResult result;
-    result.hit = true;
-    result.targetServerId = 0;
-    
-    // Call resolveProbeConsequences
-    resolveProbeConsequences(match, result);
-    
-    // Should have captured the server (if it was unowned)
-    REQUIRE(match.servers[0].owner_hider_id == 0); // Assuming seeker is hider 0
-    REQUIRE(match.servers[0].public_flags & 0x01); // Capture flag set
-    
-    // Seeker belief should be updated
-    REQUIRE(match.seeker.belief[0] == 1);
-    
-    // Last probe tick should be updated
-    REQUIRE(match.seeker.last_probe_tick[0] == match.tick);
+    match.tick = 37;
+    match.servers[0].active = 1;
+    match.servers[2].active = 1;
+    match.seeker.connection_tokens = 3;
+    match.seeker.max_tokens = 10;
+    for (uint8_t h = 0; h < 3; ++h) {
+        match.hiders[h].active = 1;
+        match.hiders[h].status = HIDER_STATUS_ACTIVE;
+    }
+    match.hiders[0].server_id = 0;
+    match.hiders[1].server_id = 0;
+    match.hiders[2].server_id = 2;
+    return match;
 }
 
-TEST_CASE("resolveProbeConsequences handles miss correctly", "[probe]") {
-    MatchState match = {};
-    
-    ProbeResult result;
-    result.hit = false;
-    result.targetServerId = 0;
-    
-    // Call resolveProbeConsequences
-    resolveProbeConsequences(match, result);
-    
-    // Seeker belief should be updated to 0 (miss)
+ProbeResult makeResult(bool hit, uint8_t serverId) {
+    ProbeResult result = {};
+    result.hit = hit;
+    result.targetServerId = serverId;
+    return result;
+}
+
+} // namespace
+
+TEST_CASE("resolveProbeConsequences on a hit captures or lets occupants escape", "[probe]") {
+    MatchState match = makeProbeConsequenceMatch();
+    match.hiders[0].action_points = 0;   // cannot pay escape cost -> captured
+    match.hiders[0].goal_progress[1] = 5;
+    match.hiders[0].goal_progress[4] = 2;
+    match.hiders[1].action_points = 5;   // can pay escape cost (3) -> escapes
+    match.hiders[1].goal_progress[1] = 6;
+    match.hiders[2].action_points = 0;   // not on the probed server -> untouched
+
+    ProbeConsequences c = resolveProbeConsequences(match, makeResult(true, 0));
+
+    // Hider 0 captured, goal progress forfeited.
+    REQUIRE(c.capturedHiderMask == 0x01);
+    REQUIRE(match.hiders[0].status == HIDER_STATUS_CAPTURED);
+    REQUIRE(match.hiders[0].server_id == 0);
+    REQUIRE(match.hiders[0].goal_progress[1] == 0);
+    REQUIRE(match.hiders[0].goal_progress[4] == 0);
+    REQUIRE(c.disqualifiedGoalProgressCount == 2);
+
+    // Hider 1 escaped to the lowest-numbered other active server, paying AP.
+    REQUIRE(c.escapedHiderMask == 0x02);
+    REQUIRE(match.hiders[1].status == HIDER_STATUS_ACTIVE);
+    REQUIRE(match.hiders[1].server_id == 2);
+    REQUIRE(match.hiders[1].action_points == 2);
+    REQUIRE(match.hiders[1].goal_progress[1] == 6);
+
+    // Hider 2 untouched.
+    REQUIRE(match.hiders[2].status == HIDER_STATUS_ACTIVE);
+    REQUIRE(match.hiders[2].server_id == 2);
+
+    // Seeker reward for one capture, and updated knowledge.
+    REQUIRE(c.tokensAwarded == 2);
+    REQUIRE(match.seeker.connection_tokens == 5);
+    REQUIRE(match.seeker.belief[0] == 200);
+    REQUIRE(match.seeker.last_probe_tick[0] == 37);
+}
+
+TEST_CASE("resolveProbeConsequences captures when no escape server exists", "[probe]") {
+    MatchState match = makeProbeConsequenceMatch();
+    match.servers[2].active = 0; // no other active server
+    match.hiders[1].action_points = 5;
+    match.seeker.connection_tokens = 9; // reward capped at max_tokens (10)
+
+    ProbeConsequences c = resolveProbeConsequences(match, makeResult(true, 0));
+
+    REQUIRE(c.capturedHiderMask == 0x03);
+    REQUIRE(c.escapedHiderMask == 0);
+    REQUIRE(match.hiders[1].status == HIDER_STATUS_CAPTURED);
+    REQUIRE(match.hiders[1].action_points == 5);
+    REQUIRE(match.seeker.connection_tokens == 10);
+    REQUIRE(c.tokensAwarded == 1);
+}
+
+TEST_CASE("resolveProbeConsequences does not re-capture an already captured hider", "[probe]") {
+    MatchState match = makeProbeConsequenceMatch();
+    match.hiders[0].status = HIDER_STATUS_CAPTURED;
+    match.hiders[1].status = HIDER_STATUS_CAPTURED;
+
+    ProbeConsequences c = resolveProbeConsequences(match, makeResult(true, 0));
+
+    REQUIRE(c.capturedHiderMask == 0);
+    REQUIRE(c.tokensAwarded == 0);
+    REQUIRE(match.seeker.connection_tokens == 3);
+}
+
+TEST_CASE("resolveProbeConsequences on a miss only updates seeker knowledge", "[probe]") {
+    MatchState match = makeProbeConsequenceMatch();
+    match.seeker.belief[0] = 120;
+
+    ProbeConsequences c = resolveProbeConsequences(match, makeResult(false, 0));
+
+    REQUIRE(c.capturedHiderMask == 0);
+    REQUIRE(c.escapedHiderMask == 0);
+    REQUIRE(c.tokensAwarded == 0);
     REQUIRE(match.seeker.belief[0] == 0);
-    
-    // Last probe tick should be updated
-    REQUIRE(match.seeker.last_probe_tick[0] == match.tick);
+    REQUIRE(match.seeker.last_probe_tick[0] == 37);
+    REQUIRE(match.seeker.connection_tokens == 3);
+    REQUIRE(match.hiders[0].status == HIDER_STATUS_ACTIVE);
+    REQUIRE(match.hiders[1].status == HIDER_STATUS_ACTIVE);
+    REQUIRE(match.hiders[0].server_id == 0);
+}
+
+TEST_CASE("applyProbe records a replayable draw (RULESET-001)", "[probe]") {
+    MatchState match = {};
+    match.tick = 12;
+    match.rng_state = 0x1234ABCDULL;
+    match.seeker.connection_tokens = 4;
+    match.servers[3].active = 1;
+    match.servers[3].trace_strength = 50;
+    MatchState copy = match;
+
+    ProbeResult result = {};
+    REQUIRE(applyProbe(match, 3, result) == RuleOutcome::ACCEPTED);
+    REQUIRE(result.targetServerId == 3);
+    REQUIRE(result.rngStateBefore == 0x1234ABCDULL);
+    REQUIRE(result.rngCounter == 12);
+    REQUIRE(result.hit == computeProbeHit(result.randomValue, 50));
+    REQUIRE(match.rng_state != 0x1234ABCDULL); // RNG stream advanced
+
+    // The record alone reproduces the draw and decision.
+    REQUIRE(replayProbeDraw(result, 50));
+    ProbeResult tampered = result;
+    tampered.randomValue ^= 1u;
+    REQUIRE_FALSE(replayProbeDraw(tampered, 50));
+
+    // Re-running from the same pre-state yields an identical result and RNG state.
+    ProbeResult again = {};
+    REQUIRE(applyProbe(copy, 3, again) == RuleOutcome::ACCEPTED);
+    REQUIRE(again.hit == result.hit);
+    REQUIRE(again.randomValue == result.randomValue);
+    REQUIRE(copy.rng_state == match.rng_state);
 }

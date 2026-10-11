@@ -7,7 +7,26 @@ namespace hider_seeker {
 // Placeholder constants for probe behavior - TODO: replace with final values
 // These are placeholders as the design doc only gives hedged examples
 constexpr uint8_t PLACEHOLDER_TOKEN_COST_PER_PROBE = 1;
-// PLACEHOLDER_PROBE_HIT_THRESHOLD is now removed as it was unused
+// Probe consequence placeholders (PROBE-001) - TODO: replace with final values.
+constexpr uint8_t PLACEHOLDER_BELIEF_ON_HIT = 200;
+constexpr uint8_t PLACEHOLDER_BELIEF_ON_MISS = 0;
+constexpr uint8_t PLACEHOLDER_ESCAPE_AP_COST = 3;
+constexpr uint8_t PLACEHOLDER_CAPTURE_TOKEN_REWARD = 2;
+// Hit chance is (traceStrength / PROBE_HIT_ROLL_RANGE), capped at 100%.
+constexpr uint32_t PROBE_HIT_ROLL_RANGE = 100;
+
+bool computeProbeHit(uint32_t randomValue, uint8_t traceStrength) {
+    return (randomValue % PROBE_HIT_ROLL_RANGE) < traceStrength;
+}
+
+bool replayProbeDraw(const ProbeResult& record, uint8_t traceStrength) {
+    RngState rng;
+    rng.state = record.rngStateBefore;
+    rng.counter = record.rngCounter;
+    const uint32_t randomValue = nextRandomValue(rng);
+    return randomValue == record.randomValue
+        && computeProbeHit(randomValue, traceStrength) == record.hit;
+}
 
 RuleOutcome applyProbe(MatchState& match, uint8_t serverId, ProbeResult& outResult) {
     if (serverId >= MAX_SERVERS) {
@@ -28,75 +47,85 @@ RuleOutcome applyProbe(MatchState& match, uint8_t serverId, ProbeResult& outResu
     RngState rng;
     rng.state = match.rng_state;
     rng.counter = match.tick;
-    uint32_t randomValue = nextRandomValue(rng);
+    outResult.rngStateBefore = rng.state;
+    outResult.rngCounter = rng.counter;
+    const uint32_t randomValue = nextRandomValue(rng);
     match.rng_state = rng.state;
 
-    // Use the random value to determine hit/miss result
-    // Simple approach: use lower bits of random value as probability
-    uint8_t traceStrength = match.servers[serverId].trace_strength;
-    
-    // Convert random value to a percentage (0-100) and compare with trace strength
-    // This makes the hit probability depend on both the trace strength and RNG
-    uint8_t probability = static_cast<uint8_t>(randomValue % 100);
+    // Higher trace strength = higher chance of hit.
+    outResult.randomValue = randomValue;
     outResult.targetServerId = serverId;
-    outResult.hit = (probability < traceStrength);  // Higher trace strength = higher chance of hit
-    
+    outResult.hit = computeProbeHit(randomValue, match.servers[serverId].trace_strength);
+
     return RuleOutcome::ACCEPTED;
 }
 
-void resolveProbeConsequences(MatchState& match, const ProbeResult& result) {
-    // PROBE-001: Implement deterministic capture/escape/goal-qualification/reward logic
-    
-    if (result.hit) {
-        // Handle capture logic
-        ServerState& server = match.servers[result.targetServerId];
-        
-        // If the server is currently unowned, capture it
-        if (server.owner_hider_id == 0xFF) {
-            // Capture the server - make it owned by the seeker (seeker is hider 0)
-            // In a real implementation, we might want to track who captured what
-            server.owner_hider_id = 0; // Assuming seeker is hider 0 for capture purposes
-            
-            // Update server's public flags to indicate it was captured
-            server.public_flags |= 0x01; // Capture flag
-            
-            // Update seeker's belief about this server (as if they now know it's captured)
-            match.seeker.belief[result.targetServerId] = 1;
-            
-            // Update last probe tick for this server
-            match.seeker.last_probe_tick[result.targetServerId] = match.tick;
-        } else {
-            // Server was already owned - handle escape or other logic
-            // For now, just update belief and last probe tick
-            match.seeker.belief[result.targetServerId] = 1;
-            match.seeker.last_probe_tick[result.targetServerId] = match.tick;
-            
-            // If the server is owned by a different hider, this might trigger goal qualification
-            // or other reward logic - but for now we'll just update state
+ProbeConsequences resolveProbeConsequences(MatchState& match, const ProbeResult& result) {
+    // PROBE-001: deterministic capture/escape/goal-qualification/reward rule,
+    // documented in probe_rules.hpp.
+    ProbeConsequences consequences = {0, 0, 0, 0};
+    const uint8_t target = result.targetServerId;
+    if (target >= MAX_SERVERS) {
+        return consequences;
+    }
+
+    // SeekerState::last_probe_tick is a uint8_t field in the frozen domain layer,
+    // so it stores the low byte of the tick.
+    match.seeker.last_probe_tick[target] = static_cast<uint8_t>(match.tick);
+
+    if (!result.hit) {
+        match.seeker.belief[target] = PLACEHOLDER_BELIEF_ON_MISS;
+        return consequences;
+    }
+
+    match.seeker.belief[target] = PLACEHOLDER_BELIEF_ON_HIT;
+
+    // Escape destination: lowest-numbered active server other than the target.
+    uint8_t escapeServerId = NO_SERVER_ID;
+    for (uint8_t s = 0; s < MAX_SERVERS; ++s) {
+        if (s != target && match.servers[s].active) {
+            escapeServerId = s;
+            break;
         }
-        
-        // Apply goal qualification/reward logic based on capture/escape
-        // This would be more complex in a real implementation
+    }
+
+    for (uint8_t h = 0; h < MAX_HIDERS; ++h) {
+        HiderState& hider = match.hiders[h];
+        if (!hider.active || hider.status == HIDER_STATUS_CAPTURED || hider.server_id != target) {
+            continue;
+        }
+
+        const uint8_t bit = static_cast<uint8_t>(1u << h);
+        if (escapeServerId != NO_SERVER_ID && hider.action_points >= PLACEHOLDER_ESCAPE_AP_COST) {
+            // Escape: pay AP and move to the escape server.
+            hider.action_points -= PLACEHOLDER_ESCAPE_AP_COST;
+            hider.server_id = escapeServerId;
+            consequences.escapedHiderMask |= bit;
+            continue;
+        }
+
+        // Capture.
+        hider.status = HIDER_STATUS_CAPTURED;
+        consequences.capturedHiderMask |= bit;
+
+        // Goal qualification: a captured hider forfeits all goal progress.
         for (uint8_t g = 0; g < MAX_GOALS; ++g) {
-            if (!match.goals[g].active) continue;
-            
-            // Check if this goal is related to capturing servers
-            for (uint8_t r = 0; r < match.goals[g].requirement_count; ++r) {
-                Requirement& req = match.goals[g].requirements[r];
-                
-                // If this requirement is about server capture or ownership
-                if (req.type == REQ_CONFIGURED_SERVER && req.subject_id == result.targetServerId) {
-                    // This goal requirement might be satisfied by the capture
-                    // In a real implementation, we'd check if the requirement is met
-                    // and potentially update goal status
-                }
+            if (hider.goal_progress[g] != 0) {
+                hider.goal_progress[g] = 0;
+                consequences.disqualifiedGoalProgressCount++;
             }
         }
-    } else {
-        // Miss - just update seeker's belief and last probe tick
-        match.seeker.belief[result.targetServerId] = 0;
-        match.seeker.last_probe_tick[result.targetServerId] = match.tick;
+
+        // Reward: seeker gains connection tokens, capped at max_tokens.
+        const uint8_t tokens = match.seeker.connection_tokens;
+        const uint8_t cap = match.seeker.max_tokens;
+        const uint8_t room = tokens < cap ? static_cast<uint8_t>(cap - tokens) : 0;
+        const uint8_t award = PLACEHOLDER_CAPTURE_TOKEN_REWARD < room ? PLACEHOLDER_CAPTURE_TOKEN_REWARD : room;
+        match.seeker.connection_tokens = static_cast<uint8_t>(tokens + award);
+        consequences.tokensAwarded = static_cast<uint8_t>(consequences.tokensAwarded + award);
     }
+
+    return consequences;
 }
 
 } // namespace hider_seeker

@@ -129,9 +129,78 @@ TEST_CASE("applyAddServer emits a public SERVER_ADDED lifecycle event", "[loa]")
     REQUIRE(match.events[0].tick == 42);
 }
 
-// LOA-004 (cancel / rebind / invalidate references to a removed slot) is an open
-// ruleset question; invalidateServerReferences is scaffolded only, so no test
-// asserts a particular LOA-004 outcome until that decision is made.
+TEST_CASE("applyRemoveServer invalidates every reference to the removed slot (LOA-004)", "[loa]") {
+    MatchState match = {};
+    match.hiders[0].active = 1;
+    match.hiders[0].resources[LOA_RESOURCE_INDEX] = 3;
+    REQUIRE(applyAddServer(match, 0) == RuleOutcome::ACCEPTED); // slot 0
+    REQUIRE(applyAddServer(match, 0) == RuleOutcome::ACCEPTED); // slot 1
+    match.hiders[0].server_id = 1;
+
+    // Goal 0: configured-server requirement on slot 0 -> must be cancelled.
+    match.goals[0].active = 1;
+    match.goals[0].status = 3;
+    match.goals[0].requirement_count = 2;
+    match.goals[0].requirements[0] = {REQ_RESOURCE_MIN, 2, 5, 0};
+    match.goals[0].requirements[1] = {REQ_CONFIGURED_SERVER, 0, 0, 0};
+    match.hiders[0].goal_progress[0] = 7;
+    // Goal 1: metric-threshold requirement on slot 1 -> untouched.
+    match.goals[1].active = 1;
+    match.goals[1].status = 3;
+    match.goals[1].requirement_count = 1;
+    match.goals[1].requirements[0] = {REQ_SERVER_METRIC_THRESHOLD, 1, 0, 50};
+    match.hiders[0].goal_progress[1] = 4;
+    // Goal 2: non-server requirement whose subject_id happens to be 0 -> untouched.
+    match.goals[2].active = 1;
+    match.goals[2].status = 3;
+    match.goals[2].requirement_count = 1;
+    match.goals[2].requirements[0] = {REQ_RESOURCE_SPEND, 0, 2, 0};
+
+    // Pending seeker targets (oldest -> newest): 0, 1, 0, 2, with head at 14 (wraps).
+    match.seeker.target_head = 14;
+    match.seeker.target_ids[14] = 0;
+    match.seeker.target_ids[15] = 1;
+    match.seeker.target_ids[0] = 0;
+    match.seeker.target_ids[1] = 2;
+    match.seeker.target_count = 4;
+
+    match.seeker.belief[0] = 9;
+    match.seeker.last_probe_tick[0] = 5;
+    match.seeker.belief[1] = 6;
+    match.seeker.last_probe_tick[1] = 4;
+
+    REQUIRE(applyRemoveServer(match, 0, 0) == RuleOutcome::ACCEPTED);
+
+    // Goal referencing the removed slot is cancelled and its progress reset.
+    REQUIRE(match.goals[0].active == 0);
+    REQUIRE(match.goals[0].status == GOAL_STATUS_CANCELLED_SERVER_REMOVED);
+    REQUIRE(match.hiders[0].goal_progress[0] == 0);
+    // Goals not referencing the removed slot are unchanged.
+    REQUIRE(match.goals[1].active == 1);
+    REQUIRE(match.goals[1].status == 3);
+    REQUIRE(match.hiders[0].goal_progress[1] == 4);
+    REQUIRE(match.goals[2].active == 1);
+    REQUIRE(match.goals[2].status == 3);
+
+    // Pending targets for slot 0 are removed; survivors keep order from the head.
+    REQUIRE(match.seeker.target_count == 2);
+    REQUIRE(match.seeker.target_head == 14);
+    REQUIRE(match.seeker.target_ids[14] == 1);
+    REQUIRE(match.seeker.target_ids[15] == 2);
+
+    // Seeker knowledge of slot 0 is reset; slot 1 is untouched.
+    REQUIRE(match.seeker.belief[0] == 0);
+    REQUIRE(match.seeker.last_probe_tick[0] == 0);
+    REQUIRE(match.seeker.belief[1] == 6);
+    REQUIRE(match.seeker.last_probe_tick[1] == 4);
+
+    // A still-pending REMOVE_SERVER intent naming the removed slot is invalidated
+    // at apply time, with no LOA spent.
+    REQUIRE(match.hiders[0].resources[LOA_RESOURCE_INDEX] == 0);
+    match.hiders[0].resources[LOA_RESOURCE_INDEX] = 1;
+    REQUIRE(applyRemoveServer(match, 0, 0) == RuleOutcome::REJECTED_INVALID_TARGET);
+    REQUIRE(match.hiders[0].resources[LOA_RESOURCE_INDEX] == 1);
+}
 
 TEST_CASE("resetServerSlot clears metrics/history/ownership/trace fields", "[loa]") {
     MatchState match = {};

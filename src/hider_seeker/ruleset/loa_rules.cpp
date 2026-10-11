@@ -4,9 +4,6 @@
 
 namespace hider_seeker {
 
-// LOA resource index - assuming resource type 0 is LOA
-constexpr uint8_t LOA_RESOURCE_INDEX = 0;
-
 namespace {
 
 // Ruleset decision (LOA-005): whether each server lifecycle event is public.
@@ -138,7 +135,7 @@ RuleOutcome applyRemoveServer(MatchState& match, uint8_t hiderId, uint8_t server
         }
     }
 
-    // LOA-004 hook (scaffold; policy undecided): references to the removed slot
+    // LOA-004: cancel/remove/reset every reference to the removed slot (see loa_rules.hpp)
     invalidateServerReferences(match, serverId);
 
     // Reset (clears metrics/history/ownership/traces and deactivates) the old slot
@@ -172,52 +169,61 @@ void resetServerSlot(ServerState& server) {
 }
 
 void invalidateServerReferences(MatchState& match, uint8_t serverId) {
-    // LOA-004: Implement the required behavior for references to removed slot
-    //
-    // For each goal requirement that references the removed server:
-    // - If it's a server metric threshold or configured server requirement,
-    //   cancel the requirement (set to inactive)
-    // For pending seeker targets:
-    // - Remove any target that references the removed server
-    // For seeker state:
-    // - Clear belief for the removed server
-    // - Clear last_probe_tick for the removed server
-    
-    // Handle goal requirements referencing the removed server
+    // Explicit LOA-004 rule; documented in loa_rules.hpp.
+    if (serverId >= MAX_SERVERS) {
+        return;
+    }
+
+    // Goals: cancel any active goal with a server-referencing requirement on this slot.
     for (uint8_t g = 0; g < MAX_GOALS; ++g) {
-        if (!match.goals[g].active) continue;
-        
-        for (uint8_t r = 0; r < match.goals[g].requirement_count; ++r) {
-            Requirement& req = match.goals[g].requirements[r];
-            
-            // If this requirement references the removed server
-            if (req.subject_id == serverId) {
-                // Cancel requirements that reference the removed server
-                // This is a simple approach - in a real implementation, 
-                // we might want to handle different requirement types differently
-                req.type = REQ_CUSTOM_RULE; // Mark as invalid/cancelled
+        GoalState& goal = match.goals[g];
+        if (!goal.active) continue;
+
+        const uint8_t count = goal.requirement_count < MAX_REQUIREMENTS_PER_GOAL
+                            ? goal.requirement_count : MAX_REQUIREMENTS_PER_GOAL;
+        bool referencesRemovedSlot = false;
+        for (uint8_t r = 0; r < count; ++r) {
+            const Requirement& req = goal.requirements[r];
+            const bool isServerRequirement = req.type == REQ_SERVER_METRIC_THRESHOLD
+                                          || req.type == REQ_CONFIGURED_SERVER;
+            if (isServerRequirement && req.subject_id == serverId) {
+                referencesRemovedSlot = true;
+                break;
+            }
+        }
+
+        if (referencesRemovedSlot) {
+            goal.active = 0;
+            goal.status = GOAL_STATUS_CANCELLED_SERVER_REMOVED;
+            for (uint8_t h = 0; h < MAX_HIDERS; ++h) {
+                match.hiders[h].goal_progress[g] = 0;
             }
         }
     }
-    
-    // Handle pending seeker targets referencing the removed server
-    for (uint8_t i = 0; i < match.seeker.target_count; ++i) {
-        uint8_t index = (match.seeker.target_head + i) % MAX_SEEKER_TARGETS;
-        if (match.seeker.target_ids[index] == serverId) {
-            // Remove this target by decrementing count and adjusting head
-            // This is a simple removal approach - in practice we might want to 
-            // shift elements or use a more sophisticated eviction policy
-            match.seeker.target_count--;
-            if (match.seeker.target_count > 0) {
-                // Adjust the head to maintain correct order
-                match.seeker.target_head = (match.seeker.target_head + 1) % MAX_SEEKER_TARGETS;
-            }
+
+    // Pending seeker targets: drop entries for this slot, compacting the
+    // survivors in their original order starting at target_head.
+    SeekerState& seeker = match.seeker;
+    const uint8_t liveCount = seeker.target_count < MAX_SEEKER_TARGETS
+                            ? seeker.target_count : MAX_SEEKER_TARGETS;
+    Array<uint8_t, MAX_SEEKER_TARGETS> kept;
+    uint8_t keptCount = 0;
+    for (uint8_t i = 0; i < liveCount; ++i) {
+        const uint8_t id = seeker.target_ids[(seeker.target_head + i) % MAX_SEEKER_TARGETS];
+        if (id != serverId) {
+            kept.set(keptCount, id);
+            keptCount++;
         }
     }
-    
-    // Handle seeker belief and last_probe_tick for the removed server
-    match.seeker.belief[serverId] = 0; // Clear belief
-    match.seeker.last_probe_tick[serverId] = 0; // Clear last probe tick
+    for (uint8_t i = 0; i < MAX_SEEKER_TARGETS; ++i) {
+        const uint8_t index = static_cast<uint8_t>((seeker.target_head + i) % MAX_SEEKER_TARGETS);
+        seeker.target_ids[index] = i < keptCount ? kept.getOrDefault(i, 0) : 0;
+    }
+    seeker.target_count = keptCount;
+
+    // Seeker per-slot knowledge is reset.
+    seeker.belief[serverId] = 0;
+    seeker.last_probe_tick[serverId] = 0;
 }
 
 } // namespace hider_seeker
