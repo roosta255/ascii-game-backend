@@ -5,6 +5,8 @@
 #include "../ruleset/probe_rules.hpp"
 #include "../ruleset/ring_buffers.hpp"
 
+#include <algorithm>
+
 namespace hider_seeker {
 
 TickOutput runTick(MatchState& state,
@@ -14,45 +16,44 @@ TickOutput runTick(MatchState& state,
                     const iTargetRankingPolicy* seekerPolicy) {
     TickOutput output;
     
-    // Step 1 (ELIGIBILITY): filter eligible candidate intents
-    Array<IntentRecord, MAX_INTENTS_PER_TICK> eligibleIntentRecords;
-    Array<uint8_t, MAX_INTENTS_PER_TICK> originalIndices; // Track original indices for correlation
+    // Step 1 (ELIGIBILITY): record the candidateIntents index of every
+    // eligible candidate. Each later step works on these indices, so every
+    // dispatched record stays tied to the exact TickIntent it came from (never
+    // re-matched by idempotencyKey, which duplicates may share).
+    Array<uint8_t, MAX_INTENTS_PER_TICK> eligibleIndices;
     uint8_t eligibleCount = 0;
-    
+
     for (int i = 0; i < candidateIntentCount; ++i) {
         candidateIntents.accessConst(i, [&](const TickIntent& candidate) {
             if (!alreadyConsumed.contains(candidate.intent.idempotencyKey)) {
-                eligibleIntentRecords.assignValue(eligibleCount, candidate.intent);
-                originalIndices.assignValue(eligibleCount, i);
+                eligibleIndices.assignValue(eligibleCount, static_cast<uint8_t>(i));
                 eligibleCount++;
             }
         });
     }
 
-    // Unused slots must sort after every eligible record so the eligible
-    // records occupy [0, eligibleCount) after ordering.
-    for (int i = eligibleCount; i < eligibleIntentRecords.size(); ++i) {
-        eligibleIntentRecords.access(i, [](IntentRecord& unused) {
-            unused.receiptSequence = UINT64_MAX;
+    // Step 2 (ORDERING): order the eligible indices strictly ascending by the
+    // referenced intent's receiptSequence (the same rule as
+    // orderAcceptedIntents). stable_sort keeps candidate order for any equal
+    // sequences, so the ordering stays deterministic.
+    std::stable_sort(eligibleIndices.begin(), eligibleIndices.begin() + eligibleCount,
+        [&candidateIntents](uint8_t a, uint8_t b) {
+            const TickIntent defaultIntent{};
+            return candidateIntents.getOrDefault(a, defaultIntent).intent.receiptSequence
+                 < candidateIntents.getOrDefault(b, defaultIntent).intent.receiptSequence;
         });
-    }
 
-    // Step 2 (ORDERING): order the eligible intents using the existing function
-    orderAcceptedIntents(eligibleIntentRecords);
-    
     // Step 3 (ACTIONS): process ordered intents
     Array<uint64_t, MAX_INTENTS_PER_TICK> consumedKeysInThisTick;
     uint8_t consumedKeyCountInThisTick = 0;
-    
+
     for (int i = 0; i < eligibleCount; ++i) {
-        // Find the original TickIntent that corresponds to this IntentRecord
-        IntentRecord defaultRecord{};
-        const IntentRecord& intentRecord = eligibleIntentRecords.getOrDefault(i, defaultRecord);
-        
-        // Get the original index from our tracking array
-        uint8_t originalIndex = originalIndices.getOrDefault(i, 0);
-        const TickIntent& matchingIntent = candidateIntents.getOrDefault(originalIndex, candidateIntents.getOrDefault(0, TickIntent{}));
-        
+        // The exact TickIntent this ordered slot originated from
+        const uint8_t originalIndex = eligibleIndices.getOrDefault(i, 0);
+        const TickIntent defaultIntent{};
+        const TickIntent& matchingIntent = candidateIntents.getOrDefault(originalIndex, defaultIntent);
+        const IntentRecord& intentRecord = matchingIntent.intent;
+
         // Check if this intent was already applied in this tick (idempotency)
         // Using the existing isIntentAlreadyApplied function
         bool alreadyApplied = isIntentAlreadyApplied(consumedKeysInThisTick, consumedKeyCountInThisTick, intentRecord.idempotencyKey);

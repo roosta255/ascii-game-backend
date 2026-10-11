@@ -553,69 +553,7 @@ TEST_CASE("Tick engine metrics placeholder leaves non-zero errors unchanged", "[
     state.servers[1].active = 1;
     state.servers[1].current.errors = 9;
     state.servers[1].trace_strength = 1;
-    state.serv
-
-TEST_CASE("Tick engine duplicate idempotency key with different actions", "[tick]") {
-    MatchState state{};
-    
-    // Initialize a basic state for testing
-    state.tick = 1;
-    state.hider_count = 1;
-    state.server_count = 2;
-    state.seeker.connection_tokens = 2;
-    
-    // Set up hider
-    state.hiders[0].active = 1;
-    state.hiders[0].action_points = 10;
-    state.hiders[0].server_id = 1;
-    
-    // Set up servers
-    state.servers[0].active = 1;
-    state.servers[0].current.cpu = 50;
-    state.servers[0].current.memory = 50;
-    state.servers[1].active = 1;
-    state.servers[1].current.cpu = 60;
-    state.servers[1].current.memory = 60;
-    
-    // Create candidate intents with same idempotency key but different action kinds
-    Array<TickIntent, MAX_INTENTS_PER_TICK> intents;
-    uint8_t intentCount = 2;
-    
-    // First intent: HIDER_ACTION (should be ACCEPTED)
-    TickIntent intent1{};
-    intent1.kind = TickActionKind::HIDER_ACTION;
-    intent1.action_mode = HiderActionMode::CONFIGURE_SERVER;
-    intent1.intent.idempotencyKey = 12345;
-    intent1.intent.hiderId = 0;
-    intent1.intent.receiptSequence = 1;
-    intents.assignValue(0, intent1);
-    
-    // Second intent: REMOVE_SERVER with same idempotency key (should be REJECTED because first one was ACCEPTED)
-    TickIntent intent2{};
-    intent2.kind = TickActionKind::REMOVE_SERVER;
-    intent2.target_server_id = 1; // This should be valid
-    intent2.intent.idempotencyKey = 12345; // Same key as intent1
-    intent2.intent.hiderId = 0;
-    intent2.intent.receiptSequence = 2;
-    intents.assignValue(1, intent2);
-    
-    // Create empty consumed key set
-    ConsumedKeySet alreadyConsumed{};
-    
-    // Run tick
-    StubPolicy policy;
-    TickOutput output = runTick(state, intents, intentCount, alreadyConsumed, &policy);
-    
-    // Should have exactly one outcome (the first intent was accepted)
-    REQUIRE(output.intentOutcomeCount == 1);
-    REQUIRE(output.consumedKeyCount == 1); // One key should be consumed
-    
-    // The first intent should be ACCEPTED
-    REQUIRE(outcomeForKey(output, 12345) == RuleOutcome::ACCEPTED);
-    
-    // The second intent should not have been processed (due to idempotency)
-    // But we want to make sure it doesn't incorrectly use the action_mode from the first one
-}ers[1].trace_age = 2;
+    state.servers[1].trace_age = 2;
 
     Array<TickIntent, MAX_INTENTS_PER_TICK> intents;
     ConsumedKeySet alreadyConsumed{};
@@ -1012,57 +950,66 @@ TEST_CASE("Tick engine duplicate idempotency key with first rejected", "[tick]")
     state.hider_count = 1;
     state.server_count = 2;
     state.seeker.connection_tokens = 2;
-    
-    // Set up hider with insufficient resources to afford the first action (should be REJECTED)
+
+    // 3 AP: cannot afford CONFIGURE_SERVER (5) but can afford BOOST_CPU (2)
     state.hiders[0].active = 1;
-    state.hiders[0].action_points = 2; // Not enough for CONFIGURE_SERVER which costs 5
+    state.hiders[0].action_points = 3;
     state.hiders[0].server_id = 1;
-    
-    // Set up servers
+
     state.servers[0].active = 1;
     state.servers[0].current.cpu = 50;
-    state.servers[0].current.memory = 50;
     state.servers[1].active = 1;
     state.servers[1].current.cpu = 60;
-    state.servers[1].current.memory = 60;
-    
-    // Create candidate intents with same idempotency key but different action kinds
+
+    // Two intents share one idempotency key but carry different actions.
+    // The first in receipt order (CONFIGURE_SERVER) is rejected, so the key is
+    // not consumed and the second (BOOST_CPU) must be dispatched with its OWN
+    // action_mode, not the first occurrence's.
+    TickIntent rejectedFirst{};
+    rejectedFirst.kind = TickActionKind::HIDER_ACTION;
+    rejectedFirst.action_mode = HiderActionMode::CONFIGURE_SERVER;
+    rejectedFirst.intent.idempotencyKey = 12345;
+    rejectedFirst.intent.hiderId = 0;
+    rejectedFirst.intent.receiptSequence = 1;
+
+    TickIntent acceptedSecond{};
+    acceptedSecond.kind = TickActionKind::HIDER_ACTION;
+    acceptedSecond.action_mode = HiderActionMode::BOOST_CPU;
+    acceptedSecond.intent.idempotencyKey = 12345; // Same key as rejectedFirst
+    acceptedSecond.intent.hiderId = 0;
+    acceptedSecond.intent.receiptSequence = 2;
+
     Array<TickIntent, MAX_INTENTS_PER_TICK> intents;
-    uint8_t intentCount = 2;
-    
-    // First intent: HIDER_ACTION (should be REJECTED due to insufficient AP)
-    TickIntent intent1{};
-    intent1.kind = TickActionKind::HIDER_ACTION;
-    intent1.action_mode = HiderActionMode::CONFIGURE_SERVER;
-    intent1.intent.idempotencyKey = 12345;
-    intent1.intent.hiderId = 0;
-    intent1.intent.receiptSequence = 1;
-    intents.assignValue(0, intent1);
-    
-    // Second intent: REMOVE_SERVER with same idempotency key (should be processed)
-    TickIntent intent2{};
-    intent2.kind = TickActionKind::REMOVE_SERVER;
-    intent2.target_server_id = 1; // This should be valid
-    intent2.intent.idempotencyKey = 12345; // Same key as intent1
-    intent2.intent.hiderId = 0;
-    intent2.intent.receiptSequence = 2;
-    intents.assignValue(1, intent2);
-    
-    // Create empty consumed key set
+    const uint8_t intentCount = 2;
+
+    SECTION("candidates supplied in receipt order") {
+        intents.assignValue(0, rejectedFirst);
+        intents.assignValue(1, acceptedSecond);
+    }
+    SECTION("candidates supplied in reverse receipt order") {
+        intents.assignValue(0, acceptedSecond);
+        intents.assignValue(1, rejectedFirst);
+    }
+
     ConsumedKeySet alreadyConsumed{};
-    
-    // Run tick
     StubPolicy policy;
     TickOutput output = runTick(state, intents, intentCount, alreadyConsumed, &policy);
-    
-    // Should have exactly one outcome (the first intent was rejected)
-    REQUIRE(output.intentOutcomeCount == 1);
-    REQUIRE(output.consumedKeyCount == 0); // No key should be consumed since first was rejected
-    
-    // The first intent should be REJECTED
-    REQUIRE(outcomeForKey(output, 12345) == RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE);
-    
-    // This test ensures that even if the first intent is rejected and not added to consumedKeysInThisTick,
-    // a subsequent intent with same idempotency key would still be processed correctly
-    // (the bug was that it would incorrectly use parameters from the first intent)
+
+    // Both occurrences are dispatched, in receipt order, each with its own action
+    REQUIRE(output.intentOutcomeCount == 2);
+    IntentOutcomeRecord noRecord{};
+    const IntentOutcomeRecord& firstOutcome = output.intentOutcomes.getOrDefault(0, noRecord);
+    const IntentOutcomeRecord& secondOutcome = output.intentOutcomes.getOrDefault(1, noRecord);
+    REQUIRE(firstOutcome.idempotencyKey == 12345);
+    REQUIRE(firstOutcome.outcome == RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE);
+    REQUIRE(secondOutcome.idempotencyKey == 12345);
+    REQUIRE(secondOutcome.outcome == RuleOutcome::ACCEPTED);
+
+    REQUIRE(output.consumedKeyCount == 1);
+    REQUIRE(output.consumedKeys.getOrDefault(0, 0) == 12345);
+
+    // BOOST_CPU's own cost and effect were applied (not CONFIGURE_SERVER's)
+    REQUIRE(state.hiders[0].action_points == 1);
+    REQUIRE(state.servers[1].current.cpu == 75);
+    REQUIRE(state.servers[0].current.cpu == 50);
 }
