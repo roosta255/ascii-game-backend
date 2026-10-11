@@ -38,15 +38,23 @@ TEST_CASE("isIntentAlreadyApplied correctly rejects already applied keys", "[ord
     consumedKeys.set(0, 100);
     consumedKeys.set(1, 200);
     consumedKeys.set(2, 300);
-    
+    const int consumedCount = 3;
+
     // Check that already applied keys are rejected
-    REQUIRE(isIntentAlreadyApplied(consumedKeys, 100) == true);
-    REQUIRE(isIntentAlreadyApplied(consumedKeys, 200) == true);
-    REQUIRE(isIntentAlreadyApplied(consumedKeys, 300) == true);
-    
+    REQUIRE(isIntentAlreadyApplied(consumedKeys, consumedCount, 100) == true);
+    REQUIRE(isIntentAlreadyApplied(consumedKeys, consumedCount, 200) == true);
+    REQUIRE(isIntentAlreadyApplied(consumedKeys, consumedCount, 300) == true);
+
     // Check that new keys are not rejected
-    REQUIRE(isIntentAlreadyApplied(consumedKeys, 400) == false);
-    REQUIRE(isIntentAlreadyApplied(consumedKeys, 500) == false);
+    REQUIRE(isIntentAlreadyApplied(consumedKeys, consumedCount, 400) == false);
+    REQUIRE(isIntentAlreadyApplied(consumedKeys, consumedCount, 500) == false);
+
+    // Unused slots must never be mistaken for a legitimate key of 0
+    REQUIRE(isIntentAlreadyApplied(consumedKeys, consumedCount, 0) == false);
+
+    // A genuinely consumed key of 0 is detected
+    consumedKeys.set(3, 0);
+    REQUIRE(isIntentAlreadyApplied(consumedKeys, consumedCount + 1, 0) == true);
 }
 
 TEST_CASE("No function mutates MatchState::tick on AP/token exhaustion", "[ordering]") {
@@ -58,7 +66,6 @@ TEST_CASE("No function mutates MatchState::tick on AP/token exhaustion", "[order
     SECTION("hider AP exhaustion: actions are rejected and tick is unchanged") {
         match.hiders[0].action_points = 0;
         const HiderActionMode modes[] = {
-            HiderActionMode::ADD_SERVER, HiderActionMode::REMOVE_SERVER,
             HiderActionMode::CONFIGURE_SERVER, HiderActionMode::SUPPRESS_ERROR,
             HiderActionMode::BOOST_CPU, HiderActionMode::ROTATE_ROUTE,
             HiderActionMode::PAY_GOAL};
@@ -66,6 +73,14 @@ TEST_CASE("No function mutates MatchState::tick on AP/token exhaustion", "[order
             REQUIRE(applyHiderAction(match, 0, mode) == RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE);
             REQUIRE(match.tick == 100);
         }
+    }
+
+    SECTION("ADD_SERVER/REMOVE_SERVER charge no AP (their cost is 1 LOA only)") {
+        match.hiders[0].action_points = 0;
+        REQUIRE(applyHiderAction(match, 0, HiderActionMode::ADD_SERVER) == RuleOutcome::ACCEPTED);
+        REQUIRE(applyHiderAction(match, 0, HiderActionMode::REMOVE_SERVER) == RuleOutcome::ACCEPTED);
+        REQUIRE(match.hiders[0].action_points == 0);
+        REQUIRE(match.tick == 100);
     }
 
     SECTION("hider AP drained to zero by accepted actions leaves tick unchanged") {

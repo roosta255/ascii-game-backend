@@ -14,19 +14,20 @@ void orderAcceptedIntents(Array<IntentRecord, MAX_INTENTS_PER_TICK>& intents) {
         });
 }
 
-bool isIntentAlreadyApplied(const Array<uint64_t, MAX_INTENTS_PER_TICK>& consumedKeys, uint64_t idempotencyKey) {
+bool isIntentAlreadyApplied(const Array<uint64_t, MAX_INTENTS_PER_TICK>& consumedKeys, int consumedCount, uint64_t idempotencyKey) {
     // Pure function that checks if an intent has already been applied
-    // This module does not itself persist consumed keys since MatchState (frozen) 
+    // This module does not itself persist consumed keys since MatchState (frozen)
     // has no field for them
-    
-    // Iterate through all elements in the array
-    for (int i = 0; i < consumedKeys.size(); ++i) {
-        // Use getOrDefault directly on the array - this is const-correct
-        uint64_t value = consumedKeys.getOrDefault(i, 0);
-        // Only consider non-zero values as legitimate idempotency keys
-        // A zero value could either be an unused slot or a legitimate key of 0,
-        // so we must avoid treating the former as the latter
-        if (value != 0 && value == idempotencyKey) {
+
+    // Only the first consumedCount slots hold valid consumed keys; unused slots
+    // are never compared, so a legitimate key of 0 is handled like any other.
+    const int limit = std::min(std::max(consumedCount, 0), consumedKeys.size());
+    for (int i = 0; i < limit; ++i) {
+        bool matched = false;
+        consumedKeys.accessConst(i, [&matched, idempotencyKey](const uint64_t& value) {
+            matched = (value == idempotencyKey);
+        });
+        if (matched) {
             return true;
         }
     }
