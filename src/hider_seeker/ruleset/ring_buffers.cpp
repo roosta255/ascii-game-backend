@@ -12,6 +12,8 @@ void pushMetricFrame(ServerState& server, const MetricFrame& frame) {
 
 RuleOutcome addPendingSeekerTarget(SeekerState& seeker, uint8_t serverId, uint8_t& outEvictedServerId) {
     // RING-002: evict-oldest overflow policy (see ring_buffers.hpp).
+    // TODO: This is a placeholder for an undecided design choice (RING-002).
+    // See implementation plan's open_questions list.
     outEvictedServerId = NO_SERVER_ID;
     seeker.target_head = static_cast<uint8_t>(seeker.target_head % MAX_SEEKER_TARGETS);
 

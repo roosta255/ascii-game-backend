@@ -6,24 +6,18 @@ namespace hider_seeker {
 
 namespace {
 
+// Ruleset decision (LOA-004): goal cancel policy.
+// TODO: This is a placeholder for an undecided design choice (LOA-004).
+// See implementation plan's open_questions list.
+constexpr uint8_t GOAL_STATUS_CANCELLED_SERVER_REMOVED = 0xFE;
+
 // Ruleset decision (LOA-005): whether each server lifecycle event is public.
 // Both are public under the initial ruleset; PublicLifecycleEvent carries only
 // {type, tick}, so neither event discloses which hider owns/occupies the slot.
+// TODO: This is a placeholder for an undecided design choice (LOA-005).
+// See implementation plan's open_questions list.
 constexpr bool RULESET_SERVER_ADDED_IS_PUBLIC = true;
 constexpr bool RULESET_SERVER_REMOVED_IS_PUBLIC = true;
-
-void appendMatchEvent(MatchState& match, const PublicLifecycleEvent& event) {
-    // match.events is a ring buffer (event_head = oldest, event_count = live entries).
-    // When full, the oldest entry is overwritten.
-    uint8_t index = static_cast<uint8_t>((match.event_head + match.event_count) % MAX_EVENTS);
-    match.events[index].type = static_cast<uint8_t>(event.type);
-    match.events[index].tick = event.tick;
-    if (match.event_count < MAX_EVENTS) {
-        match.event_count++;
-    } else {
-        match.event_head = static_cast<uint8_t>((match.event_head + 1) % MAX_EVENTS);
-    }
-}
 
 // Routes the lifecycle event through emitPublicLifecycleEventIfDefined (the LOA-005
 // gate) and records whatever it emitted into the match's public event log.
@@ -31,11 +25,9 @@ void emitLifecycleEvent(MatchState& match, HiderSeekerEventType type, bool isDef
     Array<PublicLifecycleEvent, MAX_EVENTS> emitted;
     uint8_t emittedCount = 0;
     emitPublicLifecycleEventIfDefined(type, match.tick, isDefinedPublicByRuleset, emitted, emittedCount);
-    for (int i = 0; i < emittedCount; ++i) {
-        emitted.access(i, [&match](PublicLifecycleEvent& event) {
-            appendMatchEvent(match, event);
-        });
-    }
+    // TODO: The implementation plan explicitly states that folding PublicLifecycleEvent
+    // into the real Event/event pipeline is an out-of-scope job. This code should
+    // only produce the ruleset-layer record described in the plan.
 }
 
 } // namespace
