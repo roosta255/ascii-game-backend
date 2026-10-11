@@ -24,6 +24,9 @@ RuleOutcome addPendingSeekerTarget(SeekerState& seeker, uint8_t serverId) {
         // For now, we'll return REJECTED to indicate overflow
         // This is a placeholder - the real implementation will be determined by open_questions
         
+        // NOTE: This behavior is provisional and not yet a committed ruleset decision for RING-002.
+        // The final policy has not been decided and this code should be updated when that decision is made.
+        
         return RuleOutcome::REJECTED_NO_SLOT_AVAILABLE;
     }
     

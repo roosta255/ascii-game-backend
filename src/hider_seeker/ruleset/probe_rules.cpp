@@ -18,17 +18,25 @@ RuleOutcome applyProbe(MatchState& match, uint8_t serverId, ProbeResult& outResu
     match.seeker.connection_tokens -= PLACEHOLDER_TOKEN_COST_PER_PROBE;
 
     // Compute hit/miss result as a deterministic function of MatchState plus seeded RNG
-    // This is a placeholder implementation - the real one would use the actual RNG logic
+    // This is now properly implemented using the RNG module
     
-    // For now, we'll simulate a simple deterministic hit/miss based on server state
-    // In a real implementation, this would use the RNG module with proper seeding
+    // Create an RNG state based on current match state and serverId for determinism
+    RngState rng;
+    rng.state = match.rng_state + serverId;  // Simple hash to make it dependent on server
+    rng.counter = match.tick;                // Tick ensures different results over time
     
-    // Placeholder logic: if server has high trace strength, it's more likely to be hit
+    // Generate a random value using the RNG module
+    uint32_t randomValue = nextRandomValue(rng);
+    
+    // Use the random value to determine hit/miss result
+    // Simple approach: use lower bits of random value as probability
     uint8_t traceStrength = match.servers[serverId].trace_strength;
     
-    // Simple deterministic calculation - in reality this would use nextRandomValue()
+    // Convert random value to a percentage (0-100) and compare with trace strength
+    // This makes the hit probability depend on both the trace strength and RNG
+    uint8_t probability = static_cast<uint8_t>(randomValue % 100);
     outResult.targetServerId = serverId;
-    outResult.hit = (traceStrength > PLACEHOLDER_PROBE_HIT_THRESHOLD);
+    outResult.hit = (probability < traceStrength);  // Higher trace strength = higher chance of hit
     
     return RuleOutcome::ACCEPTED;
 }
