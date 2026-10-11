@@ -1,5 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include "intent_ordering.hpp"
+#include "action_rules.hpp"
+#include "probe_rules.hpp"
+#include "loa_rules.hpp"
 #include "state.hpp"
 
 using namespace hider_seeker;
@@ -47,23 +50,49 @@ TEST_CASE("isIntentAlreadyApplied correctly rejects already applied keys", "[ord
 }
 
 TEST_CASE("No function mutates MatchState::tick on AP/token exhaustion", "[ordering]") {
-    // This test verifies that no function in this module mutates tick
-    // when AP or token exhaustion occurs
-    
-    // Create a mock match state with some initial tick value
     MatchState match = {};
     match.tick = 100;
-    
-    // Test that ordering functions don't mutate tick even when they return REJECTED
-    // (This is a simplified test - in reality, we'd need to call the actual functions
-    // that might modify tick under exhaustion conditions)
-    
-    // We can't easily test this without more complex setup, but we can at least
-    // verify that the tick value remains unchanged after calling ordering functions
-    uint32_t originalTick = match.tick;
-    
-    // Call some ordering function (this is just a placeholder to show structure)
-    // In a real scenario, we'd call functions that might modify tick under exhaustion
-    
-    REQUIRE(match.tick == originalTick); // Tick should not change
+    match.servers[0].active = 1;
+    match.servers[0].trace_strength = 100;
+
+    SECTION("hider AP exhaustion: actions are rejected and tick is unchanged") {
+        match.hiders[0].action_points = 0;
+        const HiderActionMode modes[] = {
+            HiderActionMode::ADD_SERVER, HiderActionMode::REMOVE_SERVER,
+            HiderActionMode::CONFIGURE_SERVER, HiderActionMode::SUPPRESS_ERROR,
+            HiderActionMode::BOOST_CPU, HiderActionMode::ROTATE_ROUTE,
+            HiderActionMode::PAY_GOAL};
+        for (HiderActionMode mode : modes) {
+            REQUIRE(applyHiderAction(match, 0, mode) == RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE);
+            REQUIRE(match.tick == 100);
+        }
+    }
+
+    SECTION("hider AP drained to zero by accepted actions leaves tick unchanged") {
+        match.hiders[0].action_points = 2; // exactly one BOOST_CPU (placeholder cost 2)
+        REQUIRE(applyHiderAction(match, 0, HiderActionMode::BOOST_CPU) == RuleOutcome::ACCEPTED);
+        REQUIRE(match.hiders[0].action_points == 0);
+        REQUIRE(match.tick == 100);
+        REQUIRE(applyHiderAction(match, 0, HiderActionMode::BOOST_CPU) == RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE);
+        REQUIRE(match.tick == 100);
+    }
+
+    SECTION("seeker token exhaustion: probe is rejected and tick is unchanged") {
+        match.seeker.connection_tokens = 1;
+        ProbeResult result = {false, 0};
+        REQUIRE(applyProbe(match, 0, result) == RuleOutcome::ACCEPTED);
+        REQUIRE(match.seeker.connection_tokens == 0);
+        REQUIRE(match.tick == 100);
+
+        REQUIRE(applyProbe(match, 0, result) == RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE);
+        REQUIRE(match.tick == 100);
+    }
+
+    SECTION("LOA exhaustion: add/remove server are rejected and tick is unchanged") {
+        match.hiders[0].resources[0] = 0;
+        match.servers[0].owner_hider_id = 0;
+        REQUIRE(applyAddServer(match, 0) == RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE);
+        REQUIRE(applyRemoveServer(match, 0, 0) == RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE);
+        REQUIRE(match.tick == 100);
+    }
 }

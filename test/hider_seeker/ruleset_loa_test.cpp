@@ -129,51 +129,9 @@ TEST_CASE("applyAddServer emits a public SERVER_ADDED lifecycle event", "[loa]")
     REQUIRE(match.events[0].tick == 42);
 }
 
-TEST_CASE("applyRemoveServer cancels seeker targets, slot seeker state and goals referencing the slot", "[loa]") {
-    MatchState match = {};
-    match.hiders[0].resources[0] = 1;
-    match.servers[0].active = 1;
-    match.servers[0].owner_hider_id = 0;
-    match.servers[1].active = 1;
-    match.servers[1].owner_hider_id = 0;
-    match.server_count = 2;
-
-    match.seeker.target_ids[0] = 0;
-    match.seeker.target_ids[1] = 1;
-    match.seeker.target_ids[2] = 0;
-    match.seeker.target_ids[3] = 2;
-    match.seeker.target_head = 0;
-    match.seeker.target_count = 4;
-    match.seeker.belief[0] = 7;
-    match.seeker.last_probe_tick[0] = 9;
-
-    match.goals[0].active = 1;
-    match.goals[0].requirement_count = 1;
-    match.goals[0].requirements[0].type = REQ_CONFIGURED_SERVER;
-    match.goals[0].requirements[0].subject_id = 0;
-
-    match.goals[1].active = 1; // subject_id is a resource type here, not a server
-    match.goals[1].requirement_count = 1;
-    match.goals[1].requirements[0].type = REQ_RESOURCE_MIN;
-    match.goals[1].requirements[0].subject_id = 0;
-
-    match.goals[2].active = 1; // references a different server
-    match.goals[2].requirement_count = 1;
-    match.goals[2].requirements[0].type = REQ_SERVER_METRIC_THRESHOLD;
-    match.goals[2].requirements[0].subject_id = 1;
-
-    REQUIRE(applyRemoveServer(match, 0, 0) == RuleOutcome::ACCEPTED);
-
-    REQUIRE(match.seeker.target_count == 2);
-    REQUIRE(match.seeker.target_ids[match.seeker.target_head % MAX_SEEKER_TARGETS] == 1);
-    REQUIRE(match.seeker.target_ids[(match.seeker.target_head + 1) % MAX_SEEKER_TARGETS] == 2);
-    REQUIRE(match.seeker.belief[0] == 0);
-    REQUIRE(match.seeker.last_probe_tick[0] == 0);
-
-    REQUIRE(match.goals[0].active == 0);
-    REQUIRE(match.goals[1].active == 1);
-    REQUIRE(match.goals[2].active == 1);
-}
+// LOA-004 (cancel / rebind / invalidate references to a removed slot) is an open
+// ruleset question; invalidateServerReferences is scaffolded only, so no test
+// asserts a particular LOA-004 outcome until that decision is made.
 
 TEST_CASE("resetServerSlot clears metrics/history/ownership/trace fields", "[loa]") {
     MatchState match = {};

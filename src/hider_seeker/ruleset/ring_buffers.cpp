@@ -15,10 +15,12 @@ RuleOutcome addPendingSeekerTarget(SeekerState& seeker, uint8_t serverId) {
     
     // Check if buffer is full
     if (seeker.target_count >= MAX_SEEKER_TARGETS) {
-        // RING-002 (seeker target overflow policy) is still an open question.
-        // This function is a placeholder that rejects on overflow to avoid shipping
-        // uncommitted behavior. The actual policy must be resolved through the
-        // proper ruleset decision process before this can be considered final.
+        // RING-002 (seeker target overflow policy: reject vs overwrite-oldest vs
+        // other) is an OPEN ruleset question and is NOT decided here. This branch
+        // is only a memory-safety guard so the buffer is never written past
+        // capacity; it is not the ruleset default, and no test asserts it as one.
+        // Replace this branch once RING-002 is resolved through the open-question
+        // process.
         return RuleOutcome::REJECTED_NO_SLOT_AVAILABLE;
     }
     

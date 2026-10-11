@@ -3,24 +3,22 @@
 namespace hider_seeker {
 
 RuleOutcome emitPublicLifecycleEventIfDefined(HiderSeekerEventType type, uint32_t tick, bool isDefinedPublicByRuleset,
-                                               Array<PublicLifecycleEvent, MAX_EVENTS>& outPublicEvents) {
-    // Append the event only when isDefinedPublicByRuleset is true
-    if (isDefinedPublicByRuleset) {
-        // Find first available slot in events array - properly track used slots
-        for (int i = 0; i < outPublicEvents.size(); ++i) {
-            bool isEmpty = outPublicEvents.accessConst(i, [](const PublicLifecycleEvent& event) {
-                return event.type == static_cast<HiderSeekerEventType>(0xFF); // Assuming this is empty marker
-            }).value_or(true);
-            
-            if (isEmpty) {
-                outPublicEvents.assignValue(i, PublicLifecycleEvent{type, tick});
-                return RuleOutcome::ACCEPTED;
-            }
-        }
+                                               Array<PublicLifecycleEvent, MAX_EVENTS>& outPublicEvents,
+                                               uint8_t& outPublicEventCount) {
+    // Not public under the ruleset: nothing is appended (not a rejection).
+    if (!isDefinedPublicByRuleset) {
+        return RuleOutcome::ACCEPTED;
     }
-    
-    // No event appended (either not public or no space)
-    return RuleOutcome::ACCEPTED; // Not rejecting, just not appending
+
+    // Append at the next free slot, i.e. index == current count. Slots below
+    // outPublicEventCount hold events already emitted by earlier calls.
+    if (!outPublicEvents.containsIndex(outPublicEventCount)) {
+        return RuleOutcome::REJECTED_NO_SLOT_AVAILABLE;
+    }
+
+    outPublicEvents.assignValue(outPublicEventCount, PublicLifecycleEvent{type, tick});
+    outPublicEventCount++;
+    return RuleOutcome::ACCEPTED;
 }
 
 } // namespace hider_seeker

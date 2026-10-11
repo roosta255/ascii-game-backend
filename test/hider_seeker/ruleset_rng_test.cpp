@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include "rng.hpp"
+#include <type_traits>
 
 using namespace hider_seeker;
 
@@ -28,21 +29,32 @@ TEST_CASE("nextRandomValue advances state on each call", "[rng]") {
 }
 
 TEST_CASE("nextRandomValue has no future-draw exposure", "[rng]") {
+    // 1. The only draw API cannot be invoked on a const state or an rvalue copy,
+    //    so there is no way to "peek" at a draw without consuming it.
+    static_assert(std::is_invocable_r_v<uint32_t, decltype(&nextRandomValue), RngState&>,
+                  "nextRandomValue must draw from a mutable RngState");
+    static_assert(!std::is_invocable_v<decltype(&nextRandomValue), const RngState&>,
+                  "nextRandomValue must not accept a const RngState (would allow peeking)");
+    static_assert(!std::is_invocable_v<decltype(&nextRandomValue), RngState&&>,
+                  "nextRandomValue must not accept a temporary RngState (would allow peeking)");
+
+    // 2. Every draw consumes exactly one step: state changes and counter advances
+    //    by one, so a revealed value can never be drawn again from the advanced state.
     RngState rng = {12345, 0};
-    
-    // Test that the RNG produces deterministic sequence without exposing future values
-    // This test verifies that nextRandomValue advances state on each call and 
-    // doesn't allow peeking ahead
-    
-    uint32_t first = nextRandomValue(rng);
-    uint32_t second = nextRandomValue(rng);
-    
-    // Values should be different (sequence is advancing)
-    REQUIRE(first != second);
-    
-    // The implementation should not expose future draws - this is a design principle
-    // that can't be directly tested without additional API, but we verify the basic
-    // behavior of sequential advancement
-    REQUIRE(true); // Placeholder to satisfy test structure - actual verification 
-                   // would require more complex testing infrastructure
+    uint32_t previousValue = 0;
+    for (uint64_t i = 0; i < 32; ++i) {
+        const RngState before = rng;
+        const uint32_t value = nextRandomValue(rng);
+        REQUIRE(rng.state != before.state);
+        REQUIRE(rng.counter == before.counter + 1);
+
+        // Re-drawing from the advanced state does not reproduce the revealed value.
+        RngState replay = rng;
+        REQUIRE(nextRandomValue(replay) != value);
+
+        if (i > 0) {
+            REQUIRE(value != previousValue);
+        }
+        previousValue = value;
+    }
 }

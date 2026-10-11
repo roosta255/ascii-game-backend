@@ -16,7 +16,12 @@ struct PublicLifecycleEvent {
     uint32_t tick;
 };
 
+// Appends {type, tick} at outPublicEvents[outPublicEventCount] and increments
+// outPublicEventCount, only when isDefinedPublicByRuleset is true. Callers may
+// batch several events into the same array by reusing the same count. Returns
+// REJECTED_NO_SLOT_AVAILABLE (appending nothing) if the array is already full.
 RuleOutcome emitPublicLifecycleEventIfDefined(HiderSeekerEventType, uint32_t tick, bool isDefinedPublicByRuleset,
-                                               Array<PublicLifecycleEvent, MAX_EVENTS>& outPublicEvents);
+                                               Array<PublicLifecycleEvent, MAX_EVENTS>& outPublicEvents,
+                                               uint8_t& outPublicEventCount);
 
 } // namespace hider_seeker

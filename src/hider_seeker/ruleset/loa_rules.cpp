@@ -12,9 +12,6 @@ namespace {
 constexpr bool RULESET_SERVER_ADDED_IS_PUBLIC = true;
 constexpr bool RULESET_SERVER_REMOVED_IS_PUBLIC = true;
 
-// Marker used to detect whether emitPublicLifecycleEventIfDefined appended anything.
-constexpr HiderSeekerEventType NOT_EMITTED = static_cast<HiderSeekerEventType>(0xFF);
-
 void appendMatchEvent(MatchState& match, const PublicLifecycleEvent& event) {
     // match.events is a ring buffer (event_head = oldest, event_count = live entries).
     // When full, the oldest entry is overwritten.
@@ -32,13 +29,13 @@ void appendMatchEvent(MatchState& match, const PublicLifecycleEvent& event) {
 // gate) and records whatever it emitted into the match's public event log.
 void emitLifecycleEvent(MatchState& match, HiderSeekerEventType type, bool isDefinedPublicByRuleset) {
     Array<PublicLifecycleEvent, MAX_EVENTS> emitted;
-    emitted.assignValue(0, PublicLifecycleEvent{NOT_EMITTED, 0});
-    emitPublicLifecycleEventIfDefined(type, match.tick, isDefinedPublicByRuleset, emitted);
-    emitted.access(0, [&match](PublicLifecycleEvent& event) {
-        if (event.type != NOT_EMITTED) {
+    uint8_t emittedCount = 0;
+    emitPublicLifecycleEventIfDefined(type, match.tick, isDefinedPublicByRuleset, emitted, emittedCount);
+    for (int i = 0; i < emittedCount; ++i) {
+        emitted.access(i, [&match](PublicLifecycleEvent& event) {
             appendMatchEvent(match, event);
-        }
-    });
+        });
+    }
 }
 
 } // namespace
@@ -138,7 +135,7 @@ RuleOutcome applyRemoveServer(MatchState& match, uint8_t hiderId, uint8_t server
         }
     }
 
-    // LOA-004: resolve goals / seeker targets / per-slot seeker state referencing the slot
+    // LOA-004 hook (scaffold; policy undecided): references to the removed slot
     invalidateServerReferences(match, serverId);
 
     // Reset (clears metrics/history/ownership/traces and deactivates) the old slot
@@ -172,12 +169,18 @@ void resetServerSlot(ServerState& server) {
 }
 
 void invalidateServerReferences(MatchState& match, uint8_t serverId) {
-    // Ruleset policy (LOA-004): SCAFFOLDED. This function is a placeholder
-    // implementation that does not yet implement the final ruleset decision.
-    // LOA-004 is an open question and must be resolved through the proper
-    // ruleset decision process before this behavior can be considered final.
-    // For now, this function is a no-op to avoid shipping uncommitted behavior.
-    // TODO: Implement the actual LOA-004 policy once it's decided in the ruleset.
+    // LOA-004: SCAFFOLD ONLY — intentionally not implemented.
+    //
+    // Contract: called by applyRemoveServer after occupant relocation and before
+    // resetServerSlot, with serverId still identifying the slot being removed.
+    // It is the single place that will decide what happens to goal requirements,
+    // pending seeker targets and per-slot seeker state (belief, last_probe_tick)
+    // that reference serverId.
+    //
+    // Whether those references are cancelled, rebound or merely invalidated is an
+    // open ruleset question (LOA-004) and is deliberately NOT decided here. Until
+    // it is resolved through the open-question process this function leaves all
+    // references untouched, and no test asserts any LOA-004 outcome.
     (void)match;
     (void)serverId;
 }
