@@ -5,6 +5,22 @@
 
 using namespace hider_seeker;
 
+namespace {
+// Scratch LOA-005 output channel for tests that do not inspect emitted events.
+Array<PublicLifecycleEvent, MAX_EVENTS> scratchEvents;
+uint8_t scratchEventCount = 0;
+
+RuleOutcome addServer(MatchState& match, uint8_t hiderId) {
+    scratchEventCount = 0;
+    return applyAddServer(match, hiderId, scratchEvents, scratchEventCount);
+}
+
+RuleOutcome removeServer(MatchState& match, uint8_t hiderId, uint8_t serverId) {
+    scratchEventCount = 0;
+    return applyRemoveServer(match, hiderId, serverId, scratchEvents, scratchEventCount);
+}
+} // namespace
+
 TEST_CASE("applyAddServer spends exactly 1 LOA and activates a free slot", "[loa]") {
     MatchState match = {};
     
@@ -12,9 +28,9 @@ TEST_CASE("applyAddServer spends exactly 1 LOA and activates a free slot", "[loa
     match.hiders[0].resources[0] = 2; // Assuming resource type 0 is LOA
     
     // Add server should succeed
-    RuleOutcome outcome = applyAddServer(match, 0);
+    RuleOutcome outcome = addServer(match, 0);
     REQUIRE(outcome == RuleOutcome::ACCEPTED);
-    
+
     // Check that 1 LOA was spent
     REQUIRE(match.hiders[0].resources[0] == 1);
     
@@ -37,7 +53,7 @@ TEST_CASE("applyAddServer is rejected with zero LOA spent when no slot is free",
     }
     
     // Add server should fail
-    RuleOutcome outcome = applyAddServer(match, 0);
+    RuleOutcome outcome = addServer(match, 0);
     REQUIRE(outcome == RuleOutcome::REJECTED_NO_SLOT_AVAILABLE);
     
     // Check that no LOA was spent
@@ -51,7 +67,7 @@ TEST_CASE("applyAddServer is rejected with zero LOA spent when LOA < 1", "[loa]"
     match.hiders[0].resources[0] = 0;
     
     // Add server should fail
-    RuleOutcome outcome = applyAddServer(match, 0);
+    RuleOutcome outcome = addServer(match, 0);
     REQUIRE(outcome == RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE);
     
     // Check that no LOA was spent
@@ -65,11 +81,11 @@ TEST_CASE("applyRemoveServer atomically relocates an occupant or is fully reject
     match.hiders[0].resources[0] = 2;
     
     // Add server first
-    applyAddServer(match, 0);
+    addServer(match, 0);
     REQUIRE(match.hiders[0].resources[0] == 1);
 
     // Remove server should succeed (no active hider occupies the slot, so no relocation needed)
-    RuleOutcome outcome = applyRemoveServer(match, 0, 0);
+    RuleOutcome outcome = removeServer(match, 0, 0);
     REQUIRE(outcome == RuleOutcome::ACCEPTED);
 
     // Check that the removal itself spent exactly 1 LOA (REMOVE_SERVER costs 1 LOA per design §4.2)
@@ -85,28 +101,30 @@ TEST_CASE("applyRemoveServer on an occupied slot relocates atomically or is full
     match.hiders[0].active = 1;
     match.hiders[0].resources[0] = 3;
 
-    REQUIRE(applyAddServer(match, 0) == RuleOutcome::ACCEPTED); // slot 0
-    REQUIRE(applyAddServer(match, 0) == RuleOutcome::ACCEPTED); // slot 1
+    REQUIRE(addServer(match, 0) == RuleOutcome::ACCEPTED); // slot 0
+    REQUIRE(addServer(match, 0) == RuleOutcome::ACCEPTED); // slot 1
     match.hiders[0].server_id = 0; // hider occupies slot 0
     REQUIRE(match.hiders[0].resources[0] == 1);
     REQUIRE(match.server_count == 2);
     REQUIRE(match.event_count == 0); // lifecycle events are not wired into MatchState::events
 
-    SECTION("missing, self, or inactive relocation target rejects with no state change") {
-        uint8_t badTargets[] = {NO_SERVER_ID, 0, 5};
-        for (uint8_t target : badTargets) {
-            REQUIRE(applyRemoveServer(match, 0, 0, target) == RuleOutcome::REJECTED_RELOCATION_FAILED);
-            REQUIRE(match.hiders[0].resources[0] == 1);
-            REQUIRE(match.servers[0].active == 1);
-            REQUIRE(match.servers[0].owner_hider_id == 0);
-            REQUIRE(match.server_count == 2);
-            REQUIRE(match.hiders[0].server_id == 0);
-            REQUIRE(match.event_count == 0);
-        }
+    SECTION("no other active server to relocate to rejects with no state change") {
+        resetServerSlot(match.servers[1]);
+        match.server_count = 1;
+        Array<PublicLifecycleEvent, MAX_EVENTS> events;
+        uint8_t eventCount = 0;
+        REQUIRE(applyRemoveServer(match, 0, 0, events, eventCount) == RuleOutcome::REJECTED_RELOCATION_FAILED);
+        REQUIRE(eventCount == 0);
+        REQUIRE(match.hiders[0].resources[0] == 1);
+        REQUIRE(match.servers[0].active == 1);
+        REQUIRE(match.servers[0].owner_hider_id == 0);
+        REQUIRE(match.server_count == 1);
+        REQUIRE(match.hiders[0].server_id == 0);
+        REQUIRE(match.event_count == 0);
     }
 
-    SECTION("valid relocation target relocates the occupant in the same action") {
-        REQUIRE(applyRemoveServer(match, 0, 0, 1) == RuleOutcome::ACCEPTED);
+    SECTION("occupant is relocated to the internally computed active server in the same action") {
+        REQUIRE(removeServer(match, 0, 0) == RuleOutcome::ACCEPTED);
         REQUIRE(match.hiders[0].resources[0] == 0);
         REQUIRE(match.servers[0].active == 0);
         REQUIRE(match.servers[0].owner_hider_id == 0xFF);
@@ -122,17 +140,41 @@ TEST_CASE("applyAddServer does not write lifecycle events into MatchState::event
     match.tick = 42;
     match.hiders[0].resources[0] = 1;
 
-    REQUIRE(applyAddServer(match, 0) == RuleOutcome::ACCEPTED);
+    REQUIRE(addServer(match, 0) == RuleOutcome::ACCEPTED);
     REQUIRE(match.event_count == 0);
     REQUIRE(match.event_head == 0);
+}
+
+TEST_CASE("applyAddServer/applyRemoveServer expose the public lifecycle event to the caller (LOA-005)", "[loa]") {
+    MatchState match = {};
+    match.tick = 42;
+    match.hiders[0].resources[LOA_RESOURCE_INDEX] = 2;
+    Array<PublicLifecycleEvent, MAX_EVENTS> events;
+    uint8_t eventCount = 0;
+    const PublicLifecycleEvent fallback = {HiderSeekerEventType::SERVER_ADDED, 0};
+
+    REQUIRE(applyAddServer(match, 0, events, eventCount) == RuleOutcome::ACCEPTED);
+    REQUIRE(eventCount == 1);
+    REQUIRE(events.getOrDefault(0, fallback).type == HiderSeekerEventType::SERVER_ADDED);
+    REQUIRE(events.getOrDefault(0, fallback).tick == 42);
+
+    match.tick = 43;
+    REQUIRE(applyRemoveServer(match, 0, 0, events, eventCount) == RuleOutcome::ACCEPTED);
+    REQUIRE(eventCount == 2);
+    REQUIRE(events.getOrDefault(1, fallback).type == HiderSeekerEventType::SERVER_REMOVED);
+    REQUIRE(events.getOrDefault(1, fallback).tick == 43);
+
+    // A rejected action appends nothing.
+    REQUIRE(applyAddServer(match, 0, events, eventCount) == RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE);
+    REQUIRE(eventCount == 2);
 }
 
 TEST_CASE("applyRemoveServer invalidates every reference to the removed slot (LOA-004)", "[loa]") {
     MatchState match = {};
     match.hiders[0].active = 1;
     match.hiders[0].resources[LOA_RESOURCE_INDEX] = 3;
-    REQUIRE(applyAddServer(match, 0) == RuleOutcome::ACCEPTED); // slot 0
-    REQUIRE(applyAddServer(match, 0) == RuleOutcome::ACCEPTED); // slot 1
+    REQUIRE(addServer(match, 0) == RuleOutcome::ACCEPTED); // slot 0
+    REQUIRE(addServer(match, 0) == RuleOutcome::ACCEPTED); // slot 1
     match.hiders[0].server_id = 1;
 
     // Goal 0: configured-server requirement on slot 0 -> must be cancelled.
@@ -167,7 +209,7 @@ TEST_CASE("applyRemoveServer invalidates every reference to the removed slot (LO
     match.seeker.belief[1] = 6;
     match.seeker.last_probe_tick[1] = 4;
 
-    REQUIRE(applyRemoveServer(match, 0, 0) == RuleOutcome::ACCEPTED);
+    REQUIRE(removeServer(match, 0, 0) == RuleOutcome::ACCEPTED);
 
     // Goal referencing the removed slot is cancelled and its progress reset.
     REQUIRE(match.goals[0].active == 0);
@@ -196,7 +238,7 @@ TEST_CASE("applyRemoveServer invalidates every reference to the removed slot (LO
     // at apply time, with no LOA spent.
     REQUIRE(match.hiders[0].resources[LOA_RESOURCE_INDEX] == 0);
     match.hiders[0].resources[LOA_RESOURCE_INDEX] = 1;
-    REQUIRE(applyRemoveServer(match, 0, 0) == RuleOutcome::REJECTED_INVALID_TARGET);
+    REQUIRE(removeServer(match, 0, 0) == RuleOutcome::REJECTED_INVALID_TARGET);
     REQUIRE(match.hiders[0].resources[LOA_RESOURCE_INDEX] == 1);
 }
 

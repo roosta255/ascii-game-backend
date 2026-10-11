@@ -14,19 +14,31 @@ namespace {
 constexpr bool RULESET_SERVER_ADDED_IS_PUBLIC = true;
 constexpr bool RULESET_SERVER_REMOVED_IS_PUBLIC = true;
 
+// Validation-phase check: a public event needs a free slot in the caller's
+// output array, so the action can be rejected before any state is modified.
+bool hasRoomForLifecycleEvent(bool isDefinedPublicByRuleset,
+                              const Array<PublicLifecycleEvent, MAX_EVENTS>& outPublicEvents,
+                              uint8_t outPublicEventCount) {
+    return !isDefinedPublicByRuleset || outPublicEvents.containsIndex(outPublicEventCount);
+}
+
 // Routes the lifecycle event through emitPublicLifecycleEventIfDefined (the LOA-005
-// gate), producing only the ruleset-layer PublicLifecycleEvent record. It is
-// deliberately NOT written into MatchState::events: folding PublicLifecycleEvent
-// into the real domain Event pipeline is a later, explicitly out-of-scope job.
-void emitLifecycleEvent(const MatchState& match, HiderSeekerEventType type, bool isDefinedPublicByRuleset) {
-    Array<PublicLifecycleEvent, MAX_EVENTS> emitted;
-    uint8_t emittedCount = 0;
-    emitPublicLifecycleEventIfDefined(type, match.tick, isDefinedPublicByRuleset, emitted, emittedCount);
+// gate), appending the ruleset-layer PublicLifecycleEvent record to the caller's
+// output array. It is deliberately NOT written into MatchState::events: folding
+// PublicLifecycleEvent into the real domain Event pipeline is a later, explicitly
+// out-of-scope job.
+void emitLifecycleEvent(const MatchState& match, HiderSeekerEventType type, bool isDefinedPublicByRuleset,
+                        Array<PublicLifecycleEvent, MAX_EVENTS>& outPublicEvents,
+                        uint8_t& outPublicEventCount) {
+    emitPublicLifecycleEventIfDefined(type, match.tick, isDefinedPublicByRuleset, outPublicEvents,
+                                      outPublicEventCount);
 }
 
 } // namespace
 
-RuleOutcome applyAddServer(MatchState& match, uint8_t hiderId) {
+RuleOutcome applyAddServer(MatchState& match, uint8_t hiderId,
+                           Array<PublicLifecycleEvent, MAX_EVENTS>& outPublicEvents,
+                           uint8_t& outPublicEventCount) {
     if (hiderId >= MAX_HIDERS) {
         return RuleOutcome::REJECTED_INVALID_TARGET;
     }
@@ -50,6 +62,11 @@ RuleOutcome applyAddServer(MatchState& match, uint8_t hiderId) {
         return RuleOutcome::REJECTED_NO_SLOT_AVAILABLE;
     }
 
+    // The public lifecycle event must fit in the caller's output array.
+    if (!hasRoomForLifecycleEvent(RULESET_SERVER_ADDED_IS_PUBLIC, outPublicEvents, outPublicEventCount)) {
+        return RuleOutcome::REJECTED_NO_SLOT_AVAILABLE;
+    }
+
     // Deduct 1 LOA from the hider
     match.hiders[hiderId].resources[LOA_RESOURCE_INDEX] -= 1;
 
@@ -59,13 +76,15 @@ RuleOutcome applyAddServer(MatchState& match, uint8_t hiderId) {
     match.server_count++;
 
     // Emit public lifecycle event if defined by ruleset (for ADD_SERVER)
-    emitLifecycleEvent(match, HiderSeekerEventType::SERVER_ADDED, RULESET_SERVER_ADDED_IS_PUBLIC);
+    emitLifecycleEvent(match, HiderSeekerEventType::SERVER_ADDED, RULESET_SERVER_ADDED_IS_PUBLIC,
+                       outPublicEvents, outPublicEventCount);
 
     return RuleOutcome::ACCEPTED;
 }
 
 RuleOutcome applyRemoveServer(MatchState& match, uint8_t hiderId, uint8_t serverId,
-                              uint8_t relocationTargetServerId) {
+                              Array<PublicLifecycleEvent, MAX_EVENTS>& outPublicEvents,
+                              uint8_t& outPublicEventCount) {
     // ---- Validation phase: no state is modified until every check has passed. ----
     if (hiderId >= MAX_HIDERS || serverId >= MAX_SERVERS) {
         return RuleOutcome::REJECTED_INVALID_TARGET;
@@ -96,15 +115,28 @@ RuleOutcome applyRemoveServer(MatchState& match, uint8_t hiderId, uint8_t server
         }
     }
 
-    // LOA-002: if occupied, the supplied relocation target must be a valid, active
-    // slot other than the one being removed; otherwise reject the whole action.
+    // LOA-002: if occupied, compute the relocation target internally: the
+    // lowest-numbered active server slot other than the one being removed.
+    uint8_t relocationTargetServerId = NO_SERVER_ID;
     if (hasOccupant) {
-        bool targetValid = relocationTargetServerId < MAX_SERVERS
-                        && relocationTargetServerId != serverId
-                        && match.servers[relocationTargetServerId].active;
-        if (!targetValid) {
+        bool targetFound = false;
+        for (uint8_t i = 0; i < MAX_SERVERS; ++i) {
+            if (match.servers[i].active && i != serverId) {
+                relocationTargetServerId = i;
+                targetFound = true;
+                break;
+            }
+        }
+
+        // If no other active server exists, reject the whole action
+        if (!targetFound) {
             return RuleOutcome::REJECTED_RELOCATION_FAILED;
         }
+    }
+
+    // The public lifecycle event must fit in the caller's output array.
+    if (!hasRoomForLifecycleEvent(RULESET_SERVER_REMOVED_IS_PUBLIC, outPublicEvents, outPublicEventCount)) {
+        return RuleOutcome::REJECTED_NO_SLOT_AVAILABLE;
     }
 
     // ---- Apply phase: all checks passed, apply every change together. ----
@@ -129,7 +161,8 @@ RuleOutcome applyRemoveServer(MatchState& match, uint8_t hiderId, uint8_t server
     match.server_count--;
 
     // Emit public lifecycle event if defined by ruleset (for REMOVE_SERVER)
-    emitLifecycleEvent(match, HiderSeekerEventType::SERVER_REMOVED, RULESET_SERVER_REMOVED_IS_PUBLIC);
+    emitLifecycleEvent(match, HiderSeekerEventType::SERVER_REMOVED, RULESET_SERVER_REMOVED_IS_PUBLIC,
+                       outPublicEvents, outPublicEventCount);
 
     return RuleOutcome::ACCEPTED;
 }
