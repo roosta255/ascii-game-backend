@@ -134,39 +134,39 @@ TickOutput runTick(MatchState& state,
         }
         seekerPolicy->rankTargets(state, candidates);
         
-        // Process up to connection_tokens number of probes
+        // Step 7 (PROBES): process candidates in policy order within the token budget
         for (int i = 0; i < candidates.size(); ++i) {
-            ProbeResult result{};
             ProbeCandidate defaultCandidate{NO_SERVER_ID, 0};
             const ProbeCandidate& candidate = candidates.getOrDefault(i, defaultCandidate);
-            
+
             // Skip invalid candidates (NO_SERVER_ID means no candidate)
             if (candidate.serverId == NO_SERVER_ID) {
                 continue;
             }
-            
-            // Before each candidate, check state.seeker.connection_tokens
-            if (state.seeker.connection_tokens <= 0) {
+
+            // Before each candidate, re-read state.seeker.connection_tokens
+            // (applyProbe spends tokens and resolveProbeConsequences may award them).
+            if (state.seeker.connection_tokens == 0) {
                 break; // No more tokens to spend
             }
-            
-            RuleOutcome probeOutcome = applyProbe(state, candidate.serverId, result);
 
-            // Unconditionally call resolveProbeConsequences for every policy-selected candidate processed within the token budget
+            // A result applyProbe does not fill (rejected probe) is a miss against
+            // the candidate's own server id, so resolveProbeConsequences never acts
+            // on an unrelated server.
+            ProbeResult result{};
+            result.hit = false;
+            result.targetServerId = candidate.serverId;
+
+            // applyProbe deducts the per-probe token cost itself.
+            applyProbe(state, candidate.serverId, result);
+
+            // Unconditionally resolve consequences for every policy-selected
+            // candidate processed within the token budget (architecture plan).
             ProbeConsequences consequences = resolveProbeConsequences(state, result);
 
-            if (probeOutcome == RuleOutcome::ACCEPTED) {
-                output.probeResults.assignValue(output.probeCount, result);
-                output.probeConsequences.assignValue(output.probeCount, consequences);
-                output.probeCount++;
-            } else {
-                // Even when not ACCEPTED, we still record the consequences
-                output.probeConsequences.assignValue(output.probeCount, consequences);
-                output.probeCount++;
-            }
-            
-            // Decrement token count after processing a candidate (even if not accepted)
-            state.seeker.connection_tokens--;
+            output.probeResults.assignValue(output.probeCount, result);
+            output.probeConsequences.assignValue(output.probeCount, consequences);
+            output.probeCount++;
         }
     }
     
