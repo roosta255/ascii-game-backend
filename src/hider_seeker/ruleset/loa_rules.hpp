@@ -12,6 +12,9 @@ constexpr uint8_t LOA_RESOURCE_INDEX = 0;
 
 // Ruleset-defined GoalState::status value for a goal cancelled by LOA-004
 // because one of its requirements referenced a removed server slot.
+// TODO(LOA-004): PLACEHOLDER pending ruleset confirmation — both the goal cancel
+// policy below and this status value are undecided design choices listed in the
+// implementation plan's open_questions, not settled ruleset canon.
 constexpr uint8_t GOAL_STATUS_CANCELLED_SERVER_REMOVED = 0xFE;
 
 RuleOutcome applyAddServer(MatchState&, uint8_t hiderId);
@@ -23,7 +26,8 @@ RuleOutcome applyRemoveServer(MatchState&, uint8_t hiderId, uint8_t serverId,
                               uint8_t relocationTargetServerId = NO_SERVER_ID);
 void resetServerSlot(ServerState&);
 // LOA-004: called by applyRemoveServer inside the same committed operation.
-// Explicit rule for every reference to the removed slot:
+// Provisional rule (TODO(LOA-004): placeholder pending ruleset confirmation)
+// for every reference to the removed slot:
 //  - GoalState: any active goal with a server-referencing requirement
 //    (REQ_SERVER_METRIC_THRESHOLD / REQ_CONFIGURED_SERVER) whose subject_id is
 //    the removed slot is CANCELLED: active = 0, status =

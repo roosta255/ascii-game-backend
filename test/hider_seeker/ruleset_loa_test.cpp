@@ -90,7 +90,7 @@ TEST_CASE("applyRemoveServer on an occupied slot relocates atomically or is full
     match.hiders[0].server_id = 0; // hider occupies slot 0
     REQUIRE(match.hiders[0].resources[0] == 1);
     REQUIRE(match.server_count == 2);
-    REQUIRE(match.event_count == 2);
+    REQUIRE(match.event_count == 0); // lifecycle events are not wired into MatchState::events
 
     SECTION("missing, self, or inactive relocation target rejects with no state change") {
         uint8_t badTargets[] = {NO_SERVER_ID, 0, 5};
@@ -101,7 +101,7 @@ TEST_CASE("applyRemoveServer on an occupied slot relocates atomically or is full
             REQUIRE(match.servers[0].owner_hider_id == 0);
             REQUIRE(match.server_count == 2);
             REQUIRE(match.hiders[0].server_id == 0);
-            REQUIRE(match.event_count == 2);
+            REQUIRE(match.event_count == 0);
         }
     }
 
@@ -113,20 +113,18 @@ TEST_CASE("applyRemoveServer on an occupied slot relocates atomically or is full
         REQUIRE(match.servers[1].active == 1);
         REQUIRE(match.server_count == 1);
         REQUIRE(match.hiders[0].server_id == 1);
-        REQUIRE(match.event_count == 3);
-        REQUIRE(match.events[2].type == static_cast<uint8_t>(HiderSeekerEventType::SERVER_REMOVED));
+        REQUIRE(match.event_count == 0);
     }
 }
 
-TEST_CASE("applyAddServer emits a public SERVER_ADDED lifecycle event", "[loa]") {
+TEST_CASE("applyAddServer does not write lifecycle events into MatchState::events", "[loa]") {
     MatchState match = {};
     match.tick = 42;
     match.hiders[0].resources[0] = 1;
 
     REQUIRE(applyAddServer(match, 0) == RuleOutcome::ACCEPTED);
-    REQUIRE(match.event_count == 1);
-    REQUIRE(match.events[0].type == static_cast<uint8_t>(HiderSeekerEventType::SERVER_ADDED));
-    REQUIRE(match.events[0].tick == 42);
+    REQUIRE(match.event_count == 0);
+    REQUIRE(match.event_head == 0);
 }
 
 TEST_CASE("applyRemoveServer invalidates every reference to the removed slot (LOA-004)", "[loa]") {

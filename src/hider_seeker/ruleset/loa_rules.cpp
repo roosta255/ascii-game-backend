@@ -6,28 +6,22 @@ namespace hider_seeker {
 
 namespace {
 
-// Ruleset decision (LOA-004): goal cancel policy.
-// TODO: This is a placeholder for an undecided design choice (LOA-004).
-// See implementation plan's open_questions list.
-constexpr uint8_t GOAL_STATUS_CANCELLED_SERVER_REMOVED = 0xFE;
-
-// Ruleset decision (LOA-005): whether each server lifecycle event is public.
-// Both are public under the initial ruleset; PublicLifecycleEvent carries only
-// {type, tick}, so neither event discloses which hider owns/occupies the slot.
-// TODO: This is a placeholder for an undecided design choice (LOA-005).
-// See implementation plan's open_questions list.
+// LOA-005: whether each server lifecycle event is public.
+// TODO(LOA-005): PLACEHOLDER pending ruleset confirmation — this is an undecided
+// design choice listed in the implementation plan's open_questions, not settled
+// ruleset canon. Both events are provisionally public; PublicLifecycleEvent
+// carries only {type, tick}, so neither discloses which hider owns/occupies the slot.
 constexpr bool RULESET_SERVER_ADDED_IS_PUBLIC = true;
 constexpr bool RULESET_SERVER_REMOVED_IS_PUBLIC = true;
 
 // Routes the lifecycle event through emitPublicLifecycleEventIfDefined (the LOA-005
-// gate) and records whatever it emitted into the match's public event log.
-void emitLifecycleEvent(MatchState& match, HiderSeekerEventType type, bool isDefinedPublicByRuleset) {
+// gate), producing only the ruleset-layer PublicLifecycleEvent record. It is
+// deliberately NOT written into MatchState::events: folding PublicLifecycleEvent
+// into the real domain Event pipeline is a later, explicitly out-of-scope job.
+void emitLifecycleEvent(const MatchState& match, HiderSeekerEventType type, bool isDefinedPublicByRuleset) {
     Array<PublicLifecycleEvent, MAX_EVENTS> emitted;
     uint8_t emittedCount = 0;
     emitPublicLifecycleEventIfDefined(type, match.tick, isDefinedPublicByRuleset, emitted, emittedCount);
-    // TODO: The implementation plan explicitly states that folding PublicLifecycleEvent
-    // into the real Event/event pipeline is an out-of-scope job. This code should
-    // only produce the ruleset-layer record described in the plan.
 }
 
 } // namespace
@@ -161,7 +155,8 @@ void resetServerSlot(ServerState& server) {
 }
 
 void invalidateServerReferences(MatchState& match, uint8_t serverId) {
-    // Explicit LOA-004 rule; documented in loa_rules.hpp.
+    // LOA-004 rule; documented in loa_rules.hpp.
+    // TODO(LOA-004): PLACEHOLDER cancel policy pending ruleset confirmation.
     if (serverId >= MAX_SERVERS) {
         return;
     }

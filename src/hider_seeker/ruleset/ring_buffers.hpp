@@ -7,7 +7,10 @@
 namespace hider_seeker {
 
 void pushMetricFrame(ServerState&, const MetricFrame& frame);
-// RING-002 overflow policy: EVICT-OLDEST. Always ACCEPTED. When the
+// RING-002 overflow policy: EVICT-OLDEST. Always ACCEPTED.
+// TODO(RING-002): PLACEHOLDER pending ruleset confirmation — the overflow policy
+// is an undecided design choice listed in the implementation plan's
+// open_questions, not settled ruleset canon. When the
 // target_ids/target_count/target_head ring buffer is already full
 // (MAX_SEEKER_TARGETS), the oldest entry (at target_head) is evicted, the head
 // advances by one, and serverId is stored as the newest entry; target_count
