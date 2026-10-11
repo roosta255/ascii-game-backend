@@ -76,7 +76,7 @@ TickOutput runTick(MatchState& state,
                 break;
                 
             case TickActionKind::ADD_SERVER:
-                // For ADD_SERVER, we need to pass the target_server_id
+                // For ADD_SERVER, we don't use target_server_id since it finds an available slot
                 {
                     Array<PublicLifecycleEvent, MAX_EVENTS> dummyEvents;
                     uint8_t dummyCount = 0;
@@ -134,8 +134,14 @@ TickOutput runTick(MatchState& state,
         for (int i = 0; i < candidates.size() && i < tokens; ++i) {
             ProbeResult result{};
             ProbeCandidate defaultCandidate{NO_SERVER_ID, 0};
-            const uint8_t serverId = candidates.getOrDefault(i, defaultCandidate).serverId;
-            RuleOutcome probeOutcome = applyProbe(state, serverId, result);
+            const ProbeCandidate& candidate = candidates.getOrDefault(i, defaultCandidate);
+            
+            // Skip invalid candidates (NO_SERVER_ID means no candidate)
+            if (candidate.serverId == NO_SERVER_ID) {
+                continue;
+            }
+            
+            RuleOutcome probeOutcome = applyProbe(state, candidate.serverId, result);
 
             if (probeOutcome == RuleOutcome::ACCEPTED) {
                 ProbeConsequences consequences = resolveProbeConsequences(state, result);
