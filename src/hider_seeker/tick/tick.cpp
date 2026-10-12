@@ -9,6 +9,82 @@
 
 namespace hider_seeker {
 
+namespace {
+
+// An eligible candidate: its embedded record, where it sits in
+// candidateIntents, and whether it has been dispatched yet this tick.
+struct EligibleIntent {
+    IntentRecord record;
+    uint8_t candidateIndex;
+    bool dispatched;
+};
+
+bool isSameRecord(const IntentRecord& a, const IntentRecord& b) {
+    return a.receiptSequence == b.receiptSequence &&
+           a.idempotencyKey == b.idempotencyKey &&
+           a.hiderId == b.hiderId &&
+           a.mode == b.mode;
+}
+
+void dispatchIntent(MatchState& state,
+                    const TickIntent& matchingIntent,
+                    Array<IdempotencyKeyT, MAX_INTENTS_PER_TICK>& consumedKeysInThisTick,
+                    uint8_t& consumedKeyCountInThisTick,
+                    TickOutput& output) {
+    const IntentRecord& intentRecord = matchingIntent.intent;
+
+    // Check if this intent was already applied in this tick (idempotency)
+    // Using the existing isIntentAlreadyApplied function
+    if (isIntentAlreadyApplied(consumedKeysInThisTick, consumedKeyCountInThisTick, intentRecord.idempotencyKey)) {
+        return; // Skip this intent
+    }
+
+    RuleOutcome outcome;
+
+    switch (matchingIntent.kind) {
+        case TickActionKind::HIDER_ACTION:
+            outcome = applyHiderAction(state, intentRecord.hiderId, matchingIntent.action_mode);
+            break;
+
+        case TickActionKind::ADD_SERVER:
+            // For ADD_SERVER, we don't use target_server_id since it finds an available slot
+            {
+                Array<PublicLifecycleEvent, MAX_EVENTS> dummyEvents;
+                uint8_t dummyCount = 0;
+                outcome = applyAddServer(state, intentRecord.hiderId, dummyEvents, dummyCount);
+            }
+            break;
+
+        case TickActionKind::REMOVE_SERVER:
+            // For REMOVE_SERVER, we need to pass the target_server_id
+            {
+                Array<PublicLifecycleEvent, MAX_EVENTS> dummyEvents;
+                uint8_t dummyCount = 0;
+                outcome = applyRemoveServer(state, intentRecord.hiderId, matchingIntent.target_server_id, dummyEvents, dummyCount);
+            }
+            break;
+    }
+
+    // Record the outcome
+    IntentOutcomeRecord record;
+    record.idempotencyKey = intentRecord.idempotencyKey;
+    record.outcome = outcome;
+    output.intentOutcomes.assignValue(output.intentOutcomeCount, record);
+    output.intentOutcomeCount++;
+
+    // If accepted, add to consumed keys
+    if (outcome == RuleOutcome::ACCEPTED) {
+        output.consumedKeys.assignValue(output.consumedKeyCount, intentRecord.idempotencyKey);
+        output.consumedKeyCount++;
+
+        // Also track in this tick's consumed keys for idempotency checking
+        consumedKeysInThisTick.assignValue(consumedKeyCountInThisTick, intentRecord.idempotencyKey);
+        consumedKeyCountInThisTick++;
+    }
+}
+
+} // namespace
+
 TickOutput runTick(MatchState& state,
                     const Array<TickIntent, MAX_INTENTS_PER_TICK>& candidateIntents,
                     uint8_t candidateIntentCount,
@@ -16,18 +92,18 @@ TickOutput runTick(MatchState& state,
                     const iTargetRankingPolicy* seekerPolicy) {
     TickOutput output;
     
-    // Step 1 (ELIGIBILITY): copy every eligible candidate's embedded
-    // IntentRecord into eligibleRecords, with its candidateIntents index in the
-    // parallel eligibleIndices array.
-    Array<IntentRecord, MAX_INTENTS_PER_TICK> eligibleRecords;
-    Array<uint8_t, MAX_INTENTS_PER_TICK> eligibleIndices;
+    // Step 1 (ELIGIBILITY): collect every candidate whose key isn't already
+    // consumed, with its candidateIntents index, and its embedded
+    // IntentRecord for ordering.
+    Array<EligibleIntent, MAX_INTENTS_PER_TICK> eligible;
+    Array<IntentRecord, MAX_INTENTS_PER_TICK> orderedRecords;
     uint8_t eligibleCount = 0;
 
     for (int i = 0; i < candidateIntentCount; ++i) {
         candidateIntents.accessConst(i, [&](const TickIntent& candidate) {
             if (!alreadyConsumed.contains(candidate.intent.idempotencyKey)) {
-                eligibleRecords.assignValue(eligibleCount, candidate.intent);
-                eligibleIndices.assignValue(eligibleCount, static_cast<uint8_t>(i));
+                eligible.assignValue(eligibleCount, EligibleIntent{candidate.intent, static_cast<uint8_t>(i), false});
+                orderedRecords.assignValue(eligibleCount, candidate.intent);
                 eligibleCount++;
             }
         });
@@ -37,105 +113,38 @@ TickOutput runTick(MatchState& state,
     // It sorts every slot of the array, so the unused slots past eligibleCount
     // are filled with a maximal receiptSequence to keep them sorted after
     // every real record (zeroed slots would otherwise sort first).
-    Array<IntentRecord, MAX_INTENTS_PER_TICK> orderedRecords = eligibleRecords;
     for (int i = eligibleCount; i < orderedRecords.size(); ++i) {
         orderedRecords.assignValue(i, IntentRecord{UINT64_MAX, 0, 0, HiderActionMode{}});
     }
     orderAcceptedIntents(orderedRecords);
 
-    // Step 3 (ACTIONS): process ordered intents
+    // Step 3 (ACTIONS): dispatch the eligible intents in that order.
     Array<IdempotencyKeyT, MAX_INTENTS_PER_TICK> consumedKeysInThisTick;
     uint8_t consumedKeyCountInThisTick = 0;
-
-    // Eligible slots already matched to an ordered record, so each eligible
-    // TickIntent is dispatched exactly once.
-    Array<bool, MAX_INTENTS_PER_TICK> claimed;
-    for (auto& slot : claimed) {
-        slot = false;
-    }
     uint8_t dispatchedCount = 0;
 
-    for (int i = 0; i < orderedRecords.size() && dispatchedCount < eligibleCount; ++i) {
-        const IntentRecord defaultRecord{};
-        const IntentRecord& orderedRecord = orderedRecords.getOrDefault(i, defaultRecord);
+    for (const IntentRecord& orderedRecord : orderedRecords) {
+        if (dispatchedCount == eligibleCount) {
+            break; // only padding is left
+        }
 
-        // Map the ordered record back to the first unclaimed eligible
-        // candidate (in candidate order) whose embedded record is identical.
-        int matchedSlot = -1;
-        for (int j = 0; j < eligibleCount; ++j) {
-            if (claimed.getOrDefault(j, true)) {
+        // Map the ordered record back to the first not-yet-dispatched
+        // eligible candidate (in candidate order) with an identical record,
+        // so each eligible TickIntent is dispatched exactly once.
+        uint8_t slotsSeen = 0;
+        for (EligibleIntent& slot : eligible) {
+            if (slotsSeen++ == eligibleCount) {
+                break;
+            }
+            if (slot.dispatched || !isSameRecord(slot.record, orderedRecord)) {
                 continue;
             }
-            const IntentRecord& candidateRecord = eligibleRecords.getOrDefault(j, defaultRecord);
-            if (candidateRecord.receiptSequence == orderedRecord.receiptSequence &&
-                candidateRecord.idempotencyKey == orderedRecord.idempotencyKey &&
-                candidateRecord.hiderId == orderedRecord.hiderId &&
-                candidateRecord.mode == orderedRecord.mode) {
-                matchedSlot = j;
-                break;
-            }
-        }
-
-        if (matchedSlot < 0) {
-            continue; // padding slot: no eligible candidate behind it
-        }
-        claimed.assignValue(matchedSlot, true);
-        dispatchedCount++;
-
-        const uint8_t candidateIndex = eligibleIndices.getOrDefault(matchedSlot, 0);
-        const TickIntent defaultIntent{};
-        const TickIntent& matchingIntent = candidateIntents.getOrDefault(candidateIndex, defaultIntent);
-        const IntentRecord& intentRecord = matchingIntent.intent;
-
-        // Check if this intent was already applied in this tick (idempotency)
-        // Using the existing isIntentAlreadyApplied function
-        bool alreadyApplied = isIntentAlreadyApplied(consumedKeysInThisTick, consumedKeyCountInThisTick, intentRecord.idempotencyKey);
-        
-        if (alreadyApplied) {
-            continue; // Skip this intent
-        }
-        
-        RuleOutcome outcome;
-        
-        switch (matchingIntent.kind) {
-            case TickActionKind::HIDER_ACTION:
-                outcome = applyHiderAction(state, intentRecord.hiderId, matchingIntent.action_mode);
-                break;
-                
-            case TickActionKind::ADD_SERVER:
-                // For ADD_SERVER, we don't use target_server_id since it finds an available slot
-                {
-                    Array<PublicLifecycleEvent, MAX_EVENTS> dummyEvents;
-                    uint8_t dummyCount = 0;
-                    outcome = applyAddServer(state, intentRecord.hiderId, dummyEvents, dummyCount);
-                }
-                break;
-                
-            case TickActionKind::REMOVE_SERVER:
-                // For REMOVE_SERVER, we need to pass the target_server_id
-                {
-                    Array<PublicLifecycleEvent, MAX_EVENTS> dummyEvents;
-                    uint8_t dummyCount = 0;
-                    outcome = applyRemoveServer(state, intentRecord.hiderId, matchingIntent.target_server_id, dummyEvents, dummyCount);
-                }
-                break;
-        }
-        
-        // Record the outcome
-        IntentOutcomeRecord record;
-        record.idempotencyKey = intentRecord.idempotencyKey;
-        record.outcome = outcome;
-        output.intentOutcomes.assignValue(output.intentOutcomeCount, record);
-        output.intentOutcomeCount++;
-
-        // If accepted, add to consumed keys
-        if (outcome == RuleOutcome::ACCEPTED) {
-            output.consumedKeys.assignValue(output.consumedKeyCount, intentRecord.idempotencyKey);
-            output.consumedKeyCount++;
-
-            // Also track in this tick's consumed keys for idempotency checking
-            consumedKeysInThisTick.assignValue(consumedKeyCountInThisTick, intentRecord.idempotencyKey);
-            consumedKeyCountInThisTick++;
+            slot.dispatched = true;
+            dispatchedCount++;
+            candidateIntents.accessConst(slot.candidateIndex, [&](const TickIntent& matchingIntent) {
+                dispatchIntent(state, matchingIntent, consumedKeysInThisTick, consumedKeyCountInThisTick, output);
+            });
+            break;
         }
     }
     
@@ -168,10 +177,7 @@ TickOutput runTick(MatchState& state,
         // resolveProbeConsequences during this tick do not raise the bound.
         const uint8_t initialTokens = state.seeker.connection_tokens;
         uint8_t probesIssued = 0;
-        for (int i = 0; i < candidates.size(); ++i) {
-            ProbeCandidate defaultCandidate{NO_SERVER_ID, 0};
-            const ProbeCandidate& candidate = candidates.getOrDefault(i, defaultCandidate);
-
+        for (const ProbeCandidate& candidate : candidates) {
             // Skip invalid candidates (NO_SERVER_ID means no candidate)
             if (candidate.serverId == NO_SERVER_ID) {
                 continue;
