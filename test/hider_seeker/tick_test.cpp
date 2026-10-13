@@ -109,7 +109,7 @@ TEST_CASE("Tick engine runs without crashing", "[tick]") {
     // Add a HIDER_ACTION intent
     TickIntent intent1{};
     intent1.kind = TickActionKind::HIDER_ACTION;
-    intent1.action_mode = HiderActionMode::CONFIGURE_SERVER;
+    intent1.intent.mode = HiderActionMode::CONFIGURE_SERVER;
     intent1.intent.idempotencyKey = 12345;
     intent1.intent.hiderId = 0;
     intent1.intent.receiptSequence = 1;
@@ -304,7 +304,7 @@ TEST_CASE("Tick engine eligibility filtering", "[tick]") {
     // Add a HIDER_ACTION intent
     TickIntent intent1{};
     intent1.kind = TickActionKind::HIDER_ACTION;
-    intent1.action_mode = HiderActionMode::CONFIGURE_SERVER;
+    intent1.intent.mode = HiderActionMode::CONFIGURE_SERVER;
     intent1.intent.idempotencyKey = 12345;
     intent1.intent.hiderId = 0;
     intent1.intent.receiptSequence = 1;
@@ -313,7 +313,7 @@ TEST_CASE("Tick engine eligibility filtering", "[tick]") {
     // Add another intent with same idempotency key (should be filtered out)
     TickIntent intent2{};
     intent2.kind = TickActionKind::HIDER_ACTION;
-    intent2.action_mode = HiderActionMode::SUPPRESS_ERROR;
+    intent2.intent.mode = HiderActionMode::SUPPRESS_ERROR;
     intent2.intent.idempotencyKey = 12345; // Same key as intent1
     intent2.intent.hiderId = 0;
     intent2.intent.receiptSequence = 2;
@@ -362,7 +362,7 @@ TEST_CASE("Tick engine ordering and deduplication", "[tick]") {
     // Add two intents with same idempotency key (should be deduplicated)
     TickIntent intent1{};
     intent1.kind = TickActionKind::HIDER_ACTION;
-    intent1.action_mode = HiderActionMode::CONFIGURE_SERVER;
+    intent1.intent.mode = HiderActionMode::CONFIGURE_SERVER;
     intent1.intent.idempotencyKey = 12345;
     intent1.intent.hiderId = 0;
     intent1.intent.receiptSequence = 1;
@@ -370,7 +370,7 @@ TEST_CASE("Tick engine ordering and deduplication", "[tick]") {
     
     TickIntent intent2{};
     intent2.kind = TickActionKind::HIDER_ACTION;
-    intent2.action_mode = HiderActionMode::SUPPRESS_ERROR;
+    intent2.intent.mode = HiderActionMode::SUPPRESS_ERROR;
     intent2.intent.idempotencyKey = 12345; // Same key as intent1
     intent2.intent.hiderId = 0;
     intent2.intent.receiptSequence = 2;
@@ -418,7 +418,7 @@ TEST_CASE("Tick engine action dispatch", "[tick]") {
     // CONFIGURE_SERVER
     TickIntent intent1{};
     intent1.kind = TickActionKind::HIDER_ACTION;
-    intent1.action_mode = HiderActionMode::CONFIGURE_SERVER;
+    intent1.intent.mode = HiderActionMode::CONFIGURE_SERVER;
     intent1.intent.idempotencyKey = 1001;
     intent1.intent.hiderId = 0;
     intent1.intent.receiptSequence = 1;
@@ -427,7 +427,7 @@ TEST_CASE("Tick engine action dispatch", "[tick]") {
     // SUPPRESS_ERROR
     TickIntent intent2{};
     intent2.kind = TickActionKind::HIDER_ACTION;
-    intent2.action_mode = HiderActionMode::SUPPRESS_ERROR;
+    intent2.intent.mode = HiderActionMode::SUPPRESS_ERROR;
     intent2.intent.idempotencyKey = 1002;
     intent2.intent.hiderId = 0;
     intent2.intent.receiptSequence = 2;
@@ -436,7 +436,7 @@ TEST_CASE("Tick engine action dispatch", "[tick]") {
     // BOOST_CPU
     TickIntent intent3{};
     intent3.kind = TickActionKind::HIDER_ACTION;
-    intent3.action_mode = HiderActionMode::BOOST_CPU;
+    intent3.intent.mode = HiderActionMode::BOOST_CPU;
     intent3.intent.idempotencyKey = 1003;
     intent3.intent.hiderId = 0;
     intent3.intent.receiptSequence = 3;
@@ -445,7 +445,7 @@ TEST_CASE("Tick engine action dispatch", "[tick]") {
     // ROTATE_ROUTE
     TickIntent intent4{};
     intent4.kind = TickActionKind::HIDER_ACTION;
-    intent4.action_mode = HiderActionMode::ROTATE_ROUTE;
+    intent4.intent.mode = HiderActionMode::ROTATE_ROUTE;
     intent4.intent.idempotencyKey = 1004;
     intent4.intent.hiderId = 0;
     intent4.intent.receiptSequence = 4;
@@ -454,7 +454,7 @@ TEST_CASE("Tick engine action dispatch", "[tick]") {
     // PAY_GOAL
     TickIntent intent5{};
     intent5.kind = TickActionKind::HIDER_ACTION;
-    intent5.action_mode = HiderActionMode::PAY_GOAL;
+    intent5.intent.mode = HiderActionMode::PAY_GOAL;
     intent5.intent.idempotencyKey = 1005;
     intent5.intent.hiderId = 0;
     intent5.intent.receiptSequence = 5;
