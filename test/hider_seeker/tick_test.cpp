@@ -275,6 +275,105 @@ TEST_CASE("Tick engine REMOVE_SERVER dispatch and slot freeing", "[tick]") {
     REQUIRE(state.hiders[0].action_points == 5);
 }
 
+TEST_CASE("Tick engine public lifecycle events", "[tick]") {
+    MatchState state{};
+    state.tick = 5;
+    state.hider_count = 1;
+    state.server_count = 3;
+    state.seeker.connection_tokens = 2;
+    state.seeker.max_tokens = 5;
+
+    // Hider on server 1 with enough LOA for two lifecycle actions
+    state.hiders[0].active = 1;
+    state.hiders[0].action_points = 10;
+    state.hiders[0].server_id = 1;
+    state.hiders[0].resources[LOA_RESOURCE_INDEX] = 2;
+
+    state.servers[0].active = 1;
+    state.servers[1].active = 1;
+    state.servers[2].active = 1;
+
+    Array<TickIntent, MAX_INTENTS_PER_TICK> intents;
+    ConsumedKeySet alreadyConsumed{};
+    StubPolicy policy;
+    PublicLifecycleEvent noEvent{};
+
+    TickIntent addServer{};
+    addServer.kind = TickActionKind::ADD_SERVER;
+    addServer.intent.idempotencyKey = 5001;
+    addServer.intent.hiderId = 0;
+
+    TickIntent removeServer{};
+    removeServer.kind = TickActionKind::REMOVE_SERVER;
+    removeServer.target_server_id = 2; // active and unoccupied
+    removeServer.intent.idempotencyKey = 5002;
+    removeServer.intent.hiderId = 0;
+
+    SECTION("an accepted ADD_SERVER emits one SERVER_ADDED event") {
+        addServer.intent.receiptSequence = 1;
+        intents.assignValue(0, addServer);
+
+        TickOutput output = runTick(state, intents, 1, alreadyConsumed, &policy);
+
+        REQUIRE(outcomeForKey(output, 5001) == RuleOutcome::ACCEPTED);
+        REQUIRE(output.publicEventCount == 1);
+        const PublicLifecycleEvent& event = output.publicEvents.getOrDefault(0, noEvent);
+        REQUIRE(event.type == HiderSeekerEventType::SERVER_ADDED);
+        REQUIRE(event.tick == 5);
+    }
+
+    SECTION("an accepted REMOVE_SERVER emits one SERVER_REMOVED event") {
+        removeServer.intent.receiptSequence = 1;
+        intents.assignValue(0, removeServer);
+
+        TickOutput output = runTick(state, intents, 1, alreadyConsumed, &policy);
+
+        REQUIRE(outcomeForKey(output, 5002) == RuleOutcome::ACCEPTED);
+        REQUIRE(output.publicEventCount == 1);
+        const PublicLifecycleEvent& event = output.publicEvents.getOrDefault(0, noEvent);
+        REQUIRE(event.type == HiderSeekerEventType::SERVER_REMOVED);
+        REQUIRE(event.tick == 5);
+    }
+
+    SECTION("rejected lifecycle actions emit no events") {
+        state.hiders[0].resources[LOA_RESOURCE_INDEX] = 0; // ADD_SERVER unaffordable
+        addServer.intent.receiptSequence = 1;
+        intents.assignValue(0, addServer);
+
+        removeServer.target_server_id = 3; // inactive slot: invalid target
+        removeServer.intent.receiptSequence = 2;
+        intents.assignValue(1, removeServer);
+
+        TickOutput output = runTick(state, intents, 2, alreadyConsumed, &policy);
+
+        REQUIRE(output.intentOutcomeCount == 2);
+        REQUIRE(outcomeForKey(output, 5001) == RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE);
+        REQUIRE(outcomeForKey(output, 5002) == RuleOutcome::REJECTED_INVALID_TARGET);
+        REQUIRE(output.consumedKeyCount == 0);
+        REQUIRE(output.publicEventCount == 0);
+    }
+
+    SECTION("events follow receipt order, not candidate order") {
+        // REMOVE_SERVER is received first but supplied second
+        removeServer.intent.receiptSequence = 1;
+        addServer.intent.receiptSequence = 2;
+        intents.assignValue(0, addServer);
+        intents.assignValue(1, removeServer);
+
+        TickOutput output = runTick(state, intents, 2, alreadyConsumed, &policy);
+
+        REQUIRE(outcomeForKey(output, 5001) == RuleOutcome::ACCEPTED);
+        REQUIRE(outcomeForKey(output, 5002) == RuleOutcome::ACCEPTED);
+        REQUIRE(output.publicEventCount == 2);
+        const PublicLifecycleEvent& first = output.publicEvents.getOrDefault(0, noEvent);
+        const PublicLifecycleEvent& second = output.publicEvents.getOrDefault(1, noEvent);
+        REQUIRE(first.type == HiderSeekerEventType::SERVER_REMOVED);
+        REQUIRE(first.tick == 5);
+        REQUIRE(second.type == HiderSeekerEventType::SERVER_ADDED);
+        REQUIRE(second.tick == 5);
+    }
+}
+
 TEST_CASE("Tick engine eligibility filtering", "[tick]") {
     MatchState state{};
     
