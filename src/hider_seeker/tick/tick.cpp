@@ -43,25 +43,18 @@ void dispatchIntent(MatchState& state,
 
     switch (matchingIntent.kind) {
         case TickActionKind::HIDER_ACTION:
-            outcome = applyHiderAction(state, intentRecord.hiderId, matchingIntent.action_mode);
+            outcome = applyHiderAction(state, intentRecord.hiderId, intentRecord.mode);
             break;
 
         case TickActionKind::ADD_SERVER:
             // For ADD_SERVER, we don't use target_server_id since it finds an available slot
-            {
-                Array<PublicLifecycleEvent, MAX_EVENTS> dummyEvents;
-                uint8_t dummyCount = 0;
-                outcome = applyAddServer(state, intentRecord.hiderId, dummyEvents, dummyCount);
-            }
+            outcome = applyAddServer(state, intentRecord.hiderId, output.publicEvents, output.publicEventCount);
             break;
 
         case TickActionKind::REMOVE_SERVER:
             // For REMOVE_SERVER, we need to pass the target_server_id
-            {
-                Array<PublicLifecycleEvent, MAX_EVENTS> dummyEvents;
-                uint8_t dummyCount = 0;
-                outcome = applyRemoveServer(state, intentRecord.hiderId, matchingIntent.target_server_id, dummyEvents, dummyCount);
-            }
+            outcome = applyRemoveServer(state, intentRecord.hiderId, matchingIntent.target_server_id,
+                                        output.publicEvents, output.publicEventCount);
             break;
     }
 

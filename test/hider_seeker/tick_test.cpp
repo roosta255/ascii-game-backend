@@ -109,7 +109,7 @@ TEST_CASE("Tick engine runs without crashing", "[tick]") {
     // Add a HIDER_ACTION intent
     TickIntent intent1{};
     intent1.kind = TickActionKind::HIDER_ACTION;
-    intent1.action_mode = HiderActionMode::CONFIGURE_SERVER;
+    intent1.intent.mode = HiderActionMode::CONFIGURE_SERVER;
     intent1.intent.idempotencyKey = 12345;
     intent1.intent.hiderId = 0;
     intent1.intent.receiptSequence = 1;
@@ -275,6 +275,105 @@ TEST_CASE("Tick engine REMOVE_SERVER dispatch and slot freeing", "[tick]") {
     REQUIRE(state.hiders[0].action_points == 5);
 }
 
+TEST_CASE("Tick engine public lifecycle events", "[tick]") {
+    MatchState state{};
+    state.tick = 5;
+    state.hider_count = 1;
+    state.server_count = 3;
+    state.seeker.connection_tokens = 2;
+    state.seeker.max_tokens = 5;
+
+    // Hider on server 1 with enough LOA for two lifecycle actions
+    state.hiders[0].active = 1;
+    state.hiders[0].action_points = 10;
+    state.hiders[0].server_id = 1;
+    state.hiders[0].resources[LOA_RESOURCE_INDEX] = 2;
+
+    state.servers[0].active = 1;
+    state.servers[1].active = 1;
+    state.servers[2].active = 1;
+
+    Array<TickIntent, MAX_INTENTS_PER_TICK> intents;
+    ConsumedKeySet alreadyConsumed{};
+    StubPolicy policy;
+    PublicLifecycleEvent noEvent{};
+
+    TickIntent addServer{};
+    addServer.kind = TickActionKind::ADD_SERVER;
+    addServer.intent.idempotencyKey = 5001;
+    addServer.intent.hiderId = 0;
+
+    TickIntent removeServer{};
+    removeServer.kind = TickActionKind::REMOVE_SERVER;
+    removeServer.target_server_id = 2; // active and unoccupied
+    removeServer.intent.idempotencyKey = 5002;
+    removeServer.intent.hiderId = 0;
+
+    SECTION("an accepted ADD_SERVER emits one SERVER_ADDED event") {
+        addServer.intent.receiptSequence = 1;
+        intents.assignValue(0, addServer);
+
+        TickOutput output = runTick(state, intents, 1, alreadyConsumed, &policy);
+
+        REQUIRE(outcomeForKey(output, 5001) == RuleOutcome::ACCEPTED);
+        REQUIRE(output.publicEventCount == 1);
+        const PublicLifecycleEvent& event = output.publicEvents.getOrDefault(0, noEvent);
+        REQUIRE(event.type == HiderSeekerEventType::SERVER_ADDED);
+        REQUIRE(event.tick == 5);
+    }
+
+    SECTION("an accepted REMOVE_SERVER emits one SERVER_REMOVED event") {
+        removeServer.intent.receiptSequence = 1;
+        intents.assignValue(0, removeServer);
+
+        TickOutput output = runTick(state, intents, 1, alreadyConsumed, &policy);
+
+        REQUIRE(outcomeForKey(output, 5002) == RuleOutcome::ACCEPTED);
+        REQUIRE(output.publicEventCount == 1);
+        const PublicLifecycleEvent& event = output.publicEvents.getOrDefault(0, noEvent);
+        REQUIRE(event.type == HiderSeekerEventType::SERVER_REMOVED);
+        REQUIRE(event.tick == 5);
+    }
+
+    SECTION("rejected lifecycle actions emit no events") {
+        state.hiders[0].resources[LOA_RESOURCE_INDEX] = 0; // ADD_SERVER unaffordable
+        addServer.intent.receiptSequence = 1;
+        intents.assignValue(0, addServer);
+
+        removeServer.target_server_id = 3; // inactive slot: invalid target
+        removeServer.intent.receiptSequence = 2;
+        intents.assignValue(1, removeServer);
+
+        TickOutput output = runTick(state, intents, 2, alreadyConsumed, &policy);
+
+        REQUIRE(output.intentOutcomeCount == 2);
+        REQUIRE(outcomeForKey(output, 5001) == RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE);
+        REQUIRE(outcomeForKey(output, 5002) == RuleOutcome::REJECTED_INVALID_TARGET);
+        REQUIRE(output.consumedKeyCount == 0);
+        REQUIRE(output.publicEventCount == 0);
+    }
+
+    SECTION("events follow receipt order, not candidate order") {
+        // REMOVE_SERVER is received first but supplied second
+        removeServer.intent.receiptSequence = 1;
+        addServer.intent.receiptSequence = 2;
+        intents.assignValue(0, addServer);
+        intents.assignValue(1, removeServer);
+
+        TickOutput output = runTick(state, intents, 2, alreadyConsumed, &policy);
+
+        REQUIRE(outcomeForKey(output, 5001) == RuleOutcome::ACCEPTED);
+        REQUIRE(outcomeForKey(output, 5002) == RuleOutcome::ACCEPTED);
+        REQUIRE(output.publicEventCount == 2);
+        const PublicLifecycleEvent& first = output.publicEvents.getOrDefault(0, noEvent);
+        const PublicLifecycleEvent& second = output.publicEvents.getOrDefault(1, noEvent);
+        REQUIRE(first.type == HiderSeekerEventType::SERVER_REMOVED);
+        REQUIRE(first.tick == 5);
+        REQUIRE(second.type == HiderSeekerEventType::SERVER_ADDED);
+        REQUIRE(second.tick == 5);
+    }
+}
+
 TEST_CASE("Tick engine eligibility filtering", "[tick]") {
     MatchState state{};
     
@@ -304,7 +403,7 @@ TEST_CASE("Tick engine eligibility filtering", "[tick]") {
     // Add a HIDER_ACTION intent
     TickIntent intent1{};
     intent1.kind = TickActionKind::HIDER_ACTION;
-    intent1.action_mode = HiderActionMode::CONFIGURE_SERVER;
+    intent1.intent.mode = HiderActionMode::CONFIGURE_SERVER;
     intent1.intent.idempotencyKey = 12345;
     intent1.intent.hiderId = 0;
     intent1.intent.receiptSequence = 1;
@@ -313,7 +412,7 @@ TEST_CASE("Tick engine eligibility filtering", "[tick]") {
     // Add another intent with same idempotency key (should be filtered out)
     TickIntent intent2{};
     intent2.kind = TickActionKind::HIDER_ACTION;
-    intent2.action_mode = HiderActionMode::SUPPRESS_ERROR;
+    intent2.intent.mode = HiderActionMode::SUPPRESS_ERROR;
     intent2.intent.idempotencyKey = 12345; // Same key as intent1
     intent2.intent.hiderId = 0;
     intent2.intent.receiptSequence = 2;
@@ -362,7 +461,7 @@ TEST_CASE("Tick engine ordering and deduplication", "[tick]") {
     // Add two intents with same idempotency key (should be deduplicated)
     TickIntent intent1{};
     intent1.kind = TickActionKind::HIDER_ACTION;
-    intent1.action_mode = HiderActionMode::CONFIGURE_SERVER;
+    intent1.intent.mode = HiderActionMode::CONFIGURE_SERVER;
     intent1.intent.idempotencyKey = 12345;
     intent1.intent.hiderId = 0;
     intent1.intent.receiptSequence = 1;
@@ -370,7 +469,7 @@ TEST_CASE("Tick engine ordering and deduplication", "[tick]") {
     
     TickIntent intent2{};
     intent2.kind = TickActionKind::HIDER_ACTION;
-    intent2.action_mode = HiderActionMode::SUPPRESS_ERROR;
+    intent2.intent.mode = HiderActionMode::SUPPRESS_ERROR;
     intent2.intent.idempotencyKey = 12345; // Same key as intent1
     intent2.intent.hiderId = 0;
     intent2.intent.receiptSequence = 2;
@@ -418,7 +517,7 @@ TEST_CASE("Tick engine action dispatch", "[tick]") {
     // CONFIGURE_SERVER
     TickIntent intent1{};
     intent1.kind = TickActionKind::HIDER_ACTION;
-    intent1.action_mode = HiderActionMode::CONFIGURE_SERVER;
+    intent1.intent.mode = HiderActionMode::CONFIGURE_SERVER;
     intent1.intent.idempotencyKey = 1001;
     intent1.intent.hiderId = 0;
     intent1.intent.receiptSequence = 1;
@@ -427,7 +526,7 @@ TEST_CASE("Tick engine action dispatch", "[tick]") {
     // SUPPRESS_ERROR
     TickIntent intent2{};
     intent2.kind = TickActionKind::HIDER_ACTION;
-    intent2.action_mode = HiderActionMode::SUPPRESS_ERROR;
+    intent2.intent.mode = HiderActionMode::SUPPRESS_ERROR;
     intent2.intent.idempotencyKey = 1002;
     intent2.intent.hiderId = 0;
     intent2.intent.receiptSequence = 2;
@@ -436,7 +535,7 @@ TEST_CASE("Tick engine action dispatch", "[tick]") {
     // BOOST_CPU
     TickIntent intent3{};
     intent3.kind = TickActionKind::HIDER_ACTION;
-    intent3.action_mode = HiderActionMode::BOOST_CPU;
+    intent3.intent.mode = HiderActionMode::BOOST_CPU;
     intent3.intent.idempotencyKey = 1003;
     intent3.intent.hiderId = 0;
     intent3.intent.receiptSequence = 3;
@@ -445,7 +544,7 @@ TEST_CASE("Tick engine action dispatch", "[tick]") {
     // ROTATE_ROUTE
     TickIntent intent4{};
     intent4.kind = TickActionKind::HIDER_ACTION;
-    intent4.action_mode = HiderActionMode::ROTATE_ROUTE;
+    intent4.intent.mode = HiderActionMode::ROTATE_ROUTE;
     intent4.intent.idempotencyKey = 1004;
     intent4.intent.hiderId = 0;
     intent4.intent.receiptSequence = 4;
@@ -454,7 +553,7 @@ TEST_CASE("Tick engine action dispatch", "[tick]") {
     // PAY_GOAL
     TickIntent intent5{};
     intent5.kind = TickActionKind::HIDER_ACTION;
-    intent5.action_mode = HiderActionMode::PAY_GOAL;
+    intent5.intent.mode = HiderActionMode::PAY_GOAL;
     intent5.intent.idempotencyKey = 1005;
     intent5.intent.hiderId = 0;
     intent5.intent.receiptSequence = 5;
@@ -670,7 +769,7 @@ TEST_CASE("Tick engine cross-call idempotency retry", "[tick]") {
     // Add an intent
     TickIntent intent1{};
     intent1.kind = TickActionKind::HIDER_ACTION;
-    intent1.action_mode = HiderActionMode::CONFIGURE_SERVER;
+    intent1.intent.mode = HiderActionMode::CONFIGURE_SERVER;
     intent1.intent.idempotencyKey = 12345;
     intent1.intent.hiderId = 0;
     intent1.intent.receiptSequence = 1;
@@ -696,7 +795,7 @@ TEST_CASE("Tick engine cross-call idempotency retry", "[tick]") {
     // Retry of the same intent alongside a fresh one
     TickIntent fresh{};
     fresh.kind = TickActionKind::HIDER_ACTION;
-    fresh.action_mode = HiderActionMode::BOOST_CPU;
+    fresh.intent.mode = HiderActionMode::BOOST_CPU;
     fresh.intent.idempotencyKey = 777;
     fresh.intent.hiderId = 0;
     fresh.intent.receiptSequence = 2;
@@ -745,7 +844,7 @@ TEST_CASE("Tick engine resource-exhaustion visibility", "[tick]") {
     // Add two HIDER_ACTION intents (should be rejected due to insufficient AP)
     TickIntent intent1{};
     intent1.kind = TickActionKind::HIDER_ACTION;
-    intent1.action_mode = HiderActionMode::CONFIGURE_SERVER; // Costs 5 AP
+    intent1.intent.mode = HiderActionMode::CONFIGURE_SERVER; // Costs 5 AP
     intent1.intent.idempotencyKey = 1001;
     intent1.intent.hiderId = 0;
     intent1.intent.receiptSequence = 1;
@@ -753,7 +852,7 @@ TEST_CASE("Tick engine resource-exhaustion visibility", "[tick]") {
     
     TickIntent intent2{};
     intent2.kind = TickActionKind::HIDER_ACTION;
-    intent2.action_mode = HiderActionMode::BOOST_CPU; // Costs 2 AP
+    intent2.intent.mode = HiderActionMode::BOOST_CPU; // Costs 2 AP
     intent2.intent.idempotencyKey = 1002;
     intent2.intent.hiderId = 0;
     intent2.intent.receiptSequence = 2;
@@ -807,7 +906,7 @@ TEST_CASE("Tick engine determinism across independent invocations", "[tick]") {
 
     TickIntent rotate{};
     rotate.kind = TickActionKind::HIDER_ACTION;
-    rotate.action_mode = HiderActionMode::ROTATE_ROUTE;
+    rotate.intent.mode = HiderActionMode::ROTATE_ROUTE;
     rotate.intent.idempotencyKey = 3003;
     rotate.intent.hiderId = 0;
     rotate.intent.receiptSequence = 3;
@@ -815,7 +914,7 @@ TEST_CASE("Tick engine determinism across independent invocations", "[tick]") {
 
     TickIntent boost{};
     boost.kind = TickActionKind::HIDER_ACTION;
-    boost.action_mode = HiderActionMode::BOOST_CPU;
+    boost.intent.mode = HiderActionMode::BOOST_CPU;
     boost.intent.idempotencyKey = 1001;
     boost.intent.hiderId = 0;
     boost.intent.receiptSequence = 1;
@@ -823,7 +922,7 @@ TEST_CASE("Tick engine determinism across independent invocations", "[tick]") {
 
     TickIntent unaffordable{};
     unaffordable.kind = TickActionKind::HIDER_ACTION;
-    unaffordable.action_mode = HiderActionMode::CONFIGURE_SERVER;
+    unaffordable.intent.mode = HiderActionMode::CONFIGURE_SERVER;
     unaffordable.intent.idempotencyKey = 2002;
     unaffordable.intent.hiderId = 1;
     unaffordable.intent.receiptSequence = 2;
@@ -909,7 +1008,7 @@ TEST_CASE("Tick engine duplicate idempotency key with different actions", "[tick
     // First intent: HIDER_ACTION (should be ACCEPTED)
     TickIntent intent1{};
     intent1.kind = TickActionKind::HIDER_ACTION;
-    intent1.action_mode = HiderActionMode::CONFIGURE_SERVER;
+    intent1.intent.mode = HiderActionMode::CONFIGURE_SERVER;
     intent1.intent.idempotencyKey = 12345;
     intent1.intent.hiderId = 0;
     intent1.intent.receiptSequence = 1;
@@ -967,14 +1066,14 @@ TEST_CASE("Tick engine duplicate idempotency key with first rejected", "[tick]")
     // action_mode, not the first occurrence's.
     TickIntent rejectedFirst{};
     rejectedFirst.kind = TickActionKind::HIDER_ACTION;
-    rejectedFirst.action_mode = HiderActionMode::CONFIGURE_SERVER;
+    rejectedFirst.intent.mode = HiderActionMode::CONFIGURE_SERVER;
     rejectedFirst.intent.idempotencyKey = 12345;
     rejectedFirst.intent.hiderId = 0;
     rejectedFirst.intent.receiptSequence = 1;
 
     TickIntent acceptedSecond{};
     acceptedSecond.kind = TickActionKind::HIDER_ACTION;
-    acceptedSecond.action_mode = HiderActionMode::BOOST_CPU;
+    acceptedSecond.intent.mode = HiderActionMode::BOOST_CPU;
     acceptedSecond.intent.idempotencyKey = 12345; // Same key as rejectedFirst
     acceptedSecond.intent.hiderId = 0;
     acceptedSecond.intent.receiptSequence = 2;
