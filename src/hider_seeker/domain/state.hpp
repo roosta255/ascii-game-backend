@@ -14,6 +14,8 @@ constexpr uint8_t MAX_INTENTS_PER_TICK = 64;
 constexpr uint8_t MAX_SEEKER_TARGETS = 16;
 constexpr uint8_t MAX_HIDER_PLAN_STEPS = 16;
 constexpr uint8_t RESOURCE_TYPE_COUNT = 8; // placeholder value for this slice
+constexpr uint8_t MAX_PENDING_MOVES = 16;
+constexpr uint8_t MAX_ADVANCE_TICKS = 16;
 
 enum RewardType { REWARD_NONE, REWARD };
 
@@ -107,5 +109,15 @@ struct MatchState {
 };
 
 static_assert(sizeof(MatchState) <= 8192, "MatchState exceeds its documented 8192-byte size budget — see state.hpp comment for the breakdown");
+
+struct PendingMove {
+    uint32_t move_id;
+    uint32_t submit_seq;
+    uint8_t hider_id;
+    uint8_t action_type; // TickActionKind
+    uint8_t server_id;   // target server for REMOVE_SERVER else NO_SERVER_ID
+    uint8_t target_id;   // reserved, always NO_SERVER_ID for now
+    uint8_t server_mode; // HiderActionMode for HIDER_ACTION
+};
 
 } // namespace hider_seeker

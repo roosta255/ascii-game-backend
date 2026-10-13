@@ -11,6 +11,7 @@
 
 namespace hider_seeker {
 
+RuleOutcome applyTickIntent(MatchState& state, const TickIntent& intent);
 TickOutput runTick(MatchState& state,
                     const Array<TickIntent, MAX_INTENTS_PER_TICK>& candidateIntents,
                     uint8_t candidateIntentCount,

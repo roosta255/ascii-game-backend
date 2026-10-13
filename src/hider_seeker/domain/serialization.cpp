@@ -6,7 +6,7 @@
 namespace hider_seeker {
 
 namespace {
-    constexpr uint32_t CURRENT_SCHEMA_VERSION = 1;
+    constexpr uint32_t CURRENT_SCHEMA_VERSION = 2;
 
     void writeUint8(std::vector<uint8_t>& out, uint8_t value) {
         out.push_back(value);
@@ -239,6 +239,28 @@ namespace {
         event.tick = readUint32(in, pos);
         return event;
     }
+
+    void writePendingMove(std::vector<uint8_t>& out, const PendingMove& move) {
+        writeUint32(out, move.move_id);
+        writeUint32(out, move.submit_seq);
+        writeUint8(out, move.hider_id);
+        writeUint8(out, move.action_type);
+        writeUint8(out, move.server_id);
+        writeUint8(out, move.target_id);
+        writeUint8(out, move.server_mode);
+    }
+
+    PendingMove readPendingMove(const std::vector<uint8_t>& in, size_t& pos) {
+        PendingMove move;
+        move.move_id = readUint32(in, pos);
+        move.submit_seq = readUint32(in, pos);
+        move.hider_id = readUint8(in, pos);
+        move.action_type = readUint8(in, pos);
+        move.server_id = readUint8(in, pos);
+        move.target_id = readUint8(in, pos);
+        move.server_mode = readUint8(in, pos);
+        return move;
+    }
 } // anonymous namespace
 
 void saveMatchState(const MatchState& state, std::vector<uint8_t>& out) {
@@ -273,6 +295,14 @@ void saveMatchState(const MatchState& state, std::vector<uint8_t>& out) {
     
     writeUint8(out, state.event_head);
     writeUint8(out, state.event_count);
+    
+    // Write pending move ring buffer
+    for (const auto& pending_move : state.pending) {
+        writePendingMove(out, pending_move);
+    }
+    writeUint8(out, state.pending_head);
+    writeUint8(out, state.pending_count);
+    writeUint32(out, state.next_submit_seq);
 }
 
 bool loadMatchState(const std::vector<uint8_t>& in, MatchState& state) {
@@ -322,13 +352,16 @@ bool loadMatchState(const std::vector<uint8_t>& in, MatchState& state) {
     constexpr size_t kSeekerStateSize = 5 + 2 * MAX_SERVERS + MAX_SEEKER_TARGETS;
     constexpr size_t kGoalStateSize = 10 + MAX_REQUIREMENTS_PER_GOAL * 6;
     constexpr size_t kEventSize = 5;
+    constexpr size_t kPendingMoveSize = 4 + 4 + 1 + 1 + 1 + 1 + 1; // move_id, submit_seq, hider_id, action_type, server_id, target_id, server_mode
     constexpr size_t kExpectedBulkSize =
         MAX_HIDERS * kHiderStateSize
         + MAX_SERVERS * kServerStateSize
         + kSeekerStateSize
         + MAX_GOALS * kGoalStateSize
         + MAX_EVENTS * kEventSize
-        + 2; // event_head + event_count
+        + 2 // event_head + event_count
+        + MAX_PENDING_MOVES * kPendingMoveSize // pending moves
+        + 3; // pending_head, pending_count, next_submit_seq
     if (pos + kExpectedBulkSize > in.size()) {
         return false;
     }
@@ -363,6 +396,28 @@ bool loadMatchState(const std::vector<uint8_t>& in, MatchState& state) {
     
     state.event_head = readUint8(in, pos);
     state.event_count = readUint8(in, pos);
+    
+    // Read pending move ring buffer
+    for (auto& pending_move : state.pending) {
+        pending_move = readPendingMove(in, pos);
+    }
+    
+    // Read pending_head, pending_count, and next_submit_seq
+    if (pos + 3 > in.size()) {
+        return false;
+    }
+    
+    state.pending_head = readUint8(in, pos);
+    state.pending_count = readUint8(in, pos);
+    state.next_submit_seq = readUint32(in, pos);
+    
+    // Validate pending fields
+    if (state.pending_count > MAX_PENDING_MOVES) {
+        return false;
+    }
+    if (state.pending_head >= MAX_PENDING_MOVES) {
+        return false;
+    }
     
     return true;
 }

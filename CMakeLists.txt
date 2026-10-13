@@ -53,6 +53,7 @@ set(PROJECT_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/domain
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/ruleset
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/tick
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/turn
     /usr/include/jsoncpp
 )
 
@@ -200,6 +201,7 @@ add_library(core_backend STATIC
     src/traits/TraitModifier.cpp
     src/vector/int4_to_json.cpp
     src/hider_seeker/domain/serialization.cpp
+    src/hider_seeker/ruleset/regeneration.cpp
     src/hider_seeker/ruleset/loa_rules.cpp
     src/hider_seeker/ruleset/action_rules.cpp
     src/hider_seeker/ruleset/probe_rules.cpp
@@ -208,6 +210,7 @@ add_library(core_backend STATIC
     src/hider_seeker/ruleset/rng.cpp
     src/hider_seeker/ruleset/lifecycle_events.cpp
     src/hider_seeker/tick/tick.cpp
+    src/hider_seeker/turn/turn_engine.cpp
 )
 
 # 👇 CRITICAL: Apply include dirs to the library
@@ -266,6 +269,14 @@ add_executable(test_target
     test/hider_seeker/ruleset_rng_test.cpp
     test/hider_seeker/ruleset_lifecycle_events_test.cpp
     test/hider_seeker/tick_test.cpp
+    test/hider_seeker/serialization_pending_ring_test.cpp
+    test/hider_seeker/regeneration_test.cpp
+    test/hider_seeker/turn_immediate_apply_test.cpp
+    test/hider_seeker/turn_advance_affordability_test.cpp
+    test/hider_seeker/turn_queue_test.cpp
+    test/hider_seeker/turn_advance_loop_test.cpp
+    test/hider_seeker/turn_pass_ticks_test.cpp
+    test/hider_seeker/turn_common_checks_test.cpp
 )
 
 target_include_directories(test_target PRIVATE ${PROJECT_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/test)
