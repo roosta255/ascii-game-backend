@@ -1,109 +1,80 @@
 #include <catch2/catch_test_macros.hpp>
-#include "../../src/hider_seeker/domain/state.hpp"
-#include "../../src/hider_seeker/turn/turn_engine.hpp"
-#include "../../src/hider_seeker/tick/tick.hpp"
+#include "state.hpp"
+#include "rule_types.hpp"
+#include "action_rules.hpp"
+#include "probe_rules.hpp"
+#include "tick_types.hpp"
+#include "turn_types.hpp"
+#include "turn_engine.hpp"
 
 using namespace hider_seeker;
 
-// Stub policy that counts invocations
-struct StubPolicy : public iTargetRankingPolicy {
-    int invocationCount = 0;
-    
-    void rankTargets(const MatchState& state, Array<ProbeCandidate, MAX_SERVERS>& candidates) override {
-        invocationCount++;
-        // Do nothing - just count the call
+namespace {
+
+// Seeker policy stub that only counts how often it is consulted.
+struct CountingPolicy : public iTargetRankingPolicy {
+    mutable int calls = 0;
+    void rankTargets(const MatchState&, Array<ProbeCandidate, MAX_SERVERS>&) const override {
+        calls++;
     }
 };
 
-TEST_CASE("playMove/queueMove immediate apply makes zero policy calls", "[turn]") {
+MatchState makeActiveMatch(uint8_t hiderCount) {
     MatchState state{};
-    
-    // Initialize a basic state
     state.schema_version = 2;
     state.phase = PHASE_ACTIVE;
-    state.hider_count = 1;
-    state.server_count = 2;
-    
-    // Set up hider with enough AP to make an immediate action
-    state.hiders[0].active = true;
-    state.hiders[0].status = HIDER_STATUS_ACTIVE;
-    state.hiders[0].action_points = 5; // Enough for a basic action
-    
-    // Set up server
-    state.servers[0].active = true;
-    state.servers[0].owner_hider_id = NO_SERVER_ID;
-    
-    // Create move request that should be immediately affordable
-    MoveRequest move{};
-    move.move_id = 12345;
-    move.hider_id = 0;
-    move.action_type = static_cast<uint8_t>(TickActionKind::HIDER_ACTION);
-    move.server_id = NO_SERVER_ID;
-    move.target_id = NO_SERVER_ID;
-    move.server_mode = 0; // Some mode
-    
-    StubPolicy policy{};
-    
-    // Test playMove
-    TurnResult result1 = playMove(state, move, policy);
-    
-    REQUIRE(result1.status == MoveStatus::APPLIED);
-    REQUIRE(result1.ticksAdvanced == 0);
-    REQUIRE(result1.reason == TurnReason::NONE);
-    REQUIRE(policy.invocationCount == 0); // Should not call policy
-    
-    // Test queueMove (should also be immediately affordable)
-    StubPolicy policy2{};
-    TurnResult result2 = queueMove(state, move, policy2);
-    
-    REQUIRE(result2.status == MoveStatus::QUEUED);
-    REQUIRE(result2.reason == TurnReason::NONE);
-    REQUIRE(policy2.invocationCount == 0); // Should not call policy
+    state.hider_count = hiderCount;
+    for (uint8_t hiderId = 0; hiderId < hiderCount; ++hiderId) {
+        state.hiders[hiderId].active = 1;
+        state.hiders[hiderId].status = HIDER_STATUS_ACTIVE;
+        state.hiders[hiderId].server_id = NO_SERVER_ID;
+    }
+    return state;
 }
 
-TEST_CASE("playMove/queueMove with tick unchanged", "[turn]") {
-    MatchState state{};
-    
-    // Initialize a basic state
-    state.schema_version = 2;
-    state.phase = PHASE_ACTIVE;
+MoveRequest hiderAction(uint32_t moveId, uint8_t hiderId, HiderActionMode mode) {
+    return MoveRequest{moveId, hiderId, static_cast<uint8_t>(TickActionKind::HIDER_ACTION),
+                       NO_SERVER_ID, NO_SERVER_ID, static_cast<uint8_t>(mode)};
+}
+
+} // namespace
+
+TEST_CASE("TURN-003 affordable playMove applies immediately without advancing", "[hider_seeker][turn]") {
+    MatchState state = makeActiveMatch(1);
     state.tick = 100;
-    state.hider_count = 1;
-    state.server_count = 2;
-    
-    // Set up hider with enough AP to make an immediate action
-    state.hiders[0].active = true;
-    state.hiders[0].status = HIDER_STATUS_ACTIVE;
-    state.hiders[0].action_points = 5; // Enough for a basic action
-    
-    // Set up server
-    state.servers[0].active = true;
-    state.servers[0].owner_hider_id = NO_SERVER_ID;
-    
-    // Create move request that should be immediately affordable
-    MoveRequest move{};
-    move.move_id = 12345;
-    move.hider_id = 0;
-    move.action_type = static_cast<uint8_t>(TickActionKind::HIDER_ACTION);
-    move.server_id = NO_SERVER_ID;
-    move.target_id = NO_SERVER_ID;
-    move.server_mode = 0; // Some mode
-    
-    StubPolicy policy{};
-    
-    uint32_t original_tick = state.tick;
-    
-    // Test playMove
-    TurnResult result1 = playMove(state, move, policy);
-    
-    REQUIRE(result1.status == MoveStatus::APPLIED);
-    REQUIRE(result1.ticksAdvanced == 0);
-    REQUIRE(state.tick == original_tick); // Tick should not change
-    
-    // Test queueMove
-    uint32_t original_tick2 = state.tick;
-    TurnResult result2 = queueMove(state, move, policy);
-    
-    REQUIRE(result2.status == MoveStatus::QUEUED);
-    REQUIRE(state.tick == original_tick2); // Tick should not change
+    state.revision = 7;
+    state.hiders[0].action_points = 5;
+    CountingPolicy policy;
+
+    const TurnResult result = playMove(state, hiderAction(1, 0, HiderActionMode::BOOST_CPU), policy);
+
+    REQUIRE(result.status == MoveStatus::APPLIED);
+    REQUIRE(result.reason == TurnReason::NONE);
+    REQUIRE(result.ruleOutcome == RuleOutcome::ACCEPTED);
+    REQUIRE(result.ticksAdvanced == 0);
+    REQUIRE(policy.calls == 0);
+    REQUIRE(state.tick == 100);
+    REQUIRE(state.revision == 8);
+    REQUIRE(state.hiders[0].action_points == 3); // BOOST_CPU costs 2
+    REQUIRE(state.pending_count == 0);
+}
+
+TEST_CASE("TURN-003 affordable queueMove applies immediately without queueing", "[hider_seeker][turn]") {
+    MatchState state = makeActiveMatch(1);
+    state.tick = 100;
+    state.revision = 7;
+    state.hiders[0].action_points = 5;
+    CountingPolicy policy;
+
+    const TurnResult result = queueMove(state, hiderAction(1, 0, HiderActionMode::SUPPRESS_ERROR), policy);
+
+    REQUIRE(result.status == MoveStatus::APPLIED);
+    REQUIRE(result.reason == TurnReason::NONE);
+    REQUIRE(result.ticksAdvanced == 0);
+    REQUIRE(policy.calls == 0);
+    REQUIRE(state.tick == 100);
+    REQUIRE(state.revision == 8);
+    REQUIRE(state.hiders[0].action_points == 2); // SUPPRESS_ERROR costs 3
+    REQUIRE(state.pending_count == 0);
+    REQUIRE(state.next_submit_seq == 0);
 }

@@ -90,6 +90,16 @@ struct Event {
     uint32_t tick;
 };
 
+struct PendingMove {
+    uint32_t move_id;
+    uint32_t submit_seq;
+    uint8_t hider_id;
+    uint8_t action_type; // TickActionKind
+    uint8_t server_id;   // target server for REMOVE_SERVER else NO_SERVER_ID
+    uint8_t target_id;   // reserved, always NO_SERVER_ID for now
+    uint8_t server_mode; // HiderActionMode for HIDER_ACTION
+};
+
 struct MatchState {
     uint32_t schema_version;
     uint32_t ruleset_version;
@@ -106,18 +116,14 @@ struct MatchState {
     Event events[MAX_EVENTS];
     uint8_t event_head;
     uint8_t event_count;
+    // Pending-move ring (schema version 2). Default-initialized to an empty
+    // ring so any MatchState that never touches it serializes a valid ring.
+    PendingMove pending[MAX_PENDING_MOVES] = {};
+    uint8_t pending_head = 0;
+    uint8_t pending_count = 0;
+    uint32_t next_submit_seq = 0;
 };
 
 static_assert(sizeof(MatchState) <= 8192, "MatchState exceeds its documented 8192-byte size budget — see state.hpp comment for the breakdown");
-
-struct PendingMove {
-    uint32_t move_id;
-    uint32_t submit_seq;
-    uint8_t hider_id;
-    uint8_t action_type; // TickActionKind
-    uint8_t server_id;   // target server for REMOVE_SERVER else NO_SERVER_ID
-    uint8_t target_id;   // reserved, always NO_SERVER_ID for now
-    uint8_t server_mode; // HiderActionMode for HIDER_ACTION
-};
 
 } // namespace hider_seeker

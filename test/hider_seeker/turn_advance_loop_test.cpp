@@ -1,173 +1,160 @@
 #include <catch2/catch_test_macros.hpp>
-#include "../../src/hider_seeker/domain/state.hpp"
-#include "../../src/hider_seeker/turn/turn_engine.hpp"
+#include "state.hpp"
+#include "rule_types.hpp"
+#include "action_rules.hpp"
+#include "loa_rules.hpp"
+#include "probe_rules.hpp"
+#include "tick_types.hpp"
+#include "turn_types.hpp"
+#include "turn_engine.hpp"
 
 using namespace hider_seeker;
 
-// Stub policy that does nothing
-struct StubPolicy : public iTargetRankingPolicy {
-    void rankTargets(const MatchState& state, Array<ProbeCandidate, MAX_SERVERS>& candidates) override {
-        // Do nothing
+namespace {
+
+// Seeker policy stub that only counts how often it is consulted.
+struct CountingPolicy : public iTargetRankingPolicy {
+    mutable int calls = 0;
+    void rankTargets(const MatchState&, Array<ProbeCandidate, MAX_SERVERS>&) const override {
+        calls++;
     }
 };
 
-TEST_CASE("Advance-loop RULE_REJECTED on removed REMOVE_SERVER target", "[turn]") {
+// Seeker policy stub that captures one hider of the match it is bound to on
+// its Nth consultation (i.e. during the Nth advanced tick).
+struct CapturingPolicy : public iTargetRankingPolicy {
+    CapturingPolicy(MatchState& match, uint8_t hiderId, int captureOnCall)
+    : match(match), hiderId(hiderId), captureOnCall(captureOnCall) {}
+
+    void rankTargets(const MatchState&, Array<ProbeCandidate, MAX_SERVERS>&) const override {
+        calls++;
+        if (calls == captureOnCall) {
+            match.hiders[hiderId].status = HIDER_STATUS_CAPTURED;
+        }
+    }
+
+    MatchState& match;
+    uint8_t hiderId;
+    int captureOnCall;
+    mutable int calls = 0;
+};
+
+MatchState makeActiveMatch(uint8_t hiderCount) {
     MatchState state{};
-    
-    // Initialize a basic state
     state.schema_version = 2;
     state.phase = PHASE_ACTIVE;
-    state.hider_count = 1;
-    state.server_count = 3;
-    
-    // Set up hider with no AP (should not be immediately affordable)
-    state.hiders[0].active = true;
-    state.hiders[0].status = HIDER_STATUS_ACTIVE;
-    state.hiders[0].action_points = 0; // No AP
-    
-    // Set up servers
-    state.servers[0].active = true;
-    state.servers[0].owner_hider_id = NO_SERVER_ID;
-    
-    state.servers[1].active = true;
-    state.servers[1].owner_hider_id = NO_SERVER_ID;
-    
-    state.servers[2].active = true;
-    state.servers[2].owner_hider_id = NO_SERVER_ID;
-    
-    // Create a move that will be queued and then cancelled due to target removal
-    MoveRequest move{};
-    move.move_id = 12345;
-    move.hider_id = 0;
-    move.action_type = static_cast<uint8_t>(TickActionKind::REMOVE_SERVER);
-    move.server_id = 1; // Target server that will be removed
-    move.target_id = NO_SERVER_ID;
-    move.server_mode = 0; // Some mode
-    
-    StubPolicy policy{};
-    
-    // Queue the move
-    queueMove(state, move, policy);
-    
-    REQUIRE(state.pending_count == 1);
-    
-    // Now simulate advancing ticks until the move would be applied
-    // The move should be cancelled due to target removal (server being removed)
-    TurnResult result = passTicks(state, 10, policy); // Advance 10 ticks
-    
-    // This test is more about ensuring the system handles the loop correctly
-    // rather than specific behavior for this case
-    REQUIRE(result.status == MoveStatus::CANCELLED || result.status == MoveStatus::APPLIED);
+    state.hider_count = hiderCount;
+    for (uint8_t hiderId = 0; hiderId < hiderCount; ++hiderId) {
+        state.hiders[hiderId].active = 1;
+        state.hiders[hiderId].status = HIDER_STATUS_ACTIVE;
+        state.hiders[hiderId].server_id = NO_SERVER_ID;
+    }
+    return state;
 }
 
-TEST_CASE("HIDER_CAPTURED mid-advance cancellation with already-run ticks", "[turn]") {
-    MatchState state{};
-    
-    // Initialize a basic state
-    state.schema_version = 2;
-    state.phase = PHASE_ACTIVE;
-    state.hider_count = 2;
-    state.server_count = 2;
-    
-    // Set up hiders
-    state.hiders[0].active = true;
-    state.hiders[0].status = HIDER_STATUS_ACTIVE;
-    state.hiders[0].action_points = 0; // No AP
-    
-    state.hiders[1].active = true;
-    state.hiders[1].status = HIDER_STATUS_ACTIVE;
-    state.hiders[1].action_points = 0; // No AP
-    
-    // Set up servers
-    state.servers[0].active = true;
-    state.servers[0].owner_hider_id = NO_SERVER_ID;
-    
-    state.servers[1].active = true;
-    state.servers[1].owner_hider_id = NO_SERVER_ID;
-    
-    // Create a move that will be queued and then cancelled due to hider capture
-    MoveRequest move{};
-    move.move_id = 12345;
-    move.hider_id = 0;
-    move.action_type = static_cast<uint8_t>(TickActionKind::HIDER_ACTION);
-    move.server_id = NO_SERVER_ID;
-    move.target_id = NO_SERVER_ID;
-    move.server_mode = 0; // Some mode
-    
-    StubPolicy policy{};
-    
-    // Queue the move
-    queueMove(state, move, policy);
-    
-    REQUIRE(state.pending_count == 1);
-    
-    // Advance a few ticks to get it closer to being applied
-    TurnResult result = passTicks(state, 3, policy); // Advance 3 ticks
-    
-    // The system should have advanced some ticks but not necessarily applied the move yet
-    REQUIRE(result.ticksAdvanced >= 0);
+MoveRequest hiderAction(uint32_t moveId, uint8_t hiderId, HiderActionMode mode) {
+    return MoveRequest{moveId, hiderId, static_cast<uint8_t>(TickActionKind::HIDER_ACTION),
+                       NO_SERVER_ID, NO_SERVER_ID, static_cast<uint8_t>(mode)};
 }
 
-TEST_CASE("ADVANCE_LIMIT at MAX_ADVANCE_TICKS with queued moves", "[turn]") {
-    MatchState state{};
-    
-    // Initialize a basic state
-    state.schema_version = 2;
-    state.phase = PHASE_ACTIVE;
-    state.hider_count = 1;
+MoveRequest removeServer(uint32_t moveId, uint8_t hiderId, uint8_t serverId) {
+    return MoveRequest{moveId, hiderId, static_cast<uint8_t>(TickActionKind::REMOVE_SERVER),
+                       serverId, NO_SERVER_ID, 0};
+}
+
+PendingMoveApplied appliedAt(const TurnResult& result, int index) {
+    PendingMoveApplied applied{0, NO_SERVER_ID, 0};
+    result.pendingApplied.accessConst(index, [&applied](const PendingMoveApplied& entry) { applied = entry; });
+    return applied;
+}
+
+uint32_t pendingIdAt(const MatchState& state, uint8_t offset) {
+    return state.pending[(state.pending_head + offset) % MAX_PENDING_MOVES].move_id;
+}
+
+} // namespace
+
+TEST_CASE("TURN-006 queued REMOVE_SERVER whose target is removed is cancelled RULE_REJECTED", "[hider_seeker][turn]") {
+    MatchState state = makeActiveMatch(2);
+    state.servers[0].active = 1;
+    state.servers[3].active = 1;
     state.server_count = 2;
-    
-    // Set up hider with no AP (should not be immediately affordable)
-    state.hiders[0].active = true;
-    state.hiders[0].status = HIDER_STATUS_ACTIVE;
-    state.hiders[0].action_points = 0; // No AP
-    
-    // Set up servers
-    state.servers[0].active = true;
-    state.servers[0].owner_hider_id = NO_SERVER_ID;
-    
-    state.servers[1].active = true;
-    state.servers[1].owner_hider_id = NO_SERVER_ID;
-    
-    // Create three moves that will be queued and applied on ticks 5, 10, 15
-    MoveRequest move1{};
-    move1.move_id = 1001;
-    move1.hider_id = 0;
-    move1.action_type = static_cast<uint8_t>(TickActionKind::HIDER_ACTION);
-    move1.server_id = NO_SERVER_ID;
-    move1.target_id = NO_SERVER_ID;
-    move1.server_mode = 0; // Some mode
-    
-    MoveRequest move2{};
-    move2.move_id = 1002;
-    move2.hider_id = 0;
-    move2.action_type = static_cast<uint8_t>(TickActionKind::HIDER_ACTION);
-    move2.server_id = NO_SERVER_ID;
-    move2.target_id = NO_SERVER_ID;
-    move2.server_mode = 0; // Some mode
-    
-    MoveRequest move3{};
-    move3.move_id = 1003;
-    move3.hider_id = 0;
-    move3.action_type = static_cast<uint8_t>(TickActionKind::HIDER_ACTION);
-    move3.server_id = NO_SERVER_ID;
-    move3.target_id = NO_SERVER_ID;
-    move3.server_mode = 0; // Some mode
-    
-    StubPolicy policy{};
-    
-    // Queue all three moves
-    queueMove(state, move1, policy);
-    queueMove(state, move2, policy);
-    queueMove(state, move3, policy);
-    
-    REQUIRE(state.pending_count == 3);
-    
-    // Advance ticks - should apply the first move on tick 5, second on tick 10, third on tick 15
-    // But we'll only advance 16 ticks to hit the limit
-    TurnResult result = passTicks(state, 16, policy); // Advance 16 ticks
-    
+    state.hiders[0].resources[LOA_RESOURCE_INDEX] = 0;
+    state.hiders[1].resources[LOA_RESOURCE_INDEX] = 1;
+    CountingPolicy policy;
+
+    // Hider 0 cannot afford the removal yet (0 LOA), so it waits
+    const TurnResult queued = queueMove(state, removeServer(1, 0, 3), policy);
+    REQUIRE(queued.status == MoveStatus::QUEUED);
+    REQUIRE(state.pending_count == 1);
+
+    // Hider 1 removes the same slot first
+    const TurnResult removed = queueMove(state, removeServer(2, 1, 3), policy);
+    REQUIRE(removed.status == MoveStatus::APPLIED);
+    REQUIRE(state.servers[3].active == 0);
+    REQUIRE(state.pending_count == 1);
+
+    // On the next tick hider 0's move is rule-rejected and cancelled
+    const TurnResult passed = passTicks(state, 1, policy);
+    REQUIRE(passed.status == MoveStatus::APPLIED);
+    REQUIRE(passed.ticksAdvanced == 1);
+    REQUIRE(passed.pendingAppliedCount == 0);
+    REQUIRE(state.pending_count == 0);
+    REQUIRE(state.hiders[0].resources[LOA_RESOURCE_INDEX] == 0);
+}
+
+TEST_CASE("TURN-006 hider captured mid-advance cancels its moves HIDER_CAPTURED", "[hider_seeker][turn]") {
+    MatchState state = makeActiveMatch(2);
+    state.tick = 20;
+    CapturingPolicy policy(state, 0, 2);
+
+    REQUIRE(queueMove(state, hiderAction(1, 0, HiderActionMode::CONFIGURE_SERVER), policy).status == MoveStatus::QUEUED);
+    REQUIRE(queueMove(state, hiderAction(2, 1, HiderActionMode::CONFIGURE_SERVER), policy).status == MoveStatus::QUEUED);
+    const uint64_t revisionBefore = state.revision;
+
+    const TurnResult result = playMove(state, hiderAction(3, 0, HiderActionMode::PAY_GOAL), policy);
+
+    REQUIRE(result.status == MoveStatus::CANCELLED);
+    REQUIRE(result.reason == TurnReason::HIDER_CAPTURED);
+    REQUIRE(result.ticksAdvanced == 2);
+    REQUIRE(policy.calls == 2);
+
+    // The two ticks that ran stay applied
+    REQUIRE(state.tick == 22);
+    REQUIRE(state.hiders[0].action_points == 4);
+    REQUIRE(state.hiders[1].action_points == 4);
+    REQUIRE(state.revision == revisionBefore + 1);
+
+    // Hider 0's pending move is gone; hider 1's is still waiting
+    REQUIRE(state.pending_count == 1);
+    REQUIRE(pendingIdAt(state, 0) == 2);
+}
+
+TEST_CASE("TURN-006 advance stops at MAX_ADVANCE_TICKS with ADVANCE_LIMIT", "[hider_seeker][turn]") {
+    MatchState state = makeActiveMatch(1);
+    CountingPolicy policy;
+
+    REQUIRE(queueMove(state, hiderAction(1, 0, HiderActionMode::PAY_GOAL), policy).status == MoveStatus::QUEUED);
+    REQUIRE(queueMove(state, hiderAction(2, 0, HiderActionMode::PAY_GOAL), policy).status == MoveStatus::QUEUED);
+    REQUIRE(queueMove(state, hiderAction(3, 0, HiderActionMode::PAY_GOAL), policy).status == MoveStatus::QUEUED);
+
+    const TurnResult result = playMove(state, hiderAction(4, 0, HiderActionMode::PAY_GOAL), policy);
+
     REQUIRE(result.status == MoveStatus::CANCELLED);
     REQUIRE(result.reason == TurnReason::ADVANCE_LIMIT);
-    REQUIRE(result.ticksAdvanced == 16); // Should have advanced exactly 16 ticks
+    REQUIRE(result.ticksAdvanced == MAX_ADVANCE_TICKS);
+    REQUIRE(result.ticksAdvanced == 16);
+    REQUIRE(state.tick == 16);
+    REQUIRE(policy.calls == 16);
+
+    REQUIRE(result.pendingAppliedCount == 3);
+    REQUIRE(appliedAt(result, 0).move_id == 1);
+    REQUIRE(appliedAt(result, 0).tick == 5);
+    REQUIRE(appliedAt(result, 1).move_id == 2);
+    REQUIRE(appliedAt(result, 1).tick == 10);
+    REQUIRE(appliedAt(result, 2).move_id == 3);
+    REQUIRE(appliedAt(result, 2).tick == 15);
+
+    REQUIRE(state.pending_count == 0);
+    REQUIRE(state.hiders[0].action_points == 2);
 }

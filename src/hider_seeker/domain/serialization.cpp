@@ -264,8 +264,10 @@ namespace {
 } // anonymous namespace
 
 void saveMatchState(const MatchState& state, std::vector<uint8_t>& out) {
-    // Encode state.schema_version itself as the leading marker per implementation plan
-    // This is a functional substitute for the documented approach that was specified in the plan
+    // Leading marker: the buffer layout version this code writes (schema
+    // version 2 adds the pending-move ring). state.schema_version itself is
+    // stored as an ordinary field right after it.
+    writeUint32(out, CURRENT_SCHEMA_VERSION);
     writeUint32(out, state.schema_version);
     writeUint32(out, state.ruleset_version);
     writeUint64(out, state.revision);
@@ -316,32 +318,33 @@ bool loadMatchState(const std::vector<uint8_t>& in, MatchState& state) {
     }
     
     size_t pos = 0;
-    uint32_t schema_version = readUint32(in, pos);
-    
-    // Check if this is a supported schema version
-    if (schema_version != CURRENT_SCHEMA_VERSION) {
+    uint32_t buffer_schema_version = readUint32(in, pos);
+
+    // Check if this is a supported schema version (version-1 buffers, which
+    // have no pending-move ring, are rejected like any other mismatch)
+    if (buffer_schema_version != CURRENT_SCHEMA_VERSION) {
         return false;
     }
-    
+
     // Bounds-check the fixed header fields before reading any of them --
-    // ruleset_version(4) + revision(8) + tick(4) + rng_state(8) + phase(1)
-    // + hider_count(1) + server_count(1) = 27 bytes.
-    constexpr size_t kHeaderRemainderSize = 4 + 8 + 4 + 8 + 1 + 1 + 1;
+    // schema_version(4) + ruleset_version(4) + revision(8) + tick(4)
+    // + rng_state(8) + phase(1) + hider_count(1) + server_count(1) = 31 bytes.
+    constexpr size_t kHeaderRemainderSize = 4 + 4 + 8 + 4 + 8 + 1 + 1 + 1;
     if (pos + kHeaderRemainderSize > in.size()) {
         return false;
     }
 
-    // schema_version was already consumed (and validated) above as the
-    // leading marker -- do not read it a second time, which would desync
-    // pos by 4 bytes relative to what saveMatchState actually wrote.
-    state.schema_version = schema_version;
-    state.ruleset_version = readUint32(in, pos);
-    state.revision = readUint64(in, pos);
-    state.tick = readUint32(in, pos);
-    state.rng_state = readUint64(in, pos);
-    state.phase = readUint8(in, pos);
-    state.hider_count = readUint8(in, pos);
-    state.server_count = readUint8(in, pos);
+    // Parse into a local copy and only commit it to `state` once every
+    // check has passed, so a rejected buffer never partially populates state.
+    MatchState loaded{};
+    loaded.schema_version = readUint32(in, pos);
+    loaded.ruleset_version = readUint32(in, pos);
+    loaded.revision = readUint64(in, pos);
+    loaded.tick = readUint32(in, pos);
+    loaded.rng_state = readUint64(in, pos);
+    loaded.phase = readUint8(in, pos);
+    loaded.hider_count = readUint8(in, pos);
+    loaded.server_count = readUint8(in, pos);
     
     // Bounds-check the remaining bulk sections before reading any of them
     // -- each read*() helper below indexes in[] unchecked, so a
@@ -361,64 +364,55 @@ bool loadMatchState(const std::vector<uint8_t>& in, MatchState& state) {
         + MAX_EVENTS * kEventSize
         + 2 // event_head + event_count
         + MAX_PENDING_MOVES * kPendingMoveSize // pending moves
-        + 3; // pending_head, pending_count, next_submit_seq
+        + 1 + 1 + 4; // pending_head, pending_count, next_submit_seq
     if (pos + kExpectedBulkSize > in.size()) {
         return false;
     }
-    
+
     // Read hiders
     for (int i = 0; i < MAX_HIDERS; ++i) {
-        state.hiders[i] = readHiderState(in, pos);
+        loaded.hiders[i] = readHiderState(in, pos);
     }
-    
+
     // Read servers
     for (int i = 0; i < MAX_SERVERS; ++i) {
-        state.servers[i] = readServerState(in, pos);
+        loaded.servers[i] = readServerState(in, pos);
     }
-    
+
     // Read seeker
-    state.seeker = readSeekerState(in, pos);
-    
+    loaded.seeker = readSeekerState(in, pos);
+
     // Read goals
     for (int i = 0; i < MAX_GOALS; ++i) {
-        state.goals[i] = readGoalState(in, pos);
+        loaded.goals[i] = readGoalState(in, pos);
     }
-    
+
     // Read events
     for (int i = 0; i < MAX_EVENTS; ++i) {
-        state.events[i] = readEvent(in, pos);
+        loaded.events[i] = readEvent(in, pos);
     }
-    
-    // Read event_head and event_count
-    if (pos + 2 > in.size()) {
-        return false;
-    }
-    
-    state.event_head = readUint8(in, pos);
-    state.event_count = readUint8(in, pos);
-    
+
+    loaded.event_head = readUint8(in, pos);
+    loaded.event_count = readUint8(in, pos);
+
     // Read pending move ring buffer
-    for (auto& pending_move : state.pending) {
+    for (auto& pending_move : loaded.pending) {
         pending_move = readPendingMove(in, pos);
     }
-    
-    // Read pending_head, pending_count, and next_submit_seq
-    if (pos + 3 > in.size()) {
-        return false;
-    }
-    
-    state.pending_head = readUint8(in, pos);
-    state.pending_count = readUint8(in, pos);
-    state.next_submit_seq = readUint32(in, pos);
-    
+
+    loaded.pending_head = readUint8(in, pos);
+    loaded.pending_count = readUint8(in, pos);
+    loaded.next_submit_seq = readUint32(in, pos);
+
     // Validate pending fields
-    if (state.pending_count > MAX_PENDING_MOVES) {
+    if (loaded.pending_count > MAX_PENDING_MOVES) {
         return false;
     }
-    if (state.pending_head >= MAX_PENDING_MOVES) {
+    if (loaded.pending_head >= MAX_PENDING_MOVES) {
         return false;
     }
-    
+
+    state = loaded;
     return true;
 }
 

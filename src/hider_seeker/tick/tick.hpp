@@ -11,6 +11,13 @@
 
 namespace hider_seeker {
 
+// The single per-TickIntent dispatch point runTick uses for every intent.
+// Applies exactly one intent to state; the 4-argument form appends any public
+// lifecycle event to outPublicEvents, the 2-argument form discards it. Neither
+// touches the seeker policy, probes, or metric frames.
+RuleOutcome applyTickIntent(MatchState& state, const TickIntent& intent,
+                            Array<PublicLifecycleEvent, MAX_EVENTS>& outPublicEvents,
+                            uint8_t& outPublicEventCount);
 RuleOutcome applyTickIntent(MatchState& state, const TickIntent& intent);
 TickOutput runTick(MatchState& state,
                     const Array<TickIntent, MAX_INTENTS_PER_TICK>& candidateIntents,

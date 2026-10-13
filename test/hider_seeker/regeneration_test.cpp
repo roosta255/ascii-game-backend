@@ -1,6 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
-#include "../../src/hider_seeker/domain/state.hpp"
-#include "../../src/hider_seeker/ruleset/regeneration.hpp"
+#include "state.hpp"
+#include "regeneration.hpp"
+#include "probe_rules.hpp"
+#include "loa_rules.hpp"
 
 using namespace hider_seeker;
 
@@ -45,7 +47,8 @@ TEST_CASE("regenerateForTick inactive hider gains nothing", "[regeneration]") {
     state.schema_version = 2;
     state.hider_count = 2;
     state.seeker.connection_tokens = 3;
-    
+    state.seeker.max_tokens = 10;
+
     // Set up hiders - one inactive, one active
     state.hiders[0].active = false; // Inactive hider should not gain AP
     state.hiders[0].status = HIDER_STATUS_ACTIVE;
@@ -94,4 +97,33 @@ TEST_CASE("regenerateForTick LOA unchanged", "[regeneration]") {
     // Check that LOA (resources) are unchanged
     REQUIRE(state.hiders[0].resources[0] == orig_resource_0);
     REQUIRE(state.hiders[1].resources[1] == orig_resource_1);
+    REQUIRE(state.hiders[0].resources[LOA_RESOURCE_INDEX] == 100);
+}
+
+TEST_CASE("regenerateForTick AP rises by 2 per call and caps at 10", "[regeneration]") {
+    MatchState state{};
+    state.hiders[0].active = 1;
+    state.hiders[0].status = HIDER_STATUS_ACTIVE;
+    state.hiders[0].action_points = 0;
+
+    const uint8_t expected[] = {2, 4, 6, 8, 10, 10, 10};
+    for (uint8_t value : expected) {
+        regenerateForTick(state);
+        REQUIRE(state.hiders[0].action_points == value);
+    }
+    REQUIRE(PLACEHOLDER_AP_REGEN_PER_TICK == 2);
+    REQUIRE(PLACEHOLDER_AP_CAP == 10);
+}
+
+TEST_CASE("regenerateForTick seeker tokens capped at max_tokens", "[regeneration]") {
+    MatchState state{};
+    state.seeker.max_tokens = 5;
+    state.seeker.connection_tokens = 2;
+
+    regenerateForTick(state);
+    REQUIRE(state.seeker.connection_tokens == 4);
+    regenerateForTick(state);
+    REQUIRE(state.seeker.connection_tokens == 5); // 4 + 2 capped at 5
+    regenerateForTick(state);
+    REQUIRE(state.seeker.connection_tokens == 5);
 }

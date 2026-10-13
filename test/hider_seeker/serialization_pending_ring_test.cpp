@@ -1,7 +1,9 @@
 #include <catch2/catch_test_macros.hpp>
 #include <vector>
-#include "../../src/hider_seeker/domain/state.hpp"
-#include "../../src/hider_seeker/domain/serialization.hpp"
+#include "state.hpp"
+#include "serialization.hpp"
+#include "rule_types.hpp"
+#include "probe_rules.hpp"
 
 using namespace hider_seeker;
 
@@ -233,33 +235,48 @@ TEST_CASE("Round-trip MatchState with wrapped pending ring", "[serialization]") 
 
 TEST_CASE("loadMatchState returns false for version-1 header", "[serialization]") {
     MatchState state{};
-    state.schema_version = 1; // Version 1
-    
-    // Serialize with version 1
+    state.schema_version = 1;
+
     std::vector<uint8_t> buffer;
     saveMatchState(state, buffer);
-    
-    // Try to load it back - should fail because we now require schema version 2
+    REQUIRE(buffer.size() >= 4);
+
+    // Rewrite the leading little-endian schema-version marker to 1
+    buffer[0] = 1;
+    buffer[1] = 0;
+    buffer[2] = 0;
+    buffer[3] = 0;
+
+    // Must be rejected without touching the destination state
     MatchState loaded_state{};
+    loaded_state.tick = 777;
+    loaded_state.pending_count = 3;
     bool success = loadMatchState(buffer, loaded_state);
-    
+
     REQUIRE(success == false);
+    REQUIRE(loaded_state.tick == 777);
+    REQUIRE(loaded_state.pending_count == 3);
 }
 
 TEST_CASE("loadMatchState returns false for pending_count > MAX_PENDING_MOVES", "[serialization]") {
     MatchState state{};
     state.schema_version = 2;
-    state.pending_count = MAX_PENDING_MOVES + 1; // Invalid count
-    
+    state.tick = 5;
+    state.pending_count = MAX_PENDING_MOVES + 1; // 17: invalid count
+
     // Serialize with invalid pending count
     std::vector<uint8_t> buffer;
     saveMatchState(state, buffer);
-    
-    // Try to load it back - should fail because of invalid pending count
+
+    // Try to load it back - should fail because of invalid pending count,
+    // without partially populating the destination
     MatchState loaded_state{};
+    loaded_state.tick = 777;
     bool success = loadMatchState(buffer, loaded_state);
-    
+
     REQUIRE(success == false);
+    REQUIRE(loaded_state.tick == 777);
+    REQUIRE(loaded_state.pending_count == 0);
 }
 
 TEST_CASE("loadMatchState returns false for pending_head >= MAX_PENDING_MOVES", "[serialization]") {

@@ -1,206 +1,173 @@
 #include <catch2/catch_test_macros.hpp>
-#include "../../src/hider_seeker/domain/state.hpp"
-#include "../../src/hider_seeker/turn/turn_engine.hpp"
+#include <vector>
+#include "state.hpp"
+#include "serialization.hpp"
+#include "rule_types.hpp"
+#include "action_rules.hpp"
+#include "probe_rules.hpp"
+#include "tick_types.hpp"
+#include "turn_types.hpp"
+#include "turn_engine.hpp"
 
 using namespace hider_seeker;
 
-// Stub policy that does nothing
-struct StubPolicy : public iTargetRankingPolicy {
-    void rankTargets(const MatchState& state, Array<ProbeCandidate, MAX_SERVERS>& candidates) override {
-        // Do nothing
+namespace {
+
+// Seeker policy stub that only counts how often it is consulted.
+struct CountingPolicy : public iTargetRankingPolicy {
+    mutable int calls = 0;
+    void rankTargets(const MatchState&, Array<ProbeCandidate, MAX_SERVERS>&) const override {
+        calls++;
     }
 };
 
-TEST_CASE("Common checks MATCH_NOT_ACTIVE", "[turn]") {
+MatchState makeActiveMatch(uint8_t hiderCount) {
     MatchState state{};
-    
-    // Initialize a basic state but with PHASE_LOBBY (not active)
-    state.schema_version = 2;
-    state.phase = PHASE_LOBBY; // Not active
-    state.hider_count = 1;
-    state.server_count = 2;
-    
-    // Set up hider
-    state.hiders[0].active = true;
-    state.hiders[0].status = HIDER_STATUS_ACTIVE;
-    state.hiders[0].action_points = 5; // Enough AP
-    
-    // Set up servers
-    state.servers[0].active = true;
-    state.servers[0].owner_hider_id = NO_SERVER_ID;
-    
-    state.servers[1].active = true;
-    state.servers[1].owner_hider_id = NO_SERVER_ID;
-    
-    MoveRequest move{};
-    move.move_id = 12345;
-    move.hider_id = 0;
-    move.action_type = static_cast<uint8_t>(TickActionKind::HIDER_ACTION);
-    move.server_id = NO_SERVER_ID;
-    move.target_id = NO_SERVER_ID;
-    move.server_mode = 0; // Some mode
-    
-    StubPolicy policy{};
-    
-    // Test playMove
-    TurnResult result1 = playMove(state, move, policy);
-    REQUIRE(result1.status == MoveStatus::REJECTED);
-    REQUIRE(result1.reason == TurnReason::MATCH_NOT_ACTIVE);
-    
-    // Test queueMove
-    TurnResult result2 = queueMove(state, move, policy);
-    REQUIRE(result2.status == MoveStatus::REJECTED);
-    REQUIRE(result2.reason == TurnReason::MATCH_NOT_ACTIVE);
-    
-    // Test passTicks
-    TurnResult result3 = passTicks(state, 1, policy);
-    REQUIRE(result3.status == MoveStatus::REJECTED);
-    REQUIRE(result3.reason == TurnReason::MATCH_NOT_ACTIVE);
-    
-    // Test cancelPendingMove
-    TurnResult result4 = cancelPendingMove(state, 0, 12345);
-    REQUIRE(result4.status == MoveStatus::REJECTED);
-    REQUIRE(result4.reason == TurnReason::MATCH_NOT_ACTIVE);
-}
-
-TEST_CASE("Common checks HIDER_CAPTURED", "[turn]") {
-    MatchState state{};
-    
-    // Initialize a basic state
     state.schema_version = 2;
     state.phase = PHASE_ACTIVE;
-    state.hider_count = 1;
-    state.server_count = 2;
-    
-    // Set up captured hider
-    state.hiders[0].active = true;
-    state.hiders[0].status = HIDER_STATUS_CAPTURED; // Captured
-    state.hiders[0].action_points = 5; // Enough AP
-    
-    // Set up servers
-    state.servers[0].active = true;
-    state.servers[0].owner_hider_id = NO_SERVER_ID;
-    
-    state.servers[1].active = true;
-    state.servers[1].owner_hider_id = NO_SERVER_ID;
-    
-    MoveRequest move{};
-    move.move_id = 12345;
-    move.hider_id = 0;
-    move.action_type = static_cast<uint8_t>(TickActionKind::HIDER_ACTION);
-    move.server_id = NO_SERVER_ID;
-    move.target_id = NO_SERVER_ID;
-    move.server_mode = 0; // Some mode
-    
-    StubPolicy policy{};
-    
-    // Test playMove
-    TurnResult result1 = playMove(state, move, policy);
-    REQUIRE(result1.status == MoveStatus::REJECTED);
-    REQUIRE(result1.reason == TurnReason::HIDER_CAPTURED);
-    
-    // Test queueMove
-    TurnResult result2 = queueMove(state, move, policy);
-    REQUIRE(result2.status == MoveStatus::REJECTED);
-    REQUIRE(result2.reason == TurnReason::HIDER_CAPTURED);
-    
-    // Test passTicks - should not be rejected for this check
-    TurnResult result3 = passTicks(state, 1, policy);
-    REQUIRE(result3.status == MoveStatus::APPLIED); // Should still work
-    
-    // Test cancelPendingMove - should not be rejected for this check
-    TurnResult result4 = cancelPendingMove(state, 0, 12345);
-    REQUIRE(result4.status == MoveStatus::REJECTED); // Will fail due to no pending moves
+    state.hider_count = hiderCount;
+    for (uint8_t hiderId = 0; hiderId < hiderCount; ++hiderId) {
+        state.hiders[hiderId].active = 1;
+        state.hiders[hiderId].status = HIDER_STATUS_ACTIVE;
+        state.hiders[hiderId].server_id = NO_SERVER_ID;
+    }
+    return state;
 }
 
-TEST_CASE("Common checks RULE_REJECTED/REJECTED_INVALID_TARGET", "[turn]") {
-    MatchState state{};
-    
-    // Initialize a basic state
-    state.schema_version = 2;
-    state.phase = PHASE_ACTIVE;
-    state.hider_count = 1;
-    state.server_count = 2;
-    
-    // Set up inactive hider (should be rejected)
-    state.hiders[0].active = false; // Inactive
-    state.hiders[0].status = HIDER_STATUS_ACTIVE;
-    state.hiders[0].action_points = 5; // Enough AP
-    
-    // Set up servers
-    state.servers[0].active = true;
-    state.servers[0].owner_hider_id = NO_SERVER_ID;
-    
-    state.servers[1].active = true;
-    state.servers[1].owner_hider_id = NO_SERVER_ID;
-    
-    MoveRequest move{};
-    move.move_id = 12345;
-    move.hider_id = 0;
-    move.action_type = static_cast<uint8_t>(TickActionKind::HIDER_ACTION);
-    move.server_id = NO_SERVER_ID;
-    move.target_id = NO_SERVER_ID;
-    move.server_mode = 0; // Some mode
-    
-    StubPolicy policy{};
-    
-    // Test playMove
-    TurnResult result1 = playMove(state, move, policy);
-    REQUIRE(result1.status == MoveStatus::REJECTED);
-    REQUIRE(result1.reason == TurnReason::RULE_REJECTED);
-    REQUIRE(result1.ruleOutcome == RuleOutcome::REJECTED_INVALID_TARGET);
-    
-    // Test queueMove
-    TurnResult result2 = queueMove(state, move, policy);
-    REQUIRE(result2.status == MoveStatus::REJECTED);
-    REQUIRE(result2.reason == TurnReason::RULE_REJECTED);
-    REQUIRE(result2.ruleOutcome == RuleOutcome::REJECTED_INVALID_TARGET);
+MoveRequest hiderAction(uint32_t moveId, uint8_t hiderId, HiderActionMode mode) {
+    return MoveRequest{moveId, hiderId, static_cast<uint8_t>(TickActionKind::HIDER_ACTION),
+                       NO_SERVER_ID, NO_SERVER_ID, static_cast<uint8_t>(mode)};
 }
 
-TEST_CASE("Common checks revision incrementing exactly once per non-REJECTED call", "[turn]") {
-    MatchState state{};
-    
-    // Initialize a basic state
-    state.schema_version = 2;
-    state.phase = PHASE_ACTIVE;
-    state.revision = 1000;
-    state.hider_count = 1;
-    state.server_count = 2;
-    
-    // Set up hider with enough AP
-    state.hiders[0].active = true;
-    state.hiders[0].status = HIDER_STATUS_ACTIVE;
-    state.hiders[0].action_points = 5; // Enough AP
-    
-    // Set up servers
-    state.servers[0].active = true;
-    state.servers[0].owner_hider_id = NO_SERVER_ID;
-    
-    state.servers[1].active = true;
-    state.servers[1].owner_hider_id = NO_SERVER_ID;
-    
-    MoveRequest move{};
-    move.move_id = 12345;
-    move.hider_id = 0;
-    move.action_type = static_cast<uint8_t>(TickActionKind::HIDER_ACTION);
-    move.server_id = NO_SERVER_ID;
-    move.target_id = NO_SERVER_ID;
-    move.server_mode = 0; // Some mode
-    
-    StubPolicy policy{};
-    
-    uint64_t original_revision = state.revision;
-    
-    // Test playMove - should increment revision
-    TurnResult result1 = playMove(state, move, policy);
-    REQUIRE(result1.status == MoveStatus::APPLIED || result1.status == MoveStatus::QUEUED);
-    REQUIRE(state.revision == original_revision + 1);
-    
-    // Reset revision for next test
-    state.revision = original_revision;
-    
-    // Test queueMove - should increment revision
-    TurnResult result2 = queueMove(state, move, policy);
-    REQUIRE(result2.status == MoveStatus::QUEUED);
-    REQUIRE(state.revision == original_revision + 1);
+std::vector<uint8_t> serialize(const MatchState& state) {
+    std::vector<uint8_t> out;
+    saveMatchState(state, out);
+    return out;
+}
+
+// A match with hider 0 holding one pending move (move_id 1), so every entry
+// point would otherwise have something to act on.
+MatchState makeMatchWithPendingMove() {
+    MatchState state = makeActiveMatch(2);
+    state.tick = 12;
+    state.revision = 40;
+    CountingPolicy policy;
+    queueMove(state, hiderAction(1, 0, HiderActionMode::PAY_GOAL), policy);
+    return state;
+}
+
+} // namespace
+
+TEST_CASE("TURN-008 every entry point rejects MATCH_NOT_ACTIVE outside PHASE_ACTIVE", "[hider_seeker][turn]") {
+    for (uint8_t phase : {static_cast<uint8_t>(PHASE_LOBBY), static_cast<uint8_t>(PHASE_COMPLETE)}) {
+        MatchState state = makeMatchWithPendingMove();
+        REQUIRE(state.pending_count == 1);
+        state.phase = phase;
+        state.hiders[1].action_points = 10;
+        CountingPolicy policy;
+        const std::vector<uint8_t> before = serialize(state);
+
+        const TurnResult played = playMove(state, hiderAction(2, 1, HiderActionMode::BOOST_CPU), policy);
+        REQUIRE(played.status == MoveStatus::REJECTED);
+        REQUIRE(played.reason == TurnReason::MATCH_NOT_ACTIVE);
+
+        const TurnResult queued = queueMove(state, hiderAction(3, 1, HiderActionMode::BOOST_CPU), policy);
+        REQUIRE(queued.status == MoveStatus::REJECTED);
+        REQUIRE(queued.reason == TurnReason::MATCH_NOT_ACTIVE);
+
+        const TurnResult passed = passTicks(state, 3, policy);
+        REQUIRE(passed.status == MoveStatus::REJECTED);
+        REQUIRE(passed.reason == TurnReason::MATCH_NOT_ACTIVE);
+
+        const TurnResult cancelled = cancelPendingMove(state, 0, 1);
+        REQUIRE(cancelled.status == MoveStatus::REJECTED);
+        REQUIRE(cancelled.reason == TurnReason::MATCH_NOT_ACTIVE);
+
+        REQUIRE(policy.calls == 0);
+        REQUIRE(serialize(state) == before);
+    }
+}
+
+TEST_CASE("TURN-008 a captured hider's calls are rejected HIDER_CAPTURED", "[hider_seeker][turn]") {
+    MatchState state = makeMatchWithPendingMove();
+    state.hiders[0].status = HIDER_STATUS_CAPTURED;
+    state.hiders[0].action_points = 10;
+    CountingPolicy policy;
+    const std::vector<uint8_t> before = serialize(state);
+
+    const TurnResult played = playMove(state, hiderAction(2, 0, HiderActionMode::BOOST_CPU), policy);
+    REQUIRE(played.status == MoveStatus::REJECTED);
+    REQUIRE(played.reason == TurnReason::HIDER_CAPTURED);
+
+    const TurnResult queued = queueMove(state, hiderAction(3, 0, HiderActionMode::BOOST_CPU), policy);
+    REQUIRE(queued.status == MoveStatus::REJECTED);
+    REQUIRE(queued.reason == TurnReason::HIDER_CAPTURED);
+
+    const TurnResult cancelled = cancelPendingMove(state, 0, 1);
+    REQUIRE(cancelled.status == MoveStatus::REJECTED);
+    REQUIRE(cancelled.reason == TurnReason::HIDER_CAPTURED);
+
+    REQUIRE(policy.calls == 0);
+    REQUIRE(serialize(state) == before);
+}
+
+TEST_CASE("TURN-008 inactive or out-of-range hiders are rejected RULE_REJECTED", "[hider_seeker][turn]") {
+    MatchState state = makeMatchWithPendingMove();
+    // Hider 2 exists in the array but is inactive; MAX_HIDERS is out of range
+    REQUIRE(state.hiders[2].active == 0);
+    CountingPolicy policy;
+    const std::vector<uint8_t> before = serialize(state);
+
+    for (uint8_t hiderId : {static_cast<uint8_t>(2), MAX_HIDERS}) {
+        const TurnResult played = playMove(state, hiderAction(2, hiderId, HiderActionMode::BOOST_CPU), policy);
+        REQUIRE(played.status == MoveStatus::REJECTED);
+        REQUIRE(played.reason == TurnReason::RULE_REJECTED);
+        REQUIRE(played.ruleOutcome == RuleOutcome::REJECTED_INVALID_TARGET);
+
+        const TurnResult queued = queueMove(state, hiderAction(3, hiderId, HiderActionMode::BOOST_CPU), policy);
+        REQUIRE(queued.status == MoveStatus::REJECTED);
+        REQUIRE(queued.reason == TurnReason::RULE_REJECTED);
+        REQUIRE(queued.ruleOutcome == RuleOutcome::REJECTED_INVALID_TARGET);
+
+        const TurnResult cancelled = cancelPendingMove(state, hiderId, 1);
+        REQUIRE(cancelled.status == MoveStatus::REJECTED);
+        REQUIRE(cancelled.reason == TurnReason::RULE_REJECTED);
+        REQUIRE(cancelled.ruleOutcome == RuleOutcome::REJECTED_INVALID_TARGET);
+    }
+
+    REQUIRE(policy.calls == 0);
+    REQUIRE(serialize(state) == before);
+}
+
+TEST_CASE("TURN-008 every non-REJECTED call increases revision by exactly 1", "[hider_seeker][turn]") {
+    MatchState state = makeActiveMatch(2);
+    state.revision = 100;
+    state.hiders[1].action_points = 5;
+    CountingPolicy policy;
+
+    // QUEUED
+    REQUIRE(queueMove(state, hiderAction(1, 0, HiderActionMode::CONFIGURE_SERVER), policy).status == MoveStatus::QUEUED);
+    REQUIRE(state.revision == 101);
+
+    // APPLIED immediately
+    REQUIRE(playMove(state, hiderAction(2, 1, HiderActionMode::BOOST_CPU), policy).status == MoveStatus::APPLIED);
+    REQUIRE(state.revision == 102);
+
+    // passTicks over several ticks still bumps revision once
+    REQUIRE(passTicks(state, 2, policy).status == MoveStatus::APPLIED);
+    REQUIRE(state.revision == 103);
+
+    // CANCELLED
+    REQUIRE(cancelPendingMove(state, 0, 1).status == MoveStatus::CANCELLED);
+    REQUIRE(state.revision == 104);
+
+    // APPLIED after a multi-tick advance
+    const TurnResult advanced = playMove(state, hiderAction(3, 0, HiderActionMode::PAY_GOAL), policy);
+    REQUIRE(advanced.status == MoveStatus::APPLIED);
+    REQUIRE(advanced.ticksAdvanced > 1);
+    REQUIRE(state.revision == 105);
+
+    // A REJECTED call leaves it alone
+    REQUIRE(passTicks(state, 0, policy).status == MoveStatus::REJECTED);
+    REQUIRE(state.revision == 105);
 }
