@@ -6,6 +6,7 @@
 #include "../ruleset/rule_types.hpp"
 #include "../ruleset/action_rules.hpp"
 #include "../ruleset/lifecycle_events.hpp"
+#include "../ruleset/probe_rules.hpp"
 
 namespace hider_seeker {
 
