@@ -670,7 +670,7 @@ TEST_CASE("Tick engine cross-call idempotency retry", "[tick]") {
     // Add an intent
     TickIntent intent1{};
     intent1.kind = TickActionKind::HIDER_ACTION;
-    intent1.action_mode = HiderActionMode::CONFIGURE_SERVER;
+    intent1.intent.mode = HiderActionMode::CONFIGURE_SERVER;
     intent1.intent.idempotencyKey = 12345;
     intent1.intent.hiderId = 0;
     intent1.intent.receiptSequence = 1;
@@ -696,7 +696,7 @@ TEST_CASE("Tick engine cross-call idempotency retry", "[tick]") {
     // Retry of the same intent alongside a fresh one
     TickIntent fresh{};
     fresh.kind = TickActionKind::HIDER_ACTION;
-    fresh.action_mode = HiderActionMode::BOOST_CPU;
+    fresh.intent.mode = HiderActionMode::BOOST_CPU;
     fresh.intent.idempotencyKey = 777;
     fresh.intent.hiderId = 0;
     fresh.intent.receiptSequence = 2;
@@ -745,7 +745,7 @@ TEST_CASE("Tick engine resource-exhaustion visibility", "[tick]") {
     // Add two HIDER_ACTION intents (should be rejected due to insufficient AP)
     TickIntent intent1{};
     intent1.kind = TickActionKind::HIDER_ACTION;
-    intent1.action_mode = HiderActionMode::CONFIGURE_SERVER; // Costs 5 AP
+    intent1.intent.mode = HiderActionMode::CONFIGURE_SERVER; // Costs 5 AP
     intent1.intent.idempotencyKey = 1001;
     intent1.intent.hiderId = 0;
     intent1.intent.receiptSequence = 1;
@@ -753,7 +753,7 @@ TEST_CASE("Tick engine resource-exhaustion visibility", "[tick]") {
     
     TickIntent intent2{};
     intent2.kind = TickActionKind::HIDER_ACTION;
-    intent2.action_mode = HiderActionMode::BOOST_CPU; // Costs 2 AP
+    intent2.intent.mode = HiderActionMode::BOOST_CPU; // Costs 2 AP
     intent2.intent.idempotencyKey = 1002;
     intent2.intent.hiderId = 0;
     intent2.intent.receiptSequence = 2;
@@ -807,7 +807,7 @@ TEST_CASE("Tick engine determinism across independent invocations", "[tick]") {
 
     TickIntent rotate{};
     rotate.kind = TickActionKind::HIDER_ACTION;
-    rotate.action_mode = HiderActionMode::ROTATE_ROUTE;
+    rotate.intent.mode = HiderActionMode::ROTATE_ROUTE;
     rotate.intent.idempotencyKey = 3003;
     rotate.intent.hiderId = 0;
     rotate.intent.receiptSequence = 3;
@@ -815,7 +815,7 @@ TEST_CASE("Tick engine determinism across independent invocations", "[tick]") {
 
     TickIntent boost{};
     boost.kind = TickActionKind::HIDER_ACTION;
-    boost.action_mode = HiderActionMode::BOOST_CPU;
+    boost.intent.mode = HiderActionMode::BOOST_CPU;
     boost.intent.idempotencyKey = 1001;
     boost.intent.hiderId = 0;
     boost.intent.receiptSequence = 1;
@@ -823,7 +823,7 @@ TEST_CASE("Tick engine determinism across independent invocations", "[tick]") {
 
     TickIntent unaffordable{};
     unaffordable.kind = TickActionKind::HIDER_ACTION;
-    unaffordable.action_mode = HiderActionMode::CONFIGURE_SERVER;
+    unaffordable.intent.mode = HiderActionMode::CONFIGURE_SERVER;
     unaffordable.intent.idempotencyKey = 2002;
     unaffordable.intent.hiderId = 1;
     unaffordable.intent.receiptSequence = 2;
@@ -909,7 +909,7 @@ TEST_CASE("Tick engine duplicate idempotency key with different actions", "[tick
     // First intent: HIDER_ACTION (should be ACCEPTED)
     TickIntent intent1{};
     intent1.kind = TickActionKind::HIDER_ACTION;
-    intent1.action_mode = HiderActionMode::CONFIGURE_SERVER;
+    intent1.intent.mode = HiderActionMode::CONFIGURE_SERVER;
     intent1.intent.idempotencyKey = 12345;
     intent1.intent.hiderId = 0;
     intent1.intent.receiptSequence = 1;
@@ -967,14 +967,14 @@ TEST_CASE("Tick engine duplicate idempotency key with first rejected", "[tick]")
     // action_mode, not the first occurrence's.
     TickIntent rejectedFirst{};
     rejectedFirst.kind = TickActionKind::HIDER_ACTION;
-    rejectedFirst.action_mode = HiderActionMode::CONFIGURE_SERVER;
+    rejectedFirst.intent.mode = HiderActionMode::CONFIGURE_SERVER;
     rejectedFirst.intent.idempotencyKey = 12345;
     rejectedFirst.intent.hiderId = 0;
     rejectedFirst.intent.receiptSequence = 1;
 
     TickIntent acceptedSecond{};
     acceptedSecond.kind = TickActionKind::HIDER_ACTION;
-    acceptedSecond.action_mode = HiderActionMode::BOOST_CPU;
+    acceptedSecond.intent.mode = HiderActionMode::BOOST_CPU;
     acceptedSecond.intent.idempotencyKey = 12345; // Same key as rejectedFirst
     acceptedSecond.intent.hiderId = 0;
     acceptedSecond.intent.receiptSequence = 2;
