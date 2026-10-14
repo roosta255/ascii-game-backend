@@ -1,109 +1,168 @@
 #include "match_record.hpp"
 #include "../domain/serialization.hpp"
-#include <stdexcept>
-#include <iomanip>
-#include <sstream>
 
 namespace hider_seeker {
 
+namespace {
+
+constexpr char HEX_DIGITS[] = "0123456789abcdef";
+
+std::string toHex(const std::vector<uint8_t>& bytes) {
+    std::string hex;
+    hex.reserve(bytes.size() * 2);
+    for (const uint8_t byte : bytes) {
+        hex.push_back(HEX_DIGITS[byte >> 4]);
+        hex.push_back(HEX_DIGITS[byte & 0x0F]);
+    }
+    return hex;
+}
+
+int hexValue(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    return -1; // uppercase is rejected: the format is lowercase hex
+}
+
+bool fromHex(const std::string& hex, std::vector<uint8_t>& out) {
+    if (hex.size() % 2 != 0) {
+        return false;
+    }
+    std::vector<uint8_t> bytes;
+    bytes.reserve(hex.size() / 2);
+    for (size_t pos = 0; pos < hex.size(); pos += 2) {
+        const int high = hexValue(hex[pos]);
+        const int low = hexValue(hex[pos + 1]);
+        if (high < 0 || low < 0) {
+            return false;
+        }
+        bytes.push_back(static_cast<uint8_t>((high << 4) | low));
+    }
+    out = std::move(bytes);
+    return true;
+}
+
+} // namespace
+
 nlohmann::json MatchRecord::toJson() const {
-    nlohmann::json j;
-    j["filename"] = filename;
-    j["version"] = version;
-    j["host"] = host;
-    j["state"] = state;
-    
-    // Convert accounts array to JSON
-    j["accounts"] = accounts;
-    
-    j["next_move_id"] = next_move_id;
-    
-    // Convert idempotency array to JSON
-    j["idempotency"] = idempotency;
-    
-    // Convert moves array to JSON
-    j["moves"] = moves;
-    
-    // Convert request_log array to JSON
-    j["request_log"] = request_log;
-    
-    return j;
+    std::vector<uint8_t> bytes;
+    saveMatchState(state, bytes);
+
+    nlohmann::json accountsJson = nlohmann::json::array();
+    for (const auto& account : accounts) {
+        accountsJson.push_back(account.empty() ? nlohmann::json(nullptr) : nlohmann::json(account));
+    }
+
+    nlohmann::json idempotencyJson = nlohmann::json::array();
+    for (const auto& entry : idempotency) {
+        idempotencyJson.push_back({
+            {"account", entry.account},
+            {"key", entry.key},
+            {"request", entry.request},
+            {"status_code", entry.status_code},
+            {"response", entry.response}
+        });
+    }
+
+    nlohmann::json movesJson = nlohmann::json::array();
+    for (const auto& entry : moves) {
+        movesJson.push_back({
+            {"move_id", entry.move_id},
+            {"account", entry.account},
+            {"hider_id", entry.hider_id}
+        });
+    }
+
+    nlohmann::json requestLogJson = nlohmann::json::array();
+    for (const auto& entry : request_log) {
+        requestLogJson.push_back({
+            {"revision_before", entry.revision_before},
+            {"account", entry.account},
+            {"kind", entry.kind},
+            {"body", entry.body}
+        });
+    }
+
+    return {
+        {"filename", filename},
+        {"version", version},
+        {"host", host},
+        {"state", toHex(bytes)},
+        {"accounts", accountsJson},
+        {"next_move_id", next_move_id},
+        {"idempotency", idempotencyJson},
+        {"moves", movesJson},
+        {"request_log", requestLogJson}
+    };
 }
 
 bool MatchRecord::fromJson(const nlohmann::json& j) {
+    // Parse into a scratch record and only commit once everything is valid.
+    MatchRecord parsed;
     try {
-        filename = j.value("filename", "");
-        version = j.value("version", 0);
-        host = j.value("host", "");
-        state = j.value("state", "");
-        
-        // Parse accounts array
-        if (j.contains("accounts")) {
-            accounts = j["accounts"].get<std::vector<nlohmann::json>>();
-        } else {
-            accounts.clear();
+        if (!j.is_object()) {
+            return false;
         }
-        
-        next_move_id = j.value("next_move_id", 1);
-        
-        // Parse idempotency array
-        if (j.contains("idempotency")) {
-            idempotency = j["idempotency"].get<std::vector<IdempotencyEntry>>();
-        } else {
-            idempotency.clear();
+
+        std::vector<uint8_t> bytes;
+        if (!fromHex(j.at("state").get<std::string>(), bytes)) {
+            return false;
         }
-        
-        // Parse moves array
-        if (j.contains("moves")) {
-            moves = j["moves"].get<std::vector<MoveOwnershipEntry>>();
-        } else {
-            moves.clear();
+        // loadMatchState rejects every non-current schema version itself.
+        if (!loadMatchState(bytes, parsed.state)) {
+            return false;
         }
-        
-        // Parse request_log array
-        if (j.contains("request_log")) {
-            request_log = j["request_log"].get<std::vector<RequestLogEntry>>();
-        } else {
-            request_log.clear();
+
+        parsed.filename = j.at("filename").get<std::string>();
+        parsed.version = j.at("version").get<int>();
+        parsed.host = j.at("host").get<std::string>();
+        parsed.next_move_id = j.at("next_move_id").get<uint32_t>();
+
+        const auto& accountsJson = j.at("accounts");
+        if (!accountsJson.is_array() || accountsJson.size() != MAX_HIDERS) {
+            return false;
         }
-        
-        // Validate state field is valid hex and can be decoded
-        if (!state.empty()) {
-            // Check if it's valid hex
-            bool isValidHex = true;
-            for (char c : state) {
-                if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))) {
-                    isValidHex = false;
-                    break;
-                }
-            }
-            
-            if (!isValidHex) {
-                return false;
-            }
-            
-            // Try to decode the hex string
-            std::vector<uint8_t> bytes(state.length() / 2);
-            for (size_t i = 0; i < state.length(); i += 2) {
-                std::string byteString = state.substr(i, 2);
-                try {
-                    bytes[i/2] = static_cast<uint8_t>(std::stoi(byteString, nullptr, 16));
-                } catch (...) {
-                    return false;
-                }
-            }
-            
-            // Try to load the match state - this will fail if it's schema version 1
-            MatchState tempState{};
-            if (!loadMatchState(bytes.data(), bytes.size(), tempState)) {
-                return false;
+        int slot = 0;
+        for (auto& account : parsed.accounts) {
+            const auto& value = accountsJson.at(slot++);
+            if (value.is_null()) {
+                account.clear();
+            } else {
+                account = value.get<std::string>();
             }
         }
-        
-        return true;
-    } catch (...) {
+
+        for (const auto& entryJson : j.at("idempotency")) {
+            IdempotencyEntry entry;
+            entry.account = entryJson.at("account").get<std::string>();
+            entry.key = entryJson.at("key").get<std::string>();
+            entry.request = entryJson.at("request").get<std::string>();
+            entry.status_code = entryJson.at("status_code").get<int>();
+            entry.response = entryJson.at("response");
+            parsed.idempotency.push_back(std::move(entry));
+        }
+
+        for (const auto& entryJson : j.at("moves")) {
+            MoveOwnershipEntry entry;
+            entry.move_id = entryJson.at("move_id").get<std::string>();
+            entry.account = entryJson.at("account").get<std::string>();
+            entry.hider_id = entryJson.at("hider_id").get<uint8_t>();
+            parsed.moves.push_back(std::move(entry));
+        }
+
+        for (const auto& entryJson : j.at("request_log")) {
+            RequestLogEntry entry;
+            entry.revision_before = entryJson.at("revision_before").get<uint64_t>();
+            entry.account = entryJson.at("account").get<std::string>();
+            entry.kind = entryJson.at("kind").get<std::string>();
+            entry.body = entryJson.at("body");
+            parsed.request_log.push_back(std::move(entry));
+        }
+    } catch (const nlohmann::json::exception&) {
         return false;
     }
+
+    *this = std::move(parsed);
+    return true;
 }
 
 } // namespace hider_seeker

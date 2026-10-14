@@ -218,7 +218,7 @@ add_library(core_backend STATIC
 )
 
 # 👇 CRITICAL: Apply include dirs to the library
-target_include_directories(core_backend PUBLIC ${PROJECT_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/api)
+target_include_directories(core_backend PUBLIC ${PROJECT_INCLUDE_DIRS})
 
 target_link_libraries(core_backend PUBLIC jsoncpp Drogon::Drogon)
 

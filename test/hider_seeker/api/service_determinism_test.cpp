@@ -1,99 +1,79 @@
 #include <catch2/catch_test_macros.hpp>
-#include <nlohmann/json.hpp>
-#include "src/hider_seeker/api/HiderSeekerService.hpp"
-#include "src/hider_seeker/store/FileStore.hpp"
+#include <string>
+#include <vector>
+#include "service_test_support.hpp"
 
-using namespace hider_seeker;
-using json = nlohmann::json;
+using namespace hs_test;
 
-TEST_CASE("Same-seed determinism and request_log correctness", "[service_determinism]") {
-    // Create FileStore for testing
-    FileStore store1("var/test_state/hider_seeker_matches_1");
-    FileStore store2("var/test_state/hider_seeker_matches_2");
-    
-    // Create two services with same seed
-    HiderSeekerService service1(store1);
-    HiderSeekerService service2(store2);
-    
-    // Test createMatch with same seed
-    json createBody;
-    createBody["account"] = "host";
-    createBody["hider_count"] = 2;
-    createBody["seed"] = 12345;
-    
-    auto createResponse1 = service1.createMatch(createBody.dump());
-    REQUIRE(createResponse1.status == 201);
-    std::string matchId1 = createResponse1.body["match_id"];
-    
-    auto createResponse2 = service2.createMatch(createBody.dump());
-    REQUIRE(createResponse2.status == 201);
-    std::string matchId2 = createResponse2.body["match_id"];
-    
-    // Test joinMatch for both matches
-    json joinBody;
-    joinBody["account"] = "alice";
-    joinBody["expected_revision"] = 0;
-    joinBody["idempotency_key"] = "join1";
-    
-    auto joinResponse1 = service1.joinMatch(matchId1, joinBody.dump());
-    REQUIRE(joinResponse1.status == 200);
-    
-    auto joinResponse2 = service2.joinMatch(matchId2, joinBody.dump());
-    REQUIRE(joinResponse2.status == 200);
-    
-    // Test joinMatch for second player
-    json joinBody2;
-    joinBody2["account"] = "bob";
-    joinBody2["expected_revision"] = 1;
-    joinBody2["idempotency_key"] = "join2";
-    
-    auto joinResponse3 = service1.joinMatch(matchId1, joinBody2.dump());
-    REQUIRE(joinResponse3.status == 200);
-    
-    auto joinResponse4 = service2.joinMatch(matchId2, joinBody2.dump());
-    REQUIRE(joinResponse4.status == 200);
-    
-    // Test startMatch for both matches
-    json startBody;
-    startBody["account"] = "host";
-    startBody["expected_revision"] = 2;
-    startBody["idempotency_key"] = "start1";
-    
-    auto startResponse1 = service1.startMatch(matchId1, startBody.dump());
-    REQUIRE(startResponse1.status == 200);
-    
-    auto startResponse2 = service2.startMatch(matchId2, startBody.dump());
-    REQUIRE(startResponse2.status == 200);
-    
-    // Test identical sequence of requests
-    json moveBody;
-    moveBody["account"] = "alice";
-    moveBody["expected_revision"] = 3;
-    moveBody["idempotency_key"] = "move1";
-    moveBody["play_mode"] = "PLAY";
-    json intent;
-    intent["type"] = "CONFIGURE_SERVER";
-    moveBody["intent"] = intent;
-    
-    auto moveResponse1 = service1.submitMove(matchId1, moveBody.dump());
-    REQUIRE(moveResponse1.status == 200);
-    
-    auto moveResponse2 = service2.submitMove(matchId2, moveBody.dump());
-    REQUIRE(moveResponse2.status == 200);
-    
-    // Verify that responses are identical (except for match_id)
-    REQUIRE(moveResponse1.body["status"] == moveResponse2.body["status"]);
-    REQUIRE(moveResponse1.body["tick"] == moveResponse2.body["tick"]);
-    REQUIRE(moveResponse1.body["ticks_advanced"] == moveResponse2.body["ticks_advanced"]);
-    
-    // Test that request_log entries are correct
-    auto getResponse1 = service1.getMatch(matchId1);
-    REQUIRE(getResponse1.status == 200);
-    
-    auto getResponse2 = service2.getMatch(matchId2);
-    REQUIRE(getResponse2.status == 200);
-    
-    // Both should have same number of request_log entries
-    // (create, join, join, start, move)
-    // Note: This is a simplified test - in reality we'd need to check the actual log content
+namespace {
+
+// Runs one fixed request sequence (including one REJECTED and one stale
+// request) and returns every response body, with match_id stripped.
+std::vector<json> runScript(ServiceFixture& fx, uint64_t seed) {
+    std::vector<json> bodies;
+    const auto keep = [&bodies](ApiResponse response) {
+        response.body.erase("match_id");
+        bodies.push_back(json{{"status", response.status}, {"body", response.body}});
+    };
+
+    keep(fx.create("host", 2, seed));
+    keep(fx.join("alice"));
+    keep(fx.join("bob"));
+    keep(fx.start("host"));
+    keep(fx.play("alice", intentOf("BOOST_CPU")));
+    keep(fx.queue("bob", intentOf("CONFIGURE_SERVER")));
+    keep(fx.pass("alice", 2));
+    keep(fx.play("alice", intentOf("ADD_SERVER")));
+    keep(fx.play("alice", intentOf("ADD_SERVER"))); // REJECTED: no LOA left
+
+    json stale = fx.moveBody("bob", "PLAY", intentOf("BOOST_CPU"));
+    stale["expected_revision"] = 0;
+    keep(fx.submit(stale));
+    return bodies;
+}
+
+} // namespace
+
+TEST_CASE("MOVE-008: same seed and requests give identical matches", "[hider_seeker][api][determinism]") {
+    ServiceFixture first;
+    ServiceFixture second;
+    const std::vector<json> firstBodies = runScript(first, 777);
+    const std::vector<json> secondBodies = runScript(second, 777);
+
+    REQUIRE(firstBodies == secondBodies);
+    REQUIRE(firstBodies[8].at("status") == 422);
+    REQUIRE(firstBodies[9].at("status") == 409);
+    REQUIRE(first.record().toJson().at("state") == second.record().toJson().at("state"));
+}
+
+TEST_CASE("MOVE-008: request_log records accepted state changes in order", "[hider_seeker][api][determinism]") {
+    ServiceFixture fx;
+    runScript(fx, 777);
+
+    struct Expected {
+        uint64_t revisionBefore;
+        std::string account;
+        std::string kind;
+    };
+    const std::vector<Expected> expected{
+        {0, "host", "create"},
+        {0, "alice", "join"},
+        {1, "bob", "join"},
+        {2, "host", "start"},
+        {3, "alice", "move"},
+        {4, "bob", "move"},
+        {5, "alice", "move"},
+        {6, "alice", "move"},
+    };
+
+    const auto record = fx.record();
+    REQUIRE(record.request_log.size() == expected.size());
+    for (size_t i = 0; i < expected.size(); ++i) {
+        REQUIRE(record.request_log[i].revision_before == expected[i].revisionBefore);
+        REQUIRE(record.request_log[i].account == expected[i].account);
+        REQUIRE(record.request_log[i].kind == expected[i].kind);
+        REQUIRE(record.request_log[i].body.at("account") == expected[i].account);
+    }
+    REQUIRE(record.request_log[6].body.at("play_mode") == "PASS");
+    REQUIRE(record.state.revision == 7);
 }

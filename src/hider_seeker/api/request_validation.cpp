@@ -1,67 +1,57 @@
 #include "request_validation.hpp"
-#include <regex>
-#include <algorithm>
+#include <cctype>
 
 namespace hider_seeker {
 
-bool isValidAccount(const std::string& account) {
-    if (account.empty()) {
-        return false;
+namespace {
+
+bool isWordChar(unsigned char c) {
+    return std::isalnum(c) || c == '_';
+}
+
+bool isIdChar(unsigned char c) {
+    return isWordChar(c) || c == '-';
+}
+
+template <typename Predicate>
+bool allChars(const std::string& s, Predicate predicate) {
+    for (unsigned char c : s) {
+        if (!predicate(c)) return false;
     }
-    
-    // Check that it contains only letters, digits, and underscore
-    return std::all_of(account.begin(), account.end(), [](char c) {
-        return std::isalnum(c) || c == '_';
-    });
+    return true;
+}
+
+} // namespace
+
+bool isValidAccount(const std::string& account) {
+    return !account.empty() && allChars(account, isWordChar);
 }
 
 bool isValidMatchId(const std::string& matchId) {
-    if (matchId.empty()) {
-        return false;
-    }
-    
-    // Check that it contains only letters, digits, underscore, and hyphen
-    return std::all_of(matchId.begin(), matchId.end(), [](char c) {
-        return std::isalnum(c) || c == '_' || c == '-';
-    });
+    return !matchId.empty() && allChars(matchId, isIdChar);
 }
 
 bool isValidIdempotencyKey(const std::string& key) {
-    if (key.empty() || key.length() > 64) {
-        return false;
-    }
-    
-    // Check that it contains only letters, digits, underscore, and hyphen
-    return std::all_of(key.begin(), key.end(), [](char c) {
-        return std::isalnum(c) || c == '_' || c == '-';
-    });
+    return !key.empty() && key.size() <= 64 && allChars(key, isIdChar);
 }
 
 bool isValidExpectedRevision(const nlohmann::json& value) {
-    if (value.is_number_unsigned()) {
-        return true;
-    }
-    return false;
+    if (value.is_number_unsigned()) return true;
+    return value.is_number_integer() && value.get<int64_t>() >= 0;
 }
 
 bool isValidPlayMode(const std::string& playMode) {
-    return (playMode == "PLAY" || playMode == "QUEUE" || playMode == "PASS");
+    return playMode == "PLAY" || playMode == "QUEUE" || playMode == "PASS";
 }
 
 bool isValidIntentType(const std::string& intentType) {
-    static const std::vector<std::string> validTypes = {
-        "CONFIGURE_SERVER", "SUPPRESS_ERROR", "BOOST_CPU", "ROTATE_ROUTE", 
-        "PAY_GOAL", "ADD_SERVER", "REMOVE_SERVER"
-    };
-    
-    return std::find(validTypes.begin(), validTypes.end(), intentType) != validTypes.end();
+    return intentType == "CONFIGURE_SERVER" || intentType == "SUPPRESS_ERROR" ||
+           intentType == "BOOST_CPU" || intentType == "ROTATE_ROUTE" || intentType == "PAY_GOAL" ||
+           intentType == "ADD_SERVER" || intentType == "REMOVE_SERVER";
 }
 
-nlohmann::json buildErrorBody(int statusCode, const std::string& message) {
-    nlohmann::json errorBody;
-    errorBody["error"] = statusCode;
-    errorBody["message"] = message;
-    return errorBody;
+nlohmann::json buildErrorBody(const std::string& code, const std::string& message) {
+    return {{"error", code}, {"message", message}};
 }
 
 } // namespace hider_seeker
