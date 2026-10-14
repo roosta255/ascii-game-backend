@@ -9,6 +9,40 @@
 
 namespace hider_seeker {
 
+RuleOutcome applyTickIntent(MatchState& state, const TickIntent& intent,
+                            Array<PublicLifecycleEvent, MAX_EVENTS>& outPublicEvents,
+                            uint8_t& outPublicEventCount) {
+    const IntentRecord& intentRecord = intent.intent;
+
+    RuleOutcome outcome = RuleOutcome::REJECTED_INVALID_TARGET;
+
+    switch (intent.kind) {
+        case TickActionKind::HIDER_ACTION:
+            outcome = applyHiderAction(state, intentRecord.hiderId, intentRecord.mode);
+            break;
+
+        case TickActionKind::ADD_SERVER:
+            // For ADD_SERVER, we don't use target_server_id since it finds an available slot
+            outcome = applyAddServer(state, intentRecord.hiderId, outPublicEvents, outPublicEventCount);
+            break;
+
+        case TickActionKind::REMOVE_SERVER:
+            // For REMOVE_SERVER, we need to pass the target_server_id
+            outcome = applyRemoveServer(state, intentRecord.hiderId, intent.target_server_id,
+                                        outPublicEvents, outPublicEventCount);
+            break;
+    }
+
+    return outcome;
+}
+
+RuleOutcome applyTickIntent(MatchState& state, const TickIntent& intent) {
+    // Same single dispatch point; any public lifecycle event is discarded.
+    Array<PublicLifecycleEvent, MAX_EVENTS> discardedEvents;
+    uint8_t discardedEventCount = 0;
+    return applyTickIntent(state, intent, discardedEvents, discardedEventCount);
+}
+
 namespace {
 
 // An eligible candidate: its embedded record, where it sits in
@@ -39,24 +73,7 @@ void dispatchIntent(MatchState& state,
         return; // Skip this intent
     }
 
-    RuleOutcome outcome;
-
-    switch (matchingIntent.kind) {
-        case TickActionKind::HIDER_ACTION:
-            outcome = applyHiderAction(state, intentRecord.hiderId, intentRecord.mode);
-            break;
-
-        case TickActionKind::ADD_SERVER:
-            // For ADD_SERVER, we don't use target_server_id since it finds an available slot
-            outcome = applyAddServer(state, intentRecord.hiderId, output.publicEvents, output.publicEventCount);
-            break;
-
-        case TickActionKind::REMOVE_SERVER:
-            // For REMOVE_SERVER, we need to pass the target_server_id
-            outcome = applyRemoveServer(state, intentRecord.hiderId, matchingIntent.target_server_id,
-                                        output.publicEvents, output.publicEventCount);
-            break;
-    }
+    RuleOutcome outcome = applyTickIntent(state, matchingIntent, output.publicEvents, output.publicEventCount);
 
     // Record the outcome
     IntentOutcomeRecord record;
