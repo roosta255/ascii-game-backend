@@ -46,7 +46,7 @@ TEST_CASE("MOVE-007: submitMove validation rules", "[hider_seeker][api][validati
 
     SECTION("a hider action naming a server other than the occupied one") {
         // alice occupies server 0.
-        requireBaseError(fx.play("alice", json{{"type", "BOOST_CPU"}, {"server_id", 1}}), 409, "SERVER_MISMATCH");
+        requireBaseError(fx.play("alice", json{{"type", "BOOST_CPU"}, {"server_id", 1}}), 400, "SERVER_MISMATCH");
     }
 
     SECTION("an account not in the match") {

@@ -658,7 +658,7 @@ ApiResponse HiderSeekerService::submitMove(const std::string& matchId, const std
         const TickActionKind kind = isPass ? TickActionKind::HIDER_ACTION : intentKind(intentType);
         const uint8_t occupiedServer = state.hiders[slot].server_id;
         if (!isPass && kind == TickActionKind::HIDER_ACTION && hasServerId && serverId != occupiedServer) {
-            return unrecorded(errorResponse(409, "SERVER_MISMATCH",
+            return unrecorded(errorResponse(400, "SERVER_MISMATCH",
                                             "Hider actions target the hider's own occupied server"));
         }
 
