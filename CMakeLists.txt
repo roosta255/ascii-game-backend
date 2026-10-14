@@ -54,6 +54,7 @@ set(PROJECT_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/ruleset
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/tick
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/turn
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/api
     /usr/include/jsoncpp
 )
 
@@ -211,6 +212,9 @@ add_library(core_backend STATIC
     src/hider_seeker/ruleset/lifecycle_events.cpp
     src/hider_seeker/tick/tick.cpp
     src/hider_seeker/turn/turn_engine.cpp
+    src/hider_seeker/api/match_record.cpp
+    src/hider_seeker/api/request_validation.cpp
+    src/hider_seeker/api/HiderSeekerService.cpp
 )
 
 # 👇 CRITICAL: Apply include dirs to the library
@@ -224,6 +228,7 @@ add_executable(match_backend
     src/controllers/ApiController.cpp
     src/controllers/MatchRepository.cpp
     src/controllers/AccountRepository.cpp
+    src/hider_seeker/api/HiderSeekerApiController.cpp
 )
 
 target_include_directories(match_backend PRIVATE ${PROJECT_INCLUDE_DIRS})
@@ -277,6 +282,14 @@ add_executable(test_target
     test/hider_seeker/turn_advance_loop_test.cpp
     test/hider_seeker/turn_pass_ticks_test.cpp
     test/hider_seeker/turn_common_checks_test.cpp
+    test/hider_seeker/api/match_record_test.cpp
+    test/hider_seeker/api/service_lifecycle_test.cpp
+    test/hider_seeker/api/service_submit_move_test.cpp
+    test/hider_seeker/api/service_queue_pass_cancel_test.cpp
+    test/hider_seeker/api/service_concurrency_test.cpp
+    test/hider_seeker/api/service_idempotency_test.cpp
+    test/hider_seeker/api/service_validation_test.cpp
+    test/hider_seeker/api/service_determinism_test.cpp
 )
 
 target_include_directories(test_target PRIVATE ${PROJECT_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/test)
