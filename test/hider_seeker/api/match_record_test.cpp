@@ -127,3 +127,91 @@ TEST_CASE("MOVE-001: fromJson rejects a schema-version-1 state buffer", "[hider_
     REQUIRE_FALSE(target.fromJson(encoded));
     REQUIRE(target.host == "untouched");
 }
+
+TEST_CASE("RECORD-001: public_events round-trips as {type, tick, revision} entries", "[hider_seeker][api][match_record]") {
+    MatchRecord original = sampleRecord();
+    appendPublicEvent(original, PublicEventEntry{"SERVER_ADDED", 2, 5});
+    appendPublicEvent(original, PublicEventEntry{"SERVER_REMOVED", 4, 7});
+
+    const json encoded = original.toJson();
+    REQUIRE(encoded.at("public_events") == json::array({
+        json{{"type", "SERVER_ADDED"}, {"tick", 2}, {"revision", 5}},
+        json{{"type", "SERVER_REMOVED"}, {"tick", 4}, {"revision", 7}}
+    }));
+
+    MatchRecord decoded;
+    REQUIRE(decoded.fromJson(encoded));
+    REQUIRE(decoded.public_events.size() == 2);
+    REQUIRE(decoded.public_events[0].type == "SERVER_ADDED");
+    REQUIRE(decoded.public_events[0].tick == 2);
+    REQUIRE(decoded.public_events[0].revision == 5);
+    REQUIRE(decoded.public_events[1].type == "SERVER_REMOVED");
+    REQUIRE(decoded.public_events[1].tick == 4);
+    REQUIRE(decoded.public_events[1].revision == 7);
+    REQUIRE(decoded.toJson() == encoded);
+}
+
+TEST_CASE("RECORD-001: a record without public_events loads with an empty list", "[hider_seeker][api][match_record]") {
+    json encoded = sampleRecord().toJson();
+    encoded.erase("public_events");
+
+    MatchRecord decoded;
+    decoded.public_events.push_back(PublicEventEntry{"SERVER_ADDED", 1, 1});
+    REQUIRE(decoded.fromJson(encoded));
+    REQUIRE(decoded.public_events.empty());
+    REQUIRE(decoded.host == "host");
+}
+
+TEST_CASE("RECORD-001: fromJson rejects malformed public_events", "[hider_seeker][api][match_record]") {
+    const json valid = json{{"type", "SERVER_ADDED"}, {"tick", 1}, {"revision", 2}};
+    json extraField = valid;
+    extraField["extra"] = true;
+    json missingTick = valid;
+    missingTick.erase("tick");
+    json negativeTick = valid;
+    negativeTick["tick"] = -1;
+    json stringRevision = valid;
+    stringRevision["revision"] = "2";
+
+    const std::vector<json> badValues = {
+        json("not an array"),
+        json::object(),
+        json(nullptr),
+        json::array({json{{"type", "SERVER_MOVED"}, {"tick", 1}, {"revision", 2}}}),
+        json::array({json{{"type", "server_added"}, {"tick", 1}, {"revision", 2}}}),
+        json::array({valid, extraField}),
+        json::array({missingTick}),
+        json::array({negativeTick}),
+        json::array({stringRevision}),
+        json::array({json("SERVER_ADDED")})
+    };
+
+    for (const json& bad : badValues) {
+        json encoded = sampleRecord().toJson();
+        encoded["public_events"] = bad;
+        MatchRecord target;
+        target.host = "untouched";
+        REQUIRE_FALSE(target.fromJson(encoded));
+        REQUIRE(target.host == "untouched");
+    }
+}
+
+TEST_CASE("RECORD-001: appendPublicEvent keeps at most MAX_EVENTS, dropping the oldest", "[hider_seeker][api][match_record]") {
+    MatchRecord record;
+    for (uint32_t i = 0; i < MAX_EVENTS; ++i) {
+        appendPublicEvent(record, PublicEventEntry{"SERVER_ADDED", i, i});
+    }
+    REQUIRE(record.public_events.size() == MAX_EVENTS);
+    REQUIRE(record.public_events.front().tick == 0);
+
+    appendPublicEvent(record, PublicEventEntry{"SERVER_REMOVED", 1000, 1000});
+    REQUIRE(record.public_events.size() == MAX_EVENTS);
+    REQUIRE(record.public_events.front().tick == 1);
+    REQUIRE(record.public_events.back().type == "SERVER_REMOVED");
+    REQUIRE(record.public_events.back().tick == 1000);
+
+    appendPublicEvent(record, PublicEventEntry{"SERVER_ADDED", 1001, 1001});
+    REQUIRE(record.public_events.size() == MAX_EVENTS);
+    REQUIRE(record.public_events.front().tick == 2);
+    REQUIRE(record.public_events.back().tick == 1001);
+}

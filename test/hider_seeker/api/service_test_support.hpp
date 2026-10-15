@@ -36,6 +36,9 @@ public:
 
     FileStore& store() { return store_; }
 
+    // The directory every stored document lives in, as "<dir>/<name>.json".
+    const std::string& dir() const { return dir_; }
+
     // The exact bytes stored for matchId.
     std::string readRaw(const std::string& matchId) const {
         std::ifstream file(dir_ + "/" + matchId + ".json");

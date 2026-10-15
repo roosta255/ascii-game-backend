@@ -4,7 +4,12 @@
 #include "null_seeker_policy.hpp"
 #include "request_validation.hpp"
 #include "../domain/state.hpp"
+#include "view_snapshots.hpp"
+#include "../projection/audience_views.hpp"
+#include "../projection/names.hpp"
+#include "../projection/public_event.hpp"
 #include "../ruleset/action_rules.hpp"
+#include "../ruleset/lifecycle_events.hpp"
 #include "../ruleset/loa_rules.hpp"
 #include "../ruleset/probe_rules.hpp"
 #include "../tick/tick_types.hpp"
@@ -106,15 +111,6 @@ std::string randomHex16(std::random_device& device) {
     return hex;
 }
 
-const char* phaseName(uint8_t phase) {
-    switch (phase) {
-        case PHASE_LOBBY:    return "LOBBY";
-        case PHASE_ACTIVE:   return "ACTIVE";
-        case PHASE_COMPLETE: return "COMPLETE";
-    }
-    return "UNKNOWN";
-}
-
 const char* moveStatusName(MoveStatus status) {
     switch (status) {
         case MoveStatus::APPLIED:   return "APPLIED";
@@ -153,12 +149,16 @@ const char* ruleOutcomeName(RuleOutcome outcome) {
     return "UNKNOWN";
 }
 
-const char* eventTypeName(HiderSeekerEventType type) {
-    switch (type) {
-        case HiderSeekerEventType::SERVER_ADDED:   return "SERVER_ADDED";
-        case HiderSeekerEventType::SERVER_REMOVED: return "SERVER_REMOVED";
+// RECORD-002: appends every public event of a committed turn result, in
+// order, stamped with the post-commit revision. Each entry keeps the tick the
+// ruleset recorded for that event, not the final state tick.
+void appendTurnPublicEvents(MatchRecord& record, const TurnResult& result) {
+    for (int i = 0; i < result.publicEventCount; ++i) {
+        result.publicEvents.accessConst(i, [&record](const PublicLifecycleEvent& event) {
+            appendPublicEvent(record, PublicEventEntry{eventTypeName(event.type), event.tick,
+                                                       record.state.revision});
+        });
     }
-    return "UNKNOWN";
 }
 
 // The API-level rule_outcome of a turn result. A REJECTED/CANCELLED result
@@ -398,7 +398,80 @@ ApiResponse runGuarded(iStore& store, const std::string& matchId, const json& re
     if (!saveRecord(store, record, false, failure)) {
         return failure;
     }
+    // SNAPSHOT-002: snapshot every committed revision while the caller still
+    // holds the match mutex. A failed snapshot write never changes the
+    // response of the already-committed request.
+    if (record.state.revision != revisionBefore) {
+        publishSnapshots(store, record);
+    }
     return outcome.response;
+}
+
+const char* const LATEST_CACHE_CONTROL = "no-cache";
+const char* const REVISION_CACHE_CONTROL = "private, max-age=31536000, immutable";
+
+bool isValidAudience(const std::string& audience) {
+    return audience == "hider" || audience == "public";
+}
+
+// Accepts 1-20 ASCII digits. outOfRange is set when the digits exceed uint64
+// (a revision that can never have been stored).
+bool parseRevision(const std::string& text, uint64_t& out, bool& outOfRange) {
+    if (text.empty() || text.size() > 20) {
+        return false;
+    }
+    uint64_t value = 0;
+    outOfRange = false;
+    for (const char c : text) {
+        if (c < '0' || c > '9') {
+            return false;
+        }
+        const uint64_t digit = static_cast<uint64_t>(c - '0');
+        if (value > (UINT64_MAX - digit) / 10) {
+            outOfRange = true;
+        }
+        value = value * 10 + digit;
+    }
+    out = value;
+    return true;
+}
+
+// Validates the view request steps shared by both view endpoints after the
+// audience/revision checks: account (hider only), match lookup, and slot
+// binding. On success audienceKey is "public" or "hider-<slot>".
+bool resolveViewRequest(iStore& store, const std::string& matchId, const std::string& audience,
+                        const std::string& account, MatchRecord& record, int& slot, std::string& audienceKey,
+                        ApiResponse& failure) {
+    const bool isHider = audience == "hider";
+    if (isHider && !isValidAccount(account)) {
+        failure = invalidRequest("Missing or invalid account");
+        return false;
+    }
+    if (!loadRecord(store, matchId, record, failure)) {
+        return false;
+    }
+    slot = -1;
+    audienceKey = "public";
+    if (isHider) {
+        slot = findAccountSlot(record, account);
+        if (slot < 0 || slot >= record.state.hider_count) {
+            failure = errorResponse(403, "NOT_IN_MATCH", "This account has not joined the match");
+            return false;
+        }
+        audienceKey = "hider-" + std::to_string(slot);
+    }
+    return true;
+}
+
+// 200 with view, or 304 with a null body when ifNoneMatch equals the ETag.
+ApiResponse viewResponse(const json& view, const std::string& cacheControl, const std::string& ifNoneMatch) {
+    const auto hash = view.find("content_hash");
+    const std::string etag = "\"" + (hash != view.end() && hash->is_string() ? hash->get<std::string>() : "") + "\"";
+    std::vector<std::pair<std::string, std::string>> headers = {{"ETag", etag}, {"Cache-Control", cacheControl}};
+    if (ifNoneMatch == etag) {
+        return ApiResponse{304, json(nullptr), headers};
+    }
+    return ApiResponse{200, view, headers};
 }
 
 } // namespace
@@ -479,6 +552,7 @@ ApiResponse HiderSeekerService::createMatch(const std::string& body) {
         record.filename = matchId;
         CodeEnum error = CODE_SUCCESS;
         if (store_.save(true, error, record.toJson())) {
+            publishSnapshots(store_, record); // revision 0; result ignored (SNAPSHOT-002)
             return ApiResponse{201, {{"match_id", matchId}, {"revision", 0}, {"phase", "LOBBY"}}};
         }
         if (error != CODE_INITIAL_STORE_BUT_WITH_EXISTING_STORED) {
@@ -692,6 +766,7 @@ ApiResponse HiderSeekerService::submitMove(const std::string& matchId, const std
             }});
         }
 
+        appendTurnPublicEvents(record, result);
         json responseBody = turnBody(record, result, revisionBefore, pendingBefore);
         if (!isPass) {
             record.next_move_id += 1;
@@ -738,6 +813,7 @@ ApiResponse HiderSeekerService::cancelMove(const std::string& matchId, const std
             return unrecorded(errorResponse(404, "INTENT_NOT_FOUND", "No pending move " + intentId + " for this account"));
         }
 
+        appendTurnPublicEvents(record, result);
         json responseBody = turnBody(record, result, revisionBefore, pendingBefore);
         responseBody["intent_id"] = intentId;
         pruneMoves(record);
@@ -746,6 +822,68 @@ ApiResponse HiderSeekerService::cancelMove(const std::string& matchId, const std
         logBody["intent_id"] = intentId;
         return logged(ApiResponse{200, responseBody}, logBody);
     });
+}
+
+ApiResponse HiderSeekerService::getLatestView(const std::string& matchId, const std::string& audience,
+                                              const std::string& account, const std::string& ifNoneMatch) {
+    if (!isValidMatchId(matchId)) {
+        return invalidRequest("Invalid match id");
+    }
+    if (!isValidAudience(audience)) {
+        return invalidRequest("audience must be hider or public");
+    }
+
+    std::lock_guard<std::mutex> lock(mutexFor(matchId));
+    MatchRecord record;
+    int slot = -1;
+    std::string audienceKey;
+    ApiResponse failure;
+    if (!resolveViewRequest(store_, matchId, audience, account, record, slot, audienceKey, failure)) {
+        return failure;
+    }
+
+    const uint64_t revision = record.state.revision;
+    json view;
+    if (!loadSnapshot(store_, matchId, audienceKey, revision, view)) {
+        // Rebuild on demand (latest only); storing it is best-effort.
+        const ViewContext ctx = viewContextOf(record);
+        view = slot >= 0 ? buildHiderView(record.state, ctx, static_cast<uint8_t>(slot))
+                         : buildPublicView(record.state, ctx);
+        writeSnapshotIfAbsent(store_, matchId, audienceKey, revision, view);
+    }
+    return viewResponse(view, LATEST_CACHE_CONTROL, ifNoneMatch);
+}
+
+ApiResponse HiderSeekerService::getRevisionView(const std::string& matchId, const std::string& audience,
+                                                const std::string& revision, const std::string& account,
+                                                const std::string& ifNoneMatch) {
+    if (!isValidMatchId(matchId)) {
+        return invalidRequest("Invalid match id");
+    }
+    if (!isValidAudience(audience)) {
+        return invalidRequest("audience must be hider or public");
+    }
+    uint64_t revisionNumber = 0;
+    bool outOfRange = false;
+    if (!parseRevision(revision, revisionNumber, outOfRange)) {
+        return invalidRequest("revision must be 1 to 20 digits");
+    }
+
+    std::lock_guard<std::mutex> lock(mutexFor(matchId));
+    MatchRecord record;
+    int slot = -1;
+    std::string audienceKey;
+    ApiResponse failure;
+    if (!resolveViewRequest(store_, matchId, audience, account, record, slot, audienceKey, failure)) {
+        return failure;
+    }
+
+    // Stored snapshots only: a revision view is never rebuilt from state.
+    json view;
+    if (outOfRange || !loadSnapshot(store_, matchId, audienceKey, revisionNumber, view)) {
+        return errorResponse(404, "VIEW_NOT_FOUND", "No stored view of revision " + revision);
+    }
+    return viewResponse(view, REVISION_CACHE_CONTROL, ifNoneMatch);
 }
 
 } // namespace hider_seeker
