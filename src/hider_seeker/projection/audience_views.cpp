@@ -1,4 +1,5 @@
 #include "audience_views.hpp"
+#include "names.hpp"
 #include "../ruleset/action_rules.hpp"
 #include "../ruleset/loa_rules.hpp"
 #include "../ruleset/probe_rules.hpp"
@@ -16,15 +17,6 @@ namespace hider_seeker {
 namespace {
 
 using nlohmann::json;
-
-const char* phaseName(uint8_t phase) {
-    switch (phase) {
-        case PHASE_LOBBY:    return "LOBBY";
-        case PHASE_ACTIVE:   return "ACTIVE";
-        case PHASE_COMPLETE: return "COMPLETE";
-    }
-    return "UNKNOWN";
-}
 
 // Reads only hider.active and hider.status.
 const char* hiderStatusName(const HiderState& hider) {
@@ -59,19 +51,6 @@ bool isBound(const ViewContext& ctx, int slot) {
     return !accountJson(ctx, slot).is_null();
 }
 
-const char* actionModeName(uint8_t mode) {
-    switch (static_cast<HiderActionMode>(mode)) {
-        case HiderActionMode::ADD_SERVER:       return "ADD_SERVER";
-        case HiderActionMode::REMOVE_SERVER:    return "REMOVE_SERVER";
-        case HiderActionMode::CONFIGURE_SERVER: return "CONFIGURE_SERVER";
-        case HiderActionMode::SUPPRESS_ERROR:   return "SUPPRESS_ERROR";
-        case HiderActionMode::BOOST_CPU:        return "BOOST_CPU";
-        case HiderActionMode::ROTATE_ROUTE:     return "ROTATE_ROUTE";
-        case HiderActionMode::PAY_GOAL:         return "PAY_GOAL";
-    }
-    return "UNKNOWN";
-}
-
 // The intent name of a pending move: its TickActionKind for the structural
 // kinds, otherwise its HiderActionMode.
 const char* pendingActionName(const PendingMove& move) {
@@ -80,7 +59,7 @@ const char* pendingActionName(const PendingMove& move) {
         case TickActionKind::REMOVE_SERVER: return "REMOVE_SERVER";
         case TickActionKind::HIDER_ACTION:  break;
     }
-    return actionModeName(move.server_mode);
+    return actionModeName(static_cast<HiderActionMode>(move.server_mode));
 }
 
 json renderMetricFrame(const MetricFrame& frame) {

@@ -6,6 +6,7 @@
 #include "../domain/state.hpp"
 #include "view_snapshots.hpp"
 #include "../projection/audience_views.hpp"
+#include "../projection/names.hpp"
 #include "../projection/public_event.hpp"
 #include "../ruleset/action_rules.hpp"
 #include "../ruleset/lifecycle_events.hpp"
@@ -110,15 +111,6 @@ std::string randomHex16(std::random_device& device) {
     return hex;
 }
 
-const char* phaseName(uint8_t phase) {
-    switch (phase) {
-        case PHASE_LOBBY:    return "LOBBY";
-        case PHASE_ACTIVE:   return "ACTIVE";
-        case PHASE_COMPLETE: return "COMPLETE";
-    }
-    return "UNKNOWN";
-}
-
 const char* moveStatusName(MoveStatus status) {
     switch (status) {
         case MoveStatus::APPLIED:   return "APPLIED";
@@ -157,30 +149,13 @@ const char* ruleOutcomeName(RuleOutcome outcome) {
     return "UNKNOWN";
 }
 
-const char* eventTypeName(HiderSeekerEventType type) {
-    switch (type) {
-        case HiderSeekerEventType::SERVER_ADDED:   return "SERVER_ADDED";
-        case HiderSeekerEventType::SERVER_REMOVED: return "SERVER_REMOVED";
-    }
-    return "UNKNOWN";
-}
-
-// PublicEventEntry::type spelling of a lifecycle event type.
-std::string lifecycleEventTypeToString(HiderSeekerEventType type) {
-    switch (type) {
-        case HiderSeekerEventType::SERVER_ADDED:   return "SERVER_ADDED";
-        case HiderSeekerEventType::SERVER_REMOVED: return "SERVER_REMOVED";
-    }
-    return "UNKNOWN";
-}
-
 // RECORD-002: appends every public event of a committed turn result, in
 // order, stamped with the post-commit revision. Each entry keeps the tick the
 // ruleset recorded for that event, not the final state tick.
 void appendTurnPublicEvents(MatchRecord& record, const TurnResult& result) {
     for (int i = 0; i < result.publicEventCount; ++i) {
         result.publicEvents.accessConst(i, [&record](const PublicLifecycleEvent& event) {
-            appendPublicEvent(record, PublicEventEntry{lifecycleEventTypeToString(event.type), event.tick,
+            appendPublicEvent(record, PublicEventEntry{eventTypeName(event.type), event.tick,
                                                        record.state.revision});
         });
     }
@@ -461,14 +436,6 @@ bool parseRevision(const std::string& text, uint64_t& out, bool& outOfRange) {
     return true;
 }
 
-ViewContext viewContextOf(const MatchRecord& record) {
-    ViewContext ctx;
-    ctx.matchId = record.filename;
-    ctx.accounts = record.accounts;
-    ctx.publicEvents = record.public_events;
-    return ctx;
-}
-
 // Validates the view request steps shared by both view endpoints after the
 // audience/revision checks: account (hider only), match lookup, and slot
 // binding. On success audienceKey is "public" or "hider-<slot>".
@@ -481,7 +448,6 @@ bool resolveViewRequest(iStore& store, const std::string& matchId, const std::st
         return false;
     }
     if (!loadRecord(store, matchId, record, failure)) {
-        failure = errorResponse(404, "MATCH_NOT_FOUND", "No match with id " + matchId);
         return false;
     }
     slot = -1;

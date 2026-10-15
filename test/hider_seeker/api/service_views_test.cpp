@@ -90,6 +90,16 @@ TEST_CASE("SERVICE-002: view request validation order", "[hider_seeker][api][vie
         requireError(fx.service.getRevisionView(MISSING_MATCH, "public", "0", "", ""), 404, "MATCH_NOT_FOUND");
     }
 
+    SECTION("unreadable match record is a store error, not a missing match") {
+        {
+            std::ofstream file(fx.temp.dir() + "/" + fx.matchId + ".json", std::ios::trunc);
+            file << "{\"filename\": \"" << fx.matchId << "\", \"version\": 3, \"state\": \"zz\"}";
+        }
+        requireError(fx.service.getLatestView(fx.matchId, "public", "", ""), 500, "STORE_ERROR");
+        requireError(fx.service.getLatestView(fx.matchId, "hider", "alice", ""), 500, "STORE_ERROR");
+        requireError(fx.service.getRevisionView(fx.matchId, "public", "3", "", ""), 500, "STORE_ERROR");
+    }
+
     SECTION("hider account without a slot") {
         requireError(fx.service.getLatestView(fx.matchId, "hider", "carol", ""), 403, "NOT_IN_MATCH");
         requireError(fx.service.getRevisionView(fx.matchId, "hider", "3", "carol", ""), 403, "NOT_IN_MATCH");

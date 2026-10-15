@@ -10,15 +10,15 @@ std::string snapshotFilename(const std::string& matchId, const std::string& audi
     return matchId + ".view." + audienceKey + ".rev-" + std::to_string(revision);
 }
 
-ViewContext contextOf(const MatchRecord& record) {
+} // namespace
+
+ViewContext viewContextOf(const MatchRecord& record) {
     ViewContext ctx;
     ctx.matchId = record.filename;
     ctx.accounts = record.accounts;
     ctx.publicEvents = record.public_events;
     return ctx;
 }
-
-} // namespace
 
 bool writeSnapshotIfAbsent(iStore& store, const std::string& matchId, const std::string& audienceKey,
                            uint64_t revision, const nlohmann::json& view) {
@@ -46,7 +46,7 @@ bool writeSnapshotIfAbsent(iStore& store, const std::string& matchId, const std:
 
 bool publishSnapshots(iStore& store, const MatchRecord& record) {
     try {
-        const ViewContext ctx = contextOf(record);
+        const ViewContext ctx = viewContextOf(record);
         const MatchState& state = record.state;
         bool allWritten = writeSnapshotIfAbsent(store, ctx.matchId, "public", state.revision,
                                                 buildPublicView(state, ctx));

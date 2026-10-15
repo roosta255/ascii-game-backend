@@ -17,6 +17,9 @@
 
 namespace hider_seeker {
 
+// The projection inputs held by record besides its MatchState.
+ViewContext viewContextOf(const MatchRecord& record);
+
 // Writes the public view and the view of every bound hider slot below
 // hider_count at record.state.revision, never overwriting an existing
 // snapshot. Attempts every write; false if any failed. Never throws.
