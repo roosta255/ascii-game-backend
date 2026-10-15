@@ -2,6 +2,7 @@
 
 #include "../domain/state.hpp"
 #include "../../data/Array.hpp"
+#include "projection/public_event.hpp"
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -47,11 +48,14 @@ struct MatchRecord {
     std::vector<IdempotencyEntry> idempotency;
     std::vector<MoveOwnershipEntry> moves;
     std::vector<RequestLogEntry> request_log;
+    std::vector<PublicEventEntry> public_events;
 
     nlohmann::json toJson() const;
     // Returns false, leaving this record unchanged, when j is malformed, its
     // state is not valid hex, or loadMatchState rejects the decoded bytes.
     bool fromJson(const nlohmann::json& j);
+    
+    void appendPublicEvent(const PublicEventEntry& entry);
 };
 
 } // namespace hider_seeker

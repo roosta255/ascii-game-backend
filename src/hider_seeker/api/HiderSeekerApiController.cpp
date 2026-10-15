@@ -26,8 +26,17 @@ static void respond(const RequestLog& rlog, const ApiResponse& response,
     resp->setContentTypeCode(drogon::CT_APPLICATION_JSON);
     resp->setBody(response.body.dump());
     resp->addHeader("Access-Control-Allow-Origin", "*");
-    resp->addHeader("Access-Control-Allow-Headers", "Content-Type");
+    resp->addHeader("Access-Control-Allow-Headers", "Content-Type, If-None-Match");
     resp->addHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+    
+    // Add all custom headers
+    for (const auto& header : response.headers) {
+        resp->addHeader(header.first, header.second);
+    }
+    
+    // Always add ETag to Access-Control-Expose-Headers
+    resp->addHeader("Access-Control-Expose-Headers", "ETag");
+    
     callback(resp);
 }
 
@@ -72,4 +81,24 @@ void HiderSeekerApiController::cancelMove
 {
     RequestLog rlog("hsCancelMove", req);
     respond(rlog, hiderSeekerService.cancelMove(matchId, intentId, std::string(req->getBody())), std::move(callback));
+}
+
+void HiderSeekerApiController::getLatestView
+( const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr&)>&& callback,
+  std::string matchId, std::string audience )
+{
+    RequestLog rlog("hsGetLatestView", req);
+    std::string account = req->getParameter("account");
+    std::string ifNoneMatch = req->getHeader("if-none-match");
+    respond(rlog, hiderSeekerService.getLatestView(matchId, audience, account, ifNoneMatch), std::move(callback));
+}
+
+void HiderSeekerApiController::getRevisionView
+( const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr&)>&& callback,
+  std::string matchId, std::string audience, std::string revision )
+{
+    RequestLog rlog("hsGetRevisionView", req);
+    std::string account = req->getParameter("account");
+    std::string ifNoneMatch = req->getHeader("if-none-match");
+    respond(rlog, hiderSeekerService.getRevisionView(matchId, audience, revision, account, ifNoneMatch), std::move(callback));
 }

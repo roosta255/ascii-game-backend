@@ -82,6 +82,11 @@ nlohmann::json MatchRecord::toJson() const {
         });
     }
 
+    nlohmann::json publicEventsJson = nlohmann::json::array();
+    for (const auto& entry : public_events) {
+        publicEventsJson.push_back(toJson(entry));
+    }
+
     return {
         {"filename", filename},
         {"version", version},
@@ -91,7 +96,8 @@ nlohmann::json MatchRecord::toJson() const {
         {"next_move_id", next_move_id},
         {"idempotency", idempotencyJson},
         {"moves", movesJson},
-        {"request_log", requestLogJson}
+        {"request_log", requestLogJson},
+        {"public_events", publicEventsJson}
     };
 }
 
@@ -157,12 +163,34 @@ bool MatchRecord::fromJson(const nlohmann::json& j) {
             entry.body = entryJson.at("body");
             parsed.request_log.push_back(std::move(entry));
         }
+
+        // Handle public_events
+        if (j.contains("public_events")) {
+            const auto& publicEventsJson = j["public_events"];
+            if (!publicEventsJson.is_array()) {
+                return false;
+            }
+            for (const auto& entryJson : publicEventsJson) {
+                PublicEventEntry entry;
+                if (!fromJson(entryJson, entry)) {
+                    return false;
+                }
+                parsed.public_events.push_back(std::move(entry));
+            }
+        }
     } catch (const nlohmann::json::exception&) {
         return false;
     }
 
     *this = std::move(parsed);
     return true;
+}
+
+void MatchRecord::appendPublicEvent(const PublicEventEntry& entry) {
+    if (public_events.size() >= MAX_EVENTS) {
+        public_events.erase(public_events.begin());
+    }
+    public_events.push_back(entry);
 }
 
 } // namespace hider_seeker

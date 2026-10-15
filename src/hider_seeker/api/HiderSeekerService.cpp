@@ -7,6 +7,7 @@
 #include "../ruleset/action_rules.hpp"
 #include "../ruleset/loa_rules.hpp"
 #include "../ruleset/probe_rules.hpp"
+#include "../ruleset/lifecycle_events.hpp"
 #include "../tick/tick_types.hpp"
 #include "../turn/turn_engine.hpp"
 #include "../turn/turn_types.hpp"
@@ -154,6 +155,15 @@ const char* ruleOutcomeName(RuleOutcome outcome) {
 }
 
 const char* eventTypeName(HiderSeekerEventType type) {
+    switch (type) {
+        case HiderSeekerEventType::SERVER_ADDED:   return "SERVER_ADDED";
+        case HiderSeekerEventType::SERVER_REMOVED: return "SERVER_REMOVED";
+    }
+    return "UNKNOWN";
+}
+
+// Helper to convert lifecycle event type to string for public events
+std::string lifecycleEventTypeToString(HiderSeekerEventType type) {
     switch (type) {
         case HiderSeekerEventType::SERVER_ADDED:   return "SERVER_ADDED";
         case HiderSeekerEventType::SERVER_REMOVED: return "SERVER_REMOVED";
@@ -413,6 +423,597 @@ std::mutex& HiderSeekerService::mutexFor(const std::string& matchId) {
     }
     return *slot;
 }
+
+ApiResponse HiderSeekerService::createMatch(const std::string& body) {
+    json request;
+    if (!parseObject(body, request)) {
+        return invalidRequest("Request body must be a JSON object");
+    }
+    std::string account;
+    if (!readString(request, "account", account) || !isValidAccount(account)) {
+        return invalidRequest("Missing or invalid account");
+    }
+    int64_t hiderCount = 0;
+    if (!readIntInRange(request, "hider_count", 1, MAX_HIDERS, hiderCount)) {
+        return invalidRequest("hider_count must be an integer from 1 to 8");
+    }
+
+    std::random_device device;
+    uint64_t seed = 0;
+    const auto seedField = request.find("seed");
+    if (seedField != request.end()) {
+        if (!seedField->is_number_integer() ||
+            (!seedField->is_number_unsigned() && seedField->get<int64_t>() < 0)) {
+            return invalidRequest("seed must be a non-negative 64-bit integer");
+        }
+        seed = seedField->get<uint64_t>();
+    } else {
+        seed = (static_cast<uint64_t>(device()) << 32) | static_cast<uint64_t>(device());
+    }
+
+    MatchRecord record;
+    record.host = account;
+    record.version = 0;
+    record.next_move_id = 1;
+
+    MatchState& state = record.state;
+    state.schema_version = 2;
+    state.ruleset_version = RULESET_VERSION;
+    state.revision = 0;
+    state.tick = 0;
+    state.phase = PHASE_LOBBY;
+    state.rng_state = seed;
+    state.hider_count = static_cast<uint8_t>(hiderCount);
+    state.server_count = static_cast<uint8_t>(hiderCount);
+    for (uint8_t slot = 0; slot < MAX_SERVERS; ++slot) {
+        ServerState& server = state.servers[slot];
+        server = ServerState{};
+        server.active = slot < hiderCount ? 1 : 0;
+        server.owner_hider_id = slot < hiderCount ? slot : 0xFF;
+    }
+    for (uint8_t slot = 0; slot < MAX_HIDERS; ++slot) {
+        HiderState& hider = state.hiders[slot];
+        hider = HiderState{};
+        hider.active = 0; // not joined yet
+        hider.server_id = slot < hiderCount ? slot : NO_SERVER_ID;
+    }
+    state.seeker.connection_tokens = PLACEHOLDER_SEEKER_START_TOKENS;
+    state.seeker.max_tokens = PLACEHOLDER_SEEKER_MAX_TOKENS;
+
+    record.request_log.push_back(RequestLogEntry{0, account, "create", request});
+
+    ApiResponse failure = errorResponse(500, "STORE_ERROR", "Failed to allocate a match id");
+    for (int attempt = 0; attempt < MATCH_ID_ATTEMPTS; ++attempt) {
+        const std::string matchId = "hs-" + randomHex16(device);
+        std::lock_guard<std::mutex> lock(mutexFor(matchId));
+        record.filename = matchId;
+        CodeEnum error = CODE_SUCCESS;
+        if (store_.save(true, error, record.toJson())) {
+            // Publish snapshots for revision 0
+            publishSnapshots(store_, record);
+            return ApiResponse{201, {{"match_id", matchId}, {"revision", 0}, {"phase", "LOBBY"}}};
+        }
+        if (error != CODE_INITIAL_STORE_BUT_WITH_EXISTING_STORED) {
+            return errorResponse(500, "STORE_ERROR", "Failed to save match " + matchId);
+        }
+    }
+    return failure;
+}
+
+ApiResponse HiderSeekerService::joinMatch(const std::string& matchId, const std::string& body) {
+    json request;
+    std::string account;
+    ApiResponse failure;
+    if (!parseAccountRequest(body, matchId, request, account, failure)) {
+        return failure;
+    }
+
+    std::lock_guard<std::mutex> lock(mutexFor(matchId));
+    return runGuarded(store_, matchId, request, account, "join", "",
+                      [&](MatchRecord& record, uint64_t) -> GuardedOutcome {
+        MatchState& state = record.state;
+        if (state.phase != PHASE_LOBBY) {
+            return unrecorded(errorResponse(409, "MATCH_NOT_IN_LOBBY", "The match is not in its lobby"));
+        }
+        if (findAccountSlot(record, account) >= 0) {
+            return unrecorded(errorResponse(409, "ALREADY_JOINED", "This account already joined the match"));
+        }
+
+        // Lowest-numbered free slot below hider_count.
+        int freeSlot = -1;
+        int slot = 0;
+        for (const auto& bound : record.accounts) {
+            if (slot >= state.hider_count) {
+                break;
+            }
+            if (bound.empty()) {
+                freeSlot = slot;
+                break;
+            }
+            ++slot;
+        }
+        if (freeSlot < 0) {
+            return unrecorded(errorResponse(409, "MATCH_FULL", "The match is full"));
+        }
+
+        record.accounts[freeSlot] = account;
+        state.hider_count = std::max(state.hider_count, static_cast<uint8_t>(freeSlot + 1));
+        return logged(
+            ApiResponse{200, {{"revision", record.state.revision}, {"phase", phaseName(state.phase)}}},
+            request);
+    });
+}
+
+ApiResponse HiderSeekerService::startMatch(const std::string& matchId, const std::string& body) {
+    json request;
+    std::string account;
+    ApiResponse failure;
+    if (!parseAccountRequest(body, matchId, request, account, failure)) {
+        return failure;
+    }
+
+    std::lock_guard<std::mutex> lock(mutexFor(matchId));
+    return runGuarded(store_, matchId, request, account, "start", "",
+                      [&](MatchRecord& record, uint64_t) -> GuardedOutcome {
+        MatchState& state = record.state;
+        if (state.phase != PHASE_LOBBY) {
+            return unrecorded(errorResponse(409, "MATCH_NOT_IN_LOBBY", "The match is not in its lobby"));
+        }
+        if (account != record.host) {
+            return unrecorded(errorResponse(403, "NOT_HOST", "Only the host can start the match"));
+        }
+
+        // Check that all hider slots are filled.
+        for (int slot = 0; slot < state.hider_count; ++slot) {
+            if (record.accounts[slot].empty()) {
+                return unrecorded(errorResponse(409, "NOT_ENOUGH_PLAYERS", "Not all hider slots are filled"));
+            }
+        }
+
+        // Set up the match for active play.
+        state.phase = PHASE_ACTIVE;
+        state.tick = 0;
+
+        // Initialize hiders' starting positions and resources
+        for (int slot = 0; slot < state.hider_count; ++slot) {
+            HiderState& hider = state.hiders[slot];
+            hider.active = 1;
+            hider.server_id = slot;
+            hider.action_points = STARTING_ACTION_POINTS;
+            hider.resources[LOA_RESOURCE_INDEX] = STARTING_LOA;
+            for (int i = 0; i < RESOURCE_TYPE_COUNT; ++i) {
+                if (i != LOA_RESOURCE_INDEX) {
+                    hider.resources[i] = 0;
+                }
+            }
+        }
+
+        // Initialize servers
+        for (int slot = 0; slot < state.server_count; ++slot) {
+            ServerState& server = state.servers[slot];
+            server.active = 1;
+            server.owner_hider_id = slot;
+            server.current = ServerMetrics{};
+            server.history_head = 0;
+            for (int i = 0; i < HISTORY_TICKS; ++i) {
+                server.history[i] = ServerMetrics{};
+            }
+        }
+
+        return logged(
+            ApiResponse{200, {{"revision", record.state.revision}, {"phase", phaseName(state.phase)}}},
+            request);
+    });
+}
+
+ApiResponse HiderSeekerService::getMatch(const std::string& matchId) {
+    MatchRecord record;
+    ApiResponse failure;
+    if (!loadRecord(store_, matchId, record, failure)) {
+        return failure;
+    }
+
+    const MatchState& state = record.state;
+    json response = {
+        {"revision", state.revision},
+        {"tick", state.tick},
+        {"phase", phaseName(state.phase)},
+        {"hider_count", state.hider_count},
+        {"server_count", state.server_count}
+    };
+
+    // Add hiders
+    json hiders = json::array();
+    for (int i = 0; i < state.hider_count; ++i) {
+        const auto& hider = state.hiders[i];
+        hiders.push_back({
+            {"hider_id", i},
+            {"account", record.accounts[i]},
+            {"active", hider.active != 0},
+            {"status", hider.active ? (hider.status == HIDER_STATUS_ACTIVE ? "ACTIVE" : "CAPTURED") : "NOT_JOINED"},
+            {"server_id", hider.server_id}
+        });
+    }
+    response["hiders"] = hiders;
+
+    // Add servers
+    json servers = json::array();
+    for (int i = 0; i < state.server_count; ++i) {
+        const auto& server = state.servers[i];
+        if (server.active != 0) {
+            servers.push_back({
+                {"server_id", i},
+                {"active", true},
+                {"owner_hider_id", server.owner_hider_id}
+            });
+        }
+    }
+    response["servers"] = servers;
+
+    return ApiResponse{200, response};
+}
+
+ApiResponse HiderSeekerService::submitMove(const std::string& matchId, const std::string& body) {
+    json request;
+    std::string account;
+    ApiResponse failure;
+    if (!parseAccountRequest(body, matchId, request, account, failure)) {
+        return failure;
+    }
+
+    std::lock_guard<std::mutex> lock(mutexFor(matchId));
+    return runGuarded(store_, matchId, request, account, "move", "",
+                      [&](MatchRecord& record, uint64_t revisionBefore) -> GuardedOutcome {
+        const int slot = findAccountSlot(record, account);
+        if (slot < 0) {
+            return unrecorded(errorResponse(403, "NOT_IN_MATCH", "This account is not in the match"));
+        }
+
+        // Parse the move intent.
+        json intent;
+        if (!readString(request, "intent", intent) || !intent.is_object()) {
+            return unrecorded(invalidRequest("Missing or invalid intent"));
+        }
+
+        const std::string intentType = intent.value("type", "");
+        if (intentType.empty()) {
+            return unrecorded(invalidRequest("Missing intent type"));
+        }
+
+        // Create a new move ID.
+        const uint32_t moveId = record.next_move_id++;
+        const std::string moveIdStr = formatMoveId(moveId);
+
+        // Add ownership entry for this move.
+        record.moves.push_back(MoveOwnershipEntry{moveIdStr, account, static_cast<uint8_t>(slot)});
+
+        // Run the turn engine.
+        TurnResult result;
+        const auto& state = record.state;
+        if (intentType == "ADD_SERVER" || intentType == "REMOVE_SERVER") {
+            result = runTick(
+                state,
+                intent,
+                slot,
+                moveId,
+                record.next_submit_seq,
+                record.pending_head,
+                record.pending_count);
+        } else {
+            result = runTurn(
+                state,
+                intent,
+                slot,
+                moveId,
+                record.next_submit_seq,
+                record.pending_head,
+                record.pending_count);
+        }
+
+        // Update the record with the turn result.
+        if (result.status == MoveStatus::REJECTED) {
+            // For rejected moves, we don't save anything to the record
+            return unrecorded(ApiResponse{200, turnBody(record, result, revisionBefore, pendingMoveIds(state))});
+        }
+
+        // Update the state with the turn result.
+        if (result.status == MoveStatus::APPLIED || result.status == MoveStatus::QUEUED) {
+            // Apply the move to the state
+            record.state = result.state;
+            
+            // Append public events if they exist and the move was not an idempotent replay
+            if (result.status != MoveStatus::QUEUED) {  // Only append for non-queued moves
+                for (int i = 0; i < result.publicEventCount; ++i) {
+                    PublicLifecycleEvent event;
+                    result.publicEvents.accessConst(i, [&event](const PublicLifecycleEvent& e) {
+                        event = e;
+                    });
+                    
+                    PublicEventEntry entry{
+                        lifecycleEventTypeToString(event.type),
+                        event.tick,
+                        record.state.revision
+                    };
+                    record.appendPublicEvent(entry);
+                }
+            }
+
+            // Publish snapshots after successful save (if revision advanced)
+            if (record.state.revision > revisionBefore) {
+                publishSnapshots(store_, record);
+            }
+        } else if (result.status == MoveStatus::CANCELLED) {
+            // For cancelled moves, we still need to append public events
+            for (int i = 0; i < result.publicEventCount; ++i) {
+                PublicLifecycleEvent event;
+                result.publicEvents.accessConst(i, [&event](const PublicLifecycleEvent& e) {
+                    event = e;
+                });
+                
+                PublicEventEntry entry{
+                    lifecycleEventTypeToString(event.type),
+                    event.tick,
+                    record.state.revision
+                };
+                record.appendPublicEvent(entry);
+            }
+            
+            // Publish snapshots after successful save (if revision advanced)
+            if (record.state.revision > revisionBefore) {
+                publishSnapshots(store_, record);
+            }
+        }
+
+        return logged(
+            ApiResponse{200, turnBody(record, result, revisionBefore, pendingMoveIds(state))},
+            request);
+    });
+}
+
+ApiResponse HiderSeekerService::cancelMove(const std::string& matchId, const std::string& intentId, const std::string& body) {
+    json request;
+    std::string account;
+    ApiResponse failure;
+    if (!parseAccountRequest(body, matchId, request, account, failure)) {
+        return failure;
+    }
+
+    std::lock_guard<std::mutex> lock(mutexFor(matchId));
+    return runGuarded(store_, matchId, request, account, "cancel", intentId,
+                      [&](MatchRecord& record, uint64_t revisionBefore) -> GuardedOutcome {
+        // Find the move to cancel.
+        const auto it = std::find_if(record.moves.begin(), record.moves.end(),
+                                     [&intentId](const MoveOwnershipEntry& entry) {
+                                         return entry.move_id == intentId;
+                                     });
+        if (it == record.moves.end()) {
+            return unrecorded(errorResponse(404, "MOVE_NOT_FOUND", "No move with id " + intentId));
+        }
+
+        // Check that the account owns this move.
+        if (it->account != account) {
+            return unrecorded(errorResponse(403, "NOT_OWNER", "This account does not own this move"));
+        }
+
+        // Cancel the move.
+        TurnResult result = cancelPendingMove(record.state, intentId);
+        
+        // Update the record with the turn result.
+        if (result.status == MoveStatus::REJECTED) {
+            return unrecorded(ApiResponse{200, turnBody(record, result, revisionBefore, pendingMoveIds(record.state))});
+        }
+
+        // Update the state with the turn result.
+        if (result.status == MoveStatus::APPLIED || result.status == MoveStatus::QUEUED) {
+            record.state = result.state;
+            
+            // Append public events if they exist and the move was not an idempotent replay
+            for (int i = 0; i < result.publicEventCount; ++i) {
+                PublicLifecycleEvent event;
+                result.publicEvents.accessConst(i, [&event](const PublicLifecycleEvent& e) {
+                    event = e;
+                });
+                
+                PublicEventEntry entry{
+                    lifecycleEventTypeToString(event.type),
+                    event.tick,
+                    record.state.revision
+                };
+                record.appendPublicEvent(entry);
+            }
+            
+            // Publish snapshots after successful save (if revision advanced)
+            if (record.state.revision > revisionBefore) {
+                publishSnapshots(store_, record);
+            }
+        }
+
+        return logged(
+            ApiResponse{200, turnBody(record, result, revisionBefore, pendingMoveIds(record.state))},
+            request);
+    });
+}
+
+ApiResponse HiderSeekerService::getLatestView(const std::string& matchId, const std::string& audience, const std::string& account, const std::string& ifNoneMatch) {
+    // Validate match ID
+    if (!isValidMatchId(matchId)) {
+        return invalidRequest("Invalid match id");
+    }
+    
+    // Validate audience
+    if (audience != "hider" && audience != "public") {
+        return invalidRequest("Audience must be 'hider' or 'public'");
+    }
+    
+    std::lock_guard<std::mutex> lock(mutexFor(matchId));
+    
+    MatchRecord record;
+    ApiResponse failure;
+    if (!loadRecord(store_, matchId, record, failure)) {
+        return failure;
+    }
+    
+    // For hider audience, validate account
+    if (audience == "hider") {
+        if (!isValidAccount(account)) {
+            return invalidRequest("Invalid account");
+        }
+        
+        int slot = findAccountSlot(record, account);
+        if (slot < 0) {
+            return errorResponse(403, "NOT_IN_MATCH", "This account is not in the match");
+        }
+    }
+    
+    // Determine audience key and hider slot
+    std::string audienceKey;
+    uint8_t hiderSlot = 0;
+    if (audience == "public") {
+        audienceKey = "public";
+    } else {  // hider audience
+        int slot = findAccountSlot(record, account);
+        if (slot < 0) {
+            return errorResponse(403, "NOT_IN_MATCH", "This account is not in the match");
+        }
+        audienceKey = "hider-" + std::to_string(slot);
+        hiderSlot = static_cast<uint8_t>(slot);
+    }
+    
+    uint64_t revision = record.state.revision;
+    
+    // Try to load existing snapshot
+    nlohmann::json view;
+    if (loadSnapshot(store_, matchId, audienceKey, revision, view)) {
+        // Found existing snapshot - serve it
+        std::string contentHash = view["content_hash"].get<std::string>();
+        ApiResponse response{200, view};
+        response.headers.push_back({"ETag", "\"" + contentHash + "\""});
+        response.headers.push_back({"Cache-Control", "no-cache"});
+        
+        if (ifNoneMatch == "\"" + contentHash + "\"") {
+            // If-None-Match matches - return 304
+            response.status = 304;
+            response.body = nlohmann::json();  // Empty body for 304
+        }
+        
+        return response;
+    }
+    
+    // No snapshot found - build view in memory
+    ViewContext ctx;
+    ctx.matchId = matchId;
+    ctx.accounts = record.accounts;
+    ctx.publicEvents = record.public_events;
+    
+    nlohmann::json builtView;
+    if (audience == "public") {
+        builtView = buildPublicView(record.state, ctx);
+    } else {
+        builtView = buildHiderView(record.state, ctx, hiderSlot);
+    }
+    
+    // Write snapshot
+    writeSnapshotIfAbsent(store_, matchId, audienceKey, revision, builtView);
+    
+    std::string contentHash = builtView["content_hash"].get<std::string>();
+    ApiResponse response{200, builtView};
+    response.headers.push_back({"ETag", "\"" + contentHash + "\""});
+    response.headers.push_back({"Cache-Control", "no-cache"});
+    
+    if (ifNoneMatch == "\"" + contentHash + "\"") {
+        // If-None-Match matches - return 304
+        response.status = 304;
+        response.body = nlohmann::json();  // Empty body for 304
+    }
+    
+    return response;
+}
+
+ApiResponse HiderSeekerService::getRevisionView(const std::string& matchId, const std::string& audience, const std::string& revisionStr, const std::string& account, const std::string& ifNoneMatch) {
+    // Validate match ID
+    if (!isValidMatchId(matchId)) {
+        return invalidRequest("Invalid match id");
+    }
+    
+    // Validate audience
+    if (audience != "hider" && audience != "public") {
+        return invalidRequest("Audience must be 'hider' or 'public'");
+    }
+    
+    // Validate revision
+    if (revisionStr.empty() || revisionStr.size() > 20) {
+        return invalidRequest("Invalid revision");
+    }
+    
+    for (char c : revisionStr) {
+        if (!std::isdigit(c)) {
+            return invalidRequest("Invalid revision");
+        }
+    }
+    
+    uint64_t revision = 0;
+    try {
+        revision = std::stoull(revisionStr);
+        if (revision < 1 || revision > 999999999999999999ULL) {  // 20 digits max
+            return invalidRequest("Invalid revision");
+        }
+    } catch (...) {
+        return invalidRequest("Invalid revision");
+    }
+    
+    std::lock_guard<std::mutex> lock(mutexFor(matchId));
+    
+    MatchRecord record;
+    ApiResponse failure;
+    if (!loadRecord(store_, matchId, record, failure)) {
+        return failure;
+    }
+    
+    // For hider audience, validate account
+    if (audience == "hider") {
+        if (!isValidAccount(account)) {
+            return invalidRequest("Invalid account");
+        }
+        
+        int slot = findAccountSlot(record, account);
+        if (slot < 0) {
+            return errorResponse(403, "NOT_IN_MATCH", "This account is not in the match");
+        }
+    }
+    
+    // Determine audience key
+    std::string audienceKey;
+    if (audience == "public") {
+        audienceKey = "public";
+    } else {  // hider audience
+        int slot = findAccountSlot(record, account);
+        if (slot < 0) {
+            return errorResponse(403, "NOT_IN_MATCH", "This account is not in the match");
+        }
+        audienceKey = "hider-" + std::to_string(slot);
+    }
+    
+    // Try to load snapshot for this revision
+    nlohmann::json view;
+    if (!loadSnapshot(store_, matchId, audienceKey, revision, view)) {
+        return errorResponse(404, "VIEW_NOT_FOUND", "View not found for revision " + revisionStr);
+    }
+    
+    std::string contentHash = view["content_hash"].get<std::string>();
+    ApiResponse response{200, view};
+    response.headers.push_back({"ETag", "\"" + contentHash + "\""});
+    response.headers.push_back({"Cache-Control", "private, max-age=31536000, immutable"});
+    
+    if (ifNoneMatch == "\"" + contentHash + "\"") {
+        // If-None-Match matches - return 304
+        response.status = 304;
+        response.body = nlohmann::json();  // Empty body for 304
+    }
+    
+    return response;
+}
+
+} // namespace hider_seeker
 
 ApiResponse HiderSeekerService::createMatch(const std::string& body) {
     json request;

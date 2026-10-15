@@ -7,6 +7,7 @@
 #include "serialization.hpp"
 #include "rule_types.hpp"
 #include "match_record.hpp"
+#include "projection/public_event.hpp"
 
 using namespace hider_seeker;
 using nlohmann::json;
@@ -126,4 +127,46 @@ TEST_CASE("MOVE-001: fromJson rejects a schema-version-1 state buffer", "[hider_
     target.host = "untouched";
     REQUIRE_FALSE(target.fromJson(encoded));
     REQUIRE(target.host == "untouched");
+}
+
+TEST_CASE("RECORD-001: MatchRecord::public_events JSON shape", "[match_record]") {
+    MatchRecord record;
+    
+    // Test that public_events key exists in toJson output
+    nlohmann::json json = record.toJson();
+    REQUIRE(json.contains("public_events"));
+    REQUIRE(json["public_events"].is_array());
+    
+    // Test fromJson with missing public_events key (should load as empty list)
+    MatchRecord record2;
+    REQUIRE(record2.fromJson(json));
+    REQUIRE(record2.public_events.empty());
+    
+    // Test fromJson with malformed public_events
+    json["public_events"] = "not-an-array";
+    REQUIRE_FALSE(record2.fromJson(json));
+    
+    // Test fromJson with array of invalid entries
+    json["public_events"] = nlohmann::json::array();
+    json["public_events"].push_back(nlohmann::json::object());  // Empty object
+    REQUIRE_FALSE(record2.fromJson(json));
+}
+
+TEST_CASE("RECORD-001: MatchRecord::appendPublicEvent cap behavior", "[match_record]") {
+    MatchRecord record;
+    
+    // Fill up to MAX_EVENTS (64)
+    for (int i = 0; i < MAX_EVENTS + 5; ++i) {
+        PublicEventEntry entry;
+        entry.type = "SERVER_ADDED";
+        entry.tick = i;
+        entry.revision = i;
+        record.appendPublicEvent(entry);
+    }
+    
+    // Should have exactly MAX_EVENTS entries
+    REQUIRE(record.public_events.size() == MAX_EVENTS);
+    
+    // Oldest entry should be removed
+    REQUIRE(record.public_events.front().tick == 5);  // First 5 entries were dropped
 }

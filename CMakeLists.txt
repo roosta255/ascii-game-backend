@@ -55,6 +55,7 @@ set(PROJECT_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/tick
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/turn
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/api
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/projection
     /usr/include/jsoncpp
 )
 
@@ -215,6 +216,9 @@ add_library(core_backend STATIC
     src/hider_seeker/api/match_record.cpp
     src/hider_seeker/api/request_validation.cpp
     src/hider_seeker/api/HiderSeekerService.cpp
+    src/hider_seeker/projection/audience_views.cpp
+    src/hider_seeker/projection/public_event.cpp
+    src/hider_seeker/api/view_snapshots.cpp
 )
 
 # 👇 CRITICAL: Apply include dirs to the library
@@ -290,6 +294,11 @@ add_executable(test_target
     test/hider_seeker/api/service_idempotency_test.cpp
     test/hider_seeker/api/service_validation_test.cpp
     test/hider_seeker/api/service_determinism_test.cpp
+    test/hider_seeker/projection/audience_views_test.cpp
+    test/hider_seeker/api/service_record_events_test.cpp
+    test/hider_seeker/api/view_snapshots_test.cpp
+    test/hider_seeker/api/service_snapshot_test.cpp
+    test/hider_seeker/api/service_views_test.cpp
 )
 
 target_include_directories(test_target PRIVATE ${PROJECT_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/test)
