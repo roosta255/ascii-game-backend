@@ -40,12 +40,12 @@ public:
                     std::function<void(const drogon::HttpResponsePtr&)>&& callback,
                     std::string matchId,
                     std::string intentId);
-    
+
     void getLatestView(const drogon::HttpRequestPtr& req,
                        std::function<void(const drogon::HttpResponsePtr&)>&& callback,
                        std::string matchId,
                        std::string audience);
-    
+
     void getRevisionView(const drogon::HttpRequestPtr& req,
                          std::function<void(const drogon::HttpResponsePtr&)>&& callback,
                          std::string matchId,

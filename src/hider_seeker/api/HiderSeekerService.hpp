@@ -1,23 +1,24 @@
 #pragma once
 
 #include "iStore.hpp"
-#include "projection/audience_views.hpp"
+#include "../projection/audience_views.hpp"
 #include "view_snapshots.hpp"
 #include <map>
 #include <memory>
 #include <mutex>
 #include <string>
-#include <nlohmann/json.hpp>
-#include <vector>
 #include <utility>
+#include <vector>
+#include <nlohmann/json.hpp>
 
 namespace hider_seeker {
 
-// HTTP status plus JSON body of one hider-seeker API call.
+// HTTP status plus JSON body of one hider-seeker API call, plus any extra
+// response headers (empty for every endpoint except the view endpoints).
 struct ApiResponse {
     int status;
     nlohmann::json body;
-    std::vector<std::pair<std::string, std::string>> headers = {};  // Added headers support
+    std::vector<std::pair<std::string, std::string>> headers = {};
 };
 
 // All hider-seeker move-API behavior: request validation, per-match
@@ -29,13 +30,20 @@ public:
     explicit HiderSeekerService(iStore& store);
 
     ApiResponse createMatch(const std::string& body);
-    ApiResponse joinMatch(const std::string& body);
+    ApiResponse joinMatch(const std::string& matchId, const std::string& body);
     ApiResponse startMatch(const std::string& matchId, const std::string& body);
     ApiResponse getMatch(const std::string& matchId);
     ApiResponse submitMove(const std::string& matchId, const std::string& body);
     ApiResponse cancelMove(const std::string& matchId, const std::string& intentId, const std::string& body);
-    ApiResponse getLatestView(const std::string& matchId, const std::string& audience, const std::string& account, const std::string& ifNoneMatch);
-    ApiResponse getRevisionView(const std::string& matchId, const std::string& audience, const std::string& revision, const std::string& account, const std::string& ifNoneMatch);
+    // audience is "hider" or "public"; account is ignored for "public".
+    // Serves the current revision's snapshot, building (and best-effort
+    // storing) it when missing. Headers: ETag, Cache-Control: no-cache.
+    ApiResponse getLatestView(const std::string& matchId, const std::string& audience, const std::string& account,
+                              const std::string& ifNoneMatch);
+    // Serves only an already-stored snapshot of revision (never rebuilt).
+    // Headers: ETag, Cache-Control: private, max-age=31536000, immutable.
+    ApiResponse getRevisionView(const std::string& matchId, const std::string& audience, const std::string& revision,
+                                const std::string& account, const std::string& ifNoneMatch);
 
 private:
     // The mutex for matchId, created on first access under matchMutexesGuard_.

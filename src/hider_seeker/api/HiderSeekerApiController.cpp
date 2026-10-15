@@ -10,7 +10,8 @@ using hider_seeker::HiderSeekerService;
 static FileStore hiderSeekerStore("var/state/hider_seeker_matches");
 static HiderSeekerService hiderSeekerService(hiderSeekerStore);
 
-// Logs the service outcome and returns its body and status unchanged.
+// Logs the service outcome and returns its body, status, and headers
+// unchanged. A 304 carries no body.
 static void respond(const RequestLog& rlog, const ApiResponse& response,
                     std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
     if (response.status < 400) {
@@ -24,19 +25,14 @@ static void respond(const RequestLog& rlog, const ApiResponse& response,
     auto resp = drogon::HttpResponse::newHttpResponse();
     resp->setStatusCode(static_cast<drogon::HttpStatusCode>(response.status));
     resp->setContentTypeCode(drogon::CT_APPLICATION_JSON);
-    resp->setBody(response.body.dump());
-    resp->addHeader("Access-Control-Allow-Origin", "*");
-    resp->addHeader("Access-Control-Allow-Headers", "Content-Type, If-None-Match");
-    resp->addHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
-    
-    // Add all custom headers
+    resp->setBody(response.status == 304 ? std::string() : response.body.dump());
     for (const auto& header : response.headers) {
         resp->addHeader(header.first, header.second);
     }
-    
-    // Always add ETag to Access-Control-Expose-Headers
+    resp->addHeader("Access-Control-Allow-Origin", "*");
+    resp->addHeader("Access-Control-Allow-Headers", "Content-Type, If-None-Match");
+    resp->addHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
     resp->addHeader("Access-Control-Expose-Headers", "ETag");
-    
     callback(resp);
 }
 
@@ -88,9 +84,8 @@ void HiderSeekerApiController::getLatestView
   std::string matchId, std::string audience )
 {
     RequestLog rlog("hsGetLatestView", req);
-    std::string account = req->getParameter("account");
-    std::string ifNoneMatch = req->getHeader("if-none-match");
-    respond(rlog, hiderSeekerService.getLatestView(matchId, audience, account, ifNoneMatch), std::move(callback));
+    respond(rlog, hiderSeekerService.getLatestView(matchId, audience, req->getParameter("account"),
+                                                   req->getHeader("if-none-match")), std::move(callback));
 }
 
 void HiderSeekerApiController::getRevisionView
@@ -98,7 +93,6 @@ void HiderSeekerApiController::getRevisionView
   std::string matchId, std::string audience, std::string revision )
 {
     RequestLog rlog("hsGetRevisionView", req);
-    std::string account = req->getParameter("account");
-    std::string ifNoneMatch = req->getHeader("if-none-match");
-    respond(rlog, hiderSeekerService.getRevisionView(matchId, audience, revision, account, ifNoneMatch), std::move(callback));
+    respond(rlog, hiderSeekerService.getRevisionView(matchId, audience, revision, req->getParameter("account"),
+                                                     req->getHeader("if-none-match")), std::move(callback));
 }

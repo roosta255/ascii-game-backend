@@ -1,96 +1,141 @@
-#include "projection/audience_views.hpp"
-#include "projection/public_event.hpp"
-#include <algorithm>
-#include <cstring>
+#include "audience_views.hpp"
+#include "../ruleset/action_rules.hpp"
+#include "../ruleset/loa_rules.hpp"
+#include "../ruleset/probe_rules.hpp"
+#include "../tick/tick_types.hpp"
 
-namespace asciigame {
 namespace hider_seeker {
+
+// PROJ-006 non-interference: this file reads only the MatchState fields named
+// below. It never reads rng_state, seeker, goals, the events ring
+// (events/event_head/event_count), next_submit_seq, any pending submit_seq,
+// any hider's goal_progress, or any server's owner_hider_id / trace_strength /
+// trace_age / public_flags. The public view additionally never reads any
+// hider's action_points, resources, or server_id, nor the pending ring.
 
 namespace {
 
-// FNV-1a 64-bit hash implementation
-uint64_t fnv1a64(const std::string& bytes) {
-    constexpr uint64_t offsetBasis = 0xcbf29ce484222325ULL;
-    constexpr uint64_t prime = 0x100000001b3ULL;
-    
-    uint64_t hash = offsetBasis;
-    for (char c : bytes) {
-        hash ^= static_cast<uint64_t>(c);
-        hash *= prime;
+using nlohmann::json;
+
+const char* phaseName(uint8_t phase) {
+    switch (phase) {
+        case PHASE_LOBBY:    return "LOBBY";
+        case PHASE_ACTIVE:   return "ACTIVE";
+        case PHASE_COMPLETE: return "COMPLETE";
     }
-    return hash;
+    return "UNKNOWN";
 }
 
-nlohmann::json renderMetricFrame(const ServerMetrics& frame) {
-    nlohmann::json result;
-    result["cpu"] = frame.cpu;
-    result["memory"] = frame.memory;
-    result["disk"] = frame.disk;
-    result["network"] = frame.network;
-    result["heat"] = frame.heat;
-    result["errors"] = frame.errors;
-    result["users"] = frame.users;
-    return result;
+// Reads only hider.active and hider.status.
+const char* hiderStatusName(const HiderState& hider) {
+    if (hider.active == 0) {
+        return "NOT_JOINED";
+    }
+    if (hider.status == HIDER_STATUS_ACTIVE) {
+        return "ACTIVE";
+    }
+    if (hider.status == HIDER_STATUS_CAPTURED) {
+        return "CAPTURED";
+    }
+    return "UNKNOWN";
 }
 
-nlohmann::json renderServers(const MatchState& state) {
-    nlohmann::json servers = nlohmann::json::array();
-    
-    for (int i = 0; i < MAX_SERVERS; ++i) {
-        const auto& server = state.servers[i];
-        if (server.active != 0) {
-            nlohmann::json serverJson;
-            serverJson["server_id"] = i;
-            
-            // Render metrics
-            nlohmann::json metrics = renderMetricFrame(server.current);
-            serverJson["metrics"] = metrics;
-            
-            // Render history with exactly HISTORY_TICKS frames
-            nlohmann::json history = nlohmann::json::array();
-            for (int j = 0; j < HISTORY_TICKS; ++j) {
-                int index = (server.history_head + j) % HISTORY_TICKS;
-                history.push_back(renderMetricFrame(server.history[index]));
-            }
-            serverJson["history"] = history;
-            
-            servers.push_back(serverJson);
+bool hasServerPosition(const HiderState& hider) {
+    return hider.active != 0 && (hider.status == HIDER_STATUS_ACTIVE || hider.status == HIDER_STATUS_CAPTURED);
+}
+
+// The account bound to slot, or null for an unbound (or out-of-range) slot.
+json accountJson(const ViewContext& ctx, int slot) {
+    json account = nullptr;
+    ctx.accounts.accessConst(slot, [&account](const std::string& bound) {
+        if (!bound.empty()) {
+            account = bound;
         }
+    });
+    return account;
+}
+
+bool isBound(const ViewContext& ctx, int slot) {
+    return !accountJson(ctx, slot).is_null();
+}
+
+const char* actionModeName(uint8_t mode) {
+    switch (static_cast<HiderActionMode>(mode)) {
+        case HiderActionMode::ADD_SERVER:       return "ADD_SERVER";
+        case HiderActionMode::REMOVE_SERVER:    return "REMOVE_SERVER";
+        case HiderActionMode::CONFIGURE_SERVER: return "CONFIGURE_SERVER";
+        case HiderActionMode::SUPPRESS_ERROR:   return "SUPPRESS_ERROR";
+        case HiderActionMode::BOOST_CPU:        return "BOOST_CPU";
+        case HiderActionMode::ROTATE_ROUTE:     return "ROTATE_ROUTE";
+        case HiderActionMode::PAY_GOAL:         return "PAY_GOAL";
     }
-    
+    return "UNKNOWN";
+}
+
+// The intent name of a pending move: its TickActionKind for the structural
+// kinds, otherwise its HiderActionMode.
+const char* pendingActionName(const PendingMove& move) {
+    switch (static_cast<TickActionKind>(move.action_type)) {
+        case TickActionKind::ADD_SERVER:    return "ADD_SERVER";
+        case TickActionKind::REMOVE_SERVER: return "REMOVE_SERVER";
+        case TickActionKind::HIDER_ACTION:  break;
+    }
+    return actionModeName(move.server_mode);
+}
+
+json renderMetricFrame(const MetricFrame& frame) {
+    json out = json::object();
+    out["cpu"] = frame.cpu;
+    out["memory"] = frame.memory;
+    out["disk"] = frame.disk;
+    out["network"] = frame.network;
+    out["heat"] = frame.heat;
+    out["errors"] = frame.errors;
+    out["users"] = frame.users;
+    return out;
+}
+
+// HISTORY_TICKS frames, oldest first, starting at history_head.
+json renderHistory(const ServerState& server) {
+    json history = json::array();
+    for (uint8_t offset = 0; offset < HISTORY_TICKS; ++offset) {
+        history.push_back(renderMetricFrame(server.history[(server.history_head + offset) % HISTORY_TICKS]));
+    }
+    return history;
+}
+
+// Active servers in ascending server_id. Reads only active, current, history,
+// and history_head of each server.
+json renderServers(const MatchState& state) {
+    json servers = json::array();
+    // The index is the server_id.
+    for (uint8_t serverId = 0; serverId < MAX_SERVERS; ++serverId) {
+        const ServerState& server = state.servers[serverId];
+        if (server.active == 0) {
+            continue;
+        }
+        servers.push_back({
+            {"server_id", serverId},
+            {"metrics", renderMetricFrame(server.current)},
+            {"history", renderHistory(server)}
+        });
+    }
     return servers;
 }
 
-nlohmann::json renderEvents(const std::vector<PublicEventEntry>& publicEvents) {
-    nlohmann::json events = nlohmann::json::array();
-    for (const auto& event : publicEvents) {
-        events.push_back(toJson(event));
+json renderEvents(const ViewContext& ctx) {
+    json events = json::array();
+    for (const auto& entry : ctx.publicEvents) {
+        events.push_back(toJson(entry));
     }
     return events;
 }
 
-std::string computeContentHash(const nlohmann::json& view) {
-    // Create a copy without the content_hash field
-    nlohmann::json viewCopy = view;
-    viewCopy.erase("content_hash");
-    
-    // Get compact JSON string representation
-    std::string jsonStr = viewCopy.dump();
-    
-    // Compute FNV-1a 64-bit hash and convert to hex
-    uint64_t hash = fnv1a64(jsonStr);
-    char hex[17];
-    snprintf(hex, sizeof(hex), "%016llx", static_cast<unsigned long long>(hash));
-    return std::string(hex);
-}
-
-} // anonymous namespace
-
-nlohmann::json buildHiderView(const MatchState& state, const ViewContext& ctx, uint8_t hiderId) {
-    nlohmann::json view;
-    
+// Top-level fields shared by every audience.
+json renderCommon(const MatchState& state, const ViewContext& ctx, const char* audience) {
+    json view = json::object();
     view["match_id"] = ctx.matchId;
-    view["audience"] = "hider";
+    view["audience"] = audience;
     view["view_version"] = VIEW_VERSION;
     view["schema_version"] = state.schema_version;
     view["ruleset_version"] = state.ruleset_version;
@@ -100,164 +145,116 @@ nlohmann::json buildHiderView(const MatchState& state, const ViewContext& ctx, u
     view["hider_count"] = state.hider_count;
     view["server_count"] = state.server_count;
     view["servers"] = renderServers(state);
-    view["events"] = renderEvents(ctx.publicEvents);
-    
-    // Compute content_hash before adding it to the view
-    std::string contentHash = computeContentHash(view);
-    
-    // Add content_hash to the view
-    view["content_hash"] = contentHash;
-    
-    // Build self section
-    const auto& hider = state.hiders[hiderId];
-    nlohmann::json self;
-    self["hider_id"] = hiderId;
-    self["account"] = ctx.accounts[hiderId];
-    
-    if (hider.active != 0) {
-        if (hider.status == HIDER_STATUS_ACTIVE) {
-            self["status"] = "ACTIVE";
-        } else if (hider.status == HIDER_STATUS_CAPTURED) {
-            self["status"] = "CAPTURED";
-        } else {
-            self["status"] = "NOT_JOINED";
-        }
-    } else {
-        self["status"] = "NOT_JOINED";
+    view["events"] = renderEvents(ctx);
+    return view;
+}
+
+// FNV-1a of the compact dump without content_hash, then (re)inserts it.
+void computeContentHash(json& view) {
+    view.erase("content_hash");
+    view["content_hash"] = fnv1a64Hex(view.dump());
+}
+
+json renderSelf(const MatchState& state, const ViewContext& ctx, uint8_t hiderId) {
+    const HiderState& hider = state.hiders[hiderId];
+    json resources = json::array();
+    for (const uint16_t amount : hider.resources) {
+        resources.push_back(amount);
     }
-    
-    self["action_points"] = hider.action_points;
-    self["server_id"] = hider.server_id;
-    self["loa"] = hider.resources[LOA_RESOURCE_INDEX];
-    
-    // Add all resources
-    nlohmann::json resources = nlohmann::json::array();
-    for (const auto& resource : hider.resources) {
-        resources.push_back(resource);
-    }
-    self["resources"] = resources;
-    
-    view["self"] = self;
-    
-    // Build team section
-    nlohmann::json team = nlohmann::json::array();
-    for (int i = 0; i < state.hider_count; ++i) {
-        if (i != hiderId) {
-            const auto& otherHider = state.hiders[i];
-            nlohmann::json teamMember;
-            teamMember["hider_id"] = i;
-            teamMember["account"] = ctx.accounts[i];
-            
-            if (otherHider.active != 0) {
-                if (otherHider.status == HIDER_STATUS_ACTIVE) {
-                    teamMember["status"] = "ACTIVE";
-                    teamMember["server_id"] = otherHider.server_id;
-                } else if (otherHider.status == HIDER_STATUS_CAPTURED) {
-                    teamMember["status"] = "CAPTURED";
-                    teamMember["server_id"] = otherHider.server_id;
-                } else {
-                    teamMember["status"] = "NOT_JOINED";
-                }
-            } else {
-                teamMember["status"] = "NOT_JOINED";
-            }
-            
-            team.push_back(teamMember);
+    return {
+        {"hider_id", hiderId},
+        {"account", accountJson(ctx, hiderId)},
+        {"status", hiderStatusName(hider)},
+        {"action_points", hider.action_points},
+        {"server_id", hider.server_id},
+        {"loa", hider.resources[LOA_RESOURCE_INDEX]},
+        {"resources", resources}
+    };
+}
+
+json renderTeam(const MatchState& state, const ViewContext& ctx, uint8_t hiderId) {
+    json team = json::array();
+    // The index is the hider_id; only slots below hider_count exist.
+    for (uint8_t slot = 0; slot < state.hider_count && slot < MAX_HIDERS; ++slot) {
+        if (slot == hiderId) {
+            continue;
         }
+        const HiderState& hider = state.hiders[slot];
+        team.push_back({
+            {"hider_id", slot},
+            {"account", accountJson(ctx, slot)},
+            {"status", hiderStatusName(hider)},
+            {"server_id", hasServerPosition(hider) ? json(hider.server_id) : json(nullptr)}
+        });
     }
-    view["team"] = team;
-    
-    // Build pending section
-    nlohmann::json pending = nlohmann::json::array();
-    int queuePosition = 0;
-    for (int i = state.pending_head; i < state.pending_head + state.pending_count; ++i) {
-        int index = i % MAX_PENDING_MOVES;
-        const auto& intent = state.pending[index];
-        nlohmann::json pendingItem;
-        pendingItem["intent_id"] = intent.id;
-        pendingItem["hider_id"] = intent.hider_id;
-        pendingItem["account"] = ctx.accounts[intent.hider_id];
-        
-        // Determine action type
-        if (intent.type == TICK_ACTION_ADD_SERVER || intent.type == TICK_ACTION_REMOVE_SERVER) {
-            pendingItem["action"] = tickActionKindName(intent.type);
-        } else {
-            pendingItem["action"] = hiderActionModeName(intent.type);
-        }
-        
-        // Set server_id for REMOVE_SERVER actions
-        if (intent.type == TICK_ACTION_REMOVE_SERVER) {
-            pendingItem["server_id"] = intent.target_server_id;
-        } else {
-            pendingItem["server_id"] = nullptr;
-        }
-        
-        pendingItem["queue_position"] = queuePosition;
-        pending.push_back(pendingItem);
-        queuePosition++;
+    return team;
+}
+
+// The pending ring walked from pending_head in submit order (the same walk
+// as the service's pendingMoveIds). Never reads submit_seq.
+json renderPending(const MatchState& state, const ViewContext& ctx) {
+    json pending = json::array();
+    for (uint8_t offset = 0; offset < state.pending_count && offset < MAX_PENDING_MOVES; ++offset) {
+        const PendingMove& move = state.pending[(state.pending_head + offset) % MAX_PENDING_MOVES];
+        const bool isRemove = static_cast<TickActionKind>(move.action_type) == TickActionKind::REMOVE_SERVER;
+        pending.push_back({
+            {"intent_id", "mv-" + std::to_string(move.move_id)},
+            {"hider_id", move.hider_id},
+            {"account", accountJson(ctx, move.hider_id)},
+            {"action", pendingActionName(move)},
+            {"server_id", isRemove ? json(move.server_id) : json(nullptr)},
+            {"queue_position", offset}
+        });
     }
-    view["pending"] = pending;
-    
+    return pending;
+}
+
+// Public roster: reads only each hider's active and status.
+json renderPublicHiders(const MatchState& state, const ViewContext& ctx) {
+    json hiders = json::array();
+    // The index is the hider_id; only slots below hider_count exist.
+    for (uint8_t slot = 0; slot < state.hider_count && slot < MAX_HIDERS; ++slot) {
+        const bool bound = isBound(ctx, slot);
+        hiders.push_back({
+            {"hider_id", slot},
+            {"account", accountJson(ctx, slot)},
+            {"status", bound ? hiderStatusName(state.hiders[slot]) : "NOT_JOINED"}
+        });
+    }
+    return hiders;
+}
+
+} // namespace
+
+std::string fnv1a64Hex(const std::string& bytes) {
+    uint64_t hash = 0xcbf29ce484222325ULL;
+    for (const char c : bytes) {
+        hash ^= static_cast<uint64_t>(static_cast<unsigned char>(c));
+        hash *= 0x100000001b3ULL;
+    }
+    static constexpr char HEX_DIGITS[] = "0123456789abcdef";
+    std::string hex(16, '0');
+    for (int nibble = 0; nibble < 16; ++nibble) {
+        hex[15 - nibble] = HEX_DIGITS[(hash >> (nibble * 4)) & 0x0F];
+    }
+    return hex;
+}
+
+nlohmann::json buildHiderView(const MatchState& state, const ViewContext& ctx, uint8_t hiderId) {
+    json view = renderCommon(state, ctx, "hider");
     view["hider_id"] = hiderId;
-    
+    view["self"] = renderSelf(state, ctx, hiderId);
+    view["team"] = renderTeam(state, ctx, hiderId);
+    view["pending"] = renderPending(state, ctx);
+    computeContentHash(view);
     return view;
 }
 
 nlohmann::json buildPublicView(const MatchState& state, const ViewContext& ctx) {
-    nlohmann::json view;
-    
-    view["match_id"] = ctx.matchId;
-    view["audience"] = "public";
-    view["view_version"] = VIEW_VERSION;
-    view["schema_version"] = state.schema_version;
-    view["ruleset_version"] = state.ruleset_version;
-    view["revision"] = state.revision;
-    view["tick"] = state.tick;
-    view["phase"] = phaseName(state.phase);
-    view["hider_count"] = state.hider_count;
-    view["server_count"] = state.server_count;
-    view["servers"] = renderServers(state);
-    view["events"] = renderEvents(ctx.publicEvents);
-    
-    // Compute content_hash before adding it to the view
-    std::string contentHash = computeContentHash(view);
-    
-    // Add content_hash to the view
-    view["content_hash"] = contentHash;
-    
-    // Build hiders section (no server_id, no action_points, resources, etc.)
-    nlohmann::json hiders = nlohmann::json::array();
-    for (int i = 0; i < state.hider_count; ++i) {
-        const auto& hider = state.hiders[i];
-        nlohmann::json hiderEntry;
-        hiderEntry["hider_id"] = i;
-        hiderEntry["account"] = ctx.accounts[i];
-        
-        if (hider.active != 0) {
-            if (hider.status == HIDER_STATUS_ACTIVE) {
-                hiderEntry["status"] = "ACTIVE";
-            } else if (hider.status == HIDER_STATUS_CAPTURED) {
-                hiderEntry["status"] = "CAPTURED";
-            } else {
-                hiderEntry["status"] = "NOT_JOINED";
-            }
-        } else {
-            hiderEntry["status"] = "NOT_JOINED";
-        }
-        
-        hiders.push_back(hiderEntry);
-    }
-    view["hiders"] = hiders;
-    
+    json view = renderCommon(state, ctx, "public");
+    view["hiders"] = renderPublicHiders(state, ctx);
+    computeContentHash(view);
     return view;
 }
 
-std::string fnv1a64Hex(const std::string& bytes) {
-    uint64_t hash = fnv1a64(bytes);
-    char hex[17];
-    snprintf(hex, sizeof(hex), "%016llx", static_cast<unsigned long long>(hash));
-    return std::string(hex);
-}
-
 } // namespace hider_seeker
-} // namespace asciigame

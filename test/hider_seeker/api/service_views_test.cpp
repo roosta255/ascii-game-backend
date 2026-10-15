@@ -1,253 +1,226 @@
+// SERVICE-001 / SERVICE-002: ApiResponse headers and the two view endpoints
+// (getLatestView / getRevisionView) the controller's view routes expose.
+
 #include <catch2/catch_test_macros.hpp>
-#include "hider_seeker/api/HiderSeekerService.hpp"
-#include "hider_seeker/api/match_record.hpp"
-#include "hider_seeker/domain/state.hpp"
-#include "hider_seeker/store/FileStore.hpp"
-#include <nlohmann/json.hpp>
+#include <filesystem>
+#include <fstream>
+#include <string>
+#include <utility>
+#include <vector>
+#include "state.hpp"
+#include "service_test_support.hpp"
 
-using namespace hider_seeker;
+using namespace hs_test;
 
-TEST_CASE("SERVICE-001/SERVICE-002: ApiResponse construction with headers", "[service]") {
-    // Test that the new ApiResponse constructor still works
-    nlohmann::json body = {{"test", "value"}};
-    
-    // This should compile and work (the original two-argument form)
-    ApiResponse response1{200, body};
-    REQUIRE(response1.status == 200);
-    REQUIRE(response1.body == body);
-    REQUIRE(response1.headers.empty());
-    
-    // This should also work with the new headers field
-    std::vector<std::pair<std::string, std::string>> headers = {{"Test-Header", "test-value"}};
-    ApiResponse response2{200, body, headers};
-    REQUIRE(response2.status == 200);
-    REQUIRE(response2.body == body);
-    REQUIRE(response2.headers.size() == 1);
-    REQUIRE(response2.headers[0].first == "Test-Header");
-    REQUIRE(response2.headers[0].second == "test-value");
+namespace {
+
+using Headers = std::vector<std::pair<std::string, std::string>>;
+
+const std::string LATEST_CACHE = "no-cache";
+const std::string REVISION_CACHE = "private, max-age=31536000, immutable";
+const std::string MISSING_MATCH = "hs-ffffffffffffffff";
+
+std::string snapshotPath(ServiceFixture& fx, const std::string& audienceKey, uint64_t revision) {
+    return fx.temp.dir() + "/" + fx.matchId + ".view." + audienceKey + ".rev-" + std::to_string(revision) + ".json";
 }
 
-TEST_CASE("SERVICE-001/SERVICE-002: getLatestView validation order", "[service]") {
-    FileStore store("var/test_state/hider_seeker_matches");
-    HiderSeekerService service(store);
-    
-    // Test invalid match ID
-    auto response = service.getLatestView("invalid-id", "public", "", "");
-    REQUIRE(response.status == 400);
-    REQUIRE(response.body["error"] == "INVALID_REQUEST");
-    
-    // Test invalid audience
-    response = service.getLatestView("hs-1234567890abcdef", "invalid-audience", "", "");
-    REQUIRE(response.status == 400);
-    REQUIRE(response.body["error"] == "INVALID_REQUEST");
-    
-    // Test valid audience but invalid account for hider
-    response = service.getLatestView("hs-1234567890abcdef", "hider", "invalid-account", "");
-    REQUIRE(response.status == 400);
-    REQUIRE(response.body["error"] == "INVALID_REQUEST");
-    
-    // Test valid audience and account but match not found
-    response = service.getLatestView("hs-1234567890abcdef", "public", "", "");
-    REQUIRE(response.status == 404);
-    REQUIRE(response.body["error"] == "MATCH_NOT_FOUND");
-    
-    // Test valid audience, account, and match but hider not in match
-    // First create a match
-    nlohmann::json createBody = {
-        {"account", "alice"},
-        {"hider_count", 1}
-    };
-    
-    auto createResponse = service.createMatch(createBody.dump());
-    REQUIRE(createResponse.status == 201);
-    
-    std::string matchId = createResponse.body["match_id"].get<std::string>();
-    
-    // Try to access as a non-member
-    response = service.getLatestView(matchId, "hider", "bob", "");
-    REQUIRE(response.status == 403);
-    REQUIRE(response.body["error"] == "NOT_IN_MATCH");
+std::string etagOf(const ApiResponse& response) {
+    return "\"" + response.body.at("content_hash").get<std::string>() + "\"";
 }
 
-TEST_CASE("SERVICE-001/SERVICE-002: getRevisionView validation order", "[service]") {
-    FileStore store("var/test_state/hider_seeker_matches");
-    HiderSeekerService service(store);
-    
-    // Test invalid match ID
-    auto response = service.getRevisionView("invalid-id", "public", "1", "", "");
-    REQUIRE(response.status == 400);
-    REQUIRE(response.body["error"] == "INVALID_REQUEST");
-    
-    // Test invalid audience
-    response = service.getRevisionView("hs-1234567890abcdef", "invalid-audience", "1", "", "");
-    REQUIRE(response.status == 400);
-    REQUIRE(response.body["error"] == "INVALID_REQUEST");
-    
-    // Test invalid revision (non-digit)
-    response = service.getRevisionView("hs-1234567890abcdef", "public", "abc", "", "");
-    REQUIRE(response.status == 400);
-    REQUIRE(response.body["error"] == "INVALID_REQUEST");
-    
-    // Test invalid revision (too long)
-    response = service.getRevisionView("hs-1234567890abcdef", "public", "12345678901234567890", "", "");
-    REQUIRE(response.status == 400);
-    REQUIRE(response.body["error"] == "INVALID_REQUEST");
-    
-    // Test valid audience and revision but match not found
-    response = service.getRevisionView("hs-1234567890abcdef", "public", "1", "", "");
-    REQUIRE(response.status == 404);
-    REQUIRE(response.body["error"] == "VIEW_NOT_FOUND");
+void requireViewHeaders(const ApiResponse& response, const std::string& etag, const std::string& cacheControl) {
+    REQUIRE(response.headers == Headers{{"ETag", etag}, {"Cache-Control", cacheControl}});
 }
 
-TEST_CASE("SERVICE-001/SERVICE-002: getLatestView and getRevisionView response headers", "[service]") {
-    FileStore store("var/test_state/hider_seeker_matches");
-    HiderSeekerService service(store);
-    
-    // Create a match
-    nlohmann::json createBody = {
-        {"account", "alice"},
-        {"hider_count", 1}
-    };
-    
-    auto createResponse = service.createMatch(createBody.dump());
-    REQUIRE(createResponse.status == 201);
-    
-    std::string matchId = createResponse.body["match_id"].get<std::string>();
-    
-    // Join the match
-    nlohmann::json joinBody = {
-        {"account", "bob"}
-    };
-    
-    auto joinResponse = service.joinMatch(matchId, joinBody.dump());
-    REQUIRE(joinResponse.status == 200);
-    
-    // Start the match
-    auto startResponse = service.startMatch(matchId, nlohmann::json({{"account", "alice"}}).dump());
-    REQUIRE(startResponse.status == 200);
-    
-    // Test getLatestView headers for public audience
-    auto response = service.getLatestView(matchId, "public", "", "");
+} // namespace
+
+TEST_CASE("SERVICE-001: two-argument ApiResponse construction defaults headers to empty", "[hider_seeker][api][views]") {
+    const ApiResponse response{200, json{{"ok", true}}};
     REQUIRE(response.status == 200);
-    REQUIRE(response.headers.size() >= 2);  // Should have ETag and Cache-Control
-    
-    bool hasETag = false;
-    bool hasCacheControl = false;
-    
-    for (const auto& header : response.headers) {
-        if (header.first == "ETag") hasETag = true;
-        if (header.first == "Cache-Control") hasCacheControl = true;
-    }
-    
-    REQUIRE(hasETag);
-    REQUIRE(hasCacheControl);
-    
-    // Test getRevisionView headers
-    response = service.getRevisionView(matchId, "public", "3", "", "");
-    REQUIRE(response.status == 200);
-    REQUIRE(response.headers.size() >= 2);  // Should have ETag and Cache-Control
-    
-    hasETag = false;
-    hasCacheControl = false;
-    
-    for (const auto& header : response.headers) {
-        if (header.first == "ETag") hasETag = true;
-        if (header.first == "Cache-Control") hasCacheControl = true;
-    }
-    
-    REQUIRE(hasETag);
-    REQUIRE(hasCacheControl);
+    REQUIRE(response.body == json{{"ok", true}});
+    REQUIRE(response.headers.empty());
 }
 
-TEST_CASE("SERVICE-001/SERVICE-002: getLatestView 304 handling", "[service]") {
-    FileStore store("var/test_state/hider_seeker_matches");
-    HiderSeekerService service(store);
-    
-    // Create a match
-    nlohmann::json createBody = {
-        {"account", "alice"},
-        {"hider_count", 1}
-    };
-    
-    auto createResponse = service.createMatch(createBody.dump());
-    REQUIRE(createResponse.status == 201);
-    
-    std::string matchId = createResponse.body["match_id"].get<std::string>();
-    
-    // Join the match
-    nlohmann::json joinBody = {
-        {"account", "bob"}
-    };
-    
-    auto joinResponse = service.joinMatch(matchId, joinBody.dump());
-    REQUIRE(joinResponse.status == 200);
-    
-    // Start the match
-    auto startResponse = service.startMatch(matchId, nlohmann::json({{"account", "alice"}}).dump());
-    REQUIRE(startResponse.status == 200);
-    
-    // Get the view first time to get ETag
-    auto response1 = service.getLatestView(matchId, "public", "", "");
-    REQUIRE(response1.status == 200);
-    
-    std::string etag;
-    for (const auto& header : response1.headers) {
-        if (header.first == "ETag") {
-            etag = header.second;
-            break;
+TEST_CASE("SERVICE-002: view request validation order", "[hider_seeker][api][views]") {
+    ServiceFixture fx;
+    fx.setupTwoHiders();
+
+    SECTION("malformed match id is checked first") {
+        requireError(fx.service.getLatestView("bad id!", "seeker", "", ""), 400, "INVALID_REQUEST");
+        requireError(fx.service.getRevisionView("bad id!", "seeker", "abc", "", ""), 400, "INVALID_REQUEST");
+        requireError(fx.service.getLatestView("", "public", "", ""), 400, "INVALID_REQUEST");
+    }
+
+    SECTION("unknown audience") {
+        for (const std::string audience : {"seeker", "hider-1", "HIDER", "", "public "}) {
+            INFO(audience);
+            requireError(fx.service.getLatestView(fx.matchId, audience, "alice", ""), 400, "INVALID_REQUEST");
+            requireError(fx.service.getRevisionView(fx.matchId, audience, "3", "alice", ""), 400, "INVALID_REQUEST");
         }
     }
-    
-    REQUIRE(!etag.empty());
-    
-    // Get the same view with If-None-Match matching ETag
-    auto response2 = service.getLatestView(matchId, "public", "", etag);
-    REQUIRE(response2.status == 304);
-    REQUIRE(response2.body.is_null());  // Empty body for 304
-    
-    // Get the same view with If-None-Match not matching ETag
-    auto response3 = service.getLatestView(matchId, "public", "", "\"different-etag\"");
-    REQUIRE(response3.status == 200);
-    REQUIRE(!response3.body.is_null());
+
+    SECTION("malformed revision, checked before the account and the match lookup") {
+        for (const std::string revision : {"-1", "abc", "", "1.5", " 3", "123456789012345678901"}) {
+            INFO(revision);
+            requireError(fx.service.getRevisionView(fx.matchId, "public", revision, "", ""), 400, "INVALID_REQUEST");
+            requireError(fx.service.getRevisionView(MISSING_MATCH, "hider", revision, "", ""), 400, "INVALID_REQUEST");
+        }
+    }
+
+    SECTION("hider requires a valid account, checked before the match lookup") {
+        for (const std::string account : {"", "bad account!", "alice-1"}) {
+            INFO(account);
+            requireError(fx.service.getLatestView(fx.matchId, "hider", account, ""), 400, "INVALID_REQUEST");
+            requireError(fx.service.getRevisionView(fx.matchId, "hider", "3", account, ""), 400, "INVALID_REQUEST");
+            requireError(fx.service.getLatestView(MISSING_MATCH, "hider", account, ""), 400, "INVALID_REQUEST");
+        }
+    }
+
+    SECTION("public ignores the account entirely") {
+        for (const std::string account : {"", "bad account!", "nobody"}) {
+            INFO(account);
+            REQUIRE(fx.service.getLatestView(fx.matchId, "public", account, "").status == 200);
+            REQUIRE(fx.service.getRevisionView(fx.matchId, "public", "3", account, "").status == 200);
+        }
+    }
+
+    SECTION("unknown match") {
+        requireError(fx.service.getLatestView(MISSING_MATCH, "public", "", ""), 404, "MATCH_NOT_FOUND");
+        requireError(fx.service.getLatestView(MISSING_MATCH, "hider", "alice", ""), 404, "MATCH_NOT_FOUND");
+        requireError(fx.service.getRevisionView(MISSING_MATCH, "public", "0", "", ""), 404, "MATCH_NOT_FOUND");
+    }
+
+    SECTION("hider account without a slot") {
+        requireError(fx.service.getLatestView(fx.matchId, "hider", "carol", ""), 403, "NOT_IN_MATCH");
+        requireError(fx.service.getRevisionView(fx.matchId, "hider", "3", "carol", ""), 403, "NOT_IN_MATCH");
+        // The host is not a hider either.
+        requireError(fx.service.getLatestView(fx.matchId, "hider", "host", ""), 403, "NOT_IN_MATCH");
+    }
 }
 
-TEST_CASE("SERVICE-001/SERVICE-002: getLatestView hider resolution", "[service]") {
-    FileStore store("var/test_state/hider_seeker_matches");
-    HiderSeekerService service(store);
-    
-    // Create a match with 2 hiders
-    nlohmann::json createBody = {
-        {"account", "alice"},
-        {"hider_count", 2}
-    };
-    
-    auto createResponse = service.createMatch(createBody.dump());
-    REQUIRE(createResponse.status == 201);
-    
-    std::string matchId = createResponse.body["match_id"].get<std::string>();
-    
-    // Join the match as bob
-    nlohmann::json joinBody = {
-        {"account", "bob"}
-    };
-    
-    auto joinResponse = service.joinMatch(matchId, joinBody.dump());
-    REQUIRE(joinResponse.status == 200);
-    
-    // Start the match
-    auto startResponse = service.startMatch(matchId, nlohmann::json({{"account", "alice"}}).dump());
-    REQUIRE(startResponse.status == 200);
-    
-    // Test that alice's hider request always resolves to slot 0 regardless of input
-    auto response1 = service.getLatestView(matchId, "hider", "alice", "");
-    REQUIRE(response1.status == 200);
-    
-    auto response2 = service.getLatestView(matchId, "hider", "bob", "");  // bob requesting hider view
-    REQUIRE(response2.status == 200);
-    
-    // Both should be for hider slot 0 (alice's slot)
-    // This is a bit tricky to test directly since we don't have access to the internal logic,
-    // but we can at least verify they both return valid responses
-    REQUIRE(response1.body.contains("hider_id"));
-    REQUIRE(response2.body.contains("hider_id"));
+TEST_CASE("SERVICE-002: getLatestView serves the current revision with no-cache headers", "[hider_seeker][api][views]") {
+    ServiceFixture fx;
+    fx.setupTwoHiders();
+
+    const ApiResponse pub = fx.service.getLatestView(fx.matchId, "public", "", "");
+    REQUIRE(pub.status == 200);
+    REQUIRE(pub.body.at("audience") == "public");
+    REQUIRE(pub.body.at("revision") == 3);
+    requireViewHeaders(pub, etagOf(pub), LATEST_CACHE);
+
+    // alice's "hider" request always resolves to slot 0, bob's to slot 1.
+    const ApiResponse alice = fx.service.getLatestView(fx.matchId, "hider", "alice", "");
+    REQUIRE(alice.status == 200);
+    REQUIRE(alice.body.at("hider_id") == 0);
+    REQUIRE(alice.body.at("self").at("account") == "alice");
+    requireViewHeaders(alice, etagOf(alice), LATEST_CACHE);
+    const ApiResponse bob = fx.service.getLatestView(fx.matchId, "hider", "bob", "");
+    REQUIRE(bob.body.at("hider_id") == 1);
+    REQUIRE(bob.body.at("self").at("account") == "bob");
+
+    // Served verbatim from the stored snapshot.
+    std::ifstream stored(snapshotPath(fx, "hider-0", 3));
+    const json document = json::parse(stored);
+    REQUIRE(alice.body == document.at("view"));
+
+    SECTION("an existing snapshot is served as stored, not rebuilt") {
+        json planted = document;
+        planted["view"]["marker"] = "planted";
+        planted["view"]["content_hash"] = "0000000000000abc";
+        {
+            std::ofstream file(snapshotPath(fx, "hider-0", 3));
+            file << planted.dump();
+        }
+        const ApiResponse served = fx.service.getLatestView(fx.matchId, "hider", "alice", "");
+        REQUIRE(served.status == 200);
+        REQUIRE(served.body == planted.at("view"));
+        requireViewHeaders(served, "\"0000000000000abc\"", LATEST_CACHE);
+    }
+
+    SECTION("a missing latest snapshot is rebuilt, re-stored, and served identically") {
+        REQUIRE(std::filesystem::remove(snapshotPath(fx, "public", 3)));
+        const ApiResponse rebuilt = fx.service.getLatestView(fx.matchId, "public", "", "");
+        REQUIRE(rebuilt.status == 200);
+        REQUIRE(rebuilt.body == pub.body);
+        REQUIRE(rebuilt.headers == pub.headers);
+        REQUIRE(std::filesystem::exists(snapshotPath(fx, "public", 3)));
+
+        json reloaded;
+        REQUIRE(hider_seeker::loadSnapshot(fx.temp.store(), fx.matchId, "public", 3, reloaded));
+        REQUIRE(reloaded == pub.body);
+    }
+
+    SECTION("the latest view follows new revisions") {
+        REQUIRE(fx.play("alice", intentOf("BOOST_CPU")).status == 200);
+        const ApiResponse next = fx.service.getLatestView(fx.matchId, "public", "", "");
+        REQUIRE(next.body.at("revision") == 4);
+        REQUIRE(etagOf(next) != etagOf(pub));
+    }
+}
+
+TEST_CASE("SERVICE-002: getRevisionView serves stored snapshots only, cached immutably", "[hider_seeker][api][views]") {
+    ServiceFixture fx;
+    fx.setupTwoHiders();
+
+    const ApiResponse lobby = fx.service.getRevisionView(fx.matchId, "public", "1", "", "");
+    REQUIRE(lobby.status == 200);
+    REQUIRE(lobby.body.at("revision") == 1);
+    REQUIRE(lobby.body.at("phase") == "LOBBY");
+    requireViewHeaders(lobby, etagOf(lobby), REVISION_CACHE);
+
+    // Leading zeros name the same revision.
+    REQUIRE(fx.service.getRevisionView(fx.matchId, "public", "0001", "", "").body == lobby.body);
+
+    SECTION("future revision") {
+        requireError(fx.service.getRevisionView(fx.matchId, "public", "4", "", ""), 404, "VIEW_NOT_FOUND");
+        requireError(fx.service.getRevisionView(fx.matchId, "public", "99999999999999999999", "", ""), 404,
+                     "VIEW_NOT_FOUND");
+    }
+
+    SECTION("revision before the requesting hider joined") {
+        requireError(fx.service.getRevisionView(fx.matchId, "hider", "1", "bob", ""), 404, "VIEW_NOT_FOUND");
+        requireError(fx.service.getRevisionView(fx.matchId, "hider", "0", "alice", ""), 404, "VIEW_NOT_FOUND");
+        REQUIRE(fx.service.getRevisionView(fx.matchId, "hider", "2", "bob", "").status == 200);
+        REQUIRE(fx.service.getRevisionView(fx.matchId, "hider", "1", "alice", "").status == 200);
+    }
+
+    SECTION("a missing snapshot (pre-milestone-2 data or a failed write) is never rebuilt") {
+        REQUIRE(std::filesystem::remove(snapshotPath(fx, "public", 3)));
+        requireError(fx.service.getRevisionView(fx.matchId, "public", "3", "", ""), 404, "VIEW_NOT_FOUND");
+        REQUIRE_FALSE(std::filesystem::exists(snapshotPath(fx, "public", 3)));
+    }
+
+    SECTION("at the current revision it matches getLatestView") {
+        const ApiResponse latest = fx.service.getLatestView(fx.matchId, "hider", "alice", "");
+        const ApiResponse pinned = fx.service.getRevisionView(fx.matchId, "hider", "3", "alice", "");
+        REQUIRE(pinned.status == 200);
+        REQUIRE(pinned.body == latest.body);
+        REQUIRE(etagOf(pinned) == etagOf(latest));
+        requireViewHeaders(pinned, etagOf(latest), REVISION_CACHE);
+    }
+}
+
+TEST_CASE("SERVICE-002: If-None-Match exact match returns 304", "[hider_seeker][api][views]") {
+    ServiceFixture fx;
+    fx.setupTwoHiders();
+
+    const ApiResponse latest = fx.service.getLatestView(fx.matchId, "public", "", "");
+    const std::string etag = etagOf(latest);
+
+    const ApiResponse notModified = fx.service.getLatestView(fx.matchId, "public", "", etag);
+    REQUIRE(notModified.status == 304);
+    REQUIRE(notModified.body.is_null());
+    REQUIRE(notModified.headers == latest.headers);
+
+    const ApiResponse unquoted = fx.service.getLatestView(fx.matchId, "public", "",
+                                                             latest.body.at("content_hash").get<std::string>());
+    REQUIRE(unquoted.status == 200);
+    REQUIRE(unquoted.body == latest.body);
+    REQUIRE(fx.service.getLatestView(fx.matchId, "public", "", "\"other\"").status == 200);
+
+    const ApiResponse pinned = fx.service.getRevisionView(fx.matchId, "public", "3", "", etag);
+    REQUIRE(pinned.status == 304);
+    REQUIRE(pinned.body.is_null());
+    requireViewHeaders(pinned, etag, REVISION_CACHE);
+    REQUIRE(fx.service.getRevisionView(fx.matchId, "public", "3", "", "W/" + etag).status == 200);
 }

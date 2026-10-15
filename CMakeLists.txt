@@ -217,7 +217,6 @@ add_library(core_backend STATIC
     src/hider_seeker/api/request_validation.cpp
     src/hider_seeker/api/HiderSeekerService.cpp
     src/hider_seeker/projection/audience_views.cpp
-    src/hider_seeker/projection/public_event.cpp
     src/hider_seeker/api/view_snapshots.cpp
 )
 

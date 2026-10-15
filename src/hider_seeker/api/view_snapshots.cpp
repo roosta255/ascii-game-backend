@@ -1,96 +1,101 @@
 #include "view_snapshots.hpp"
-#include <string>
 
-namespace asciigame {
 namespace hider_seeker {
 
 namespace {
 
-std::string makeSnapshotFilename(const std::string& matchId, const std::string& audienceKey, uint64_t revision) {
+using nlohmann::json;
+
+std::string snapshotFilename(const std::string& matchId, const std::string& audienceKey, uint64_t revision) {
     return matchId + ".view." + audienceKey + ".rev-" + std::to_string(revision);
 }
 
-} // anonymous namespace
-
-bool publishSnapshots(iStore& store, const MatchRecord& record) {
-    // Build ViewContext from the record
+ViewContext contextOf(const MatchRecord& record) {
     ViewContext ctx;
     ctx.matchId = record.filename;
     ctx.accounts = record.accounts;
     ctx.publicEvents = record.public_events;
-    
-    // Build public view
-    nlohmann::json publicView = buildPublicView(record.state, ctx);
-    std::string publicAudienceKey = "public";
-    if (!writeSnapshotIfAbsent(store, record.filename, publicAudienceKey, record.state.revision, publicView)) {
-        return false;
-    }
-    
-    // Build hider views for each bound slot
-    for (int i = 0; i < record.state.hider_count; ++i) {
-        if (!record.accounts[i].empty()) {  // Slot is bound
-            std::string hiderAudienceKey = "hider-" + std::to_string(i);
-            nlohmann::json hiderView = buildHiderView(record.state, ctx, i);
-            if (!writeSnapshotIfAbsent(store, record.filename, hiderAudienceKey, record.state.revision, hiderView)) {
-                return false;
-            }
-        }
-    }
-    
-    return true;
+    return ctx;
 }
 
-bool loadSnapshot(iStore& store, const std::string& matchId, const std::string& audienceKey, uint64_t revision, nlohmann::json& outView) {
-    std::string filename = makeSnapshotFilename(matchId, audienceKey, revision);
-    
-    // Try to load the document
-    std::string content;
-    if (!store.load(filename, content)) {
-        return false;  // Document doesn't exist
-    }
-    
+} // namespace
+
+bool writeSnapshotIfAbsent(iStore& store, const std::string& matchId, const std::string& audienceKey,
+                           uint64_t revision, const nlohmann::json& view) {
     try {
-        nlohmann::json doc = nlohmann::json::parse(content);
-        
-        // Validate document structure
-        if (!doc.contains("filename") || !doc.contains("version") || !doc.contains("view")) {
+        const std::string filename = snapshotFilename(matchId, audienceKey, revision);
+
+        // Never touch an existing document - including an unreadable one,
+        // which the store itself would not recognize as existing.
+        CodeEnum loadError = CODE_SUCCESS;
+        json existing;
+        if (store.load(filename, loadError, existing)) {
+            return true;
+        }
+        if (loadError != CODE_FILE_NOT_FOUND_ON_DISK) {
             return false;
         }
-        
-        if (doc["version"] != 0) {
-            return false;  // Unsupported version
-        }
-        
-        if (!doc["view"].is_object()) {
-            return false;  // View is not an object
-        }
-        
-        outView = doc["view"];
-        return true;
-    } catch (const nlohmann::json::exception&) {
-        return false;  // Malformed JSON
+
+        const json document = {{"filename", filename}, {"version", 0}, {"view", view}};
+        CodeEnum saveError = CODE_SUCCESS;
+        return store.save(true, saveError, document);
+    } catch (...) {
+        return false;
     }
 }
 
-bool writeSnapshotIfAbsent(iStore& store, const std::string& matchId, const std::string& audienceKey, uint64_t revision, const nlohmann::json& view) {
-    std::string filename = makeSnapshotFilename(matchId, audienceKey, revision);
-    
-    // Check if document already exists
-    std::string existingContent;
-    if (store.load(filename, existingContent)) {
-        // Document already exists, don't overwrite
-        return true;
+bool publishSnapshots(iStore& store, const MatchRecord& record) {
+    try {
+        const ViewContext ctx = contextOf(record);
+        const MatchState& state = record.state;
+        bool allWritten = writeSnapshotIfAbsent(store, ctx.matchId, "public", state.revision,
+                                                buildPublicView(state, ctx));
+
+        // The index is the hider slot named in the audience key.
+        for (uint8_t slot = 0; slot < state.hider_count && slot < MAX_HIDERS; ++slot) {
+            bool bound = false;
+            ctx.accounts.accessConst(slot, [&bound](const std::string& account) { bound = !account.empty(); });
+            if (!bound) {
+                continue;
+            }
+            const bool written = writeSnapshotIfAbsent(store, ctx.matchId, "hider-" + std::to_string(slot),
+                                                       state.revision, buildHiderView(state, ctx, slot));
+            allWritten = allWritten && written;
+        }
+        return allWritten;
+    } catch (...) {
+        return false;
     }
-    
-    // Create the document to store
-    nlohmann::json doc;
-    doc["filename"] = filename;
-    doc["version"] = 0;
-    doc["view"] = view;
-    
-    // Save it with isInitial = true (never overwrites existing documents)
-    return store.save(filename, doc.dump(), true);
+}
+
+bool loadSnapshot(iStore& store, const std::string& matchId, const std::string& audienceKey, uint64_t revision,
+                  nlohmann::json& outView) {
+    try {
+        CodeEnum error = CODE_SUCCESS;
+        json document;
+        if (!store.load(snapshotFilename(matchId, audienceKey, revision), error, document)) {
+            return false;
+        }
+        if (!document.is_object()) {
+            return false;
+        }
+        const auto filename = document.find("filename");
+        const auto version = document.find("version");
+        const auto view = document.find("view");
+        if (filename == document.end() || !filename->is_string()) {
+            return false;
+        }
+        if (version == document.end() || !version->is_number_integer() || version->get<int64_t>() != 0) {
+            return false;
+        }
+        if (view == document.end() || !view->is_object()) {
+            return false;
+        }
+        outView = *view;
+        return true;
+    } catch (...) {
+        return false;
+    }
 }
 
 } // namespace hider_seeker
-} // namespace asciigame
