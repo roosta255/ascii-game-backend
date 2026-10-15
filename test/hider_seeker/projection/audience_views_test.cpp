@@ -420,3 +420,64 @@ TEST_CASE("PROJ-006: hidden fields never change either view", "[hider_seeker][pr
         REQUIRE(buildPublicView(changed, ctx).dump() != publicBefore);
     }
 }
+
+namespace {
+
+// Every number appearing anywhere in value, at any depth, under any key.
+void collectNumbers(const json& value, std::vector<int64_t>& out) {
+    if (value.is_object() || value.is_array()) {
+        for (const auto& element : value) {
+            collectNumbers(element, out);
+        }
+    } else if (value.is_number_integer()) {
+        out.push_back(value.get<int64_t>());
+    }
+}
+
+bool containsNumber(const json& view, int64_t number) {
+    std::vector<int64_t> numbers;
+    collectNumbers(view, numbers);
+    for (int64_t value : numbers) {
+        if (value == number) {
+            return true;
+        }
+    }
+    return false;
+}
+
+} // namespace
+
+TEST_CASE("VIEW-002: trace raised by a hider action never reaches any view", "[hider_seeker][projection][metrics]") {
+    const ViewContext ctx = baseContext();
+    MatchState state = baseState();
+    state.hiders[0].action_points = 10;
+    state.servers[0].trace_strength = 90; // a value no other rendered field holds
+
+    // CONFIGURE_SERVER raises alice's server trace: 90 + 5 = 95.
+    REQUIRE(applyHiderAction(state, 0, HiderActionMode::CONFIGURE_SERVER) == RuleOutcome::ACCEPTED);
+    REQUIRE(state.servers[0].trace_strength == 95);
+    REQUIRE(state.servers[0].trace_age == 0); // reset because trace rose
+
+    const json hiderViews[] = {buildHiderView(state, ctx, 0), buildHiderView(state, ctx, 1)};
+    const json publicView = buildPublicView(state, ctx);
+
+    for (const json& view : {hiderViews[0], hiderViews[1], publicView}) {
+        // No key names trace, and trace_strength's value appears under no key.
+        std::set<std::string> keys;
+        collectKeys(view, keys);
+        for (const std::string& key : keys) {
+            INFO(key);
+            REQUIRE(key.find("trace") == std::string::npos);
+        }
+        REQUIRE_FALSE(containsNumber(view, 95));
+    }
+
+    // Non-interference: the views are identical to the same state with the
+    // trace fields put back to their pre-action values.
+    MatchState untraced = state;
+    untraced.servers[0].trace_strength = 90;
+    untraced.servers[0].trace_age = 2;
+    REQUIRE(buildHiderView(untraced, ctx, 0).dump() == hiderViews[0].dump());
+    REQUIRE(buildHiderView(untraced, ctx, 1).dump() == hiderViews[1].dump());
+    REQUIRE(buildPublicView(untraced, ctx).dump() == publicView.dump());
+}

@@ -20,16 +20,8 @@ inline const char* phaseName(uint8_t phase) {
 }
 
 inline const char* actionModeName(HiderActionMode mode) {
-    switch (mode) {
-        case HiderActionMode::ADD_SERVER:       return "ADD_SERVER";
-        case HiderActionMode::REMOVE_SERVER:    return "REMOVE_SERVER";
-        case HiderActionMode::CONFIGURE_SERVER: return "CONFIGURE_SERVER";
-        case HiderActionMode::SUPPRESS_ERROR:   return "SUPPRESS_ERROR";
-        case HiderActionMode::BOOST_CPU:        return "BOOST_CPU";
-        case HiderActionMode::ROTATE_ROUTE:     return "ROTATE_ROUTE";
-        case HiderActionMode::PAY_GOAL:         return "PAY_GOAL";
-    }
-    return "UNKNOWN";
+    const char* name = hiderActionName(mode);
+    return name ? name : "UNKNOWN";
 }
 
 inline const char* eventTypeName(HiderSeekerEventType type) {

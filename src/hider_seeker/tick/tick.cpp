@@ -4,6 +4,7 @@
 #include "../ruleset/loa_rules.hpp"
 #include "../ruleset/probe_rules.hpp"
 #include "../ruleset/ring_buffers.hpp"
+#include "../ruleset/server_metrics.hpp"
 
 #include <algorithm>
 
@@ -158,16 +159,23 @@ TickOutput runTick(MatchState& state,
         }
     }
     
-    // Step 4 (METRICS): push metric frames for active servers
-    // PLACEHOLDER pending ruleset confirmation
-    for (int i = 0; i < MAX_SERVERS; ++i) {
-        if (state.servers[i].active) {
-            MetricFrame frame = state.servers[i].current;
-            if (state.servers[i].trace_strength > 0) {
-                state.servers[i].trace_age++; // increment trace_age by 1 when trace_strength > 0
-            }
-            pushMetricFrame(state.servers[i], frame);
+    // Step 4 (METRICS): for each active server, drift every metric toward its
+    // rest value (in ServerMetric order), then age a still-present trace
+    // (evaluated after that decay), then push the frame. Inactive servers are
+    // left untouched.
+    for (ServerState& server : state.servers) {
+        if (!server.active) {
+            continue;
         }
+        // The index is the ServerMetric being drifted.
+        for (int m = 0; m < SERVER_METRIC_COUNT; ++m) {
+            const ServerMetric metric = static_cast<ServerMetric>(m);
+            driftMetric(server, metric, serverMetricDef(metric));
+        }
+        if (server.trace_strength > 0) {
+            server.trace_age++;
+        }
+        pushMetricFrame(server, server.current);
     }
     
     // Step 6 (SEEKER-POLICY): resolve probes based on policy

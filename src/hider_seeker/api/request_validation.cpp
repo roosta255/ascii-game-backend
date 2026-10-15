@@ -1,4 +1,5 @@
 #include "request_validation.hpp"
+#include "../ruleset/action_rules.hpp"
 #include <cctype>
 
 namespace hider_seeker {
@@ -45,9 +46,8 @@ bool isValidPlayMode(const std::string& playMode) {
 }
 
 bool isValidIntentType(const std::string& intentType) {
-    return intentType == "CONFIGURE_SERVER" || intentType == "SUPPRESS_ERROR" ||
-           intentType == "BOOST_CPU" || intentType == "ROTATE_ROUTE" || intentType == "PAY_GOAL" ||
-           intentType == "ADD_SERVER" || intentType == "REMOVE_SERVER";
+    HiderActionMode mode;
+    return hiderActionFromName(intentType.c_str(), mode);
 }
 
 nlohmann::json buildErrorBody(const std::string& code, const std::string& message) {

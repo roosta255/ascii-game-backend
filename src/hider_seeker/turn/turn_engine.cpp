@@ -56,7 +56,7 @@ bool passesMoveChecks(const MatchState& state, const MoveRequest& move, TurnResu
     }
     const bool knownKind = move.action_type <= static_cast<uint8_t>(TickActionKind::REMOVE_SERVER);
     const bool knownMode = move.action_type != static_cast<uint8_t>(TickActionKind::HIDER_ACTION) ||
-                           move.server_mode <= static_cast<uint8_t>(HiderActionMode::PAY_GOAL);
+                           move.server_mode < HIDER_ACTION_MODE_COUNT;
     if (!knownKind || !knownMode) {
         out = rejected(TurnReason::RULE_REJECTED, RuleOutcome::REJECTED_INVALID_TARGET);
         return false;

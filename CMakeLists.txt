@@ -206,6 +206,7 @@ add_library(core_backend STATIC
     src/hider_seeker/ruleset/regeneration.cpp
     src/hider_seeker/ruleset/loa_rules.cpp
     src/hider_seeker/ruleset/action_rules.cpp
+    src/hider_seeker/ruleset/server_metrics.cpp
     src/hider_seeker/ruleset/probe_rules.cpp
     src/hider_seeker/ruleset/intent_ordering.cpp
     src/hider_seeker/ruleset/ring_buffers.cpp
@@ -298,6 +299,8 @@ add_executable(test_target
     test/hider_seeker/api/view_snapshots_test.cpp
     test/hider_seeker/api/service_snapshot_test.cpp
     test/hider_seeker/api/service_views_test.cpp
+    test/hider_seeker/server_metrics_test.cpp
+    test/hider_seeker/api/service_metrics_integration_test.cpp
 )
 
 target_include_directories(test_target PRIVATE ${PROJECT_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/test)

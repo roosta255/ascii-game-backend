@@ -175,12 +175,11 @@ std::string ruleOutcomeField(const TurnResult& result) {
 // Maps an intent.type to its HiderActionMode (ADD_SERVER/REMOVE_SERVER map to
 // their own modes, which only label the intent - their kind is what dispatches).
 HiderActionMode intentMode(const std::string& intentType) {
-    if (intentType == "ADD_SERVER")       return HiderActionMode::ADD_SERVER;
-    if (intentType == "REMOVE_SERVER")    return HiderActionMode::REMOVE_SERVER;
-    if (intentType == "CONFIGURE_SERVER") return HiderActionMode::CONFIGURE_SERVER;
-    if (intentType == "SUPPRESS_ERROR")   return HiderActionMode::SUPPRESS_ERROR;
-    if (intentType == "BOOST_CPU")        return HiderActionMode::BOOST_CPU;
-    if (intentType == "ROTATE_ROUTE")     return HiderActionMode::ROTATE_ROUTE;
+    HiderActionMode mode;
+    if (hiderActionFromName(intentType.c_str(), mode)) {
+        return mode;
+    }
+    // Default fallback for invalid types
     return HiderActionMode::PAY_GOAL;
 }
 

@@ -2,42 +2,70 @@
 
 #include "rule_types.hpp"
 #include "../domain/state.hpp"
+#include "../../data/Array.hpp"
+#include <cstdint>
 
 namespace hider_seeker {
 
-enum class HiderActionMode : uint8_t {
-    ADD_SERVER,         // index 0
-    REMOVE_SERVER,      // index 1
-    CONFIGURE_SERVER,   // index 2
-    SUPPRESS_ERROR,     // index 3
-    BOOST_CPU,          // index 4
-    ROTATE_ROUTE,       // index 5  
-    PAY_GOAL            // index 6
+// Most effects a single HiderAction.enum line may list. A line with more
+// fails to compile (see the definition table in action_rules.cpp).
+constexpr uint8_t MAX_ACTION_EFFECTS = 4;
+
+// metric value of an unused effect slot (no ServerMetric has this index).
+constexpr uint8_t NO_EFFECT_METRIC = 0xFF;
+
+struct ActionEffect {
+    uint8_t metric = NO_EFFECT_METRIC; // a ServerMetric
+    int16_t delta = 0;                 // signed; the result is clamped to the metric's [min, max]
 };
 
-// Which MetricFrame field of the acting hider's occupied server an action's
-// effect modifies. NONE means the mode has no per-tick metric effect in this
-// table (e.g. ADD/REMOVE_SERVER, whose structural effect lives in loa_rules).
-enum class ActionEffectMetric : uint8_t {
-    NONE,
-    CPU,
-    MEMORY,
-    DISK,
-    NETWORK,
-    HEAT,
-    ERRORS,
-    USERS
+// One HiderAction.enum line's fields. Listing more than MAX_ACTION_EFFECTS
+// effects is a "too many initializers" compile error, never a truncation.
+struct HiderActionConfig {
+    uint16_t ap_cost = 0;
+    // A plain array so a line can write .effects = { {A, 1}, {B, 2} }.
+    ActionEffect effects[MAX_ACTION_EFFECTS] = {};
 };
 
-// AP cost and effect parameters for one HiderActionMode (all integer fields).
-// The backend derives both cost and effect of an accepted action from this
-// entry, never from the submitted intent (AP-001).
-struct ActionRuleEntry {
+struct HiderActionDef {
     uint16_t ap_cost;
-    ActionEffectMetric effect_metric; // metric modified on the hider's occupied server
-    int16_t effect_delta;             // signed amount added to that metric (clamped to 0..255)
+    Array<ActionEffect, MAX_ACTION_EFFECTS> effects; // fixed-capacity, no dynamic memory
+    uint8_t effect_count;                            // effects[0, effect_count) are used
 };
 
-RuleOutcome applyHiderAction(MatchState&, uint8_t hiderId, HiderActionMode mode);
+// Generated from HiderAction.enum: one enumerator per HIDER_ACTION_DECL line,
+// in file order. The numeric index is the save format (PendingMove::server_mode).
+enum class HiderActionMode : uint8_t {
+#define HIDER_ACTION_DECL(name, ...) name,
+#include "HiderAction.enum"
+#undef HIDER_ACTION_DECL
+};
+
+// The number of HIDER_ACTION_DECL lines.
+constexpr uint8_t HIDER_ACTION_MODE_COUNT = 0
+#define HIDER_ACTION_DECL(name, ...) + 1
+#include "HiderAction.enum"
+#undef HIDER_ACTION_DECL
+    ;
+
+static_assert(static_cast<uint8_t>(HiderActionMode::ADD_SERVER) == 0 &&
+                  static_cast<uint8_t>(HiderActionMode::REMOVE_SERVER) == 1,
+              "ADD_SERVER and REMOVE_SERVER indices are the save format and must stay 0 and 1");
+
+// Callers are expected to pass in-range modes only; an out-of-range mode
+// yields a definition no hider can afford, so it is never applied.
+const HiderActionDef& hiderActionDef(HiderActionMode mode);
+// nullptr when mode >= HIDER_ACTION_MODE_COUNT.
+const char* hiderActionName(HiderActionMode mode);
+// Exact, case-sensitive match against the HiderAction.enum names; false (and
+// out untouched) when there is no match.
+bool hiderActionFromName(const char* text, HiderActionMode& out);
+
+// Applies hiderId's action mode using only the backend's definition table
+// (never values from a submitted intent). Rejects with
+// REJECTED_INSUFFICIENT_RESOURCE and changes nothing when the hider cannot
+// pay def.ap_cost; otherwise pays the cost and applies the effects to the
+// hider's occupied server if it is active.
+RuleOutcome applyHiderAction(MatchState& match, uint8_t hiderId, HiderActionMode mode);
 
 } // namespace hider_seeker

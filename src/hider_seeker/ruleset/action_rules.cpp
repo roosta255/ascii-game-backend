@@ -1,89 +1,102 @@
 #include "action_rules.hpp"
-#include "../../data/Pointer.hpp"
+#include "server_metrics.hpp"
+#include <array>
 #include <cstdint>
+#include <cstring>
 
 namespace hider_seeker {
 
-// Placeholder constants for AP costs and effects - TODO: replace with final values
-// These are placeholders as the design doc only gives hedged examples
-constexpr uint16_t PLACEHOLDER_AP_ADD_SERVER = 0; // No extra cost - 1 LOA is already charged by loa_rules.cpp
-constexpr uint16_t PLACEHOLDER_AP_REMOVE_SERVER = 0; // No extra cost - 1 LOA is already charged by loa_rules.cpp
-constexpr uint16_t PLACEHOLDER_AP_CONFIGURE_SERVER = 5;
-constexpr uint16_t PLACEHOLDER_AP_SUPPRESS_ERROR = 3;
-constexpr uint16_t PLACEHOLDER_AP_BOOST_CPU = 2;
-constexpr uint16_t PLACEHOLDER_AP_ROTATE_ROUTE = 4;
-constexpr uint16_t PLACEHOLDER_AP_PAY_GOAL = 10;
-
-// Placeholder effect parameters - TODO: replace with final ruleset values.
-// The design doc only gives hedged examples, so each mode's effect is a single
-// signed delta on one metric of the acting hider's occupied server.
-// ADD/REMOVE_SERVER carry no metric effect here: their structural effect
-// (slot activation / removal) is applied by applyAddServer / applyRemoveServer.
-// CONFIGURE_SERVER and PAY_GOAL affect goal state, which is not modelled by
-// this slice, so they also carry no metric effect yet.
-constexpr int16_t PLACEHOLDER_EFFECT_SUPPRESS_ERROR = -10; // ERRORS
-constexpr int16_t PLACEHOLDER_EFFECT_BOOST_CPU = 15;       // CPU
-constexpr int16_t PLACEHOLDER_EFFECT_ROTATE_ROUTE = 5;     // NETWORK
-
-// Static table of action rules, indexed by HiderActionMode - placeholder values
-static const ActionRuleEntry ACTION_RULES[] = {
-    {PLACEHOLDER_AP_ADD_SERVER,        ActionEffectMetric::NONE,    0},                               // ADD_SERVER (index 0)
-    {PLACEHOLDER_AP_REMOVE_SERVER,     ActionEffectMetric::NONE,    0},                               // REMOVE_SERVER (index 1)
-    {PLACEHOLDER_AP_CONFIGURE_SERVER,  ActionEffectMetric::NONE,    0},                               // CONFIGURE_SERVER (index 2)
-    {PLACEHOLDER_AP_SUPPRESS_ERROR,    ActionEffectMetric::ERRORS,  PLACEHOLDER_EFFECT_SUPPRESS_ERROR}, // SUPPRESS_ERROR (index 3)
-    {PLACEHOLDER_AP_BOOST_CPU,         ActionEffectMetric::CPU,     PLACEHOLDER_EFFECT_BOOST_CPU},     // BOOST_CPU (index 4)
-    {PLACEHOLDER_AP_ROTATE_ROUTE,      ActionEffectMetric::NETWORK, PLACEHOLDER_EFFECT_ROTATE_ROUTE},  // ROTATE_ROUTE (index 5)
-    {PLACEHOLDER_AP_PAY_GOAL,          ActionEffectMetric::NONE,    0}                                // PAY_GOAL (index 6)
-};
-
 namespace {
 
-Pointer<uint8_t> metricField(MetricFrame& frame, ActionEffectMetric metric) {
-    switch (metric) {
-        case ActionEffectMetric::CPU:     return Pointer<uint8_t>(frame.cpu);
-        case ActionEffectMetric::MEMORY:  return Pointer<uint8_t>(frame.memory);
-        case ActionEffectMetric::DISK:    return Pointer<uint8_t>(frame.disk);
-        case ActionEffectMetric::NETWORK: return Pointer<uint8_t>(frame.network);
-        case ActionEffectMetric::HEAT:    return Pointer<uint8_t>(frame.heat);
-        case ActionEffectMetric::ERRORS:  return Pointer<uint8_t>(frame.errors);
-        case ActionEffectMetric::USERS:   return Pointer<uint8_t>(frame.users);
-        case ActionEffectMetric::NONE:    break;
+// Copies a config's leading used effect slots (those whose metric is set).
+HiderActionDef toDef(const HiderActionConfig& config) {
+    HiderActionDef def{config.ap_cost, Array<ActionEffect, MAX_ACTION_EFFECTS>(), 0};
+    for (const ActionEffect& effect : config.effects) {
+        if (effect.metric == NO_EFFECT_METRIC) {
+            break;
+        }
+        def.effects.assignValue(def.effect_count++, effect);
     }
-    return Pointer<uint8_t>();
+    return def;
 }
 
-// Applies entry's metric effect to the acting hider's occupied server.
-// Placeholder rule: if the hider occupies no active server, the metric effect
-// has no target and is skipped (the AP cost is still paid).
-void applyActionEffect(MatchState& match, uint8_t hiderId, const ActionRuleEntry& entry) {
-    const uint8_t serverId = match.hiders[hiderId].server_id;
-    if (serverId >= MAX_SERVERS || !match.servers[serverId].active) {
-        return;
-    }
-    metricField(match.servers[serverId].current, entry.effect_metric).access([&entry](uint8_t& field) {
-        int32_t value = static_cast<int32_t>(field) + entry.effect_delta;
-        if (value < 0) value = 0;
-        if (value > 255) value = 255;
-        field = static_cast<uint8_t>(value);
-    });
-}
+// Generated from HiderAction.enum, indexed by HiderActionMode.
+const Array<HiderActionDef, HIDER_ACTION_MODE_COUNT> HIDER_ACTION_DEFS(std::array<HiderActionDef, HIDER_ACTION_MODE_COUNT>{{
+#define HIDER_ACTION_DECL(name, ...) toDef(HiderActionConfig __VA_ARGS__),
+#include "HiderAction.enum"
+#undef HIDER_ACTION_DECL
+}});
+
+// Generated from HiderAction.enum, indexed by HiderActionMode.
+const Array<const char*, HIDER_ACTION_MODE_COUNT> HIDER_ACTION_NAMES(std::array<const char*, HIDER_ACTION_MODE_COUNT>{{
+#define HIDER_ACTION_DECL(name, ...) #name,
+#include "HiderAction.enum"
+#undef HIDER_ACTION_DECL
+}});
+
+// Returned for an out-of-range mode: no hider can afford it, so it is never applied.
+const HiderActionDef UNAFFORDABLE_ACTION_DEF{UINT16_MAX, Array<ActionEffect, MAX_ACTION_EFFECTS>(), 0};
 
 } // namespace
 
+const HiderActionDef& hiderActionDef(HiderActionMode mode) {
+    return HIDER_ACTION_DEFS.getOrDefault(static_cast<int>(mode), UNAFFORDABLE_ACTION_DEF);
+}
+
+const char* hiderActionName(HiderActionMode mode) {
+    const char* name = nullptr;
+    HIDER_ACTION_NAMES.accessConst(static_cast<int>(mode), [&name](const char* const& entry) { name = entry; });
+    return name;
+}
+
+bool hiderActionFromName(const char* text, HiderActionMode& out) {
+    if (text == nullptr) {
+        return false;
+    }
+    // The index is the HiderActionMode value being looked up.
+    for (int index = 0; index < HIDER_ACTION_MODE_COUNT; ++index) {
+        const char* name = hiderActionName(static_cast<HiderActionMode>(index));
+        if (name != nullptr && std::strcmp(text, name) == 0) {
+            out = static_cast<HiderActionMode>(index);
+            return true;
+        }
+    }
+    return false;
+}
+
 RuleOutcome applyHiderAction(MatchState& match, uint8_t hiderId, HiderActionMode mode) {
-    // Look up cost/effect from the backend's own table (never from submitted intent)
-    const ActionRuleEntry& entry = ACTION_RULES[static_cast<uint8_t>(mode)];
-    
-    // Check if hider has sufficient AP
-    if (match.hiders[hiderId].action_points < entry.ap_cost) {
+    if (hiderId >= MAX_HIDERS) {
+        return RuleOutcome::REJECTED_INVALID_TARGET;
+    }
+    HiderState& hider = match.hiders[hiderId];
+
+    // Cost and effects come only from the backend's own definition table.
+    const HiderActionDef& def = hiderActionDef(mode);
+    if (hider.action_points < def.ap_cost) {
         return RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE;
     }
+    hider.action_points = static_cast<uint8_t>(hider.action_points - def.ap_cost);
 
-    // Deduct the AP cost from HiderState::action_points only when action is accepted and applied
-    match.hiders[hiderId].action_points -= entry.ap_cost;
+    // No occupied server, or an inactive one: the AP is paid and nothing else changes.
+    if (hider.server_id >= MAX_SERVERS || !match.servers[hider.server_id].active) {
+        return RuleOutcome::ACCEPTED;
+    }
+    ServerState& server = match.servers[hider.server_id];
 
-    // Apply the mode's effect, taken from the same backend table entry
-    applyActionEffect(match, hiderId, entry);
+    const uint8_t traceBefore = serverMetricField(server, SERVER_METRIC_TRACE).orElse(0);
+    // Only the first effect_count slots are used.
+    for (int i = 0; i < def.effect_count; ++i) {
+        def.effects.accessConst(i, [&server](const ActionEffect& effect) {
+            const ServerMetric metric = static_cast<ServerMetric>(effect.metric);
+            applyMetricDelta(server, metric, effect.delta, serverMetricDef(metric));
+        });
+    }
+    const uint8_t traceAfter = serverMetricField(server, SERVER_METRIC_TRACE).orElse(0);
+
+    // An action that raised trace makes it fresh again.
+    if (traceAfter > traceBefore) {
+        server.trace_age = 0;
+    }
 
     return RuleOutcome::ACCEPTED;
 }

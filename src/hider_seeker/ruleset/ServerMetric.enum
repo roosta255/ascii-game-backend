@@ -1,0 +1,37 @@
+// ServerMetric.enum - the single definition of every per-server metric.
+//
+// This is an X-macro file: it has no include guard and is #included by
+// server_metrics.hpp / server_metrics.cpp with SERVER_METRIC_DECL defined to
+// generate the ServerMetric enum (SERVER_METRIC_<name>), the name table, and
+// the ServerMetricDef table. Do not include it anywhere else.
+//
+// Each line is:
+//   SERVER_METRIC_DECL(NAME, ({ .min = a, .max = b, .rest = r, .drift_per_tick = d }))
+//
+//   NAME            - the metric's wire name; becomes SERVER_METRIC_<NAME>.
+//   .min            - the lowest value the metric can ever hold (0..255).
+//   .max            - the highest value the metric can ever hold (0..255).
+//                     Action effects and drift are clamped into [min, max].
+//   .rest           - the resting value: with nothing acting on the server,
+//                     the metric settles here. Must satisfy min <= rest <= max
+//                     (checked by a static_assert in server_metrics.hpp).
+//   .drift_per_tick - how far the metric moves toward rest every tick, in the
+//                     tick's METRICS step. It never overshoots rest; 0 means
+//                     the metric never drifts.
+//
+// TRACE is hidden from every player view: it is ServerState::trace_strength,
+// not a MetricFrame field, so it never appears in history frames or in any
+// hider or public view.
+//
+// Ordering: append new metrics at the end; never reorder or delete lines.
+//
+// PLACEHOLDER pending BALANCE-001: every number below is a placeholder.
+
+SERVER_METRIC_DECL(CPU,     ({ .min = 0, .max = 100, .rest = 0, .drift_per_tick = 1 }))
+SERVER_METRIC_DECL(MEMORY,  ({ .min = 0, .max = 100, .rest = 0, .drift_per_tick = 1 }))
+SERVER_METRIC_DECL(DISK,    ({ .min = 0, .max = 100, .rest = 0, .drift_per_tick = 1 }))
+SERVER_METRIC_DECL(NETWORK, ({ .min = 0, .max = 100, .rest = 0, .drift_per_tick = 1 }))
+SERVER_METRIC_DECL(HEAT,    ({ .min = 0, .max = 100, .rest = 0, .drift_per_tick = 1 }))
+SERVER_METRIC_DECL(ERRORS,  ({ .min = 0, .max = 100, .rest = 0, .drift_per_tick = 1 }))
+SERVER_METRIC_DECL(USERS,   ({ .min = 0, .max = 100, .rest = 0, .drift_per_tick = 1 }))
+SERVER_METRIC_DECL(TRACE,   ({ .min = 0, .max = 100, .rest = 0, .drift_per_tick = 2 }))
