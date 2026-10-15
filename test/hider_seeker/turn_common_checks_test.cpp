@@ -218,7 +218,7 @@ TEST_CASE("DEF-007 a stored pending server_mode of 6 loads and plays as PAY_GOAL
     MatchState state{};
     REQUIRE(loadMatchState(serialize(built), state));
     REQUIRE(state.pending_count == 1);
-    REQUIRE(state.pending[0].server_mode == static_cast<uint8_t>(PAY_GOAL));
+    REQUIRE(state.pending[0].server_mode == static_cast<uint8_t>(HiderActionMode::PAY_GOAL));
 
     CountingPolicy policy;
     const TurnResult passed = passTicks(state, 1, policy);

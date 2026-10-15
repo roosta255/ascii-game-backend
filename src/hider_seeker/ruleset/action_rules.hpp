@@ -11,9 +11,20 @@ namespace hider_seeker {
 // fails to compile (see the definition table in action_rules.cpp).
 constexpr uint8_t MAX_ACTION_EFFECTS = 4;
 
+// metric value of an unused effect slot (no ServerMetric has this index).
+constexpr uint8_t NO_EFFECT_METRIC = 0xFF;
+
 struct ActionEffect {
-    uint8_t metric; // a ServerMetric
-    int16_t delta;  // signed; the result is clamped to the metric's [min, max]
+    uint8_t metric = NO_EFFECT_METRIC; // a ServerMetric
+    int16_t delta = 0;                 // signed; the result is clamped to the metric's [min, max]
+};
+
+// One HiderAction.enum line's fields. Listing more than MAX_ACTION_EFFECTS
+// effects is a "too many initializers" compile error, never a truncation.
+struct HiderActionConfig {
+    uint16_t ap_cost = 0;
+    // A plain array so a line can write .effects = { {A, 1}, {B, 2} }.
+    ActionEffect effects[MAX_ACTION_EFFECTS] = {};
 };
 
 struct HiderActionDef {
@@ -24,14 +35,21 @@ struct HiderActionDef {
 
 // Generated from HiderAction.enum: one enumerator per HIDER_ACTION_DECL line,
 // in file order. The numeric index is the save format (PendingMove::server_mode).
-enum HiderActionMode : uint8_t {
-#define HIDER_ACTION_DECL(name, ap_cost, effects) name,
+enum class HiderActionMode : uint8_t {
+#define HIDER_ACTION_DECL(name, ...) name,
 #include "HiderAction.enum"
 #undef HIDER_ACTION_DECL
-    HIDER_ACTION_MODE_COUNT
 };
 
-static_assert(ADD_SERVER == 0 && REMOVE_SERVER == 1,
+// The number of HIDER_ACTION_DECL lines.
+constexpr uint8_t HIDER_ACTION_MODE_COUNT = 0
+#define HIDER_ACTION_DECL(name, ...) + 1
+#include "HiderAction.enum"
+#undef HIDER_ACTION_DECL
+    ;
+
+static_assert(static_cast<uint8_t>(HiderActionMode::ADD_SERVER) == 0 &&
+                  static_cast<uint8_t>(HiderActionMode::REMOVE_SERVER) == 1,
               "ADD_SERVER and REMOVE_SERVER indices are the save format and must stay 0 and 1");
 
 // Callers are expected to pass in-range modes only; an out-of-range mode

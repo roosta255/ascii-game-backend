@@ -95,13 +95,13 @@ TEST_CASE("applyHiderAction applies no effect when rejected", "[action]") {
 
 TEST_CASE("HiderAction.enum generates seven modes with unchanged indices", "[action][def]") {
     REQUIRE(HIDER_ACTION_MODE_COUNT == 7);
-    REQUIRE(static_cast<int>(ADD_SERVER) == 0);
-    REQUIRE(static_cast<int>(REMOVE_SERVER) == 1);
-    REQUIRE(static_cast<int>(CONFIGURE_SERVER) == 2);
-    REQUIRE(static_cast<int>(SUPPRESS_ERROR) == 3);
-    REQUIRE(static_cast<int>(BOOST_CPU) == 4);
-    REQUIRE(static_cast<int>(ROTATE_ROUTE) == 5);
-    REQUIRE(static_cast<int>(PAY_GOAL) == 6);
+    REQUIRE(static_cast<int>(HiderActionMode::ADD_SERVER) == 0);
+    REQUIRE(static_cast<int>(HiderActionMode::REMOVE_SERVER) == 1);
+    REQUIRE(static_cast<int>(HiderActionMode::CONFIGURE_SERVER) == 2);
+    REQUIRE(static_cast<int>(HiderActionMode::SUPPRESS_ERROR) == 3);
+    REQUIRE(static_cast<int>(HiderActionMode::BOOST_CPU) == 4);
+    REQUIRE(static_cast<int>(HiderActionMode::ROTATE_ROUTE) == 5);
+    REQUIRE(static_cast<int>(HiderActionMode::PAY_GOAL) == 6);
 }
 
 TEST_CASE("hiderActionName and hiderActionFromName round-trip every mode", "[action][def]") {
@@ -109,25 +109,25 @@ TEST_CASE("hiderActionName and hiderActionFromName round-trip every mode", "[act
         const HiderActionMode mode = static_cast<HiderActionMode>(index);
         const char* name = hiderActionName(mode);
         REQUIRE(name != nullptr);
-        HiderActionMode parsed = HIDER_ACTION_MODE_COUNT;
+        HiderActionMode parsed = static_cast<HiderActionMode>(HIDER_ACTION_MODE_COUNT);
         REQUIRE(hiderActionFromName(name, parsed));
         REQUIRE(parsed == mode);
     }
-    REQUIRE(std::string(hiderActionName(BOOST_CPU)) == "BOOST_CPU");
-    REQUIRE(hiderActionName(HIDER_ACTION_MODE_COUNT) == nullptr);
+    REQUIRE(std::string(hiderActionName(HiderActionMode::BOOST_CPU)) == "BOOST_CPU");
+    REQUIRE(hiderActionName(static_cast<HiderActionMode>(HIDER_ACTION_MODE_COUNT)) == nullptr);
 }
 
 TEST_CASE("hiderActionFromName accepts exact names only", "[action][def]") {
-    HiderActionMode parsed = PAY_GOAL;
+    HiderActionMode parsed = HiderActionMode::PAY_GOAL;
     REQUIRE_FALSE(hiderActionFromName("", parsed));
     REQUIRE_FALSE(hiderActionFromName("boost_cpu", parsed));
     REQUIRE_FALSE(hiderActionFromName("PASS", parsed));
     REQUIRE_FALSE(hiderActionFromName("BOOST", parsed));
-    REQUIRE(parsed == PAY_GOAL); // untouched on failure
+    REQUIRE(parsed == HiderActionMode::PAY_GOAL); // untouched on failure
 }
 
 TEST_CASE("hiderActionDef returns the HiderAction.enum cost and effects", "[action][def]") {
-    const HiderActionDef& suppress = hiderActionDef(SUPPRESS_ERROR);
+    const HiderActionDef& suppress = hiderActionDef(HiderActionMode::SUPPRESS_ERROR);
     REQUIRE(suppress.ap_cost == 3);
     REQUIRE(suppress.effect_count == 2);
     ActionEffect first{};
@@ -139,7 +139,7 @@ TEST_CASE("hiderActionDef returns the HiderAction.enum cost and effects", "[acti
     REQUIRE(second.metric == SERVER_METRIC_TRACE);
     REQUIRE(second.delta == 20);
 
-    const HiderActionDef& payGoal = hiderActionDef(PAY_GOAL);
+    const HiderActionDef& payGoal = hiderActionDef(HiderActionMode::PAY_GOAL);
     REQUIRE(payGoal.ap_cost == 10);
     REQUIRE(payGoal.effect_count == 0);
 }
@@ -153,7 +153,7 @@ TEST_CASE("applyHiderAction BOOST_CPU raises cpu and trace and resets trace_age"
     match.servers[0].trace_strength = 0;
     match.servers[0].trace_age = 7;
 
-    REQUIRE(applyHiderAction(match, 0, BOOST_CPU) == RuleOutcome::ACCEPTED);
+    REQUIRE(applyHiderAction(match, 0, HiderActionMode::BOOST_CPU) == RuleOutcome::ACCEPTED);
     REQUIRE(match.servers[0].current.cpu == 65);   // 50 + 15
     REQUIRE(match.servers[0].trace_strength == 5); // 0 + 5
     REQUIRE(match.servers[0].trace_age == 0);      // trace rose, so reset from 7
@@ -168,7 +168,7 @@ TEST_CASE("applyHiderAction SUPPRESS_ERROR clamps errors at the metric min", "[a
     match.servers[1].current.errors = 4;
     match.servers[1].trace_strength = 10;
 
-    REQUIRE(applyHiderAction(match, 0, SUPPRESS_ERROR) == RuleOutcome::ACCEPTED);
+    REQUIRE(applyHiderAction(match, 0, HiderActionMode::SUPPRESS_ERROR) == RuleOutcome::ACCEPTED);
     REQUIRE(match.servers[1].current.errors == 0);  // 4 - 10 = -6, clamped to ERRORS min 0
     REQUIRE(match.servers[1].trace_strength == 30); // 10 + 20
     REQUIRE(match.hiders[0].action_points == 7);    // 10 - 3
@@ -181,7 +181,7 @@ TEST_CASE("applyHiderAction ROTATE_ROUTE clamps network at the metric max", "[ac
     match.servers[0].active = 1;
     match.servers[0].current.network = 98;
 
-    REQUIRE(applyHiderAction(match, 0, ROTATE_ROUTE) == RuleOutcome::ACCEPTED);
+    REQUIRE(applyHiderAction(match, 0, HiderActionMode::ROTATE_ROUTE) == RuleOutcome::ACCEPTED);
     REQUIRE(match.servers[0].current.network == 100); // 98 + 5 = 103, clamped to NETWORK max 100 (no longer 255)
     REQUIRE(match.servers[0].trace_strength == 10);   // 0 + 10
 }
@@ -194,7 +194,7 @@ TEST_CASE("applyHiderAction PAY_GOAL leaves trace_age unchanged", "[action][def]
     match.servers[0].trace_strength = 9;
     match.servers[0].trace_age = 4;
 
-    REQUIRE(applyHiderAction(match, 0, PAY_GOAL) == RuleOutcome::ACCEPTED);
+    REQUIRE(applyHiderAction(match, 0, HiderActionMode::PAY_GOAL) == RuleOutcome::ACCEPTED);
     REQUIRE(match.servers[0].trace_strength == 9);
     REQUIRE(match.servers[0].trace_age == 4);
     REQUIRE(match.hiders[0].action_points == 0); // 10 - 10
@@ -209,7 +209,7 @@ TEST_CASE("applyHiderAction rejected for insufficient AP changes no metric, trac
     match.servers[0].trace_strength = 6;
     match.servers[0].trace_age = 3;
 
-    REQUIRE(applyHiderAction(match, 0, SUPPRESS_ERROR) == RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE);
+    REQUIRE(applyHiderAction(match, 0, HiderActionMode::SUPPRESS_ERROR) == RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE);
     REQUIRE(match.servers[0].current.errors == 40);
     REQUIRE(match.servers[0].trace_strength == 6);
     REQUIRE(match.servers[0].trace_age == 3);
@@ -225,7 +225,7 @@ TEST_CASE("applyHiderAction with an inactive occupied server pays AP only", "[ac
     match.servers[3].trace_strength = 0;
     match.servers[3].trace_age = 7;
 
-    REQUIRE(applyHiderAction(match, 0, BOOST_CPU) == RuleOutcome::ACCEPTED);
+    REQUIRE(applyHiderAction(match, 0, HiderActionMode::BOOST_CPU) == RuleOutcome::ACCEPTED);
     REQUIRE(match.hiders[0].action_points == 8); // 10 - 2
     REQUIRE(match.servers[3].current.cpu == 50);
     REQUIRE(match.servers[3].trace_strength == 0);

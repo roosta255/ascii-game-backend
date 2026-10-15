@@ -6,16 +6,16 @@
 // table. Do not include it anywhere else.
 //
 // Each line is:
-//   HIDER_ACTION_DECL(name, ap_cost, (effects...))
+//   HIDER_ACTION_DECL(NAME, ({ .ap_cost = N, .effects = { {SERVER_METRIC_X, delta}, ... } }))
 //
-//   name    - the action's wire name; becomes the HiderActionMode enumerator
-//             and is what the move API accepts as intent.type.
-//   ap_cost - action points the hider pays when the action is accepted. If
-//             the hider has fewer AP than this, the action is rejected and
-//             nothing changes.
-//   effects - a parenthesised list of zero to MAX_ACTION_EFFECTS (4)
-//             {SERVER_METRIC_<metric>, delta} pairs, applied in order. A line
-//             with more than 4 effects fails to compile.
+//   NAME     - the action's wire name; becomes the HiderActionMode enumerator
+//              and is what the move API accepts as intent.type.
+//   .ap_cost - action points the hider pays when the action is accepted. If
+//              the hider has fewer AP than this, the action is rejected and
+//              nothing changes. Omitted means 0.
+//   .effects - zero to MAX_ACTION_EFFECTS (4) {SERVER_METRIC_<metric>, delta}
+//              pairs, applied in order. Omitted or {} means no effects. A line
+//              with more than 4 effects fails to compile.
 //
 // Effects apply only to the acting hider's occupied server (no other server
 // and no other hider is touched). If the hider occupies no active server,
@@ -29,10 +29,11 @@
 // lines - an action's position (its index) is the save format. Renaming a
 // line is allowed.
 
-HIDER_ACTION_DECL(ADD_SERVER,       0,  ())                                                       // PLACEHOLDER pending BALANCE-001
-HIDER_ACTION_DECL(REMOVE_SERVER,    0,  ())                                                       // PLACEHOLDER pending BALANCE-001
-HIDER_ACTION_DECL(CONFIGURE_SERVER, 5,  ({SERVER_METRIC_TRACE, +5}))                              // PLACEHOLDER pending BALANCE-001
-HIDER_ACTION_DECL(SUPPRESS_ERROR,   3,  ({SERVER_METRIC_ERRORS, -10}, {SERVER_METRIC_TRACE, +20})) // PLACEHOLDER pending BALANCE-001
-HIDER_ACTION_DECL(BOOST_CPU,        2,  ({SERVER_METRIC_CPU, +15}, {SERVER_METRIC_TRACE, +5}))     // PLACEHOLDER pending BALANCE-001
-HIDER_ACTION_DECL(ROTATE_ROUTE,     4,  ({SERVER_METRIC_NETWORK, +5}, {SERVER_METRIC_TRACE, +10})) // PLACEHOLDER pending BALANCE-001
-HIDER_ACTION_DECL(PAY_GOAL,         10, ())                                                       // PLACEHOLDER pending BALANCE-001
+// PLACEHOLDER pending BALANCE-001: every cost and effect below.
+HIDER_ACTION_DECL(ADD_SERVER,       ({ .ap_cost = 0,  .effects = {} }))
+HIDER_ACTION_DECL(REMOVE_SERVER,    ({ .ap_cost = 0,  .effects = {} }))
+HIDER_ACTION_DECL(CONFIGURE_SERVER, ({ .ap_cost = 5,  .effects = { {SERVER_METRIC_TRACE, 5} } }))
+HIDER_ACTION_DECL(SUPPRESS_ERROR,   ({ .ap_cost = 3,  .effects = { {SERVER_METRIC_ERRORS, -10}, {SERVER_METRIC_TRACE, 20} } }))
+HIDER_ACTION_DECL(BOOST_CPU,        ({ .ap_cost = 2,  .effects = { {SERVER_METRIC_CPU, 15}, {SERVER_METRIC_TRACE, 5} } }))
+HIDER_ACTION_DECL(ROTATE_ROUTE,     ({ .ap_cost = 4,  .effects = { {SERVER_METRIC_NETWORK, 5}, {SERVER_METRIC_TRACE, 10} } }))
+HIDER_ACTION_DECL(PAY_GOAL,         ({ .ap_cost = 10, .effects = {} }))

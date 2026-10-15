@@ -9,15 +9,14 @@ namespace {
 
 // Generated from ServerMetric.enum, indexed by ServerMetric.
 const Array<ServerMetricDef, SERVER_METRIC_COUNT> SERVER_METRIC_DEFS(std::array<ServerMetricDef, SERVER_METRIC_COUNT>{{
-#define SERVER_METRIC_DECL(name, min_value, max_value, rest_value, drift_per_tick) \
-    ServerMetricDef{min_value, max_value, rest_value, drift_per_tick},
+#define SERVER_METRIC_DECL(name, ...) ServerMetricDef __VA_ARGS__,
 #include "ServerMetric.enum"
 #undef SERVER_METRIC_DECL
 }});
 
 // Generated from ServerMetric.enum, indexed by ServerMetric.
 const Array<const char*, SERVER_METRIC_COUNT> SERVER_METRIC_NAMES(std::array<const char*, SERVER_METRIC_COUNT>{{
-#define SERVER_METRIC_DECL(name, min_value, max_value, rest_value, drift_per_tick) #name,
+#define SERVER_METRIC_DECL(name, ...) #name,
 #include "ServerMetric.enum"
 #undef SERVER_METRIC_DECL
 }});

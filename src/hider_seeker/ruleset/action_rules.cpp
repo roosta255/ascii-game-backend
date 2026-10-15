@@ -3,37 +3,36 @@
 #include <array>
 #include <cstdint>
 #include <cstring>
-#include <initializer_list>
 
 namespace hider_seeker {
 
 namespace {
 
-#define HIDER_ACTION_UNPAREN(...) __VA_ARGS__
+// Copies a config's leading used effect slots (those whose metric is set).
+HiderActionDef toDef(const HiderActionConfig& config) {
+    HiderActionDef def{config.ap_cost, Array<ActionEffect, MAX_ACTION_EFFECTS>(), 0};
+    for (const ActionEffect& effect : config.effects) {
+        if (effect.metric == NO_EFFECT_METRIC) {
+            break;
+        }
+        def.effects.assignValue(def.effect_count++, effect);
+    }
+    return def;
+}
 
-// Generated from HiderAction.enum, indexed by HiderActionMode. Each line's
-// effects initialise a std::array of exactly MAX_ACTION_EFFECTS slots, so a
-// line listing more effects is a "too many initializers" compile error
-// rather than a silent truncation.
+// Generated from HiderAction.enum, indexed by HiderActionMode.
 const Array<HiderActionDef, HIDER_ACTION_MODE_COUNT> HIDER_ACTION_DEFS(std::array<HiderActionDef, HIDER_ACTION_MODE_COUNT>{{
-#define HIDER_ACTION_DECL(name, ap_cost, effects)                                                         \
-    HiderActionDef{                                                                                        \
-        ap_cost,                                                                                           \
-        Array<ActionEffect, MAX_ACTION_EFFECTS>(                                                           \
-            std::array<ActionEffect, MAX_ACTION_EFFECTS>{{HIDER_ACTION_UNPAREN effects}}),                 \
-        static_cast<uint8_t>(std::initializer_list<ActionEffect>{HIDER_ACTION_UNPAREN effects}.size())},
+#define HIDER_ACTION_DECL(name, ...) toDef(HiderActionConfig __VA_ARGS__),
 #include "HiderAction.enum"
 #undef HIDER_ACTION_DECL
 }});
 
 // Generated from HiderAction.enum, indexed by HiderActionMode.
 const Array<const char*, HIDER_ACTION_MODE_COUNT> HIDER_ACTION_NAMES(std::array<const char*, HIDER_ACTION_MODE_COUNT>{{
-#define HIDER_ACTION_DECL(name, ap_cost, effects) #name,
+#define HIDER_ACTION_DECL(name, ...) #name,
 #include "HiderAction.enum"
 #undef HIDER_ACTION_DECL
 }});
-
-#undef HIDER_ACTION_UNPAREN
 
 // Returned for an out-of-range mode: no hider can afford it, so it is never applied.
 const HiderActionDef UNAFFORDABLE_ACTION_DEF{UINT16_MAX, Array<ActionEffect, MAX_ACTION_EFFECTS>(), 0};
