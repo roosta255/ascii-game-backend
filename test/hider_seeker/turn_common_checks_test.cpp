@@ -171,3 +171,61 @@ TEST_CASE("TURN-008 every non-REJECTED call increases revision by exactly 1", "[
     REQUIRE(passTicks(state, 0, policy).status == MoveStatus::REJECTED);
     REQUIRE(state.revision == 105);
 }
+
+TEST_CASE("DEF-007 HIDER_ACTION server_mode is bounds-checked against HIDER_ACTION_MODE_COUNT", "[hider_seeker][turn]") {
+    MatchState state = makeActiveMatch(1);
+    state.hiders[0].action_points = 10;
+    CountingPolicy policy;
+
+    SECTION("server_mode == HIDER_ACTION_MODE_COUNT is rejected REJECTED_INVALID_TARGET") {
+        const std::vector<uint8_t> before = serialize(state);
+        const MoveRequest outOfRange{1, 0, static_cast<uint8_t>(TickActionKind::HIDER_ACTION), NO_SERVER_ID,
+                                     NO_SERVER_ID, static_cast<uint8_t>(HIDER_ACTION_MODE_COUNT)};
+
+        const TurnResult played = playMove(state, outOfRange, policy);
+        REQUIRE(played.status == MoveStatus::REJECTED);
+        REQUIRE(played.reason == TurnReason::RULE_REJECTED);
+        REQUIRE(played.ruleOutcome == RuleOutcome::REJECTED_INVALID_TARGET);
+
+        const TurnResult queued = queueMove(state, outOfRange, policy);
+        REQUIRE(queued.status == MoveStatus::REJECTED);
+        REQUIRE(queued.ruleOutcome == RuleOutcome::REJECTED_INVALID_TARGET);
+
+        REQUIRE(serialize(state) == before);
+    }
+
+    SECTION("server_mode == HIDER_ACTION_MODE_COUNT - 1 is accepted") {
+        const MoveRequest lastMode{1, 0, static_cast<uint8_t>(TickActionKind::HIDER_ACTION), NO_SERVER_ID,
+                                   NO_SERVER_ID, static_cast<uint8_t>(HIDER_ACTION_MODE_COUNT - 1)};
+
+        const TurnResult played = playMove(state, lastMode, policy);
+        REQUIRE(played.status == MoveStatus::APPLIED);
+        REQUIRE(played.ruleOutcome == RuleOutcome::ACCEPTED);
+        REQUIRE(state.hiders[0].action_points == 0); // 10 - 10 (PAY_GOAL is the last mode)
+    }
+}
+
+TEST_CASE("DEF-007 a stored pending server_mode of 6 loads and plays as PAY_GOAL", "[hider_seeker][turn]") {
+    MatchState built = makeActiveMatch(1);
+    built.tick = 20;
+    built.hiders[0].action_points = 8; // + 2 regen on the next tick = PAY_GOAL's 10
+    built.pending[0] = PendingMove{1, 0, 0, static_cast<uint8_t>(TickActionKind::HIDER_ACTION), NO_SERVER_ID,
+                                   NO_SERVER_ID, 6};
+    built.pending_head = 0;
+    built.pending_count = 1;
+    built.next_submit_seq = 1;
+
+    MatchState state{};
+    REQUIRE(loadMatchState(serialize(built), state));
+    REQUIRE(state.pending_count == 1);
+    REQUIRE(state.pending[0].server_mode == static_cast<uint8_t>(PAY_GOAL));
+
+    CountingPolicy policy;
+    const TurnResult passed = passTicks(state, 1, policy);
+    REQUIRE(passed.status == MoveStatus::APPLIED);
+    REQUIRE(passed.pendingAppliedCount == 1);
+    PendingMoveApplied none{};
+    REQUIRE(passed.pendingApplied.getOrDefault(0, none).move_id == 1);
+    REQUIRE(state.pending_count == 0);
+    REQUIRE(state.hiders[0].action_points == 0); // 8 + 2 regen - 10 PAY_GOAL
+}

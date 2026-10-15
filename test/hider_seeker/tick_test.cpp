@@ -623,27 +623,35 @@ TEST_CASE("Tick engine metrics placeholder correctness", "[tick]") {
     TickOutput output = runTick(state, intents, intentCount, alreadyConsumed, &policy);
     REQUIRE(output.probeCount == 0);
 
-    // trace_age (a ServerState field) increments iff trace_strength > 0
-    REQUIRE(state.servers[0].trace_age == 6); // 5 + 1
-    REQUIRE(state.servers[1].trace_age == 3); // unchanged
+    // trace_age (a ServerState field) increments iff trace_strength > 0 after
+    // trace's own drift
+    REQUIRE(state.servers[0].trace_age == 6); // 5 + 1 (trace 10 - 2 drift = 8 > 0)
+    REQUIRE(state.servers[1].trace_age == 3); // unchanged (trace stays 0)
     REQUIRE(state.servers[2].trace_age == 4); // inactive: unchanged
-    REQUIRE(state.servers[0].trace_strength == 10);
-    REQUIRE(state.servers[1].trace_strength == 0);
+    REQUIRE(state.servers[0].trace_strength == 8); // 10 - 2 drift
+    REQUIRE(state.servers[1].trace_strength == 0); // already at rest 0
+    REQUIRE(state.servers[2].trace_strength == 10); // inactive: unchanged
 
-    // The pushed frame is the unmodified current frame, and no MetricFrame
-    // field (errors included) was altered
+    // Every non-zero MetricFrame field drifted 1 toward rest 0; zero fields
+    // (errors included) stay at rest. The pushed frame is the drifted frame.
+    MetricFrame expected0 = before0;
+    expected0.cpu = 49;    // 50 - 1 drift
+    expected0.memory = 49; // 50 - 1 drift
+    MetricFrame expected1 = before1;
+    expected1.cpu = 59;    // 60 - 1 drift
+    expected1.memory = 59; // 60 - 1 drift
     REQUIRE(state.servers[0].history_head == static_cast<uint8_t>(head0 + 1));
     REQUIRE(state.servers[1].history_head == static_cast<uint8_t>(head1 + 1));
-    REQUIRE(sameFrame(state.servers[0].current, before0));
-    REQUIRE(sameFrame(state.servers[1].current, before1));
-    REQUIRE(sameFrame(state.servers[0].history[head0 % HISTORY_TICKS], before0));
-    REQUIRE(sameFrame(state.servers[1].history[head1 % HISTORY_TICKS], before1));
-    REQUIRE(state.servers[0].current.errors == 0);
+    REQUIRE(sameFrame(state.servers[0].current, expected0));
+    REQUIRE(sameFrame(state.servers[1].current, expected1));
+    REQUIRE(sameFrame(state.servers[0].history[head0 % HISTORY_TICKS], expected0));
+    REQUIRE(sameFrame(state.servers[1].history[head1 % HISTORY_TICKS], expected1));
+    REQUIRE(state.servers[0].current.errors == 0); // 0 is rest: no drift
     REQUIRE(state.servers[0].history[head0 % HISTORY_TICKS].errors == 0);
     REQUIRE(state.servers[2].history_head == 0);
 }
 
-TEST_CASE("Tick engine metrics placeholder leaves non-zero errors unchanged", "[tick]") {
+TEST_CASE("Tick engine metrics drift non-zero errors toward rest", "[tick]") {
     MatchState state{};
     state.servers[0].active = 1;
     state.servers[0].current.errors = 7;
@@ -658,12 +666,66 @@ TEST_CASE("Tick engine metrics placeholder leaves non-zero errors unchanged", "[
     ConsumedKeySet alreadyConsumed{};
     runTick(state, intents, 0, alreadyConsumed, nullptr);
 
-    REQUIRE(state.servers[0].current.errors == 7);
-    REQUIRE(state.servers[0].history[0].errors == 7);
-    REQUIRE(state.servers[0].trace_age == 2);
-    REQUIRE(state.servers[1].current.errors == 9);
-    REQUIRE(state.servers[1].history[0].errors == 9);
-    REQUIRE(state.servers[1].trace_age == 3);
+    REQUIRE(state.servers[0].current.errors == 6);    // 7 - 1 drift
+    REQUIRE(state.servers[0].history[0].errors == 6); // 7 - 1 drift
+    REQUIRE(state.servers[0].trace_age == 2);         // trace 0: no aging
+    REQUIRE(state.servers[1].current.errors == 8);    // 9 - 1 drift
+    REQUIRE(state.servers[1].history[0].errors == 8); // 9 - 1 drift
+    REQUIRE(state.servers[1].trace_strength == 0);    // 1 - 2 drift stops at rest 0
+    REQUIRE(state.servers[1].trace_age == 2);         // trace decayed to 0 before the age check: no aging
+}
+
+TEST_CASE("Tick engine METRICS step decays before the trace_age check", "[tick][metrics]") {
+    MatchState state{};
+    state.servers[0].active = 1;
+    state.servers[0].current.cpu = 10;
+    state.servers[0].current.errors = 0;
+    state.servers[0].trace_strength = 7;
+    state.servers[0].trace_age = 3;
+
+    Array<TickIntent, MAX_INTENTS_PER_TICK> intents;
+    ConsumedKeySet alreadyConsumed{};
+    runTick(state, intents, 0, alreadyConsumed, nullptr);
+
+    REQUIRE(state.servers[0].current.cpu == 9);    // 10 - 1 drift
+    REQUIRE(state.servers[0].current.errors == 0); // at rest 0
+    REQUIRE(state.servers[0].trace_strength == 5); // 7 - 2 drift
+    REQUIRE(state.servers[0].trace_age == 4);      // 3 + 1 (trace 5 > 0 after decay)
+    REQUIRE(state.servers[0].history_head == 1);
+    REQUIRE(state.servers[0].history[0].cpu == 9); // newest frame is the drifted frame
+}
+
+TEST_CASE("Tick engine METRICS step does not age a trace that decays to zero", "[tick][metrics]") {
+    MatchState state{};
+    state.servers[0].active = 1;
+    state.servers[0].trace_strength = 2;
+    state.servers[0].trace_age = 3;
+
+    Array<TickIntent, MAX_INTENTS_PER_TICK> intents;
+    ConsumedKeySet alreadyConsumed{};
+    runTick(state, intents, 0, alreadyConsumed, nullptr);
+
+    REQUIRE(state.servers[0].trace_strength == 0); // 2 - 2 drift
+    REQUIRE(state.servers[0].trace_age == 3);      // trace is 0 after decay: unchanged
+}
+
+TEST_CASE("Tick engine METRICS step leaves inactive servers untouched", "[tick][metrics]") {
+    MatchState state{};
+    state.servers[4].active = 0;
+    state.servers[4].current.cpu = 50;
+    state.servers[4].current.errors = 20;
+    state.servers[4].current.users = 200;
+    state.servers[4].trace_strength = 30;
+    state.servers[4].trace_age = 6;
+    state.servers[4].history[0].cpu = 11;
+    state.servers[4].history_head = 1;
+    const ServerState before = state.servers[4];
+
+    Array<TickIntent, MAX_INTENTS_PER_TICK> intents;
+    ConsumedKeySet alreadyConsumed{};
+    runTick(state, intents, 0, alreadyConsumed, nullptr);
+
+    REQUIRE(std::memcmp(&state.servers[4], &before, sizeof(ServerState)) == 0);
 }
 
 TEST_CASE("Tick engine probe-budget truncation", "[tick]") {
@@ -875,7 +937,7 @@ TEST_CASE("Tick engine resource-exhaustion visibility", "[tick]") {
         REQUIRE(output.intentOutcomes.getOrDefault(1, none).outcome == RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE);
         REQUIRE(output.consumedKeyCount == 0); // Rejected keys are not consumed
         REQUIRE(state.hiders[0].action_points == 1); // Nothing charged
-        REQUIRE(state.servers[1].current.cpu == cpuBefore); // No effect applied
+        REQUIRE(state.servers[1].current.cpu == cpuBefore - 1); // No effect applied: 60 - 1 drift only
     }
 
     SECTION("an exhausted seeker token budget yields no probes") {
@@ -1109,6 +1171,6 @@ TEST_CASE("Tick engine duplicate idempotency key with first rejected", "[tick]")
 
     // BOOST_CPU's own cost and effect were applied (not CONFIGURE_SERVER's)
     REQUIRE(state.hiders[0].action_points == 1);
-    REQUIRE(state.servers[1].current.cpu == 75);
-    REQUIRE(state.servers[0].current.cpu == 50);
+    REQUIRE(state.servers[1].current.cpu == 74); // 60 + 15 BOOST_CPU - 1 drift
+    REQUIRE(state.servers[0].current.cpu == 49); // 50 - 1 drift, no effect
 }

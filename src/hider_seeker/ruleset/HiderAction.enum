@@ -1,0 +1,38 @@
+// HiderAction.enum - the single definition of every hider action.
+//
+// This is an X-macro file: it has no include guard and is #included by
+// action_rules.hpp / action_rules.cpp with HIDER_ACTION_DECL defined to
+// generate the HiderActionMode enum, the name table, and the HiderActionDef
+// table. Do not include it anywhere else.
+//
+// Each line is:
+//   HIDER_ACTION_DECL(name, ap_cost, (effects...))
+//
+//   name    - the action's wire name; becomes the HiderActionMode enumerator
+//             and is what the move API accepts as intent.type.
+//   ap_cost - action points the hider pays when the action is accepted. If
+//             the hider has fewer AP than this, the action is rejected and
+//             nothing changes.
+//   effects - a parenthesised list of zero to MAX_ACTION_EFFECTS (4)
+//             {SERVER_METRIC_<metric>, delta} pairs, applied in order. A line
+//             with more than 4 effects fails to compile.
+//
+// Effects apply only to the acting hider's occupied server (no other server
+// and no other hider is touched). If the hider occupies no active server,
+// the AP is still paid and no effect is applied.
+//
+// Deltas are signed and the result is clamped to the target metric's
+// [min, max] range from ServerMetric.enum. An action that raises TRACE
+// resets that server's trace_age to 0.
+//
+// Ordering: append new actions at the end. Never reorder or delete existing
+// lines - an action's position (its index) is the save format. Renaming a
+// line is allowed.
+
+HIDER_ACTION_DECL(ADD_SERVER,       0,  ())                                                       // PLACEHOLDER pending BALANCE-001
+HIDER_ACTION_DECL(REMOVE_SERVER,    0,  ())                                                       // PLACEHOLDER pending BALANCE-001
+HIDER_ACTION_DECL(CONFIGURE_SERVER, 5,  ({SERVER_METRIC_TRACE, +5}))                              // PLACEHOLDER pending BALANCE-001
+HIDER_ACTION_DECL(SUPPRESS_ERROR,   3,  ({SERVER_METRIC_ERRORS, -10}, {SERVER_METRIC_TRACE, +20})) // PLACEHOLDER pending BALANCE-001
+HIDER_ACTION_DECL(BOOST_CPU,        2,  ({SERVER_METRIC_CPU, +15}, {SERVER_METRIC_TRACE, +5}))     // PLACEHOLDER pending BALANCE-001
+HIDER_ACTION_DECL(ROTATE_ROUTE,     4,  ({SERVER_METRIC_NETWORK, +5}, {SERVER_METRIC_TRACE, +10})) // PLACEHOLDER pending BALANCE-001
+HIDER_ACTION_DECL(PAY_GOAL,         10, ())                                                       // PLACEHOLDER pending BALANCE-001
