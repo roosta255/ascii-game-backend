@@ -1,5 +1,4 @@
 #include <catch2/catch_test_macros.hpp>
-#include "../../../src/hider_seeker/ruleset/HiderAction.enum"
 #include "../../../src/hider_seeker/ruleset/action_rules.hpp"
 
 using namespace hider_seeker;
