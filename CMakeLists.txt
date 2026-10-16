@@ -301,6 +301,7 @@ add_executable(test_target
     test/hider_seeker/api/service_views_test.cpp
     test/hider_seeker/server_metrics_test.cpp
     test/hider_seeker/api/service_metrics_integration_test.cpp
+    test/hider_seeker/api/service_match_start_test.cpp
 )
 
 target_include_directories(test_target PRIVATE ${PROJECT_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/test)
