@@ -6,7 +6,7 @@
 namespace hider_seeker {
 
 namespace {
-    constexpr uint32_t CURRENT_SCHEMA_VERSION = 2;
+    constexpr uint32_t CURRENT_SCHEMA_VERSION = 3;
 
     void writeUint8(std::vector<uint8_t>& out, uint8_t value) {
         out.push_back(value);
@@ -305,6 +305,10 @@ void saveMatchState(const MatchState& state, std::vector<uint8_t>& out) {
     writeUint8(out, state.pending_head);
     writeUint8(out, state.pending_count);
     writeUint32(out, state.next_submit_seq);
+    // Write new fields added in schema version 3
+    writeUint8(out, state.hider_connection_pool);
+    writeUint16(out, state.seeker_connection_mask);
+    writeUint8(out, state.winner);
 }
 
 bool loadMatchState(const std::vector<uint8_t>& in, MatchState& state) {
@@ -403,6 +407,16 @@ bool loadMatchState(const std::vector<uint8_t>& in, MatchState& state) {
     loaded.pending_head = readUint8(in, pos);
     loaded.pending_count = readUint8(in, pos);
     loaded.next_submit_seq = readUint32(in, pos);
+    
+    // Read new fields added in schema version 3
+    loaded.hider_connection_pool = readUint8(in, pos);
+    loaded.seeker_connection_mask = readUint16(in, pos);
+    loaded.winner = readUint8(in, pos);
+    
+    // Validate winner value (should be 0, 1, or 2)
+    if (loaded.winner > 2) {
+        return false;
+    }
 
     // Validate pending fields
     if (loaded.pending_count > MAX_PENDING_MOVES) {

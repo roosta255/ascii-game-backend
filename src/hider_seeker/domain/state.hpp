@@ -122,6 +122,9 @@ struct MatchState {
     uint8_t pending_head = 0;
     uint8_t pending_count = 0;
     uint32_t next_submit_seq = 0;
+    uint8_t hider_connection_pool = 0;
+    uint16_t seeker_connection_mask = 0;
+    uint8_t winner = 0;
 };
 
 static_assert(sizeof(MatchState) <= 8192, "MatchState exceeds its documented 8192-byte size budget — see state.hpp comment for the breakdown");

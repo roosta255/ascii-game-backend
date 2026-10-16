@@ -4,6 +4,7 @@
 #include "null_seeker_policy.hpp"
 #include "request_validation.hpp"
 #include "../domain/state.hpp"
+#include "../ruleset/match_end.hpp"
 #include "view_snapshots.hpp"
 #include "../projection/audience_views.hpp"
 #include "../projection/names.hpp"
@@ -635,6 +636,10 @@ ApiResponse HiderSeekerService::startMatch(const std::string& matchId, const std
 
         state.phase = PHASE_ACTIVE;
         state.revision += 1;
+        // Initialize new fields added in schema version 3
+        state.hider_connection_pool = PLACEHOLDER_HIDER_CONNECTIONS_PER_HIDER * state.hider_count;
+        state.seeker_connection_mask = 0;
+        state.winner = static_cast<uint8_t>(MatchWinner::NONE);
         return logged(ApiResponse{200, {{"revision", state.revision}, {"phase", "ACTIVE"}}}, request);
     });
 }
