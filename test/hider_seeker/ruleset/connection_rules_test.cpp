@@ -44,6 +44,7 @@ TEST_CASE("applyConnect rejects when connection pool is empty", "[connection]") 
     MatchState state{};
     // Set up a basic valid state
     state.hiders[0].active = true;
+    state.hiders[0].server_id = NO_SERVER_ID;  // Explicitly set to ensure disconnected
     state.servers[0].active = true;
     state.hider_connection_pool = 0; // Empty pool
     
@@ -56,6 +57,7 @@ TEST_CASE("applyConnect succeeds with valid inputs", "[connection]") {
     // Set up a basic valid state
     state.hiders[0].active = true;
     state.hiders[0].action_points = 10;
+    state.hiders[0].server_id = NO_SERVER_ID;  // Explicitly set to ensure disconnected
     state.servers[0].active = true;
     state.hider_connection_pool = 1;
     

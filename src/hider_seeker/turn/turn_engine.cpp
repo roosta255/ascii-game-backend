@@ -278,27 +278,6 @@ TurnResult playMove(MatchState& state, const MoveRequest& move, iTargetRankingPo
         return result;
     }
 
-    // Special handling for CONNECT/DISCONNECT actions - they require the hider to be connected
-    if (move.action_type == static_cast<uint8_t>(TickActionKind::CONNECT) || 
-        move.action_type == static_cast<uint8_t>(TickActionKind::DISCONNECT)) {
-        const uint8_t hiderId = move.hider_id;
-        if (hiderId >= MAX_HIDERS || !state.hiders[hiderId].active) {
-            return rejected(TurnReason::RULE_REJECTED, RuleOutcome::REJECTED_INVALID_TARGET);
-        }
-        // Check if hider is connected
-        if (move.action_type == static_cast<uint8_t>(TickActionKind::CONNECT)) {
-            // For CONNECT, we need to check that the hider is not already connected
-            if (state.hiders[hiderId].server_id != NO_SERVER_ID) {
-                return rejected(TurnReason::RULE_REJECTED, RuleOutcome::REJECTED_INVALID_TARGET);
-            }
-        } else if (move.action_type == static_cast<uint8_t>(TickActionKind::DISCONNECT)) {
-            // For DISCONNECT, we need to check that the hider is connected
-            if (state.hiders[hiderId].server_id == NO_SERVER_ID) {
-                return rejected(TurnReason::RULE_REJECTED, RuleOutcome::REJECTED_INVALID_TARGET);
-            }
-        }
-    }
-
     const TickIntent intent = intentFromMove(move, state.next_submit_seq);
     const RuleOutcome nowOutcome = trialOutcome(state, intent);
     if (nowOutcome == RuleOutcome::ACCEPTED) {
@@ -322,27 +301,6 @@ TurnResult queueMove(MatchState& state, const MoveRequest& move, iTargetRankingP
     TurnResult result{};
     if (!passesMoveChecks(state, move, result)) {
         return result;
-    }
-
-    // Special handling for CONNECT/DISCONNECT actions - they require the hider to be connected
-    if (move.action_type == static_cast<uint8_t>(TickActionKind::CONNECT) || 
-        move.action_type == static_cast<uint8_t>(TickActionKind::DISCONNECT)) {
-        const uint8_t hiderId = move.hider_id;
-        if (hiderId >= MAX_HIDERS || !state.hiders[hiderId].active) {
-            return rejected(TurnReason::RULE_REJECTED, RuleOutcome::REJECTED_INVALID_TARGET);
-        }
-        // Check if hider is connected
-        if (move.action_type == static_cast<uint8_t>(TickActionKind::CONNECT)) {
-            // For CONNECT, we need to check that the hider is not already connected
-            if (state.hiders[hiderId].server_id != NO_SERVER_ID) {
-                return rejected(TurnReason::RULE_REJECTED, RuleOutcome::REJECTED_INVALID_TARGET);
-            }
-        } else if (move.action_type == static_cast<uint8_t>(TickActionKind::DISCONNECT)) {
-            // For DISCONNECT, we need to check that the hider is connected
-            if (state.hiders[hiderId].server_id == NO_SERVER_ID) {
-                return rejected(TurnReason::RULE_REJECTED, RuleOutcome::REJECTED_INVALID_TARGET);
-            }
-        }
     }
 
     const TickIntent intent = intentFromMove(move, state.next_submit_seq);
