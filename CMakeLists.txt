@@ -56,6 +56,7 @@ set(PROJECT_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/turn
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/api
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/projection
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/ruleset/connection_rules
     /usr/include/jsoncpp
 )
 
@@ -206,10 +207,11 @@ add_library(core_backend STATIC
     src/hider_seeker/ruleset/regeneration.cpp
     src/hider_seeker/ruleset/loa_rules.cpp
     src/hider_seeker/ruleset/action_rules.cpp
+    src/hider_seeker/ruleset/connection_rules.cpp
     src/hider_seeker/ruleset/server_metrics.cpp
     src/hider_seeker/ruleset/probe_rules.cpp
     src/hider_seeker/ruleset/intent_ordering.cpp
-    src/hider_seeker/ruleset/ring_buffers.cpp
+    src/hider_seeker/ruleset/connection_rules.cpp
     src/hider_seeker/ruleset/rng.cpp
     src/hider_seeker/ruleset/lifecycle_events.cpp
     src/hider_seeker/tick/tick.cpp
@@ -285,7 +287,11 @@ add_executable(test_target
     test/hider_seeker/turn_queue_test.cpp
     test/hider_seeker/turn_advance_loop_test.cpp
     test/hider_seeker/turn_pass_ticks_test.cpp
-    test/hider_seeker/turn_common_checks_test.cpp
+    test/hider_seeker/ruleset/connection_rules_test.cpp
+    test/hider_seeker/ruleset/hider_action_enum_test.cpp
+    test/hider_seeker/tick/tick_intent_dispatch_test.cpp
+    test/hider_seeker/turn/turn_engine_connection_test.cpp
+    test/hider_seeker/turn/known_kind_bound_test.cpp
     test/hider_seeker/api/match_record_test.cpp
     test/hider_seeker/api/service_lifecycle_test.cpp
     test/hider_seeker/api/service_submit_move_test.cpp
