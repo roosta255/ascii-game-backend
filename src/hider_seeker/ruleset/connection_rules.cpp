@@ -29,12 +29,12 @@ RuleOutcome applyConnect(MatchState& state, uint8_t hiderId, uint8_t serverId) {
     
     // 5. Check if hider has sufficient AP
     const uint16_t apCost = 0; // No cost for connect action
-    if (state.hiders[hiderId].resources.ap < apCost) {
+    if (state.hiders[hiderId].action_points < apCost) {
         return RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE;
     }
     
     // 6. Apply the connection
-    state.hiders[hiderId].resources.ap -= apCost;
+    state.hiders[hiderId].action_points -= apCost;
     state.hider_connection_pool -= 1;
     state.hiders[hiderId].server_id = serverId;
     
@@ -55,12 +55,12 @@ RuleOutcome applyDisconnect(MatchState& state, uint8_t hiderId) {
     
     // 3. Check if hider has sufficient AP
     const uint16_t apCost = 0; // No cost for disconnect action
-    if (state.hiders[hiderId].resources.ap < apCost) {
+    if (state.hiders[hiderId].action_points < apCost) {
         return RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE;
     }
     
     // 4. Apply the disconnection
-    state.hiders[hiderId].resources.ap -= apCost;
+    state.hiders[hiderId].action_points -= apCost;
     state.hider_connection_pool += 1; // saturating at 255 (implicit in uint8_t)
     if (state.hider_connection_pool > 255) {
         state.hider_connection_pool = 255;

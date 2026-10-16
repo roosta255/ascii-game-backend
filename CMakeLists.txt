@@ -214,6 +214,7 @@ add_library(core_backend STATIC
     src/hider_seeker/ruleset/connection_rules.cpp
     src/hider_seeker/ruleset/rng.cpp
     src/hider_seeker/ruleset/lifecycle_events.cpp
+    src/hider_seeker/ruleset/ring_buffers.cpp
     src/hider_seeker/tick/tick.cpp
     src/hider_seeker/turn/turn_engine.cpp
     src/hider_seeker/api/match_record.cpp
