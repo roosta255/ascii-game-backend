@@ -637,7 +637,7 @@ ApiResponse HiderSeekerService::startMatch(const std::string& matchId, const std
         state.phase = PHASE_ACTIVE;
         state.revision += 1;
         // Initialize new fields added in schema version 3
-        state.hider_connection_pool = PLACEHOLDER_HIDER_CONNECTIONS_PER_HIDER * state.hider_count;
+        state.hider_connection_pool = PLACEHOLDER_HIDER_CONNECTIONS_PER_HIDER * state.hider_count; // PLACEHOLDER pending BALANCE-001
         state.seeker_connection_mask = 0;
         state.winner = static_cast<uint8_t>(MatchWinner::NONE);
         return logged(ApiResponse{200, {{"revision", state.revision}, {"phase", "ACTIVE"}}}, request);
