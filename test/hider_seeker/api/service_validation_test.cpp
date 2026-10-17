@@ -84,5 +84,6 @@ TEST_CASE("MOVE-007: submitMove validation rules", "[hider_seeker][api][validati
     }
 
     // None of the rejected requests changed the match.
-    REQUIRE(fx.revision() == 3);
+    // CONN-008c: fixture connects hiders, so revision is now 5 (start + 2 CONNECTs)
+    REQUIRE(fx.revision() == 5);
 }

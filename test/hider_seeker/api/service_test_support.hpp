@@ -127,7 +127,12 @@ struct ServiceFixture {
         REQUIRE(join("alice").status == 200);
         REQUIRE(join("bob").status == 200);
         REQUIRE(start("host").status == 200);
-        REQUIRE(revision() == 3);
+        // CONN-008c: fixture adds CONNECT steps for each hider to match the
+        // existing tests that expect hiders to be connected. Each CONNECT raises
+        // revision by 1, so revision expectation shifts from 3 to 5.
+        REQUIRE(play("alice", json{{"type", "CONNECT"}, {"server_id", 0}}).status == 200);
+        REQUIRE(play("bob", json{{"type", "CONNECT"}, {"server_id", 1}}).status == 200);
+        REQUIRE(revision() == 5);
     }
 };
 

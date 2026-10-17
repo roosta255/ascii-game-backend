@@ -14,7 +14,8 @@ TEST_CASE("MOVE-003: PLAY applies now or advances ticks until affordable", "[hid
         const ApiResponse played = fx.play("alice", intentOf("BOOST_CPU"));
         REQUIRE(played.status == 200);
         REQUIRE(played.body.at("status") == "APPLIED");
-        REQUIRE(played.body.at("accepted_against_revision") == 3);
+        // CONN-008c: fixture connects hiders, so revision is now 5 (start + 2 CONNECTs)
+        REQUIRE(played.body.at("accepted_against_revision") == 5);
         REQUIRE(played.body.at("ticks_advanced") == 1);
         REQUIRE(played.body.at("tick") == 1);
         REQUIRE(played.body.at("revision") == 4);
@@ -31,7 +32,8 @@ TEST_CASE("MOVE-003: PLAY applies now or advances ticks until affordable", "[hid
         REQUIRE(played.body.at("status") == "APPLIED");
         REQUIRE(played.body.at("ticks_advanced") == 5);
         REQUIRE(played.body.at("tick") == 5);
-        REQUIRE(played.body.at("revision") == 4);
+        // CONN-008c: fixture connects hiders, so revision is now 5 (start + 2 CONNECTs)
+        REQUIRE(played.body.at("revision") == 5);
     }
 
     SECTION("ADD_SERVER applies once with 1 LOA, then is NEVER_AFFORDABLE") {
