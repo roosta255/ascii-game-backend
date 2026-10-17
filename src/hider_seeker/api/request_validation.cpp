@@ -50,6 +50,15 @@ bool isValidIntentType(const std::string& intentType) {
     return hiderActionFromName(intentType.c_str(), mode);
 }
 
+// CONN-API-002: Map string intent types to TickActionKind
+TickActionKind intentKind(const std::string& intentType) {
+    if (intentType == "ADD_SERVER")    return TickActionKind::ADD_SERVER;
+    if (intentType == "REMOVE_SERVER") return TickActionKind::REMOVE_SERVER;
+    if (intentType == "CONNECT")       return TickActionKind::CONNECT;
+    if (intentType == "DISCONNECT")    return TickActionKind::DISCONNECT;
+    return TickActionKind::HIDER_ACTION;
+}
+
 nlohmann::json buildErrorBody(const std::string& code, const std::string& message) {
     return {{"error", code}, {"message", message}};
 }

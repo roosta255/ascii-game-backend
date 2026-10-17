@@ -24,4 +24,8 @@ TEST_CASE("ServiceMatchStartTest", "[service][match-start]") {
     
     // CONN-002a: Check that winner is initialized to NONE
     REQUIRE(state.winner == static_cast<uint8_t>(MatchWinner::NONE));
+    
+    // CONN-002c: Check that all hiders start disconnected (server_id = NO_SERVER_ID)
+    REQUIRE(state.hiders[0].server_id == NO_SERVER_ID);
+    REQUIRE(state.hiders[1].server_id == NO_SERVER_ID);
 }

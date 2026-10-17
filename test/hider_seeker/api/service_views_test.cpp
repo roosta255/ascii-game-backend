@@ -9,6 +9,7 @@
 #include <vector>
 #include "state.hpp"
 #include "service_test_support.hpp"
+#include "../hider_seeker/ruleset/rule_types.hpp"
 
 using namespace hs_test;
 
@@ -208,6 +209,35 @@ TEST_CASE("SERVICE-002: getRevisionView serves stored snapshots only, cached imm
         REQUIRE(etagOf(pinned) == etagOf(latest));
         requireViewHeaders(pinned, etagOf(latest), REVISION_CACHE);
     }
+}
+
+// Test that CONNECT/DISCONNECT functionality works correctly and is reflected in views
+TEST_CASE("CONN-003c: CONNECT/DISCONNECT updates hider view correctly", "[hider_seeker][api][views]") {
+    ServiceFixture fx;
+    fx.setupTwoHiders();
+
+    // Initially, both hiders should have server_id = NO_SERVER_ID (disconnected)
+    const ApiResponse initialView = fx.service.getLatestView(fx.matchId, "hider", "alice", "");
+    REQUIRE(initialView.status == 200);
+    REQUIRE(initialView.body.at("self").at("server_id") == NO_SERVER_ID);
+
+    // Connect alice to server 0
+    const ApiResponse connected = fx.play("alice", json{{"type", "CONNECT"}, {"server_id", 0}});
+    REQUIRE(connected.status == 200);
+    
+    // Check that the view now shows alice connected to server 0
+    const ApiResponse connectedView = fx.service.getLatestView(fx.matchId, "hider", "alice", "");
+    REQUIRE(connectedView.status == 200);
+    REQUIRE(connectedView.body.at("self").at("server_id") == 0);
+
+    // Disconnect alice
+    const ApiResponse disconnected = fx.play("alice", json{{"type", "DISCONNECT"}});
+    REQUIRE(disconnected.status == 200);
+    
+    // Check that the view now shows alice disconnected again (server_id = NO_SERVER_ID)
+    const ApiResponse disconnectedView = fx.service.getLatestView(fx.matchId, "hider", "alice", "");
+    REQUIRE(disconnectedView.status == 200);
+    REQUIRE(disconnectedView.body.at("self").at("server_id") == NO_SERVER_ID);
 }
 
 TEST_CASE("SERVICE-002: If-None-Match exact match returns 304", "[hider_seeker][api][views]") {

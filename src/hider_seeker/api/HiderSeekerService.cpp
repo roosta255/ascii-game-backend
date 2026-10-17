@@ -146,6 +146,7 @@ const char* ruleOutcomeName(RuleOutcome outcome) {
         case RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE: return "REJECTED_INSUFFICIENT_RESOURCE";
         case RuleOutcome::REJECTED_RELOCATION_FAILED:     return "REJECTED_RELOCATION_FAILED";
         case RuleOutcome::REJECTED_INVALID_TARGET:        return "REJECTED_INVALID_TARGET";
+        case RuleOutcome::REJECTED_NO_CONNECTIONS:        return "REJECTED_NO_CONNECTIONS";
     }
     return "UNKNOWN";
 }
@@ -640,6 +641,11 @@ ApiResponse HiderSeekerService::startMatch(const std::string& matchId, const std
         state.hider_connection_pool = PLACEHOLDER_HIDER_CONNECTIONS_PER_HIDER * state.hider_count; // PLACEHOLDER pending BALANCE-001
         state.seeker_connection_mask = 0;
         state.winner = static_cast<uint8_t>(MatchWinner::NONE);
+        
+        // CONN-002c: Set all hiders to disconnected at match start
+        for (int i = 0; i < state.hider_count; ++i) {
+            state.hiders[i].server_id = NO_SERVER_ID;
+        }
         return logged(ApiResponse{200, {{"revision", state.revision}, {"phase", "ACTIVE"}}}, request);
     });
 }
@@ -723,6 +729,10 @@ ApiResponse HiderSeekerService::submitMove(const std::string& matchId, const std
                 }
                 hasServerId = true;
             }
+            // CONN-API-001: CONNECT intent without server_id should return INVALID_REQUEST
+            if (intentType == "CONNECT" && !hasServerId) {
+                return unrecorded(invalidRequest("CONNECT requires intent.server_id"));
+            }
             if (intentType == "REMOVE_SERVER" && !hasServerId) {
                 return unrecorded(invalidRequest("REMOVE_SERVER requires intent.server_id"));
             }
@@ -735,7 +745,9 @@ ApiResponse HiderSeekerService::submitMove(const std::string& matchId, const std
         MatchState& state = record.state;
         const TickActionKind kind = isPass ? TickActionKind::HIDER_ACTION : intentKind(intentType);
         const uint8_t occupiedServer = state.hiders[slot].server_id;
-        if (!isPass && kind == TickActionKind::HIDER_ACTION && hasServerId && serverId != occupiedServer) {
+        // CONN-API-004: For CONNECT intent, don't apply SERVER_MISMATCH check
+        if (!isPass && kind == TickActionKind::HIDER_ACTION && hasServerId && serverId != occupiedServer 
+            && intentType != "CONNECT") {
             return unrecorded(errorResponse(400, "SERVER_MISMATCH",
                                             "Hider actions target the hider's own occupied server"));
         }
