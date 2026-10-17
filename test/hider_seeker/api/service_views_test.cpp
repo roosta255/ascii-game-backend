@@ -216,7 +216,7 @@ TEST_CASE("SERVICE-002: getRevisionView serves stored snapshots only, cached imm
 // Test that CONNECT/DISCONNECT functionality works correctly and is reflected in views
 TEST_CASE("CONN-003c: CONNECT/DISCONNECT updates hider view correctly", "[hider_seeker][api][views]") {
     ServiceFixture fx;
-    fx.setupTwoHiders();
+    fx.setupTwoHidersDisconnected();
 
     // Initially, both hiders should have server_id = NO_SERVER_ID (disconnected)
     const ApiResponse initialView = fx.service.getLatestView(fx.matchId, "hider", "alice", "");
