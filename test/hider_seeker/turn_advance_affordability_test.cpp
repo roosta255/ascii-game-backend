@@ -30,7 +30,8 @@ MatchState makeActiveMatch(uint8_t hiderCount) {
     for (uint8_t hiderId = 0; hiderId < hiderCount; ++hiderId) {
         state.hiders[hiderId].active = 1;
         state.hiders[hiderId].status = HIDER_STATUS_ACTIVE;
-        state.hiders[hiderId].server_id = NO_SERVER_ID;
+        // 5a1b: hider actions need a connection; an inactive server keeps the old no-server behavior
+        state.hiders[hiderId].server_id = 0; // Set to inactive server (server 0 is inactive in these tests)
     }
     return state;
 }

@@ -54,7 +54,7 @@ bool passesMoveChecks(const MatchState& state, const MoveRequest& move, TurnResu
     if (!passesHiderChecks(state, move.hider_id, out)) {
         return false;
     }
-    const bool knownKind = move.action_type <= static_cast<uint8_t>(TickActionKind::REMOVE_SERVER);
+    const bool knownKind = move.action_type <= static_cast<uint8_t>(TickActionKind::DISCONNECT);
     const bool knownMode = move.action_type != static_cast<uint8_t>(TickActionKind::HIDER_ACTION) ||
                            move.server_mode < HIDER_ACTION_MODE_COUNT;
     if (!knownKind || !knownMode) {

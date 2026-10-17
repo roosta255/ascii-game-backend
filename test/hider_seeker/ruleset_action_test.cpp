@@ -93,8 +93,8 @@ TEST_CASE("applyHiderAction applies no effect when rejected", "[action]") {
     REQUIRE(match.hiders[0].action_points == 1);
 }
 
-TEST_CASE("HiderAction.enum generates seven modes with unchanged indices", "[action][def]") {
-    REQUIRE(HIDER_ACTION_MODE_COUNT == 7);
+TEST_CASE("HiderAction.enum generates nine modes with correct indices", "[action][def]") {
+    REQUIRE(HIDER_ACTION_MODE_COUNT == 9);
     REQUIRE(static_cast<int>(HiderActionMode::ADD_SERVER) == 0);
     REQUIRE(static_cast<int>(HiderActionMode::REMOVE_SERVER) == 1);
     REQUIRE(static_cast<int>(HiderActionMode::CONFIGURE_SERVER) == 2);
@@ -102,6 +102,8 @@ TEST_CASE("HiderAction.enum generates seven modes with unchanged indices", "[act
     REQUIRE(static_cast<int>(HiderActionMode::BOOST_CPU) == 4);
     REQUIRE(static_cast<int>(HiderActionMode::ROTATE_ROUTE) == 5);
     REQUIRE(static_cast<int>(HiderActionMode::PAY_GOAL) == 6);
+    REQUIRE(static_cast<int>(HiderActionMode::CONNECT) == 7);
+    REQUIRE(static_cast<int>(HiderActionMode::DISCONNECT) == 8);
 }
 
 TEST_CASE("hiderActionName and hiderActionFromName round-trip every mode", "[action][def]") {

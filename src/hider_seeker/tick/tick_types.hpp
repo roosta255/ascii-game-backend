@@ -10,7 +10,7 @@
 
 namespace hider_seeker {
 
-enum class TickActionKind : uint8_t { HIDER_ACTION, ADD_SERVER, REMOVE_SERVER };
+enum class TickActionKind : uint8_t { HIDER_ACTION, ADD_SERVER, REMOVE_SERVER, CONNECT, DISCONNECT };
 
 // IdempotencyKeyT: declare using the exact type from IntentRecord
 using IdempotencyKeyT = decltype(IntentRecord{}.idempotencyKey);

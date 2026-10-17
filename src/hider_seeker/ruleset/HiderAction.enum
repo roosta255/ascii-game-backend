@@ -37,3 +37,5 @@ HIDER_ACTION_DECL(SUPPRESS_ERROR,   ({ .ap_cost = 3,  .effects = { {SERVER_METRI
 HIDER_ACTION_DECL(BOOST_CPU,        ({ .ap_cost = 2,  .effects = { {SERVER_METRIC_CPU, 15}, {SERVER_METRIC_TRACE, 5} } }))
 HIDER_ACTION_DECL(ROTATE_ROUTE,     ({ .ap_cost = 4,  .effects = { {SERVER_METRIC_NETWORK, 5}, {SERVER_METRIC_TRACE, 10} } }))
 HIDER_ACTION_DECL(PAY_GOAL,         ({ .ap_cost = 10, .effects = {} }))
+HIDER_ACTION_DECL(CONNECT,    ({ .ap_cost = 0, .effects = {} }))
+HIDER_ACTION_DECL(DISCONNECT, ({ .ap_cost = 0, .effects = {} }))
