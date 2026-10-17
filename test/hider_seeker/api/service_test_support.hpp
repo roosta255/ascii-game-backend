@@ -47,6 +47,12 @@ public:
         return contents.str();
     }
 
+    // Replaces the bytes stored for matchId.
+    void writeRaw(const std::string& matchId, const std::string& contents) const {
+        std::ofstream file(dir_ + "/" + matchId + ".json", std::ios::trunc);
+        file << contents;
+    }
+
 private:
     static std::string makeDir() {
         static std::atomic<int> counter{0};
@@ -79,6 +85,10 @@ struct ServiceFixture {
         REQUIRE(loaded.fromJson(json::parse(temp.readRaw(matchId))));
         return loaded;
     }
+
+    // Stores `edited` in place of the match's record, for tests that need a
+    // state no sequence of moves reaches quickly (e.g. an empty connection pool).
+    void writeRecord(const MatchRecord& edited) { temp.writeRaw(matchId, edited.toJson().dump()); }
 
     ApiResponse create(const std::string& host, int hiderCount, uint64_t seed = 42) {
         const ApiResponse response =
