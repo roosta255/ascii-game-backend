@@ -14,8 +14,8 @@ enum class RuleOutcome {
     REJECTED_INSUFFICIENT_RESOURCE,
     REJECTED_RELOCATION_FAILED,
     REJECTED_INVALID_TARGET,
+    APPLIED,
     REJECTED_NO_CONNECTIONS,
-    APPLIED
 };
 
 } // namespace hider_seeker

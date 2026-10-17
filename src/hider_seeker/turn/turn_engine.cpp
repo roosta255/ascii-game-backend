@@ -284,8 +284,7 @@ TurnResult playMove(MatchState& state, const MoveRequest& move, iTargetRankingPo
         applyNow(state, intent, result);
         return result;
     }
-    if (nowOutcome != RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE && 
-        nowOutcome != RuleOutcome::REJECTED_NO_CONNECTIONS) {
+    if (nowOutcome != RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE) {
         return rejected(TurnReason::RULE_REJECTED, nowOutcome);
     }
     if (!becomesAffordable(state, intent)) {
@@ -310,8 +309,7 @@ TurnResult queueMove(MatchState& state, const MoveRequest& move, iTargetRankingP
         applyNow(state, intent, result);
         return result;
     }
-    if (nowOutcome != RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE && 
-        nowOutcome != RuleOutcome::REJECTED_NO_CONNECTIONS) {
+    if (nowOutcome != RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE) {
         return rejected(TurnReason::RULE_REJECTED, nowOutcome);
     }
 

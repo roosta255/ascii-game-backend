@@ -70,6 +70,11 @@ RuleOutcome applyHiderAction(MatchState& match, uint8_t hiderId, HiderActionMode
     }
     HiderState& hider = match.hiders[hiderId];
 
+    // Hider actions require a connection to the server
+    if (hider.server_id == NO_SERVER_ID) {
+        return RuleOutcome::REJECTED_INVALID_TARGET;
+    }
+
     // Cost and effects come only from the backend's own definition table.
     const HiderActionDef& def = hiderActionDef(mode);
     if (hider.action_points < def.ap_cost) {
