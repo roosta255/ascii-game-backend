@@ -185,9 +185,12 @@ HiderActionMode intentMode(const std::string& intentType) {
     return HiderActionMode::PAY_GOAL;
 }
 
+// Maps an intent.type to its TickActionKind.
 TickActionKind intentKind(const std::string& intentType) {
     if (intentType == "ADD_SERVER")    return TickActionKind::ADD_SERVER;
     if (intentType == "REMOVE_SERVER") return TickActionKind::REMOVE_SERVER;
+    if (intentType == "CONNECT")       return TickActionKind::CONNECT;
+    if (intentType == "DISCONNECT")    return TickActionKind::DISCONNECT;
     return TickActionKind::HIDER_ACTION;
 }
 
@@ -765,8 +768,9 @@ ApiResponse HiderSeekerService::submitMove(const std::string& matchId, const std
             move.hider_id = static_cast<uint8_t>(slot);
             move.action_type = static_cast<uint8_t>(kind);
             // Hider actions act on the occupied server implicitly; only
-            // REMOVE_SERVER names a server. goal_id is accepted and ignored.
-            move.server_id = kind == TickActionKind::REMOVE_SERVER ? static_cast<uint8_t>(serverId) : NO_SERVER_ID;
+            // REMOVE_SERVER and CONNECT name a server. goal_id is accepted and ignored.
+            move.server_id = (kind == TickActionKind::REMOVE_SERVER || kind == TickActionKind::CONNECT) 
+                           ? static_cast<uint8_t>(serverId) : NO_SERVER_ID;
             move.target_id = NO_SERVER_ID;
             move.server_mode = static_cast<uint8_t>(intentMode(intentType));
             result = playMode == "PLAY" ? playMove(state, move, seekerPolicy) : queueMove(state, move, seekerPolicy);
