@@ -14,11 +14,12 @@ TEST_CASE("MOVE-003: PLAY applies now or advances ticks until affordable", "[hid
         const ApiResponse played = fx.play("alice", intentOf("BOOST_CPU"));
         REQUIRE(played.status == 200);
         REQUIRE(played.body.at("status") == "APPLIED");
-        REQUIRE(played.body.at("accepted_against_revision") == 3);
+        // CONN-008c: fixture connects hiders, so revision is now 5 (start + 2 CONNECTs)
+        REQUIRE(played.body.at("accepted_against_revision") == 5);
         REQUIRE(played.body.at("ticks_advanced") == 1);
         REQUIRE(played.body.at("tick") == 1);
-        REQUIRE(played.body.at("revision") == 4);
-        REQUIRE(played.body.at("intent_id") == "mv-1");
+        REQUIRE(played.body.at("revision") == 6); // CONN-008c: +2 for the fixture's CONNECTs
+        REQUIRE(played.body.at("intent_id") == "mv-3"); // CONN-008c: the fixture's CONNECTs are mv-1 and mv-2
         REQUIRE(played.body.at("pending_applied").empty());
         REQUIRE(played.body.at("pending_cancelled").empty());
         REQUIRE(played.body.at("events").empty());
@@ -31,7 +32,7 @@ TEST_CASE("MOVE-003: PLAY applies now or advances ticks until affordable", "[hid
         REQUIRE(played.body.at("status") == "APPLIED");
         REQUIRE(played.body.at("ticks_advanced") == 5);
         REQUIRE(played.body.at("tick") == 5);
-        REQUIRE(played.body.at("revision") == 4);
+        REQUIRE(played.body.at("revision") == 6); // CONN-008c: +2 for the fixture's CONNECTs
     }
 
     SECTION("ADD_SERVER applies once with 1 LOA, then is NEVER_AFFORDABLE") {

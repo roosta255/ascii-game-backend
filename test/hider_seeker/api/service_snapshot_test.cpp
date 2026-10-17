@@ -35,7 +35,8 @@ std::string snapshotName(ServiceFixture& fx, const std::string& audienceKey, uin
 
 TEST_CASE("SNAPSHOT-002: create, join, join, start snapshot exactly the bound audiences", "[hider_seeker][api][snapshots]") {
     ServiceFixture fx;
-    fx.setupTwoHiders();
+    // CONN-008c: exactly create, join, join, start, without the fixture's CONNECTs.
+    fx.setupTwoHidersDisconnected();
 
     const std::set<std::string> expected = {
         snapshotName(fx, "public", 0),
@@ -68,21 +69,22 @@ TEST_CASE("SNAPSHOT-002: committed moves and cancels snapshot their new revision
     REQUIRE(queued.status == 200);
     REQUIRE(queued.body.at("status") == "QUEUED");
     const std::set<std::string> afterQueue = snapshotNames(fx);
-    REQUIRE(afterQueue.count(snapshotName(fx, "public", 4)) == 1);
-    REQUIRE(afterQueue.count(snapshotName(fx, "hider-0", 4)) == 1);
-    REQUIRE(afterQueue.count(snapshotName(fx, "hider-1", 4)) == 1);
+    // CONN-008c: +2 for the fixture's CONNECTs
+    REQUIRE(afterQueue.count(snapshotName(fx, "public", 6)) == 1);
+    REQUIRE(afterQueue.count(snapshotName(fx, "hider-0", 6)) == 1);
+    REQUIRE(afterQueue.count(snapshotName(fx, "hider-1", 6)) == 1);
 
     const ApiResponse cancelled = fx.cancel("alice", queued.body.at("intent_id").get<std::string>());
     REQUIRE(cancelled.status == 200);
-    REQUIRE(cancelled.body.at("revision") == 5);
+    REQUIRE(cancelled.body.at("revision") == 7);
     const std::set<std::string> afterCancel = snapshotNames(fx);
     REQUIRE(afterCancel.size() == afterQueue.size() + 3);
-    REQUIRE(afterCancel.count(snapshotName(fx, "public", 5)) == 1);
-    REQUIRE(afterCancel.count(snapshotName(fx, "hider-0", 5)) == 1);
-    REQUIRE(afterCancel.count(snapshotName(fx, "hider-1", 5)) == 1);
+    REQUIRE(afterCancel.count(snapshotName(fx, "public", 7)) == 1);
+    REQUIRE(afterCancel.count(snapshotName(fx, "hider-0", 7)) == 1);
+    REQUIRE(afterCancel.count(snapshotName(fx, "hider-1", 7)) == 1);
 
     REQUIRE(fx.pass("bob", 1).status == 200);
-    REQUIRE(snapshotNames(fx).count(snapshotName(fx, "public", 6)) == 1);
+    REQUIRE(snapshotNames(fx).count(snapshotName(fx, "public", 8)) == 1);
 }
 
 TEST_CASE("SNAPSHOT-002: REJECTED moves and idempotent replays write no snapshot", "[hider_seeker][api][snapshots]") {
@@ -109,8 +111,8 @@ TEST_CASE("SNAPSHOT-002: a failed snapshot write never changes the move's respon
     ServiceFixture twin;
     twin.setupTwoHiders();
 
-    // An unreadable document already occupies the revision-4 public snapshot path.
-    const std::string blocked = snapshotName(fx, "public", 4);
+    // An unreadable document already occupies the revision-6 public snapshot path.
+    const std::string blocked = snapshotName(fx, "public", 6); // CONN-008c: +2 for the fixture's CONNECTs
     {
         std::ofstream file(fx.temp.dir() + "/" + blocked + ".json");
         file << "{not json";
@@ -125,11 +127,11 @@ TEST_CASE("SNAPSHOT-002: a failed snapshot write never changes the move's respon
 
     // The move itself is committed, the blocking document untouched, and the
     // remaining snapshot writes still happened.
-    REQUIRE(fx.revision() == 4);
+    REQUIRE(fx.revision() == 6);
     REQUIRE(fx.temp.readRaw(blocked) == "{not json");
-    REQUIRE(snapshotNames(fx).count(snapshotName(fx, "hider-0", 4)) == 1);
-    REQUIRE(snapshotNames(fx).count(snapshotName(fx, "hider-1", 4)) == 1);
+    REQUIRE(snapshotNames(fx).count(snapshotName(fx, "hider-0", 6)) == 1);
+    REQUIRE(snapshotNames(fx).count(snapshotName(fx, "hider-1", 6)) == 1);
 
-    // No public revision-4 view can be served from the unreadable document.
-    requireError(fx.service.getRevisionView(fx.matchId, "public", "4", "", ""), 404, "VIEW_NOT_FOUND");
+    // No public revision-6 view can be served from the unreadable document.
+    requireError(fx.service.getRevisionView(fx.matchId, "public", "6", "", ""), 404, "VIEW_NOT_FOUND");
 }

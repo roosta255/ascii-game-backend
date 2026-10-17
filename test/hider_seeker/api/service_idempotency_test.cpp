@@ -12,7 +12,7 @@ TEST_CASE("MOVE-006: idempotency keys replay, conflict, and are scoped per accou
     applied["idempotency_key"] = "same-key";
     const ApiResponse first = fx.submit(applied);
     REQUIRE(first.status == 200);
-    REQUIRE(first.body.at("revision") == 4);
+    REQUIRE(first.body.at("revision") == 6); // CONN-008c: +2 for the fixture's CONNECTs
     REQUIRE(fx.tick() == 1);
 
     SECTION("repeating an applied request replays it without changing the match") {
@@ -20,9 +20,9 @@ TEST_CASE("MOVE-006: idempotency keys replay, conflict, and are scoped per accou
         const ApiResponse replay = fx.submit(applied);
         REQUIRE(replay.status == first.status);
         REQUIRE(replay.body == first.body);
-        REQUIRE(fx.revision() == 4);
+        REQUIRE(fx.revision() == 6); // CONN-008c: +2 for the fixture's CONNECTs
         REQUIRE(fx.tick() == 1);
-        REQUIRE(fx.record().request_log.size() == 5);
+        REQUIRE(fx.record().request_log.size() == 7); // CONN-008c: +2 for the fixture's CONNECTs
     }
 
     SECTION("repeating a REJECTED request replays the identical 422") {
@@ -42,7 +42,7 @@ TEST_CASE("MOVE-006: idempotency keys replay, conflict, and are scoped per accou
         json different = fx.moveBody("alice", "PLAY", intentOf("SUPPRESS_ERROR"));
         different["idempotency_key"] = "same-key";
         requireError(fx.submit(different), 422, "IDEMPOTENCY_KEY_REUSED");
-        REQUIRE(fx.revision() == 4);
+        REQUIRE(fx.revision() == 6); // CONN-008c: +2 for the fixture's CONNECTs
     }
 
     SECTION("the same key from a different account is a separate request") {
@@ -51,6 +51,6 @@ TEST_CASE("MOVE-006: idempotency keys replay, conflict, and are scoped per accou
         const ApiResponse bobResponse = fx.submit(bobs);
         REQUIRE(bobResponse.status == 200);
         REQUIRE(bobResponse.body.at("status") == "APPLIED");
-        REQUIRE(bobResponse.body.at("revision") == 5);
+        REQUIRE(bobResponse.body.at("revision") == 7); // CONN-008c: +2 for the fixture's CONNECTs
     }
 }

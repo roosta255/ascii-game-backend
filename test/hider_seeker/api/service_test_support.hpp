@@ -47,6 +47,12 @@ public:
         return contents.str();
     }
 
+    // Replaces the bytes stored for matchId.
+    void writeRaw(const std::string& matchId, const std::string& contents) const {
+        std::ofstream file(dir_ + "/" + matchId + ".json", std::ios::trunc);
+        file << contents;
+    }
+
 private:
     static std::string makeDir() {
         static std::atomic<int> counter{0};
@@ -79,6 +85,10 @@ struct ServiceFixture {
         REQUIRE(loaded.fromJson(json::parse(temp.readRaw(matchId))));
         return loaded;
     }
+
+    // Stores `edited` in place of the match's record, for tests that need a
+    // state no sequence of moves reaches quickly (e.g. an empty connection pool).
+    void writeRecord(const MatchRecord& edited) { temp.writeRaw(matchId, edited.toJson().dump()); }
 
     ApiResponse create(const std::string& host, int hiderCount, uint64_t seed = 42) {
         const ApiResponse response =
@@ -121,13 +131,22 @@ struct ServiceFixture {
     }
 
     // host creates a 2-hider match, alice (slot 0) and bob (slot 1) join, host
-    // starts it: revision 3, tick 0.
-    void setupTwoHiders(uint64_t seed = 42) {
+    // starts it: revision 3, tick 0, both hiders disconnected, pool 6.
+    void setupTwoHidersDisconnected(uint64_t seed = 42) {
         REQUIRE(create("host", 2, seed).status == 201);
         REQUIRE(join("alice").status == 200);
         REQUIRE(join("bob").status == 200);
         REQUIRE(start("host").status == 200);
         REQUIRE(revision() == 3);
+    }
+
+    // setupTwoHidersDisconnected, then alice CONNECTs to server 0 and bob to
+    // server 1 (CONN-008c): revision 3 + 2 CONNECTs = 5, tick 0, pool 4.
+    void setupTwoHiders(uint64_t seed = 42) {
+        setupTwoHidersDisconnected(seed);
+        REQUIRE(play("alice", json{{"type", "CONNECT"}, {"server_id", 0}}).status == 200);
+        REQUIRE(play("bob", json{{"type", "CONNECT"}, {"server_id", 1}}).status == 200);
+        REQUIRE(revision() == 5);
     }
 };
 

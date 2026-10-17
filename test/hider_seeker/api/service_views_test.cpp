@@ -115,7 +115,7 @@ TEST_CASE("SERVICE-002: getLatestView serves the current revision with no-cache 
     const ApiResponse pub = fx.service.getLatestView(fx.matchId, "public", "", "");
     REQUIRE(pub.status == 200);
     REQUIRE(pub.body.at("audience") == "public");
-    REQUIRE(pub.body.at("revision") == 3);
+    REQUIRE(pub.body.at("revision") == 5); // CONN-008c: +2 for the fixture's CONNECTs
     requireViewHeaders(pub, etagOf(pub), LATEST_CACHE);
 
     // alice's "hider" request always resolves to slot 0, bob's to slot 1.
@@ -129,7 +129,7 @@ TEST_CASE("SERVICE-002: getLatestView serves the current revision with no-cache 
     REQUIRE(bob.body.at("self").at("account") == "bob");
 
     // Served verbatim from the stored snapshot.
-    std::ifstream stored(snapshotPath(fx, "hider-0", 3));
+    std::ifstream stored(snapshotPath(fx, "hider-0", 5)); // CONN-008c: +2 for the fixture's CONNECTs
     const json document = json::parse(stored);
     REQUIRE(alice.body == document.at("view"));
 
@@ -138,7 +138,7 @@ TEST_CASE("SERVICE-002: getLatestView serves the current revision with no-cache 
         planted["view"]["marker"] = "planted";
         planted["view"]["content_hash"] = "0000000000000abc";
         {
-            std::ofstream file(snapshotPath(fx, "hider-0", 3));
+            std::ofstream file(snapshotPath(fx, "hider-0", 5)); // CONN-008c: +2 for the fixture's CONNECTs
             file << planted.dump();
         }
         const ApiResponse served = fx.service.getLatestView(fx.matchId, "hider", "alice", "");
@@ -148,22 +148,22 @@ TEST_CASE("SERVICE-002: getLatestView serves the current revision with no-cache 
     }
 
     SECTION("a missing latest snapshot is rebuilt, re-stored, and served identically") {
-        REQUIRE(std::filesystem::remove(snapshotPath(fx, "public", 3)));
+        REQUIRE(std::filesystem::remove(snapshotPath(fx, "public", 5))); // CONN-008c: +2 for the fixture's CONNECTs
         const ApiResponse rebuilt = fx.service.getLatestView(fx.matchId, "public", "", "");
         REQUIRE(rebuilt.status == 200);
         REQUIRE(rebuilt.body == pub.body);
         REQUIRE(rebuilt.headers == pub.headers);
-        REQUIRE(std::filesystem::exists(snapshotPath(fx, "public", 3)));
+        REQUIRE(std::filesystem::exists(snapshotPath(fx, "public", 5)));
 
         json reloaded;
-        REQUIRE(hider_seeker::loadSnapshot(fx.temp.store(), fx.matchId, "public", 3, reloaded));
+        REQUIRE(hider_seeker::loadSnapshot(fx.temp.store(), fx.matchId, "public", 5, reloaded)); // CONN-008c: +2 for the fixture's CONNECTs
         REQUIRE(reloaded == pub.body);
     }
 
     SECTION("the latest view follows new revisions") {
         REQUIRE(fx.play("alice", intentOf("BOOST_CPU")).status == 200);
         const ApiResponse next = fx.service.getLatestView(fx.matchId, "public", "", "");
-        REQUIRE(next.body.at("revision") == 4);
+        REQUIRE(next.body.at("revision") == 6); // CONN-008c: +2 for the fixture's CONNECTs
         REQUIRE(etagOf(next) != etagOf(pub));
     }
 }
@@ -182,7 +182,8 @@ TEST_CASE("SERVICE-002: getRevisionView serves stored snapshots only, cached imm
     REQUIRE(fx.service.getRevisionView(fx.matchId, "public", "0001", "", "").body == lobby.body);
 
     SECTION("future revision") {
-        requireError(fx.service.getRevisionView(fx.matchId, "public", "4", "", ""), 404, "VIEW_NOT_FOUND");
+        // CONN-008c: +2 for the fixture's CONNECTs
+        requireError(fx.service.getRevisionView(fx.matchId, "public", "6", "", ""), 404, "VIEW_NOT_FOUND");
         requireError(fx.service.getRevisionView(fx.matchId, "public", "99999999999999999999", "", ""), 404,
                      "VIEW_NOT_FOUND");
     }
@@ -202,7 +203,7 @@ TEST_CASE("SERVICE-002: getRevisionView serves stored snapshots only, cached imm
 
     SECTION("at the current revision it matches getLatestView") {
         const ApiResponse latest = fx.service.getLatestView(fx.matchId, "hider", "alice", "");
-        const ApiResponse pinned = fx.service.getRevisionView(fx.matchId, "hider", "3", "alice", "");
+        const ApiResponse pinned = fx.service.getRevisionView(fx.matchId, "hider", "5", "alice", ""); // CONN-008c: +2 for the fixture's CONNECTs
         REQUIRE(pinned.status == 200);
         REQUIRE(pinned.body == latest.body);
         REQUIRE(etagOf(pinned) == etagOf(latest));
@@ -228,9 +229,9 @@ TEST_CASE("SERVICE-002: If-None-Match exact match returns 304", "[hider_seeker][
     REQUIRE(unquoted.body == latest.body);
     REQUIRE(fx.service.getLatestView(fx.matchId, "public", "", "\"other\"").status == 200);
 
-    const ApiResponse pinned = fx.service.getRevisionView(fx.matchId, "public", "3", "", etag);
+    const ApiResponse pinned = fx.service.getRevisionView(fx.matchId, "public", "5", "", etag); // CONN-008c: +2 for the fixture's CONNECTs
     REQUIRE(pinned.status == 304);
     REQUIRE(pinned.body.is_null());
     requireViewHeaders(pinned, etag, REVISION_CACHE);
-    REQUIRE(fx.service.getRevisionView(fx.matchId, "public", "3", "", "W/" + etag).status == 200);
+    REQUIRE(fx.service.getRevisionView(fx.matchId, "public", "5", "", "W/" + etag).status == 200);
 }

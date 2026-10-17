@@ -29,23 +29,23 @@ TEST_CASE("RECORD-002: ADD_SERVER then REMOVE_SERVER append two ordered public e
     fx.setupTwoHiders();
     REQUIRE(fx.record().public_events.empty());
 
-    // alice adds a server at tick 0: revision 4.
+    // alice adds a server at tick 0: revision 6 (CONN-008c: +2 for the fixture's CONNECTs).
     const ApiResponse added = fx.play("alice", intentOf("ADD_SERVER"));
     REQUIRE(added.status == 200);
     REQUIRE(added.body.at("status") == "APPLIED");
-    REQUIRE(added.body.at("revision") == 4);
+    REQUIRE(added.body.at("revision") == 6);
     REQUIRE(added.body.at("events").at(0).at("tick") == 0);
 
-    // bob passes to tick 2 (revision 5), then removes server 1 (revision 6).
+    // bob passes to tick 2 (revision 7), then removes server 1 (revision 8).
     REQUIRE(fx.pass("bob", 2).status == 200);
     const ApiResponse removed = fx.play("bob", removeServer(1));
     REQUIRE(removed.status == 200);
     REQUIRE(removed.body.at("status") == "APPLIED");
-    REQUIRE(removed.body.at("revision") == 6);
+    REQUIRE(removed.body.at("revision") == 8);
     REQUIRE(removed.body.at("tick") == 2);
     REQUIRE(removed.body.at("events").at(0).at("tick") == 2);
 
-    const json expected = json::array({eventOf("SERVER_ADDED", 0, 4), eventOf("SERVER_REMOVED", 2, 6)});
+    const json expected = json::array({eventOf("SERVER_ADDED", 0, 6), eventOf("SERVER_REMOVED", 2, 8)});
     REQUIRE(recordEvents(fx) == expected);
 
     // Both audiences render the same ordered history.
@@ -83,11 +83,11 @@ TEST_CASE("RECORD-002: an idempotent replay appends nothing", "[hider_seeker][ap
     REQUIRE(first.status == 200);
     REQUIRE(first.body.at("status") == "APPLIED");
     const json after = recordEvents(fx);
-    REQUIRE(after == json::array({eventOf("SERVER_ADDED", 0, 4)}));
+    REQUIRE(after == json::array({eventOf("SERVER_ADDED", 0, 6)})); // CONN-008c: +2 for the fixture's CONNECTs
 
     const ApiResponse replay = fx.submit(body);
     REQUIRE(replay.status == first.status);
     REQUIRE(replay.body == first.body);
     REQUIRE(recordEvents(fx) == after);
-    REQUIRE(fx.revision() == 4);
+    REQUIRE(fx.revision() == 6); // CONN-008c: +2 for the fixture's CONNECTs
 }

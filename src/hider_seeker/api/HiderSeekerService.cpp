@@ -146,6 +146,7 @@ const char* ruleOutcomeName(RuleOutcome outcome) {
         case RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE: return "REJECTED_INSUFFICIENT_RESOURCE";
         case RuleOutcome::REJECTED_RELOCATION_FAILED:     return "REJECTED_RELOCATION_FAILED";
         case RuleOutcome::REJECTED_INVALID_TARGET:        return "REJECTED_INVALID_TARGET";
+        case RuleOutcome::REJECTED_NO_CONNECTIONS:        return "REJECTED_NO_CONNECTIONS";
     }
     return "UNKNOWN";
 }
@@ -184,9 +185,12 @@ HiderActionMode intentMode(const std::string& intentType) {
     return HiderActionMode::PAY_GOAL;
 }
 
+// Maps an intent.type to its TickActionKind.
 TickActionKind intentKind(const std::string& intentType) {
     if (intentType == "ADD_SERVER")    return TickActionKind::ADD_SERVER;
     if (intentType == "REMOVE_SERVER") return TickActionKind::REMOVE_SERVER;
+    if (intentType == "CONNECT")       return TickActionKind::CONNECT;
+    if (intentType == "DISCONNECT")    return TickActionKind::DISCONNECT;
     return TickActionKind::HIDER_ACTION;
 }
 
@@ -640,6 +644,11 @@ ApiResponse HiderSeekerService::startMatch(const std::string& matchId, const std
         state.hider_connection_pool = PLACEHOLDER_HIDER_CONNECTIONS_PER_HIDER * state.hider_count; // PLACEHOLDER pending BALANCE-001
         state.seeker_connection_mask = 0;
         state.winner = static_cast<uint8_t>(MatchWinner::NONE);
+        
+        // CONN-002c: Set all hiders to disconnected at match start
+        for (int i = 0; i < state.hider_count; ++i) {
+            state.hiders[i].server_id = NO_SERVER_ID;
+        }
         return logged(ApiResponse{200, {{"revision", state.revision}, {"phase", "ACTIVE"}}}, request);
     });
 }
@@ -723,6 +732,10 @@ ApiResponse HiderSeekerService::submitMove(const std::string& matchId, const std
                 }
                 hasServerId = true;
             }
+            // CONN-API-001: CONNECT intent without server_id should return INVALID_REQUEST
+            if (intentType == "CONNECT" && !hasServerId) {
+                return unrecorded(invalidRequest("CONNECT requires intent.server_id"));
+            }
             if (intentType == "REMOVE_SERVER" && !hasServerId) {
                 return unrecorded(invalidRequest("REMOVE_SERVER requires intent.server_id"));
             }
@@ -735,7 +748,9 @@ ApiResponse HiderSeekerService::submitMove(const std::string& matchId, const std
         MatchState& state = record.state;
         const TickActionKind kind = isPass ? TickActionKind::HIDER_ACTION : intentKind(intentType);
         const uint8_t occupiedServer = state.hiders[slot].server_id;
-        if (!isPass && kind == TickActionKind::HIDER_ACTION && hasServerId && serverId != occupiedServer) {
+        // CONN-API-004: For CONNECT intent, don't apply SERVER_MISMATCH check
+        if (!isPass && kind == TickActionKind::HIDER_ACTION && hasServerId && serverId != occupiedServer 
+            && intentType != "CONNECT") {
             return unrecorded(errorResponse(400, "SERVER_MISMATCH",
                                             "Hider actions target the hider's own occupied server"));
         }
@@ -753,8 +768,9 @@ ApiResponse HiderSeekerService::submitMove(const std::string& matchId, const std
             move.hider_id = static_cast<uint8_t>(slot);
             move.action_type = static_cast<uint8_t>(kind);
             // Hider actions act on the occupied server implicitly; only
-            // REMOVE_SERVER names a server. goal_id is accepted and ignored.
-            move.server_id = kind == TickActionKind::REMOVE_SERVER ? static_cast<uint8_t>(serverId) : NO_SERVER_ID;
+            // REMOVE_SERVER and CONNECT name a server. goal_id is accepted and ignored.
+            move.server_id = (kind == TickActionKind::REMOVE_SERVER || kind == TickActionKind::CONNECT) 
+                           ? static_cast<uint8_t>(serverId) : NO_SERVER_ID;
             move.target_id = NO_SERVER_ID;
             move.server_mode = static_cast<uint8_t>(intentMode(intentType));
             result = playMode == "PLAY" ? playMove(state, move, seekerPolicy) : queueMove(state, move, seekerPolicy);

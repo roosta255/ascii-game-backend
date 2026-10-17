@@ -49,6 +49,10 @@ TEST_CASE("MOVE-007: submitMove validation rules", "[hider_seeker][api][validati
         requireBaseError(fx.play("alice", json{{"type", "BOOST_CPU"}, {"server_id", 1}}), 400, "SERVER_MISMATCH");
     }
 
+    SECTION("CONNECT without server_id") {
+        requireBaseError(fx.play("alice", intentOf("CONNECT")), 400, "INVALID_REQUEST");
+    }
+
     SECTION("an account not in the match") {
         requireBaseError(fx.play("mallory", intentOf("BOOST_CPU")), 403, "NOT_IN_MATCH");
     }
@@ -68,5 +72,6 @@ TEST_CASE("MOVE-007: submitMove validation rules", "[hider_seeker][api][validati
     }
 
     // None of the rejected requests changed the match.
-    REQUIRE(fx.revision() == 3);
+    // CONN-008c: fixture connects hiders, so revision is now 5 (start + 2 CONNECTs)
+    REQUIRE(fx.revision() == 5);
 }
