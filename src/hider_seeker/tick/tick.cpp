@@ -5,6 +5,7 @@
 #include "../ruleset/probe_rules.hpp"
 #include "../ruleset/ring_buffers.hpp"
 #include "../ruleset/server_metrics.hpp"
+#include "../ruleset/connection_rules.hpp"
 
 #include <algorithm>
 
@@ -31,6 +32,16 @@ RuleOutcome applyTickIntent(MatchState& state, const TickIntent& intent,
             // For REMOVE_SERVER, we need to pass the target_server_id
             outcome = applyRemoveServer(state, intentRecord.hiderId, intent.target_server_id,
                                         outPublicEvents, outPublicEventCount);
+            break;
+            
+        case TickActionKind::CONNECT:
+            // For CONNECT, we need to pass the target_server_id
+            outcome = applyConnect(state, intentRecord.hiderId, intent.target_server_id);
+            break;
+
+        case TickActionKind::DISCONNECT:
+            // For DISCONNECT, no target_server_id needed
+            outcome = applyDisconnect(state, intentRecord.hiderId);
             break;
     }
 

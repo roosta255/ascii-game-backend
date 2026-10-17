@@ -52,6 +52,9 @@ static_assert(static_cast<uint8_t>(HiderActionMode::ADD_SERVER) == 0 &&
                   static_cast<uint8_t>(HiderActionMode::REMOVE_SERVER) == 1,
               "ADD_SERVER and REMOVE_SERVER indices are the save format and must stay 0 and 1");
 
+static_assert(static_cast<uint8_t>(HiderActionMode::CONNECT) == 7);
+static_assert(static_cast<uint8_t>(HiderActionMode::DISCONNECT) == 8);
+
 // Callers are expected to pass in-range modes only; an out-of-range mode
 // yields a definition no hider can afford, so it is never applied.
 const HiderActionDef& hiderActionDef(HiderActionMode mode);
