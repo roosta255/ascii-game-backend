@@ -4,7 +4,6 @@
 #include "../ruleset/probe_rules.hpp"
 #include "../ruleset/regeneration.hpp"
 #include "../tick/tick.hpp"
-#include "../ruleset/connection_rules.hpp"
 
 namespace hider_seeker {
 
@@ -110,15 +109,8 @@ bool becomesAffordable(const MatchState& state, const TickIntent& intent) {
 // TURN-003: apply an affordable move right now, with no tick advanced.
 void applyNow(MatchState& state, const TickIntent& intent, TurnResult& result) {
     result.ruleOutcome = applyTickIntent(state, intent, result.publicEvents, result.publicEventCount);
-    // Handle REJECTED_NO_CONNECTIONS as a special case - treat it like REJECTED_INSUFFICIENT_RESOURCE
-    // so that the move is rejected rather than treated as an invalid move
-    if (result.ruleOutcome == RuleOutcome::REJECTED_NO_CONNECTIONS) {
-        result.status = MoveStatus::REJECTED;
-        result.reason = TurnReason::RULE_REJECTED;
-    } else {
-        result.status = MoveStatus::APPLIED;
-        result.reason = TurnReason::NONE;
-    }
+    result.status = MoveStatus::APPLIED;
+    result.reason = TurnReason::NONE;
     result.ticksAdvanced = 0;
     state.revision += 1;
 }
@@ -317,11 +309,6 @@ TurnResult queueMove(MatchState& state, const MoveRequest& move, iTargetRankingP
         return result;
     }
     if (nowOutcome != RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE) {
-        // Handle REJECTED_NO_CONNECTIONS as a special case - treat it like REJECTED_INSUFFICIENT_RESOURCE
-        // so that the move is rejected rather than treated as an invalid move
-        if (nowOutcome == RuleOutcome::REJECTED_NO_CONNECTIONS) {
-            return rejected(TurnReason::RULE_REJECTED, nowOutcome);
-        }
         return rejected(TurnReason::RULE_REJECTED, nowOutcome);
     }
 
