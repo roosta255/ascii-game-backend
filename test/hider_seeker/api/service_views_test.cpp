@@ -11,6 +11,8 @@
 #include "service_test_support.hpp"
 #include "../hider_seeker/ruleset/rule_types.hpp"
 
+using namespace hider_seeker;
+
 using namespace hs_test;
 
 namespace {

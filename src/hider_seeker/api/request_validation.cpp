@@ -1,5 +1,6 @@
 #include "request_validation.hpp"
 #include "../ruleset/action_rules.hpp"
+#include "../tick/tick_types.hpp"
 #include <cctype>
 
 namespace hider_seeker {
