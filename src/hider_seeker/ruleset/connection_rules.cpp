@@ -38,7 +38,7 @@ RuleOutcome applyConnect(MatchState& state, uint8_t hiderId, uint8_t serverId) {
     state.hider_connection_pool -= 1;
     state.hiders[hiderId].server_id = serverId;
     
-    return RuleOutcome::APPLIED;
+    return RuleOutcome::ACCEPTED;
 }
 
 RuleOutcome applyDisconnect(MatchState& state, uint8_t hiderId) {
@@ -67,7 +67,7 @@ RuleOutcome applyDisconnect(MatchState& state, uint8_t hiderId) {
     }
     state.hiders[hiderId].server_id = NO_SERVER_ID;
     
-    return RuleOutcome::APPLIED;
+    return RuleOutcome::ACCEPTED;
 }
 
 } // namespace hider_seeker

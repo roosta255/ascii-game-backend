@@ -62,7 +62,7 @@ TEST_CASE("applyConnect succeeds with valid inputs", "[connection]") {
     state.hider_connection_pool = 1;
     
     RuleOutcome outcome = applyConnect(state, 0, 0);
-    REQUIRE(outcome == RuleOutcome::APPLIED);
+    REQUIRE(outcome == RuleOutcome::ACCEPTED);
     REQUIRE(state.hiders[0].server_id == 0);
     REQUIRE(state.hider_connection_pool == 0);
     REQUIRE(state.hiders[0].action_points == 10); // No cost for connect
@@ -95,7 +95,7 @@ TEST_CASE("applyDisconnect succeeds with valid inputs", "[connection]") {
     state.hiders[0].action_points = 10;
     
     RuleOutcome outcome = applyDisconnect(state, 0);
-    REQUIRE(outcome == RuleOutcome::APPLIED);
+    REQUIRE(outcome == RuleOutcome::ACCEPTED);
     REQUIRE(state.hiders[0].server_id == NO_SERVER_ID);
     REQUIRE(state.hider_connection_pool == 1); // Incremented
     REQUIRE(state.hiders[0].action_points == 10); // No cost for disconnect
