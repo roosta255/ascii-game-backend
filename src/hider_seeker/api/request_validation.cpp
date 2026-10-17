@@ -50,8 +50,6 @@ bool isValidIntentType(const std::string& intentType) {
     return hiderActionFromName(intentType.c_str(), mode);
 }
 
-
-
 nlohmann::json buildErrorBody(const std::string& code, const std::string& message) {
     return {{"error", code}, {"message", message}};
 }
