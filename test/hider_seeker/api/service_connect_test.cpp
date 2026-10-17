@@ -4,7 +4,7 @@
 
 using namespace hs_test;
 
-TEST_CASE("CONN-003c: CONNECT/DISCONNECT updates hider view correctly", "[hider_seeker][api][connect]") {
+TEST_CASE("CONN-003c: CONNECT and DISCONNECT through the move API", "[hider_seeker][api][connect]") {
     ServiceFixture fx;
     fx.setupTwoHidersDisconnected();
 
@@ -13,8 +13,8 @@ TEST_CASE("CONN-003c: CONNECT/DISCONNECT updates hider view correctly", "[hider_
         REQUIRE(connected.status == 200);
         REQUIRE(connected.body.at("status") == "APPLIED");
         REQUIRE(connected.body.at("ticks_advanced") == 0);
-        REQUIRE(connected.body.at("revision") == 4); // CONN-008c: +2 for the fixture's CONNECTs
-        // Note: hider_connection_pool is not in response body, only in state
+        REQUIRE(connected.body.at("revision") == 4); // 3 after start + this CONNECT
+        REQUIRE(fx.record().state.hider_connection_pool == 5);
         REQUIRE(fx.record().state.hiders[0].server_id == 0);
     }
 
@@ -37,7 +37,7 @@ TEST_CASE("CONN-003c: CONNECT/DISCONNECT updates hider view correctly", "[hider_
         const ApiResponse disconnected = fx.play("alice", json{{"type", "DISCONNECT"}});
         REQUIRE(disconnected.status == 200);
         REQUIRE(disconnected.body.at("status") == "APPLIED");
-        // Note: hider_connection_pool is not in response body, only in state
+        REQUIRE(fx.record().state.hider_connection_pool == 6);
         REQUIRE(fx.record().state.hiders[0].server_id == hider_seeker::NO_SERVER_ID);
     }
 
@@ -53,7 +53,7 @@ TEST_CASE("CONN-003c: CONNECT/DISCONNECT updates hider view correctly", "[hider_
         REQUIRE(connected.body.at("error") == "INVALID_REQUEST");
     }
 
-    SECTION("MatchRecord r = fx.record(); set r.state.hider_connection_pool = 0; fx.writeRecord(r); then CONNECT") {
+    SECTION("CONNECT with the pool at 0") {
         MatchRecord r = fx.record();
         r.state.hider_connection_pool = 0;
         fx.writeRecord(r);
@@ -61,7 +61,8 @@ TEST_CASE("CONN-003c: CONNECT/DISCONNECT updates hider view correctly", "[hider_
         const ApiResponse connected = fx.play("alice", json{{"type", "CONNECT"}, {"server_id", 0}});
         REQUIRE(connected.status == 422);
         REQUIRE(connected.body.at("rule_outcome") == "REJECTED_NO_CONNECTIONS");
-        REQUIRE(fx.revision() == 3); // No tick advanced, no revision change
+        REQUIRE(fx.revision() == 3); // rejected: nothing committed
+        REQUIRE(fx.tick() == 0);     // and no tick advanced
     }
 
     SECTION("alice BOOST_CPU while disconnected") {
