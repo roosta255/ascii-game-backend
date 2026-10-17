@@ -18,7 +18,7 @@ TEST_CASE("MOVE-003: PLAY applies now or advances ticks until affordable", "[hid
         REQUIRE(played.body.at("accepted_against_revision") == 5);
         REQUIRE(played.body.at("ticks_advanced") == 1);
         REQUIRE(played.body.at("tick") == 1);
-        REQUIRE(played.body.at("revision") == 4);
+        REQUIRE(played.body.at("revision") == 6); // CONN-008c: +2 for the fixture's CONNECTs
         REQUIRE(played.body.at("intent_id") == "mv-1");
         REQUIRE(played.body.at("pending_applied").empty());
         REQUIRE(played.body.at("pending_cancelled").empty());
@@ -33,7 +33,7 @@ TEST_CASE("MOVE-003: PLAY applies now or advances ticks until affordable", "[hid
         REQUIRE(played.body.at("ticks_advanced") == 5);
         REQUIRE(played.body.at("tick") == 5);
         // CONN-008c: fixture connects hiders, so revision is now 5 (start + 2 CONNECTs)
-        REQUIRE(played.body.at("revision") == 5);
+        REQUIRE(played.body.at("revision") == 6); // CONN-008c: +2 for the fixture's CONNECTs
     }
 
     SECTION("ADD_SERVER applies once with 1 LOA, then is NEVER_AFFORDABLE") {

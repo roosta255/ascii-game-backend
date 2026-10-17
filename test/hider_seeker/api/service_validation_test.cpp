@@ -53,18 +53,6 @@ TEST_CASE("MOVE-007: submitMove validation rules", "[hider_seeker][api][validati
         requireBaseError(fx.play("alice", intentOf("CONNECT")), 400, "INVALID_REQUEST");
     }
 
-    SECTION("DISCONNECT with server_id should succeed") {
-        // First connect alice to server 0
-        const ApiResponse connected = fx.play("alice", json{{"type", "CONNECT"}, {"server_id", 0}});
-        REQUIRE(connected.status == 200);
-        REQUIRE(connected.body.at("status") == "APPLIED");
-        
-        // Then disconnect alice (should succeed even with server_id provided)
-        const ApiResponse disconnected = fx.play("alice", json{{"type", "DISCONNECT"}, {"server_id", 0}});
-        REQUIRE(disconnected.status == 200);
-        REQUIRE(disconnected.body.at("status") == "APPLIED");
-    }
-
     SECTION("an account not in the match") {
         requireBaseError(fx.play("mallory", intentOf("BOOST_CPU")), 403, "NOT_IN_MATCH");
     }

@@ -18,7 +18,7 @@ TEST_CASE("MOVE-005: a stale expected_revision is rejected without touching the 
     const ApiResponse stale = fx.submit(body);
 
     requireError(stale, 409, "STALE_REVISION");
-    REQUIRE(stale.body.at("revision") == 3);
+    REQUIRE(stale.body.at("revision") == 5); // CONN-008c: +2 for the fixture's CONNECTs
     REQUIRE(fx.temp.readRaw(fx.matchId) == storedBefore);
 }
 
@@ -40,5 +40,5 @@ TEST_CASE("MOVE-005: concurrent moves against one revision resolve to one 200 an
     std::vector<int> statuses{aliceStatus, bobStatus};
     std::sort(statuses.begin(), statuses.end());
     REQUIRE(statuses == std::vector<int>{200, 409});
-    REQUIRE(fx.revision() == 4);
+    REQUIRE(fx.revision() == 6); // CONN-008c: +2 for the fixture's CONNECTs
 }
