@@ -10,8 +10,9 @@ using namespace hs_test;
 TEST_CASE("ServiceMatchStartTest", "[service][match-start]") {
     ServiceFixture fixture;
     
-    // Setup: create a 2-hider match, join alice and bob, start it
-    fixture.setupTwoHiders();
+    // Setup: create a 2-hider match, join alice and bob, start it, with no
+    // CONNECT steps, so the state is exactly what startMatch left.
+    fixture.setupTwoHidersDisconnected();
     
     // Load the stored MatchState after start
     auto record = fixture.record();
