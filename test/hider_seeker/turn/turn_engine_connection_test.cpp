@@ -82,13 +82,13 @@ TEST_CASE("applyConnect_and_applyDisconnect_work_correctly", "[connection]") {
     
     // Test applyConnect
     RuleOutcome connectOutcome = applyConnect(state, 0, 0);
-    REQUIRE(connectOutcome == RuleOutcome::APPLIED);
+    REQUIRE(connectOutcome == RuleOutcome::ACCEPTED);
     REQUIRE(state.hiders[0].server_id == 0);
     REQUIRE(state.hider_connection_pool == 0);
     
     // Test applyDisconnect
     RuleOutcome disconnectOutcome = applyDisconnect(state, 0);
-    REQUIRE(disconnectOutcome == RuleOutcome::APPLIED);
+    REQUIRE(disconnectOutcome == RuleOutcome::ACCEPTED);
     REQUIRE(state.hiders[0].server_id == NO_SERVER_ID);
     REQUIRE(state.hider_connection_pool == 1);
 }
