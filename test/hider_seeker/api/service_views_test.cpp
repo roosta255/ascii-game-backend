@@ -118,7 +118,7 @@ TEST_CASE("SERVICE-002: getLatestView serves the current revision with no-cache 
     const ApiResponse pub = fx.service.getLatestView(fx.matchId, "public", "", "");
     REQUIRE(pub.status == 200);
     REQUIRE(pub.body.at("audience") == "public");
-    REQUIRE(pub.body.at("revision") == 3);
+    REQUIRE(pub.body.at("revision") == 5); // CONN-008c: +2 for the fixture's CONNECTs
     requireViewHeaders(pub, etagOf(pub), LATEST_CACHE);
 
     // alice's "hider" request always resolves to slot 0, bob's to slot 1.
@@ -260,9 +260,9 @@ TEST_CASE("SERVICE-002: If-None-Match exact match returns 304", "[hider_seeker][
     REQUIRE(unquoted.body == latest.body);
     REQUIRE(fx.service.getLatestView(fx.matchId, "public", "", "\"other\"").status == 200);
 
-    const ApiResponse pinned = fx.service.getRevisionView(fx.matchId, "public", "3", "", etag);
+    const ApiResponse pinned = fx.service.getRevisionView(fx.matchId, "public", "5", "", etag);
     REQUIRE(pinned.status == 304);
     REQUIRE(pinned.body.is_null());
     requireViewHeaders(pinned, etag, REVISION_CACHE);
-    REQUIRE(fx.service.getRevisionView(fx.matchId, "public", "3", "", "W/" + etag).status == 200);
+    REQUIRE(fx.service.getRevisionView(fx.matchId, "public", "5", "", "W/" + etag).status == 200);
 }
