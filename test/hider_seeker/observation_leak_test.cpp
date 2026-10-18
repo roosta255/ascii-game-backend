@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include "feature_extract.hpp"
-#include "hider_seeker/domain/state.hpp"
+#include "state.hpp"
 
 using namespace hider_seeker;
 
@@ -21,8 +21,8 @@ TEST_CASE("ObservationLeakTest", "[hider_seeker]") {
         for (int k = 0; k < HISTORY_TICKS; ++k) {
             state.servers[s].history[k].cpu = 40 + s + k;
         }
-        state.servers[s].last_probe_tick[s] = 50;
-        state.servers[s].belief[s] = 3;
+        state.seeker.last_probe_tick[s] = 50;
+        state.seeker.belief[s] = 3;
     }
     
     // Build the original observation

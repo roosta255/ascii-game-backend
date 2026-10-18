@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include "baseline_policy.hpp"
-#include "hider_seeker/seeker/feature_extract.hpp"
+#include "feature_extract.hpp"
 
 using namespace hider_seeker;
 

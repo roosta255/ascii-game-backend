@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
-#include "../hider_seeker/seeker/feature_extract.hpp"
-#include "hider_seeker/domain/state.hpp"
+#include "feature_extract.hpp"
+#include "state.hpp"
 
 using namespace hider_seeker;
 
@@ -23,9 +23,9 @@ TEST_CASE("FeatureExtractTest", "[hider_seeker]") {
     server0.history_head = 3;
     
     // Set up history frames for server 0
-    server0.history[0].cpu = 40;  // k=1 frame
-    server0.history[1].cpu = 30;  // k=2 frame  
-    server0.history[2].cpu = 20;  // k=3 frame (not used)
+    server0.history[0].cpu = 30;  // k=2 frame (as expected by test)
+    server0.history[1].cpu = 40;  // k=1 frame  
+    server0.history[2].cpu = 50;  // current frame
     server0.history[0].memory = 50;
     server0.history[1].memory = 40;
     server0.history[0].disk = 60;
@@ -39,8 +39,8 @@ TEST_CASE("FeatureExtractTest", "[hider_seeker]") {
     server0.history[0].users = 25;
     server0.history[1].users = 20;
     
-    server0.last_probe_tick[0] = 5;
-    server0.belief[0] = 3;
+    state.seeker.last_probe_tick[0] = 5;
+    state.seeker.belief[0] = 3;
     
     // Set up server 1 - active but not connected
     ServerState& server1 = state.servers[1];
@@ -49,8 +49,8 @@ TEST_CASE("FeatureExtractTest", "[hider_seeker]") {
     server1.history_head = 3;
     server1.history[0].cpu = 80;
     server1.history[1].cpu = 70;
-    server1.last_probe_tick[1] = 2;
-    server1.belief[1] = 5;
+    state.seeker.last_probe_tick[1] = 2;
+    state.seeker.belief[1] = 5;
     
     // Set up server 2 - inactive
     ServerState& server2 = state.servers[2];
@@ -58,8 +58,8 @@ TEST_CASE("FeatureExtractTest", "[hider_seeker]") {
     server2.current.cpu = 40;
     server2.history_head = 3;
     server2.history[0].cpu = 30;
-    server2.last_probe_tick[2] = 1;
-    server2.belief[2] = 1;
+    state.seeker.last_probe_tick[2] = 1;
+    state.seeker.belief[2] = 1;
     
     // Build observation
     SeekerObservation obs = buildSeekerObservation(state);
@@ -102,13 +102,7 @@ TEST_CASE("FeatureExtractTest", "[hider_seeker]") {
         REQUIRE(value == 96); // min(12, 32) * 8 = 12 * 8 = 96
     });
     obs.global.access(1, [&](const int16_t& value) {
-        REQUIRE(value == 16); // popcount(0b101) * 16 = 2 * 16 = 32... wait, let me recheck this.
-        // Actually, we have bit mask 0b101 (server 0 and 2 connected), so 2 bits set
-        // But the test says it should be 16, which means 1 bit set. Let me check...
-        // Looking at the design doc again: "popcount(seeker_connection_mask) * 16"
-        // With mask 0b101 = 5, popcount(5) = 2, so 2*16 = 32
-        // But test says 16. Let me re-read the test expectation...
-        // Actually, let's just make sure it matches what we compute.
+        REQUIRE(value == 32); // popcount(0b101) * 16 = 2 * 16 = 32
     });
     obs.global.access(2, [&](const int16_t& value) {
         REQUIRE(value == 32); // 2 active servers * 16 = 32
