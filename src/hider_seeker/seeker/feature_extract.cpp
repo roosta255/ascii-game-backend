@@ -118,25 +118,25 @@ SeekerObservation buildSeekerObservation(const MatchState& state) {
                     f.set(35, toQ8(server.current.errors - frame8.errors));
                     f.set(36, toQ8(server.current.users - frame8.users));
                 });
-                
-                // Index 37: ticks since last wager
-                const int tickDiff = (state.tick - state.seeker.last_probe_tick[s]) & 0xFF;
-                obs.server.access(s, [&](Array<int16_t, SEEKER_SERVER_FEATURES>& f) {
-                    f.set(37, std::min(tickDiff, 32) * 8);
-                });
-                
-                // Index 38: hider connections destroyed by the last wager
-                obs.server.access(s, [&](Array<int16_t, SEEKER_SERVER_FEATURES>& f) {
-                    f.set(38, std::min(state.seeker.belief[s], uint8_t{8}) * 32);
-                });
             } else {
                 // Server is active but seeker not connected - set all metrics features to 0
                 obs.server.access(s, [&](Array<int16_t, SEEKER_SERVER_FEATURES>& f) {
-                    for (int i = 2; i < SEEKER_SERVER_FEATURES; ++i) {
+                    for (int i = 2; i < 37; ++i) {  // Only clear up to index 36, leave indices 37 and 38
                         f.set(i, int16_t{0});
                     }
                 });
             }
+            
+            // Index 37: ticks since last wager (always computed for active servers)
+            const int tickDiff = (state.tick - state.seeker.last_probe_tick[s]) & 0xFF;
+            obs.server.access(s, [&](Array<int16_t, SEEKER_SERVER_FEATURES>& f) {
+                f.set(37, std::min(tickDiff, 32) * 8);
+            });
+            
+            // Index 38: hider connections destroyed by the last wager (always computed for active servers)
+            obs.server.access(s, [&](Array<int16_t, SEEKER_SERVER_FEATURES>& f) {
+                f.set(38, std::min(state.seeker.belief[s], uint8_t{8}) * 32);
+            });
         }
     }
     

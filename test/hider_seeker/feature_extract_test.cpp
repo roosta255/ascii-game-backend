@@ -19,8 +19,8 @@ TEST_CASE("FeatureExtractTest - Connected server with specific metrics", "[featu
     
     // Set up history for frameAgo(k=1) and k=2
     state.servers[0].history_head = 3;
-    state.servers[0].history[0].cpu = 40;  // k=2 (frame 0)
-    state.servers[0].history[1].cpu = 30;  // k=1 (frame 1) 
+    state.servers[0].history[0].cpu = 30;  // k=2 (frame 0)
+    state.servers[0].history[1].cpu = 40;  // k=1 (frame 1) 
     state.servers[0].history[2].cpu = 50;  // current frame
     
     const SeekerObservation obs = buildSeekerObservation(state);
@@ -29,10 +29,10 @@ TEST_CASE("FeatureExtractTest - Connected server with specific metrics", "[featu
     REQUIRE(obs.server.getOrDefault(0, {}).getOrDefault(2, int16_t{0}) == 128);  // 50 * 256 / 100 = 128
     
     // Test feature index 9 (cpu Δ1) 
-    REQUIRE(obs.server.getOrDefault(0, {}).getOrDefault(9, int16_t{0}) == 51);   // (50 - 30) * 256 / 100 = 51
+    REQUIRE(obs.server.getOrDefault(0, {}).getOrDefault(9, int16_t{0}) == 25);   // (50 - 30) * 256 / 100 = 25
     
     // Test feature index 16 (cpu Δ2)
-    REQUIRE(obs.server.getOrDefault(0, {}).getOrDefault(16, int16_t{0}) == 25);  // (50 - 40) * 256 / 100 = 25
+    REQUIRE(obs.server.getOrDefault(0, {}).getOrDefault(16, int16_t{0}) == 51);  // (50 - 40) * 256 / 100 = 51
 }
 
 TEST_CASE("FeatureExtractTest - Active but not connected server", "[feature-extract]") {
