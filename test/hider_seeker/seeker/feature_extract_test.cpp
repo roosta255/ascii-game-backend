@@ -23,8 +23,8 @@ TEST_CASE("OBS-001: Feature values for connected server", "[hider_seeker][seeker
     
     // Set up history for server 0 (frameAgo k=1 and k=2)
     state.servers[0].history_head = 3; // Points to index 2 for newest frame
-    state.servers[0].history[0] = {40, 50, 60, 70, 80, 5, 15}; // k=1 frame (1 tick ago)
-    state.servers[0].history[1] = {30, 40, 50, 60, 70, 2, 10}; // k=2 frame (2 ticks ago)
+    state.servers[0].history[0] = {30, 40, 50, 60, 70, 2, 10}; // k=2 frame (2 ticks ago)
+    state.servers[0].history[1] = {40, 50, 60, 70, 80, 5, 15}; // k=1 frame (1 tick ago)
     state.servers[0].history[2] = {20, 30, 40, 50, 60, 1, 5};  // newest frame
     
     // Set tick and last probe tick
@@ -117,8 +117,8 @@ TEST_CASE("OBS-005: Observation does not leak unrelated state", "[hider_seeker][
     // Set current metrics for server 0
     state1.servers[0].current.cpu = 50;
     state1.servers[0].history_head = 3;
-    state1.servers[0].history[0] = {40, 50, 60, 70, 80, 5, 15};
-    state1.servers[0].history[1] = {30, 40, 50, 60, 70, 2, 10};
+    state1.servers[0].history[0] = {30, 40, 50, 60, 70, 2, 10};
+    state1.servers[0].history[1] = {40, 50, 60, 70, 80, 5, 15};
     state1.servers[0].history[2] = {20, 30, 40, 50, 60, 1, 5};
     
     // Set tick and last probe tick
