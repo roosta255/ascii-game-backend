@@ -11,7 +11,11 @@ namespace {
     }
 
     MetricFrame frameAgo(const ServerState& server, int k) {
-        const int historyIndex = (server.history_head - 1 - k) % HISTORY_TICKS;
+        // Handle negative indices properly
+        int historyIndex = (server.history_head - 1 - k);
+        if (historyIndex < 0) {
+            historyIndex += HISTORY_TICKS;
+        }
         return server.history[historyIndex];
     }
     
@@ -42,8 +46,18 @@ SeekerObservation buildSeekerObservation(const MatchState& state) {
             f.set(1, ((state.seeker_connection_mask >> s) & 1) ? int16_t{256} : int16_t{0});
         });
         
+        // Feature index 0: active (256 if server is active, 0 otherwise)
+        obs.server.access(s, [&](Array<int16_t, SEEKER_SERVER_FEATURES>& f) {
+            f.set(0, server.active ? int16_t{256} : int16_t{0});
+        });
+        
+        // Feature index 1: seeker connected (256 if connected, 0 otherwise)
+        obs.server.access(s, [&](Array<int16_t, SEEKER_SERVER_FEATURES>& f) {
+            f.set(1, ((state.seeker_connection_mask >> s) & 1) ? int16_t{256} : int16_t{0});
+        });
+        
         if (server.active && ((state.seeker_connection_mask >> s) & 1)) {
-            // Server is active and seeker connected - compute metrics features
+            // Server is active and seeker connected - compute all metrics features
             
             // Features indices 2-8: current metrics
             obs.server.access(s, [&](Array<int16_t, SEEKER_SERVER_FEATURES>& f) {
@@ -117,23 +131,10 @@ SeekerObservation buildSeekerObservation(const MatchState& state) {
             });
         } else {
             // Server is inactive or seeker not connected - set all features 2-36 to 0
+            // Features 0 and 1 are already set above
             obs.server.access(s, [&](Array<int16_t, SEEKER_SERVER_FEATURES>& f) {
-                for (int i = 2; i <= 36; ++i) {
+                for (int i = 2; i < SEEKER_SERVER_FEATURES; ++i) {
                     f.set(i, int16_t{0});
-                }
-                
-                // Index 37 and 38 are still computed but will be 0 if not connected
-                if (!server.active) {
-                    for (int i = 0; i < SEEKER_SERVER_FEATURES; ++i) {
-                        f.set(i, int16_t{0});
-                    }
-                } else {
-                    // Index 37: ticks since last wager
-                    const int tickDiff = (state.tick - state.seeker.last_probe_tick[s]) & 0xFF;
-                    f.set(37, std::min(tickDiff, 32) * 8);
-                    
-                    // Index 38: hider connections destroyed by the last wager
-                    f.set(38, std::min(state.seeker.belief[s], uint8_t{8}) * 32);
                 }
             });
         }
