@@ -110,6 +110,7 @@ SeekerObservation buildSeekerObservation(const MatchState& state) {
         value = static_cast<int16_t>(count * 16);
     });
     obs.global.access(3, [&](int16_t& value) {
+        // Compute tick feature as per design: min(tick, 256)
         value = static_cast<int16_t>(std::min(static_cast<int>(state.tick), 256));
     });
     
