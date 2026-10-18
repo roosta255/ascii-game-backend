@@ -222,10 +222,14 @@ add_library(core_backend STATIC
     src/hider_seeker/api/HiderSeekerService.cpp
     src/hider_seeker/projection/audience_views.cpp
     src/hider_seeker/api/view_snapshots.cpp
+    src/hider_seeker/seeker/feature_extract.cpp
+    src/hider_seeker/seeker/baseline_policy.cpp
 )
 
 # 👇 CRITICAL: Apply include dirs to the library
 target_include_directories(core_backend PUBLIC ${PROJECT_INCLUDE_DIRS})
+# Add the seeker include directory
+target_include_directories(core_backend PRIVATE src/hider_seeker)
 
 target_link_libraries(core_backend PUBLIC jsoncpp Drogon::Drogon)
 
@@ -311,6 +315,9 @@ add_executable(test_target
     test/hider_seeker/api/service_metrics_integration_test.cpp
     test/hider_seeker/api/service_match_start_test.cpp
     test/hider_seeker/api/service_connect_test.cpp
+    test/hider_seeker/observation_leak_test.cpp
+    test/hider_seeker/observation_test.cpp
+    test/hider_seeker/baseline_policy_test.cpp
 )
 
 target_include_directories(test_target PRIVATE ${PROJECT_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/test)
