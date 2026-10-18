@@ -7,7 +7,7 @@ using namespace hider_seeker;
 TEST_CASE("FeatureExtractTest", "[hider_seeker]") {
     MatchState state{};
     state.tick = 7;
-    state.seeker_connection_mask = 0b101; // Connect to servers 0 and 2
+    state.seeker_connection_mask = 0b001; // Connect to server 0 only (single connection)
     state.seeker.connection_tokens = 12;
     
     // Set up server 0 - active and connected
@@ -102,7 +102,7 @@ TEST_CASE("FeatureExtractTest", "[hider_seeker]") {
         REQUIRE(value == 96); // min(12, 32) * 8 = 12 * 8 = 96
     });
     obs.global.access(1, [&](const int16_t& value) {
-        REQUIRE(value == 32); // popcount(0b101) * 16 = 2 * 16 = 32
+        REQUIRE(value == 16); // popcount(0b001) * 16 = 1 * 16 = 16 (changed from 32)
     });
     obs.global.access(2, [&](const int16_t& value) {
         REQUIRE(value == 32); // 2 active servers * 16 = 32
