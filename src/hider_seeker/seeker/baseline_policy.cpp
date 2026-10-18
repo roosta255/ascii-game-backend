@@ -32,6 +32,8 @@ void BaselineSeekerPolicy::score(const SeekerObservation& obs, Array<SeekerServe
         
         const bool connected = (server_features.getOrDefault(1, int16_t{0}) == 256);
         
+        SeekerServerScores result{0, 0, 0}; // Initialize all scores to 0
+        
         if (connected) {
             // Connected server: compute activity and set wager/close scores
             const int16_t errorsDelta2 = server_features.getOrDefault(21, int16_t{0});  // k=2 block, start 16, pos 5, sum 21
@@ -49,18 +51,14 @@ void BaselineSeekerPolicy::score(const SeekerObservation& obs, Array<SeekerServe
             const int16_t ticksSinceLastWager = server_features.getOrDefault(37, int16_t{0});
             if (activity >= PLACEHOLDER_BASELINE_WAGER_THRESHOLD && 
                 ticksSinceLastWager >= PLACEHOLDER_BASELINE_REWAGER_GAP) {
-                scores.set(s, SeekerServerScores{0, 0, 256}); // wager = 256 (1.0)
-            } else {
-                scores.set(s, SeekerServerScores{0, 0, 0}); // wager = 0
+                result.wager = 256; // wager = 256 (1.0)
             }
             
             // Set close score
             int16_t seekerPool = 0;
             obs.global.accessConst(0, [&](const int16_t& value) { seekerPool = value; });
             if (seekerPool == 0) {
-                scores.set(s, SeekerServerScores{0, 256, 0}); // close = 256 (1.0)
-            } else {
-                scores.set(s, SeekerServerScores{0, 0, 0}); // close = 0
+                result.close = 256; // close = 256 (1.0)
             }
         } else {
             // Not connected server: set open score if appropriate
@@ -70,11 +68,11 @@ void BaselineSeekerPolicy::score(const SeekerObservation& obs, Array<SeekerServe
             
             if (openConnections < PLACEHOLDER_BASELINE_MAX_OPEN * 16) {
                 // open = 256 + ticksSinceLastWager
-                scores.set(s, SeekerServerScores{256 + ticksSinceLastWager, 0, 0});
-            } else {
-                scores.set(s, SeekerServerScores{0, 0, 0});
+                result.open = 256 + ticksSinceLastWager;
             }
         }
+        
+        scores.set(s, result);
     }
 }
 
