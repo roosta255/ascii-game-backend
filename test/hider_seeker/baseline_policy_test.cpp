@@ -40,4 +40,44 @@ TEST_CASE("BaselinePolicyScoringTest", "[baseline][policy]") {
     
     // The score for server 0 should have a wager of 256 (since activity >= threshold and f[37] >= rewager gap)
     REQUIRE(scores.getOrDefault(0, SeekerServerScores{}).wager == 256);
+    
+    // Test that the constants are correctly used in the policy
+    // This test ensures that the hardcoded values match what's expected
+    
+    // Create a test case where activity is exactly at threshold (20) and f[37] is 16
+    // This should trigger a wager of 256 according to the design
+    MatchState state2{};
+    state2.servers[0].active = 1;
+    state2.seeker_connection_mask = 0b0001; // Connected to server 0 only
+    
+    // Set up features that result in activity = 20 (threshold)
+    // Let's make: 3*errors + 2*heat + 2*network + 1*cpu = 20
+    // For simplicity, let's say errors = 6, heat = 1, network = 0, cpu = 0
+    // 3*6 + 2*1 + 2*0 + 1*0 = 18 + 2 = 20 (perfect!)
+    
+    state2.servers[0].current.errors = 6; 
+    state2.servers[0].current.heat = 1;
+    state2.servers[0].current.network = 0;
+    state2.servers[0].current.cpu = 0;
+    
+    state2.servers[0].history_head = 3;
+    state2.servers[0].history[1].errors = 0; // k=1 frame - errors = 0  
+    state2.servers[0].history[0].errors = 6; // k=2 frame - errors = 6 (delta = 0)
+    state2.servers[0].history[1].heat = 0;
+    state2.servers[0].history[0].heat = 0;
+    state2.servers[0].history[1].network = 0;
+    state2.servers[0].history[0].network = 0;
+    state2.servers[0].history[1].cpu = 0;
+    state2.servers[0].history[0].cpu = 0;
+    
+    // Set up f[37] to be exactly 16 (the rewager gap)
+    state2.seeker.last_probe_tick[0] = state2.tick - 2; // 2 ticks ago, so 2 * 8 = 16
+    
+    auto obs2 = buildSeekerObservation(state2);
+    
+    Array<SeekerServerScores, MAX_SERVERS> scores2{};
+    policy.score(obs2, scores2);
+    
+    // The score for server 0 should have a wager of 256 (since activity >= threshold and f[37] >= rewager gap)
+    REQUIRE(scores2.getOrDefault(0, SeekerServerScores{}).wager == 256);
 }
