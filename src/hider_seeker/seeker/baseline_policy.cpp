@@ -24,7 +24,7 @@ void BaselineSeekerPolicy::score(const SeekerObservation& obs, Array<SeekerServe
             if (serverFeatures.getOrDefault(1, int16_t{0}) == 256) {
                 // Server is connected - compute wager score
                 const int16_t errorsDelta2 = serverFeatures.getOrDefault(21, int16_t{0});  // index 16 + 5 (for errors)
-                const int16_t networkDelta2 = serverFeatures.getOrDefault(22, int16_t{0}); // index 16 + 6 (for network)
+                const int16_t networkDelta2 = serverFeatures.getOrDefault(19, int16_t{0}); // index 16 + 3 (for network)
                 const int16_t heatDelta2 = serverFeatures.getOrDefault(20, int16_t{0});   // index 16 + 4 (for heat)
                 const int16_t cpuDelta2 = serverFeatures.getOrDefault(16, int16_t{0});    // index 16 + 0 (for cpu)
                 
