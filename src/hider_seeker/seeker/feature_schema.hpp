@@ -4,6 +4,8 @@
 #include "../domain/state.hpp"
 #include "../data/Array.hpp"
 
+namespace hider_seeker {
+
 // Seeker observation feature schema version
 constexpr uint8_t SEEKER_FEATURE_VERSION = 1;
 constexpr uint8_t SEEKER_SERVER_FEATURES = 39;
@@ -28,3 +30,5 @@ struct SeekerObservation {
     Array<Array<int16_t, SEEKER_SERVER_FEATURES>, MAX_SERVERS> server;
     Array<int16_t, SEEKER_GLOBAL_FEATURES> global;
 };
+
+} // namespace hider_seeker

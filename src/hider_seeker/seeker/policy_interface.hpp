@@ -7,6 +7,8 @@
 // MAX_SERVERS is needed for the template parameter
 #include "../domain/state.hpp"
 
+namespace hider_seeker {
+
 struct SeekerServerScores { 
     int32_t open = 0; 
     int32_t close = 0; 
@@ -19,3 +21,5 @@ public:
     virtual std::string policyId() const = 0; // "null", "baseline", "model:<version>"
     virtual ~iSeekerPolicy() = default;
 };
+
+} // namespace hider_seeker

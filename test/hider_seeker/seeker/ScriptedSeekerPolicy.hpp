@@ -2,6 +2,8 @@
 
 #include "policy_interface.hpp"
 
+namespace hider_seeker {
+
 class ScriptedSeekerPolicy : public iSeekerPolicy {
 public:
     Array<SeekerServerScores, MAX_SERVERS> stored;
@@ -14,3 +16,5 @@ public:
         return "scripted";
     }
 };
+
+} // namespace hider_seeker

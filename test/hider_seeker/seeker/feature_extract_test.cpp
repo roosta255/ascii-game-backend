@@ -129,11 +129,11 @@ TEST_CASE("OBS-005: Observation does not leak unrelated state", "[hider_seeker][
     // Copy the first state to second state
     state2 = state1;
     
-    // Mutate fields that should not affect observation
-    state2.trace_strength = 42;
-    state2.trace_age = 100;
-    state2.owner_hider_id = 5;
-    state2.public_flags = 7;
+    // Mutate fields that should not affect observation - use server-specific fields instead of global ones
+    state2.servers[0].trace_strength = 42;
+    state2.servers[0].trace_age = 100;
+    state2.servers[0].owner_hider_id = 5;
+    state2.servers[0].public_flags = 7;
     state2.hiders[0].server_id = 3;
     state2.hiders[0].action_points = 20;
     state2.hiders[0].resources[0] = 100;
