@@ -57,6 +57,7 @@ set(PROJECT_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/api
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/projection
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/ruleset/connection_rules
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/seeker
     /usr/include/jsoncpp
 )
 
@@ -215,6 +216,8 @@ add_library(core_backend STATIC
     src/hider_seeker/ruleset/rng.cpp
     src/hider_seeker/ruleset/lifecycle_events.cpp
     src/hider_seeker/ruleset/ring_buffers.cpp
+    src/hider_seeker/seeker/feature_extract.cpp
+    src/hider_seeker/seeker/baseline_policy.cpp
     src/hider_seeker/tick/tick.cpp
     src/hider_seeker/turn/turn_engine.cpp
     src/hider_seeker/api/match_record.cpp
@@ -311,6 +314,9 @@ add_executable(test_target
     test/hider_seeker/api/service_metrics_integration_test.cpp
     test/hider_seeker/api/service_match_start_test.cpp
     test/hider_seeker/api/service_connect_test.cpp
+    test/hider_seeker/seeker/feature_extract_test.cpp
+    test/hider_seeker/seeker/baseline_policy_test.cpp
+    test/hider_seeker/seeker/ScriptedSeekerPolicy_test.cpp
 )
 
 target_include_directories(test_target PRIVATE ${PROJECT_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/test)
