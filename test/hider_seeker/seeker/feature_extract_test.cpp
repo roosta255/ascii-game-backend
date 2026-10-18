@@ -143,6 +143,9 @@ TEST_CASE("OBS-005: Observation does not leak unrelated state", "[hider_seeker][
     state2.servers[1].current.cpu = 80; // A server the seeker is not connected to
     state2.servers[1].history[0] = {70, 60, 50, 40, 30, 20, 10}; // History of a disconnected server
     
+    // Make sure last_probe_tick is set in both states (this was missing!)
+    state2.seeker.last_probe_tick[0] = 5;
+    
     SeekerObservation obs1 = buildSeekerObservation(state1);
     SeekerObservation obs2 = buildSeekerObservation(state2);
     

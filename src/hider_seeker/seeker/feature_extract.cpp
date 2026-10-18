@@ -55,40 +55,40 @@ SeekerObservation buildSeekerObservation(const MatchState& state) {
                 // Indices 9-36: Q8 of signed change current.m - frameAgo(s, k).m for each metric m and each k-major
                 if (isConnected) {
                     // Process k=1 (indices 9-15)
-                    row.set(9, toQ8(server.current.cpu - server.history[(server.history_head - 1 - 1) % 16].cpu));
-                    row.set(10, toQ8(server.current.memory - server.history[(server.history_head - 1 - 1) % 16].memory));
-                    row.set(11, toQ8(server.current.disk - server.history[(server.history_head - 1 - 1) % 16].disk));
-                    row.set(12, toQ8(server.current.network - server.history[(server.history_head - 1 - 1) % 16].network));
-                    row.set(13, toQ8(server.current.heat - server.history[(server.history_head - 1 - 1) % 16].heat));
-                    row.set(14, toQ8(server.current.errors - server.history[(server.history_head - 1 - 1) % 16].errors));
-                    row.set(15, toQ8(server.current.users - server.history[(server.history_head - 1 - 1) % 16].users));
+                    row.set(9, toQ8(server.current.cpu - server.history[(server.history_head + HISTORY_TICKS - 1 - 1) % HISTORY_TICKS].cpu));
+                    row.set(10, toQ8(server.current.memory - server.history[(server.history_head + HISTORY_TICKS - 1 - 1) % HISTORY_TICKS].memory));
+                    row.set(11, toQ8(server.current.disk - server.history[(server.history_head + HISTORY_TICKS - 1 - 1) % HISTORY_TICKS].disk));
+                    row.set(12, toQ8(server.current.network - server.history[(server.history_head + HISTORY_TICKS - 1 - 1) % HISTORY_TICKS].network));
+                    row.set(13, toQ8(server.current.heat - server.history[(server.history_head + HISTORY_TICKS - 1 - 1) % HISTORY_TICKS].heat));
+                    row.set(14, toQ8(server.current.errors - server.history[(server.history_head + HISTORY_TICKS - 1 - 1) % HISTORY_TICKS].errors));
+                    row.set(15, toQ8(server.current.users - server.history[(server.history_head + HISTORY_TICKS - 1 - 1) % HISTORY_TICKS].users));
                     
                     // Process k=2 (indices 16-22)
-                    row.set(16, toQ8(server.current.cpu - server.history[(server.history_head - 1 - 2) % 16].cpu));
-                    row.set(17, toQ8(server.current.memory - server.history[(server.history_head - 1 - 2) % 16].memory));
-                    row.set(18, toQ8(server.current.disk - server.history[(server.history_head - 1 - 2) % 16].disk));
-                    row.set(19, toQ8(server.current.network - server.history[(server.history_head - 1 - 2) % 16].network));
-                    row.set(20, toQ8(server.current.heat - server.history[(server.history_head - 1 - 2) % 16].heat));
-                    row.set(21, toQ8(server.current.errors - server.history[(server.history_head - 1 - 2) % 16].errors));
-                    row.set(22, toQ8(server.current.users - server.history[(server.history_head - 1 - 2) % 16].users));
+                    row.set(16, toQ8(server.current.cpu - server.history[(server.history_head + HISTORY_TICKS - 1 - 2) % HISTORY_TICKS].cpu));
+                    row.set(17, toQ8(server.current.memory - server.history[(server.history_head + HISTORY_TICKS - 1 - 2) % HISTORY_TICKS].memory));
+                    row.set(18, toQ8(server.current.disk - server.history[(server.history_head + HISTORY_TICKS - 1 - 2) % HISTORY_TICKS].disk));
+                    row.set(19, toQ8(server.current.network - server.history[(server.history_head + HISTORY_TICKS - 1 - 2) % HISTORY_TICKS].network));
+                    row.set(20, toQ8(server.current.heat - server.history[(server.history_head + HISTORY_TICKS - 1 - 2) % HISTORY_TICKS].heat));
+                    row.set(21, toQ8(server.current.errors - server.history[(server.history_head + HISTORY_TICKS - 1 - 2) % HISTORY_TICKS].errors));
+                    row.set(22, toQ8(server.current.users - server.history[(server.history_head + HISTORY_TICKS - 1 - 2) % HISTORY_TICKS].users));
                     
                     // Process k=4 (indices 23-29)
-                    row.set(23, toQ8(server.current.cpu - server.history[(server.history_head - 1 - 4) % 16].cpu));
-                    row.set(24, toQ8(server.current.memory - server.history[(server.history_head - 1 - 4) % 16].memory));
-                    row.set(25, toQ8(server.current.disk - server.history[(server.history_head - 1 - 4) % 16].disk));
-                    row.set(26, toQ8(server.current.network - server.history[(server.history_head - 1 - 4) % 16].network));
-                    row.set(27, toQ8(server.current.heat - server.history[(server.history_head - 1 - 4) % 16].heat));
-                    row.set(28, toQ8(server.current.errors - server.history[(server.history_head - 1 - 4) % 16].errors));
-                    row.set(29, toQ8(server.current.users - server.history[(server.history_head - 1 - 4) % 16].users));
+                    row.set(23, toQ8(server.current.cpu - server.history[(server.history_head + HISTORY_TICKS - 1 - 4) % HISTORY_TICKS].cpu));
+                    row.set(24, toQ8(server.current.memory - server.history[(server.history_head + HISTORY_TICKS - 1 - 4) % HISTORY_TICKS].memory));
+                    row.set(25, toQ8(server.current.disk - server.history[(server.history_head + HISTORY_TICKS - 1 - 4) % HISTORY_TICKS].disk));
+                    row.set(26, toQ8(server.current.network - server.history[(server.history_head + HISTORY_TICKS - 1 - 4) % HISTORY_TICKS].network));
+                    row.set(27, toQ8(server.current.heat - server.history[(server.history_head + HISTORY_TICKS - 1 - 4) % HISTORY_TICKS].heat));
+                    row.set(28, toQ8(server.current.errors - server.history[(server.history_head + HISTORY_TICKS - 1 - 4) % HISTORY_TICKS].errors));
+                    row.set(29, toQ8(server.current.users - server.history[(server.history_head + HISTORY_TICKS - 1 - 4) % HISTORY_TICKS].users));
                     
                     // Process k=8 (indices 30-36)
-                    row.set(30, toQ8(server.current.cpu - server.history[(server.history_head - 1 - 8) % 16].cpu));
-                    row.set(31, toQ8(server.current.memory - server.history[(server.history_head - 1 - 8) % 16].memory));
-                    row.set(32, toQ8(server.current.disk - server.history[(server.history_head - 1 - 8) % 16].disk));
-                    row.set(33, toQ8(server.current.network - server.history[(server.history_head - 1 - 8) % 16].network));
-                    row.set(34, toQ8(server.current.heat - server.history[(server.history_head - 1 - 8) % 16].heat));
-                    row.set(35, toQ8(server.current.errors - server.history[(server.history_head - 1 - 8) % 16].errors));
-                    row.set(36, toQ8(server.current.users - server.history[(server.history_head - 1 - 8) % 16].users));
+                    row.set(30, toQ8(server.current.cpu - server.history[(server.history_head + HISTORY_TICKS - 1 - 8) % HISTORY_TICKS].cpu));
+                    row.set(31, toQ8(server.current.memory - server.history[(server.history_head + HISTORY_TICKS - 1 - 8) % HISTORY_TICKS].memory));
+                    row.set(32, toQ8(server.current.disk - server.history[(server.history_head + HISTORY_TICKS - 1 - 8) % HISTORY_TICKS].disk));
+                    row.set(33, toQ8(server.current.network - server.history[(server.history_head + HISTORY_TICKS - 1 - 8) % HISTORY_TICKS].network));
+                    row.set(34, toQ8(server.current.heat - server.history[(server.history_head + HISTORY_TICKS - 1 - 8) % HISTORY_TICKS].heat));
+                    row.set(35, toQ8(server.current.errors - server.history[(server.history_head + HISTORY_TICKS - 1 - 8) % HISTORY_TICKS].errors));
+                    row.set(36, toQ8(server.current.users - server.history[(server.history_head + HISTORY_TICKS - 1 - 8) % HISTORY_TICKS].users));
                 } else {
                     // For disconnected servers, all change features are 0
                     for (int i = 9; i <= 36; ++i) {
