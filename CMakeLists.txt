@@ -273,6 +273,7 @@ add_executable(test_target
     test/StructuredLogTests.cpp
     test/MapTests.cpp
     test/hider_seeker/serialization_round_trip_test.cpp
+    test/hider_seeker/serialization_v3_test.cpp
     test/hider_seeker/ruleset_loa_test.cpp
     test/hider_seeker/ruleset_action_test.cpp
     test/hider_seeker/ruleset_probe_test.cpp
