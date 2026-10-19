@@ -25,13 +25,21 @@ struct CountingPolicy : public iSeekerPolicy {
 // Seeker policy stub that captures one hider of the match it is bound to on
 // its Nth consultation (i.e. during the Nth advanced tick).
 struct CapturingPolicy : public iSeekerPolicy {
-    mutable int calls = 0;
+    CapturingPolicy(MatchState& match, uint8_t hiderId, int captureOnCall)
+    : match(match), hiderId(hiderId), captureOnCall(captureOnCall) {}
+
     void score(const SeekerObservation&, Array<SeekerServerScores, MAX_SERVERS>&) const override {
         calls++;
-        // Note: This policy doesn't actually capture anything in the new system
-        // as we don't have access to the state from the score method anymore.
+        if (calls == captureOnCall) {
+            match.hiders[hiderId].status = HIDER_STATUS_CAPTURED;
+        }
     }
     std::string policyId() const override { return "test"; }
+
+    MatchState& match;
+    uint8_t hiderId;
+    int captureOnCall;
+    mutable int calls = 0;
 };
 
 MatchState makeActiveMatch(uint8_t hiderCount) {
@@ -103,7 +111,7 @@ TEST_CASE("TURN-006 queued REMOVE_SERVER whose target is removed is cancelled RU
 TEST_CASE("TURN-006 hider captured mid-advance cancels its moves HIDER_CAPTURED", "[hider_seeker][turn]") {
     MatchState state = makeActiveMatch(2);
     state.tick = 20;
-    CapturingPolicy policy;
+    CapturingPolicy policy(state, 0, 2);
 
     REQUIRE(queueMove(state, hiderAction(1, 0, HiderActionMode::CONFIGURE_SERVER), policy).status == MoveStatus::QUEUED);
     REQUIRE(queueMove(state, hiderAction(2, 1, HiderActionMode::CONFIGURE_SERVER), policy).status == MoveStatus::QUEUED);

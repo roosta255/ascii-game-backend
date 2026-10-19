@@ -20,7 +20,7 @@ namespace {
         
         state.hiders[0].active = 1;
         state.hiders[0].action_points = 10;
-        state.hiders[0].server_id = NO_SERVER_ID; // Not connected initially
+        state.hiders[0].server_id = 0; // hider 0 is connected to server 0
         
         state.servers[0].active = 1;
         state.servers[0].current.cpu = 50;
@@ -37,9 +37,10 @@ namespace {
 TEST_CASE("CONN-006b (match end in runTick): hider destroyed by wager", "[tick]") {
     MatchState state = makeActiveMatch();
     
-    // Set up a scripted policy that opens server 0 with open=256 and wager=0
+    // Open 256 and wager 256 on server 0 ({open, close, wager}): tick 1 opens it
+    // (not connected yet, so no wager), tick 2 wagers 1 and destroys hider 0.
     ScriptedSeekerPolicy policy;
-    policy.scores.assignValue(0, SeekerServerScores{256, 0, 0}); // Open server 0
+    policy.scores.assignValue(0, SeekerServerScores{256, 0, 256});
     policy.scores.assignValue(1, SeekerServerScores{0, 0, 0}); // No action on server 1
     
     Array<TickIntent, MAX_INTENTS_PER_TICK> intents;
@@ -52,7 +53,6 @@ TEST_CASE("CONN-006b (match end in runTick): hider destroyed by wager", "[tick]"
     REQUIRE(state.phase == PHASE_ACTIVE); // Match still active
     
     // Second tick: wagers on server 0 to destroy hider connection
-    policy.scores.assignValue(0, SeekerServerScores{0, 256, 0}); // Wager on server 0
     output = runTick(state, intents, intentCount, alreadyConsumed, &policy);
     
     // After second tick, hider should be destroyed and match complete
@@ -64,6 +64,7 @@ TEST_CASE("CONN-006b (match end in runTick): seeker loses with no tokens", "[tic
     MatchState state = makeActiveMatch();
     state.seeker.connection_tokens = 0; // No tokens
     state.seeker_connection_mask = 0;   // No mask
+    state.hider_connection_pool = 3;    // the hiders have not lost
     
     // Set up a scripted policy that does nothing (all scores 0)
     ScriptedSeekerPolicy policy;
@@ -83,9 +84,9 @@ TEST_CASE("CONN-006b (match end in runTick): seeker loses with no tokens", "[tic
 TEST_CASE("CONN-006b (match end in runTick): passTicks with scripted policy", "[tick]") {
     MatchState state = makeActiveMatch();
     
-    // Set up a scripted policy that opens server 0 with open=256 and wager=0
+    // Same scripted setup as the first test: open and wager 256 on server 0.
     ScriptedSeekerPolicy policy;
-    policy.scores.assignValue(0, SeekerServerScores{256, 0, 0}); // Open server 0
+    policy.scores.assignValue(0, SeekerServerScores{256, 0, 256});
     policy.scores.assignValue(1, SeekerServerScores{0, 0, 0}); // No action on server 1
     
     // Call passTicks with the same scripted policy
