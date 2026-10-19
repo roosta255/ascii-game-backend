@@ -290,3 +290,44 @@ TEST_CASE("resetServerSlot clears metrics/history/ownership/trace fields", "[loa
     REQUIRE(match.servers[0].history[0].cpu == 0);
     REQUIRE(match.servers[0].history_head == 0);
 }
+
+TEST_CASE("invalidateServerReferences refunds seeker token when seeker was connected", "[loa]") {
+    MatchState match = {};
+    match.hiders[0].active = 1;
+    match.hiders[0].server_id = NO_SERVER_ID;
+    match.hiders[0].resources[LOA_RESOURCE_INDEX] = 2;
+    
+    // Add a server to get slot 0
+    REQUIRE(addServer(match, 0) == RuleOutcome::ACCEPTED);
+    
+    // Connect the seeker to server 0 (set bit in mask)
+    match.seeker_connection_mask |= (1u << 0);
+    match.seeker.connection_tokens = 4;  // Start with 4 tokens
+    
+    // Remove server 0 - should refund 1 token
+    REQUIRE(removeServer(match, 0, 0) == RuleOutcome::ACCEPTED);
+    
+    // Check that the seeker got a token back and the bit was cleared
+    REQUIRE(match.seeker.connection_tokens == 5);  // 4 + 1 = 5
+    REQUIRE((match.seeker_connection_mask & (1u << 0)) == 0);  // Bit should be cleared
+}
+
+TEST_CASE("invalidateServerReferences makes no changes when seeker was not connected", "[loa]") {
+    MatchState match = {};
+    match.hiders[0].active = 1;
+    match.hiders[0].server_id = NO_SERVER_ID;
+    match.hiders[0].resources[LOA_RESOURCE_INDEX] = 2;
+    
+    // Add a server to get slot 0
+    REQUIRE(addServer(match, 0) == RuleOutcome::ACCEPTED);
+    
+    // Do NOT connect the seeker to server 0 (bit not set in mask)
+    match.seeker.connection_tokens = 4;  // Start with 4 tokens
+    
+    // Remove server 0 - should make no changes
+    REQUIRE(removeServer(match, 0, 0) == RuleOutcome::ACCEPTED);
+    
+    // Check that the seeker tokens and mask remain unchanged
+    REQUIRE(match.seeker.connection_tokens == 4);  // Should still be 4
+    REQUIRE((match.seeker_connection_mask & (1u << 0)) == 0);  // Bit should still be cleared
+}

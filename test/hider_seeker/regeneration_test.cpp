@@ -36,8 +36,8 @@ TEST_CASE("regenerateForTick AP regen and cap", "[regeneration]") {
     REQUIRE(state.hiders[1].action_points == 10); // 8 + 2 = 10 (capped)
     REQUIRE(state.hiders[2].action_points == 5); // Captured hider should not gain AP
     
-    // Check that seeker gained tokens (2 each) but capped at max_tokens
-    REQUIRE(state.seeker.connection_tokens == 7); // 5 + 2 = 7
+    // Check that seeker tokens are unchanged (no longer regenerate) // 5a3 seeker tokens no longer regenerate
+    REQUIRE(state.seeker.connection_tokens == 5);
 }
 
 TEST_CASE("regenerateForTick inactive hider gains nothing", "[regeneration]") {
@@ -65,8 +65,8 @@ TEST_CASE("regenerateForTick inactive hider gains nothing", "[regeneration]") {
     REQUIRE(state.hiders[0].action_points == 5); // Inactive hider should not gain AP
     REQUIRE(state.hiders[1].action_points == 5); // Active hider gains 2 AP
     
-    // Check that seeker gained tokens (2 each) but capped at max_tokens
-    REQUIRE(state.seeker.connection_tokens == 5); // 3 + 2 = 5
+    // Check that seeker tokens are unchanged (no longer regenerate) // 5a3 seeker tokens no longer regenerate
+    REQUIRE(state.seeker.connection_tokens == 3);
 }
 
 TEST_CASE("regenerateForTick LOA unchanged", "[regeneration]") {
@@ -115,15 +115,15 @@ TEST_CASE("regenerateForTick AP rises by 2 per call and caps at 10", "[regenerat
     REQUIRE(PLACEHOLDER_AP_CAP == 10);
 }
 
-TEST_CASE("regenerateForTick seeker tokens capped at max_tokens", "[regeneration]") {
+TEST_CASE("regenerateForTick leaves seeker tokens unchanged", "[regeneration]") {
     MatchState state{};
     state.seeker.max_tokens = 5;
     state.seeker.connection_tokens = 2;
 
     regenerateForTick(state);
-    REQUIRE(state.seeker.connection_tokens == 4);
+    REQUIRE(state.seeker.connection_tokens == 2); // 5a3: seeker tokens no longer regenerate
     regenerateForTick(state);
-    REQUIRE(state.seeker.connection_tokens == 5); // 4 + 2 capped at 5
+    REQUIRE(state.seeker.connection_tokens == 2); // 5a3: seeker tokens no longer regenerate
     regenerateForTick(state);
-    REQUIRE(state.seeker.connection_tokens == 5);
+    REQUIRE(state.seeker.connection_tokens == 2); // 5a3: seeker tokens no longer regenerate
 }

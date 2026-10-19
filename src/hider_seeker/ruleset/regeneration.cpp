@@ -27,10 +27,6 @@ void regenerateForTick(MatchState& state) {
         }
     }
 
-    state.seeker.connection_tokens = saturatingAdd(state.seeker.connection_tokens,
-                                                   PLACEHOLDER_SEEKER_TOKEN_REGEN_PER_TICK,
-                                                   state.seeker.max_tokens);
-
     // LOA (hider resources) and every other field are left unchanged.
 }
 

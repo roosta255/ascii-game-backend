@@ -544,8 +544,8 @@ ApiResponse HiderSeekerService::createMatch(const std::string& body) {
         hider.active = 0; // not joined yet
         hider.server_id = slot < hiderCount ? slot : NO_SERVER_ID;
     }
-    state.seeker.connection_tokens = PLACEHOLDER_SEEKER_START_TOKENS;
-    state.seeker.max_tokens = PLACEHOLDER_SEEKER_MAX_TOKENS;
+    state.seeker.connection_tokens = PLACEHOLDER_SEEKER_START_CONNECTIONS;
+    state.seeker.max_tokens = PLACEHOLDER_SEEKER_START_CONNECTIONS;
 
     record.request_log.push_back(RequestLogEntry{0, account, "create", request});
 
