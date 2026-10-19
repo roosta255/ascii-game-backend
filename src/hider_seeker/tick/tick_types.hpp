@@ -6,7 +6,7 @@
 #include "../ruleset/rule_types.hpp"
 #include "../ruleset/action_rules.hpp"
 #include "../ruleset/lifecycle_events.hpp"
-#include "../ruleset/probe_rules.hpp"
+#include "../ruleset/hider_status.hpp"
 
 namespace hider_seeker {
 
@@ -45,8 +45,6 @@ struct ConsumedKeySet {
     }
 };
 
-constexpr uint8_t MAX_PROBES_PER_TICK = MAX_SERVERS; // reusing the frozen MAX_SERVERS=16 constant
-
 // One seeker wager in a tick (5a3d's applyWager): the server, the wager after capping, the hider connections it destroyed, and the seeker connections it lost. Server-side only; never public.
 struct WagerRecord {
     uint8_t serverId;
@@ -65,10 +63,6 @@ struct TickOutput {
     
     Array<IntentOutcomeRecord, MAX_INTENTS_PER_TICK> intentOutcomes; 
     uint8_t intentOutcomeCount = 0;
-    
-    Array<ProbeResult, MAX_PROBES_PER_TICK> probeResults;
-    Array<ProbeConsequences, MAX_PROBES_PER_TICK> probeConsequences;
-    uint8_t probeCount = 0;
     
     // Public lifecycle events from ADD_SERVER/REMOVE_SERVER, in the
     // order the intents were applied.

@@ -1,7 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include "state.hpp"
 #include "regeneration.hpp"
-#include "probe_rules.hpp"
+#include "hider_status.hpp"
 #include "loa_rules.hpp"
 
 using namespace hider_seeker;

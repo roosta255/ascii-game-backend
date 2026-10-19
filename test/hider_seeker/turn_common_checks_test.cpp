@@ -1,14 +1,14 @@
 #include <catch2/catch_test_macros.hpp>
-#include <vector>
-#include "state.hpp"
-#include "serialization.hpp"
-#include "rule_types.hpp"
-#include "action_rules.hpp"
-#include "probe_rules.hpp"
-#include "tick_types.hpp"
-#include "turn_types.hpp"
 #include "turn_engine.hpp"
-#include "policy_interface.hpp"
+#include "turn_types.hpp"
+#include "ruleset/action_rules.hpp"
+#include "ruleset/hider_status.hpp"
+#include "domain/state.hpp"
+#include "tick/tick_types.hpp"
+#include "ruleset/intent_ordering.hpp"
+#include "ruleset/regeneration.hpp"
+#include "ruleset/match_end.hpp"
+#include "seeker/null_seeker_policy.hpp"
 
 using namespace hider_seeker;
 

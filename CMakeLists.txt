@@ -212,7 +212,7 @@ add_library(core_backend STATIC
     src/hider_seeker/ruleset/connection_rules.cpp
     src/hider_seeker/ruleset/match_end.cpp
     src/hider_seeker/ruleset/server_metrics.cpp
-    src/hider_seeker/ruleset/probe_rules.cpp
+
     src/hider_seeker/ruleset/intent_ordering.cpp
     src/hider_seeker/ruleset/rng.cpp
     src/hider_seeker/ruleset/lifecycle_events.cpp
@@ -281,7 +281,7 @@ add_executable(test_target
     test/hider_seeker/serialization_v3_test.cpp
     test/hider_seeker/ruleset_loa_test.cpp
     test/hider_seeker/ruleset_action_test.cpp
-    test/hider_seeker/ruleset_probe_test.cpp
+
     test/hider_seeker/ruleset_ordering_test.cpp
     test/hider_seeker/ruleset_ring_buffer_test.cpp
     test/hider_seeker/ruleset_rng_test.cpp

@@ -9,7 +9,7 @@
 #include <vector>
 #include <nlohmann/json.hpp>
 #include "state.hpp"
-#include "probe_rules.hpp"
+#include "hider_status.hpp"
 #include "loa_rules.hpp"
 #include "audience_views.hpp"
 #include "view_snapshots.hpp"

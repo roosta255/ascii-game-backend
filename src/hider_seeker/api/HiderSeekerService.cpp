@@ -12,7 +12,7 @@
 #include "../ruleset/action_rules.hpp"
 #include "../ruleset/lifecycle_events.hpp"
 #include "../ruleset/loa_rules.hpp"
-#include "../ruleset/probe_rules.hpp"
+#include "../ruleset/hider_status.hpp"
 #include "../tick/tick_types.hpp"
 #include "../turn/turn_engine.hpp"
 #include "../turn/turn_types.hpp"

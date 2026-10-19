@@ -3,7 +3,7 @@
 #include "rule_types.hpp"
 #include "action_rules.hpp"
 #include "loa_rules.hpp"
-#include "probe_rules.hpp"
+#include "hider_status.hpp"
 #include "tick_types.hpp"
 #include "turn_types.hpp"
 #include "turn_engine.hpp"
