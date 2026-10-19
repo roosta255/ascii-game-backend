@@ -260,9 +260,12 @@ void runAdvanceLoop(MatchState& state, const iSeekerPolicy& seekerPolicy, uint8_
         }
 
         if (state.phase == PHASE_COMPLETE) {
+            // When match ends, set the reason appropriately
+            result.reason = TurnReason::MATCH_NOT_ACTIVE;
             if (hasTrigger) {
                 result.status = MoveStatus::CANCELLED;
-                result.reason = TurnReason::MATCH_NOT_ACTIVE;
+            } else {
+                result.status = MoveStatus::APPLIED;  // passTicks should still report APPLIED for ticks that ran
             }
             return;
         }
