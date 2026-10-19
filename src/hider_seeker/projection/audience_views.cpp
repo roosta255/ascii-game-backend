@@ -2,7 +2,7 @@
 #include "names.hpp"
 #include "../ruleset/action_rules.hpp"
 #include "../ruleset/loa_rules.hpp"
-#include "../ruleset/probe_rules.hpp"
+#include "../ruleset/hider_status.hpp"
 #include "../tick/tick_types.hpp"
 #include "../ruleset/match_end.hpp"
 

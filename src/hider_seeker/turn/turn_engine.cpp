@@ -1,7 +1,7 @@
 #include "turn_engine.hpp"
 #include "../ruleset/action_rules.hpp"
 #include "../ruleset/intent_ordering.hpp"
-#include "../ruleset/probe_rules.hpp"
+#include "../ruleset/hider_status.hpp"
 #include "../ruleset/regeneration.hpp"
 #include "../tick/tick.hpp"
 

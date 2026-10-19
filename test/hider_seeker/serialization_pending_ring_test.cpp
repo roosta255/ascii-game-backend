@@ -3,7 +3,12 @@
 #include "state.hpp"
 #include "serialization.hpp"
 #include "rule_types.hpp"
-#include "probe_rules.hpp"
+#include "action_rules.hpp"
+#include "hider_status.hpp"
+#include "tick_types.hpp"
+#include "turn_engine.hpp"
+#include "turn_types.hpp"
+#include "policy_interface.hpp"
 
 using namespace hider_seeker;
 

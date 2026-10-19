@@ -1,5 +1,5 @@
 #include "regeneration.hpp"
-#include "probe_rules.hpp"
+#include "hider_status.hpp"
 
 namespace hider_seeker {
 

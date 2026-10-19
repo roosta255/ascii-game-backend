@@ -1,7 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include "intent_ordering.hpp"
 #include "action_rules.hpp"
-#include "probe_rules.hpp"
+#include "hider_status.hpp"
 #include "loa_rules.hpp"
 #include "state.hpp"
 
@@ -89,17 +89,6 @@ TEST_CASE("No function mutates MatchState::tick on AP/token exhaustion", "[order
         REQUIRE(match.hiders[0].action_points == 0);
         REQUIRE(match.tick == 100);
         REQUIRE(applyHiderAction(match, 0, HiderActionMode::BOOST_CPU) == RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE);
-        REQUIRE(match.tick == 100);
-    }
-
-    SECTION("seeker token exhaustion: probe is rejected and tick is unchanged") {
-        match.seeker.connection_tokens = 1;
-        ProbeResult result = {false, 0};
-        REQUIRE(applyProbe(match, 0, result) == RuleOutcome::ACCEPTED);
-        REQUIRE(match.seeker.connection_tokens == 0);
-        REQUIRE(match.tick == 100);
-
-        REQUIRE(applyProbe(match, 0, result) == RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE);
         REQUIRE(match.tick == 100);
     }
 

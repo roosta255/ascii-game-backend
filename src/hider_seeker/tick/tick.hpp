@@ -4,7 +4,7 @@
 #include "../ruleset/rule_types.hpp"
 #include "../ruleset/action_rules.hpp"
 #include "../ruleset/intent_ordering.hpp"
-#include "../ruleset/probe_rules.hpp"
+#include "../ruleset/hider_status.hpp"
 #include "../ruleset/ring_buffers.hpp"
 #include "../seeker/policy_interface.hpp"
 #include "tick_types.hpp"

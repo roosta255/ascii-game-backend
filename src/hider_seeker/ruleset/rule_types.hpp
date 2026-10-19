@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include "hider_status.hpp"
 
 namespace hider_seeker {
 
