@@ -1,5 +1,6 @@
 #include "seeker_turn.hpp"
 #include "../ruleset/connection_rules.hpp"
+#include "feature_extract.hpp"
 
 namespace hider_seeker {
 
