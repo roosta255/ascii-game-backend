@@ -42,6 +42,7 @@ MatchState baseState() {
     state.phase = PHASE_ACTIVE;
     state.hider_count = 2;
     state.server_count = 2;
+    state.hider_connection_pool = 6; // Initialize the connection pool for 2 hiders
 
     for (uint8_t slot = 0; slot < 2; ++slot) {
         HiderState& hider = state.hiders[slot];
@@ -154,7 +155,7 @@ TEST_CASE("PROJ-002/003: hider and public views have exactly their documented to
 
 TEST_CASE("VIEW-010 (views): view_version 2 and winner handling", "[hider_seeker][projection]") {
     MatchState state = baseState();
-    const ViewContext ctx = baseContext();
+    ViewContext ctx = baseContext();
 
     // Test: both views have view_version 2 and winner null on an active match
     const json hider = buildHiderView(state, ctx, 0);
@@ -166,7 +167,7 @@ TEST_CASE("VIEW-010 (views): view_version 2 and winner handling", "[hider_seeker
 
     // Test: with phase = PHASE_COMPLETE and winner = SEEKER, both views show "winner": "SEEKER"
     state.phase = PHASE_COMPLETE;
-    state.winner = MatchWinner::SEEKER;
+    state.winner = static_cast<uint8_t>(MatchWinner::SEEKER);
     const json hiderCompleteSeeker = buildHiderView(state, ctx, 0);
     const json pubCompleteSeeker = buildPublicView(state, ctx);
     REQUIRE(hiderCompleteSeeker.at("phase") == "COMPLETE");
@@ -175,7 +176,7 @@ TEST_CASE("VIEW-010 (views): view_version 2 and winner handling", "[hider_seeker
     REQUIRE(pubCompleteSeeker.at("winner") == "SEEKER");
 
     // Test: with winner = HIDERS, both views show "winner": "HIDERS"
-    state.winner = MatchWinner::HIDERS;
+    state.winner = static_cast<uint8_t>(MatchWinner::HIDERS);
     const json hiderCompleteHiders = buildHiderView(state, ctx, 0);
     const json pubCompleteHiders = buildPublicView(state, ctx);
     REQUIRE(hiderCompleteHiders.at("winner") == "HIDERS");
@@ -218,7 +219,7 @@ TEST_CASE("VIEW-010 (views): server_id null for disconnected hiders", "[hider_se
 
 TEST_CASE("VIEW-010 (views): SERVER_PROBED entry in public view", "[hider_seeker][projection]") {
     MatchState state = baseState();
-    const ViewContext ctx = baseContext();
+    ViewContext ctx = baseContext();
 
     // Add a SERVER_PROBED event to the context
     PublicEventEntry entry{"SERVER_PROBED", 2, 5, 2, "HIT"};

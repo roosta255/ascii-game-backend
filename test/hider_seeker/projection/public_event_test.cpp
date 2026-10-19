@@ -95,25 +95,3 @@ TEST_CASE("VIEW-006: SERVER_PROBED entries in public view JSON", "[public_event]
     REQUIRE(pub.at("events").at(0).at("server_id") == 2);
     REQUIRE(pub.at("events").at(0).at("outcome") == "HIT");
 }
-
-TEST_CASE("VIEW-006: SERVER_PROBED entries in public view JSON", "[public_event][projection]") {
-    // Test: a public view whose context holds a SERVER_PROBED entry (server_id 2, HIT)
-    // contains {"type": "SERVER_PROBED", "server_id": 2, "outcome": "HIT", ...}
-    
-    // Create a basic match state and context
-    MatchState state{};
-    ViewContext ctx;
-    ctx.matchId = "test-match";
-    ctx.accounts.assignValue(0, "alice");
-    ctx.accounts.assignValue(1, "bob");
-    
-    // Add a SERVER_PROBED event to the context
-    ctx.publicEvents.push_back(PublicEventEntry{"SERVER_PROBED", 2, 5, 2, "HIT"});
-    
-    const auto pub = buildPublicView(state, ctx);
-    
-    REQUIRE(pub.at("events").size() == 1);
-    REQUIRE(pub.at("events").at(0).at("type") == "SERVER_PROBED");
-    REQUIRE(pub.at("events").at(0).at("server_id") == 2);
-    REQUIRE(pub.at("events").at(0).at("outcome") == "HIT");
-}
