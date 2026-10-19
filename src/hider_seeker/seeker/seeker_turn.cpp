@@ -11,20 +11,17 @@ void runSeekerTurn(MatchState& state, const iSeekerPolicy& policy, TickOutput& o
 
     // Score phase
     SeekerObservation obs = buildSeekerObservation(state);
-    Array<SeekerServerScores, MAX_SERVERS> scores;
+    Array<SeekerServerScores, MAX_SERVERS> scores{};
     
     policy.score(obs, scores);
 
     // Wager phase
     for (int s = 0; s < MAX_SERVERS; ++s) {
         if ((state.seeker_connection_mask & (1u << s)) && state.servers[s].active) {
-            int32_t w = 0;
             const SeekerServerScores& score = scores.getOrDefault(s, SeekerServerScores{0, 0, 0});
-            // Apply the rounding formula: (score + 128) / 256
-            w = (score.wager + 128) / 256;
+            // Apply the rounding formula with wager guard: w = score <= 0 ? 0 : min((score + 128) / 256, MAX_HIDERS)
+            int32_t w = score.wager <= 0 ? 0 : (score.wager + 128) / 256;
             if (w > MAX_HIDERS) w = MAX_HIDERS;
-            // Debug: print what we computed
-            // std::cout << "Server " << s << ": wager=" << score.wager << ", w=" << w << std::endl;
             if (w >= 1) {
                 applyWager(state, s, static_cast<uint8_t>(w), output);
             }
