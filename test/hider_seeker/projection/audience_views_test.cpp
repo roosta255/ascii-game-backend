@@ -117,6 +117,7 @@ PendingMove pendingMove(uint32_t moveId, uint32_t submitSeq, uint8_t hiderId, Ti
                        static_cast<uint8_t>(mode)};
 }
 
+// 5a4: view_version 2 adds winner and team_connections
 const std::set<std::string> COMMON_KEYS = {
     "match_id", "audience", "view_version", "schema_version", "ruleset_version", "revision", "tick", "phase",
     "hider_count", "server_count", "servers", "events", "winner", "content_hash"
