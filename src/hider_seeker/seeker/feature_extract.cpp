@@ -1,158 +1,118 @@
 #include "feature_extract.hpp"
 #include <algorithm>
-#include <cstdint>
-#include <cstring>
 
 namespace hider_seeker {
 
-namespace {
-    int16_t toQ8(int v) {
-        return static_cast<int16_t>(v * 256 / 100);
-    }
+// Convert a value to Q8 (256 = 1.0) using integer division truncating toward zero
+int16_t toQ8(int v) {
+    return static_cast<int16_t>(v * 256 / 100);
+}
 
-    MetricFrame frameAgo(const ServerState& server, int k) {
-        // Handle negative indices properly
-        int historyIndex = (server.history_head - 1 - k);
-        if (historyIndex < 0) {
-            historyIndex += HISTORY_TICKS;
-        }
-        return server.history[historyIndex];
-    }
-    
-    // Simple popcount implementation for uint16_t
-    inline int popcount(uint16_t x) {
-        int count = 0;
-        while (x) {
-            count += x & 1;
-            x >>= 1;
-        }
-        return count;
-    }
-} // anonymous namespace
+// Get frame k ticks ago from server history
+MetricFrame frameAgo(const ServerState& server, int k) {
+    // history_head is the next slot to write, so newest frame is at (history_head - 1)
+    // frameAgo(k) is history[(history_head - 1 - k) % HISTORY_TICKS]
+    return server.history[(server.history_head + HISTORY_TICKS - 1 - k) % HISTORY_TICKS];
+}
 
 SeekerObservation buildSeekerObservation(const MatchState& state) {
-    SeekerObservation obs = {};
+    SeekerObservation obs;
     
+    // Process each server
     for (int s = 0; s < MAX_SERVERS; ++s) {
         const ServerState& server = state.servers[s];
         
-        // Determine if this server is "connected" from seeker's perspective
-        bool connected = ((state.seeker_connection_mask >> s) & 1);
-        
-        // For inactive servers, all features should be 0
-        if (!server.active) {
-            obs.server.access(s, [&](Array<int16_t, SEEKER_SERVER_FEATURES>& f) {
-                for (int i = 0; i < SEEKER_SERVER_FEATURES; ++i) {
-                    f.set(i, int16_t{0});
-                }
-            });
-        } else {
-            // Server is active - set features appropriately
-            obs.server.access(s, [&](Array<int16_t, SEEKER_SERVER_FEATURES>& f) {
-                // Feature index 0: active (256 if server is active, 0 otherwise)
-                f.set(0, int16_t{256});
-                
-                // Feature index 1: seeker connected (256 if connected, 0 otherwise)
-                f.set(1, connected ? int16_t{256} : int16_t{0});
-            });
-            
-            if (connected) {
-                // Server is active and seeker connected - compute all metrics features
-                
-                // Features indices 2-8: current metrics
-                obs.server.access(s, [&](Array<int16_t, SEEKER_SERVER_FEATURES>& f) {
-                    f.set(2, toQ8(server.current.cpu));
-                    f.set(3, toQ8(server.current.memory));
-                    f.set(4, toQ8(server.current.disk));
-                    f.set(5, toQ8(server.current.network));
-                    f.set(6, toQ8(server.current.heat));
-                    f.set(7, toQ8(server.current.errors));
-                    f.set(8, toQ8(server.current.users));
-                });
-                
-                // Features indices 9-36: change over k = 1, 2, 4, 8 ticks for each metric
-                // k=1 (indices 9-15)
-                const MetricFrame frame1 = frameAgo(server, 1);
-                obs.server.access(s, [&](Array<int16_t, SEEKER_SERVER_FEATURES>& f) {
-                    f.set(9, toQ8(server.current.cpu - frame1.cpu));
-                    f.set(10, toQ8(server.current.memory - frame1.memory));
-                    f.set(11, toQ8(server.current.disk - frame1.disk));
-                    f.set(12, toQ8(server.current.network - frame1.network));
-                    f.set(13, toQ8(server.current.heat - frame1.heat));
-                    f.set(14, toQ8(server.current.errors - frame1.errors));
-                    f.set(15, toQ8(server.current.users - frame1.users));
-                });
-                
-                // k=2 (indices 16-22)
-                const MetricFrame frame2 = frameAgo(server, 2);
-                obs.server.access(s, [&](Array<int16_t, SEEKER_SERVER_FEATURES>& f) {
-                    f.set(16, toQ8(server.current.cpu - frame2.cpu));
-                    f.set(17, toQ8(server.current.memory - frame2.memory));
-                    f.set(18, toQ8(server.current.disk - frame2.disk));
-                    f.set(19, toQ8(server.current.network - frame2.network));
-                    f.set(20, toQ8(server.current.heat - frame2.heat));
-                    f.set(21, toQ8(server.current.errors - frame2.errors));
-                    f.set(22, toQ8(server.current.users - frame2.users));
-                });
-                
-                // k=4 (indices 23-29)
-                const MetricFrame frame4 = frameAgo(server, 4);
-                obs.server.access(s, [&](Array<int16_t, SEEKER_SERVER_FEATURES>& f) {
-                    f.set(23, toQ8(server.current.cpu - frame4.cpu));
-                    f.set(24, toQ8(server.current.memory - frame4.memory));
-                    f.set(25, toQ8(server.current.disk - frame4.disk));
-                    f.set(26, toQ8(server.current.network - frame4.network));
-                    f.set(27, toQ8(server.current.heat - frame4.heat));
-                    f.set(28, toQ8(server.current.errors - frame4.errors));
-                    f.set(29, toQ8(server.current.users - frame4.users));
-                });
-                
-                // k=8 (indices 30-36)
-                const MetricFrame frame8 = frameAgo(server, 8);
-                obs.server.access(s, [&](Array<int16_t, SEEKER_SERVER_FEATURES>& f) {
-                    f.set(30, toQ8(server.current.cpu - frame8.cpu));
-                    f.set(31, toQ8(server.current.memory - frame8.memory));
-                    f.set(32, toQ8(server.current.disk - frame8.disk));
-                    f.set(33, toQ8(server.current.network - frame8.network));
-                    f.set(34, toQ8(server.current.heat - frame8.heat));
-                    f.set(35, toQ8(server.current.errors - frame8.errors));
-                    f.set(36, toQ8(server.current.users - frame8.users));
-                });
-            } else {
-                // Server is active but seeker not connected - set all metrics features to 0
-                obs.server.access(s, [&](Array<int16_t, SEEKER_SERVER_FEATURES>& f) {
-                    for (int i = 2; i < 37; ++i) {  // Only clear up to index 36, leave indices 37 and 38
-                        f.set(i, int16_t{0});
-                    }
-                });
+        // Set all features to 0 initially (in case server is inactive)
+        obs.server.access(s, [&](Array<int16_t, SEEKER_SERVER_FEATURES>& f) {
+            for (auto& feature : f) {
+                feature = int16_t{0};
             }
             
-            // Index 37: ticks since last wager (always computed for active servers)
-            const int tickDiff = (state.tick - state.seeker.last_probe_tick[s]) & 0xFF;
-            obs.server.access(s, [&](Array<int16_t, SEEKER_SERVER_FEATURES>& f) {
-                f.set(37, std::min(tickDiff, 32) * 8);
-            });
+            // Index 0: active
+            if (server.active) {
+                f.set(0, int16_t{256});
+            } else {
+                return; // Skip all other features for inactive servers
+            }
             
-            // Index 38: hider connections destroyed by the last wager (always computed for active servers)
-            obs.server.access(s, [&](Array<int16_t, SEEKER_SERVER_FEATURES>& f) {
-                f.set(38, std::min(state.seeker.belief[s], uint8_t{8}) * 32);
-            });
-        }
+            // Index 1: seeker connected
+            if (state.seeker_connection_mask & (1 << s)) {
+                f.set(1, int16_t{256});
+            }
+            
+            // Indices 2-8: current metrics when connected
+            if (f.getOrDefault(1, int16_t{0}) == 256) {
+                f.set(2, toQ8(server.current.cpu));
+                f.set(3, toQ8(server.current.memory));
+                f.set(4, toQ8(server.current.disk));
+                f.set(5, toQ8(server.current.network));
+                f.set(6, toQ8(server.current.heat));
+                f.set(7, toQ8(server.current.errors));
+                f.set(8, toQ8(server.current.users));
+            }
+            
+            // Indices 9-36: change over k=1,2,4,8 ticks for each metric when connected
+            if (f.getOrDefault(1, int16_t{0}) == 256) {
+                constexpr int K_VALUES[] = {1, 2, 4, 8};
+                constexpr int BLOCK_STARTS[] = {9, 16, 23, 30}; // Start indices for each k-block
+                const int METRIC_COUNT = 7; // cpu, memory, disk, network, heat, errors, users
+                
+                // For each k value (1, 2, 4, 8)
+                for (int block = 0; block < 4; ++block) {
+                    const int k = K_VALUES[block];
+                    const int firstIndex = BLOCK_STARTS[block];
+                    
+                    // Get frame k ticks ago
+                    MetricFrame frame = frameAgo(server, k);
+                    
+                    // Compute change for each metric and store in appropriate block
+                    f.set(firstIndex + 0, toQ8(server.current.cpu - frame.cpu));     // cpu
+                    f.set(firstIndex + 1, toQ8(server.current.memory - frame.memory)); // memory
+                    f.set(firstIndex + 2, toQ8(server.current.disk - frame.disk));    // disk
+                    f.set(firstIndex + 3, toQ8(server.current.network - frame.network)); // network
+                    f.set(firstIndex + 4, toQ8(server.current.heat - frame.heat));    // heat
+                    f.set(firstIndex + 5, toQ8(server.current.errors - frame.errors)); // errors
+                    f.set(firstIndex + 6, toQ8(server.current.users - frame.users));  // users
+                }
+            }
+            
+            // Index 37: ticks since last wager (computed regardless of connection)
+            int tickDiff = (state.tick - static_cast<uint32_t>(state.seeker.last_probe_tick[s])) & 0xFF;
+            f.set(37, static_cast<int16_t>(std::min(static_cast<int>(tickDiff), 32) * 8));
+            
+            // Index 38: hider connections destroyed by last wager (computed regardless of connection)
+            f.set(38, static_cast<int16_t>(std::min(state.seeker.belief[s], static_cast<uint8_t>(8)) * 32));
+        });
     }
     
     // Compute global features
-    obs.global.access(0, [&](int16_t& value) { value = std::min(state.seeker.connection_tokens, uint8_t{32}) * 8; });  // seeker pool
-    obs.global.access(1, [&](int16_t& value) { value = popcount(state.seeker_connection_mask) * 16; });                // open seeker connections
-    obs.global.access(2, [&](int16_t& value) { 
+    obs.global.access(0, [&](int16_t& value) {
+        value = static_cast<int16_t>(std::min(static_cast<int>(state.seeker.connection_tokens), 32) * 8);
+    });
+    obs.global.access(1, [&](int16_t& value) {
+        // Count set bits in seeker_connection_mask
+        int count = 0;
+        uint16_t mask = state.seeker_connection_mask;
+        while (mask) {
+            count += mask & 1;
+            mask >>= 1;
+        }
+        value = static_cast<int16_t>(count * 16);
+    });
+    obs.global.access(2, [&](int16_t& value) {
+        // Count active servers
         int count = 0;
         for (const auto& server : state.servers) {
             if (server.active) {
                 count++;
             }
         }
-        value = count * 16; 
-    });  // active servers
-    obs.global.access(3, [&](int16_t& value) { value = std::min(state.tick, uint32_t{256}); });                        // tick
+        value = static_cast<int16_t>(count * 16);
+    });
+    obs.global.access(3, [&](int16_t& value) {
+        // Compute tick feature as per design: min(tick, 256)
+        value = static_cast<int16_t>(std::min(static_cast<int>(state.tick), 256));
+    });
     
     return obs;
 }

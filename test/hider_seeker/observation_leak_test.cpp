@@ -1,88 +1,92 @@
 #include <catch2/catch_test_macros.hpp>
-#include "state.hpp"
 #include "feature_extract.hpp"
-#include "ScriptedSeekerPolicy.hpp"
+#include "state.hpp"
 
 using namespace hider_seeker;
 
-TEST_CASE("ObservationLeakTest", "[observation-leak]") {
-    MatchState state = {};
-    
-    // Set up a basic match state with some data
+TEST_CASE("ObservationLeakTest", "[hider_seeker]") {
+    // Create a base MatchState
+    MatchState state{};
     state.tick = 100;
-    state.seeker_connection_mask = 0b101;  // Connected to servers 0 and 2
-    state.seeker.connection_tokens = 15;
+    state.seeker_connection_mask = 0b101; // Connect to servers 0 and 2
+    state.seeker.connection_tokens = 5;
     
-    // Initialize server 0 as active and connected
-    state.servers[0].active = 1;
-    state.servers[0].current.cpu = 50;
-    state.servers[0].current.memory = 60;
-    state.servers[0].current.disk = 70;
-    state.servers[0].current.network = 80;
-    state.servers[0].current.heat = 90;
-    state.servers[0].current.errors = 5;
-    state.servers[0].current.users = 10;
-    
-    // Set up history for server 0
-    state.servers[0].history_head = 1;
-    state.servers[0].history[0].cpu = 40;
-    state.servers[0].history[0].memory = 50;
-    state.servers[0].history[0].disk = 60;
-    state.servers[0].history[0].network = 70;
-    state.servers[0].history[0].heat = 80;
-    state.servers[0].history[0].errors = 10;
-    state.servers[0].history[0].users = 5;
-    
-    // Set up server 1 as active but not connected
-    state.servers[1].active = 1;
-    state.servers[1].current.cpu = 90;
-    
-    // Set up server 2 as inactive
-    state.servers[2].active = 0;
+    // Set up some servers
+    for (int s = 0; s < MAX_SERVERS; ++s) {
+        state.servers[s].active = 1;
+        state.servers[s].owner_hider_id = s;
+        state.servers[s].current.cpu = 50 + s;
+        state.servers[s].history_head = 3;
+        // Set up history frames
+        for (int k = 0; k < HISTORY_TICKS; ++k) {
+            state.servers[s].history[k].cpu = 40 + s + k;
+        }
+        state.seeker.last_probe_tick[s] = 50;
+        state.seeker.belief[s] = 3;
+    }
     
     // Build the original observation
-    const SeekerObservation originalObs = buildSeekerObservation(state);
+    SeekerObservation originalObs = buildSeekerObservation(state);
     
-    // Test that mutating unrelated fields doesn't change the observation
+    // Test that changing trace_strength doesn't affect output
+    state.servers[0].trace_strength = 255;
+    SeekerObservation obs1 = buildSeekerObservation(state);
+    REQUIRE(memcmp(&originalObs, &obs1, sizeof(SeekerObservation)) == 0);
     
-    // Mutate trace_strength (should not affect observation)
-    state.servers[0].trace_strength = 42;
+    // Test that changing trace_age doesn't affect output
+    state.servers[0].trace_age = 255;
+    SeekerObservation obs2 = buildSeekerObservation(state);
+    REQUIRE(memcmp(&originalObs, &obs2, sizeof(SeekerObservation)) == 0);
     
-    // Mutate trace_age (should not affect observation)
-    state.servers[0].trace_age = 15;
+    // Test that changing owner_hider_id doesn't affect output
+    state.servers[0].owner_hider_id = 255;
+    SeekerObservation obs3 = buildSeekerObservation(state);
+    REQUIRE(memcmp(&originalObs, &obs3, sizeof(SeekerObservation)) == 0);
     
-    // Mutate owner_hider_id (should not affect observation)
-    state.servers[0].owner_hider_id = 3;
+    // Test that changing public_flags doesn't affect output
+    state.servers[0].public_flags = 255;
+    SeekerObservation obs4 = buildSeekerObservation(state);
+    REQUIRE(memcmp(&originalObs, &obs4, sizeof(SeekerObservation)) == 0);
     
-    // Mutate public_flags (should not affect observation)
-    state.servers[0].public_flags = 7;
+    // Test that changing hider's server_id doesn't affect output
+    state.hiders[0].server_id = 255;
+    SeekerObservation obs5 = buildSeekerObservation(state);
+    REQUIRE(memcmp(&originalObs, &obs5, sizeof(SeekerObservation)) == 0);
     
-    // Mutate hider's server_id (should not affect observation)
-    state.hiders[0].server_id = 5;
+    // Test that changing hider's action_points doesn't affect output
+    state.hiders[0].action_points = 255;
+    SeekerObservation obs6 = buildSeekerObservation(state);
+    REQUIRE(memcmp(&originalObs, &obs6, sizeof(SeekerObservation)) == 0);
     
-    // Mutate hider's action_points (should not affect observation)
-    state.hiders[0].action_points = 20;
+    // Test that changing hider's resources doesn't affect output
+    state.hiders[0].resources[0] = 255;
+    SeekerObservation obs7 = buildSeekerObservation(state);
+    REQUIRE(memcmp(&originalObs, &obs7, sizeof(SeekerObservation)) == 0);
     
-    // Mutate hider's resources (should not affect observation)
-    state.hiders[0].resources[0] = 100;
+    // Test that changing hider_connection_pool doesn't affect output
+    state.hider_connection_pool = 255;
+    SeekerObservation obs8 = buildSeekerObservation(state);
+    REQUIRE(memcmp(&originalObs, &obs8, sizeof(SeekerObservation)) == 0);
     
-    // Mutate hider_connection_pool (should not affect observation)
-    state.hider_connection_pool = 5;
+    // Test that changing pending move ring doesn't affect output
+    state.pending_head = 10;
+    SeekerObservation obs9 = buildSeekerObservation(state);
+    REQUIRE(memcmp(&originalObs, &obs9, sizeof(SeekerObservation)) == 0);
     
-    // Mutate pending move ring (should not affect observation)
-    state.pending_head = 3;
-    state.pending[0].hider_id = 1;
+    // Test that changing rng_state doesn't affect output
+    state.rng_state = 0x123456789ABCDEF0ULL;
+    SeekerObservation obs10 = buildSeekerObservation(state);
+    REQUIRE(memcmp(&originalObs, &obs10, sizeof(SeekerObservation)) == 0);
     
-    // Mutate rng_state (should not affect observation)
-    state.rng_state = 123456789;
+    // Test that changing metrics/history of unconnected server doesn't affect output
+    state.servers[1].current.cpu = 99;
+    state.servers[1].history[0].cpu = 88;
+    SeekerObservation obs11 = buildSeekerObservation(state);
+    REQUIRE(memcmp(&originalObs, &obs11, sizeof(SeekerObservation)) == 0);
     
-    // Mutate metrics and history of a server the seeker is NOT connected to
-    state.servers[1].current.cpu = 95;
-    state.servers[1].history[0].cpu = 85;
-    
-    // Build the new observation after mutations
-    const SeekerObservation mutatedObs = buildSeekerObservation(state);
-    
-    // Compare byte-by-byte - they should be identical
-    REQUIRE(memcmp(&originalObs, &mutatedObs, sizeof(SeekerObservation)) == 0);
+    // Test that changing tick DOES affect output (tick is included in global features)
+    state.tick = 200;
+    SeekerObservation obs12 = buildSeekerObservation(state);
+    // Tick should be included in global feature 3, so the outputs should differ
+    REQUIRE(memcmp(&originalObs, &obs12, sizeof(SeekerObservation)) != 0);
 }

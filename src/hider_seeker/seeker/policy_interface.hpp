@@ -9,7 +9,7 @@ struct SeekerServerScores {
     int32_t open = 0; 
     int32_t close = 0; 
     int32_t wager = 0; 
-}; // Q8
+}; // Q8 values
 
 class iSeekerPolicy {
 public:

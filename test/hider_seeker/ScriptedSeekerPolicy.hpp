@@ -1,20 +1,15 @@
 #pragma once
 
-#include "../../src/hider_seeker/seeker/policy_interface.hpp"
+#include "policy_interface.hpp"
 
 namespace hider_seeker {
 
 class ScriptedSeekerPolicy : public iSeekerPolicy {
 public:
-    Array<SeekerServerScores, MAX_SERVERS> storedScores;
+    Array<SeekerServerScores, MAX_SERVERS> scores;
     
-    void score(const SeekerObservation&, Array<SeekerServerScores, MAX_SERVERS>& out) const override {
-        out = storedScores;
-    }
-    
-    std::string policyId() const override {
-        return "scripted";
-    }
+    void score(const SeekerObservation&, Array<SeekerServerScores, MAX_SERVERS>&) const override;
+    std::string policyId() const override;
 };
 
 } // namespace hider_seeker

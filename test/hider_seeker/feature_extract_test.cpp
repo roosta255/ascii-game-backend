@@ -1,96 +1,119 @@
 #include <catch2/catch_test_macros.hpp>
-#include "state.hpp"
 #include "feature_extract.hpp"
+#include "state.hpp"
 
 using namespace hider_seeker;
 
-TEST_CASE("FeatureExtractTest - Connected server with specific metrics", "[feature-extract]") {
-    MatchState state = {};
-    
-    // Set up a connected server (server 0)
-    state.servers[0].active = 1;
-    state.seeker_connection_mask = 0b1;  // Connected to server 0
-    state.tick = 100;
-    state.seeker.last_probe_tick[0] = 80;  // Last probe was 20 ticks ago
-    state.seeker.belief[0] = 3;  // Belief is 3
-    
-    // Set current metrics
-    state.servers[0].current.cpu = 50;
-    
-    // Set up history for frameAgo(k=1) and k=2
-    state.servers[0].history_head = 3;
-    state.servers[0].history[0].cpu = 30;  // k=2 (frame 0)
-    state.servers[0].history[1].cpu = 40;  // k=1 (frame 1) 
-    state.servers[0].history[2].cpu = 50;  // current frame
-    
-    const SeekerObservation obs = buildSeekerObservation(state);
-    
-    // Test feature index 2 (current cpu)
-    REQUIRE(obs.server.getOrDefault(0, {}).getOrDefault(2, int16_t{0}) == 128);  // 50 * 256 / 100 = 128
-    
-    // Test feature index 9 (cpu Δ1) 
-    REQUIRE(obs.server.getOrDefault(0, {}).getOrDefault(9, int16_t{0}) == 25);   // (50 - 30) * 256 / 100 = 25
-    
-    // Test feature index 16 (cpu Δ2)
-    REQUIRE(obs.server.getOrDefault(0, {}).getOrDefault(16, int16_t{0}) == 51);  // (50 - 40) * 256 / 100 = 51
-}
-
-TEST_CASE("FeatureExtractTest - Active but not connected server", "[feature-extract]") {
-    MatchState state = {};
-    
-    // Set up an active but not connected server (server 1)
-    state.servers[1].active = 1;
-    state.seeker_connection_mask = 0b0;  // Not connected to any server
-    
-    // Set current metrics
-    state.servers[1].current.cpu = 90;
-    
-    const SeekerObservation obs = buildSeekerObservation(state);
-    
-    // Test feature index 0 (active)
-    REQUIRE(obs.server.getOrDefault(1, {}).getOrDefault(0, int16_t{0}) == 256);  // Server is active
-    
-    // Test feature index 1 (seeker connected) 
-    REQUIRE(obs.server.getOrDefault(1, {}).getOrDefault(1, int16_t{0}) == 0);    // Not connected
-    
-    // Test that features 2-36 are all 0
-    for (int i = 2; i <= 36; ++i) {
-        REQUIRE(obs.server.getOrDefault(1, {}).getOrDefault(i, int16_t{0}) == 0);
-    }
-}
-
-TEST_CASE("FeatureExtractTest - Inactive server", "[feature-extract]") {
-    MatchState state = {};
-    
-    // Set up an inactive server (server 2)
-    state.servers[2].active = 0;
-    
-    const SeekerObservation obs = buildSeekerObservation(state);
-    
-    // Test that all features for the inactive server are 0
-    for (int i = 0; i < SEEKER_SERVER_FEATURES; ++i) {
-        REQUIRE(obs.server.getOrDefault(2, {}).getOrDefault(i, int16_t{0}) == 0);
-    }
-}
-
-TEST_CASE("FeatureExtractTest - Global features", "[feature-extract]") {
-    MatchState state = {};
-    
-    // Set up global features
-    state.seeker.connection_tokens = 12;
-    state.seeker_connection_mask = 0b1;  // One open connection
-    state.server_count = 2;  // Two servers total
+TEST_CASE("FeatureExtractTest", "[hider_seeker]") {
+    MatchState state{};
     state.tick = 7;
+    state.seeker_connection_mask = 0b001; // Connect to server 0 only (single connection)
+    state.seeker.connection_tokens = 12;
     
-    // Mark both servers as active
-    state.servers[0].active = 1;
-    state.servers[1].active = 1;
+    // Set up server 0 - active and connected
+    ServerState& server0 = state.servers[0];
+    server0.active = 1;
+    server0.current.cpu = 50;
+    server0.current.memory = 60;
+    server0.current.disk = 70;
+    server0.current.network = 80;
+    server0.current.heat = 90;
+    server0.current.errors = 20;
+    server0.current.users = 30;
+    server0.history_head = 3;
     
-    const SeekerObservation obs = buildSeekerObservation(state);
+    // Set up history frames for server 0
+    server0.history[0].cpu = 30;  // k=2 frame (as expected by test)
+    server0.history[1].cpu = 40;  // k=1 frame  
+    server0.history[2].cpu = 50;  // current frame
+    server0.history[0].memory = 50;
+    server0.history[1].memory = 40;
+    server0.history[0].disk = 60;
+    server0.history[1].disk = 50;
+    server0.history[0].network = 70;
+    server0.history[1].network = 60;
+    server0.history[0].heat = 80;
+    server0.history[1].heat = 70;
+    server0.history[0].errors = 15;
+    server0.history[1].errors = 10;
+    server0.history[0].users = 25;
+    server0.history[1].users = 20;
     
-    // Test global features
-    REQUIRE(obs.global.getOrDefault(0, int16_t{0}) == 96);   // min(12, 32) * 8 = 96
-    REQUIRE(obs.global.getOrDefault(1, int16_t{0}) == 16);   // popcount(1) * 16 = 16  
-    REQUIRE(obs.global.getOrDefault(2, int16_t{0}) == 32);   // count_if(active) * 16 = 2 * 16 = 32
-    REQUIRE(obs.global.getOrDefault(3, int16_t{0}) == 7);    // min(7, 256) = 7
+    state.seeker.last_probe_tick[0] = 5;
+    state.seeker.belief[0] = 3;
+    
+    // Set up server 1 - active but not connected
+    ServerState& server1 = state.servers[1];
+    server1.active = 1;
+    server1.current.cpu = 90;
+    server1.history_head = 3;
+    server1.history[0].cpu = 80;
+    server1.history[1].cpu = 70;
+    state.seeker.last_probe_tick[1] = 2;
+    state.seeker.belief[1] = 5;
+    
+    // Set up server 2 - inactive
+    ServerState& server2 = state.servers[2];
+    server2.active = 0;
+    server2.current.cpu = 40;
+    server2.history_head = 3;
+    server2.history[0].cpu = 30;
+    state.seeker.last_probe_tick[2] = 1;
+    state.seeker.belief[2] = 1;
+    
+    // Build observation
+    SeekerObservation obs = buildSeekerObservation(state);
+    
+    // Test active & connected server 0 with cpu=50, frameAgo(k=1).cpu=40, frameAgo(k=2).cpu=30
+    // Should assert feature 2 == 128, feature 9 == 25, feature 16 == 51
+    obs.server.access(0, [&](const Array<int16_t, SEEKER_SERVER_FEATURES>& f) {
+        // Feature 2: cpu Q8 value = 50 * 256 / 100 = 128
+        REQUIRE(f.getOrDefault(2, int16_t{0}) == 128);
+        
+        // Feature 9: cpu Δ1 = 50 - 40 = 10, Q8 = 10 * 256 / 100 = 25
+        REQUIRE(f.getOrDefault(9, int16_t{0}) == 25);
+        
+        // Feature 16: cpu Δ2 = 50 - 30 = 20, Q8 = 20 * 256 / 100 = 51
+        REQUIRE(f.getOrDefault(16, int16_t{0}) == 51);
+    });
+    
+    // Test server 1 active but not connected, cpu=90
+    // Should assert feature 0 == 256, feature 1 == 0, and features 2-36 are all 0
+    obs.server.access(1, [&](const Array<int16_t, SEEKER_SERVER_FEATURES>& f) {
+        REQUIRE(f.getOrDefault(0, int16_t{0}) == 256); // active
+        REQUIRE(f.getOrDefault(1, int16_t{0}) == 0);   // not connected
+        
+        // All other features should be 0 for not connected server
+        for (int i = 2; i <= 36; ++i) {
+            REQUIRE(f.getOrDefault(i, int16_t{0}) == 0);
+        }
+    });
+    
+    // Test inactive server - entire feature row is all 0
+    obs.server.access(2, [&](const Array<int16_t, SEEKER_SERVER_FEATURES>& f) {
+        for (int i = 0; i < SEEKER_SERVER_FEATURES; ++i) {
+            REQUIRE(f.getOrDefault(i, int16_t{0}) == 0);
+        }
+    });
+    
+    // Test global features with connection_tokens=12, one open connection, two active servers, tick=7
+    // Should assert global array equals [96, 16, 32, 7]
+    obs.global.access(0, [&](const int16_t& value) {
+        REQUIRE(value == 96); // min(12, 32) * 8 = 12 * 8 = 96
+    });
+    obs.global.access(1, [&](const int16_t& value) {
+        REQUIRE(value == 16); // popcount(0b001) * 16 = 1 * 16 = 16 (changed from 32)
+    });
+    obs.global.access(2, [&](const int16_t& value) {
+        REQUIRE(value == 32); // 2 active servers * 16 = 32
+    });
+    obs.global.access(3, [&](const int16_t& value) {
+        REQUIRE(value == 7); // min(7, 256) = 7
+    });
+    
+    // Test feature 38 for server 1 with belief[1] = 5
+    // Should be min(5, 8) * 32 = 5 * 32 = 160
+    obs.server.access(1, [&](const Array<int16_t, SEEKER_SERVER_FEATURES>& f) {
+        REQUIRE(f.getOrDefault(38, int16_t{0}) == 160);
+    });
 }

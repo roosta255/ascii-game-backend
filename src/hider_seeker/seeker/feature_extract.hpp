@@ -1,8 +1,7 @@
 #pragma once
 
-#include "state.hpp"
+#include "../domain/state.hpp"
 #include "feature_schema.hpp"
-#include <cstdint>
 
 namespace hider_seeker {
 
