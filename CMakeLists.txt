@@ -308,6 +308,7 @@ add_executable(test_target
     test/hider_seeker/api/service_determinism_test.cpp
     test/hider_seeker/projection/audience_views_test.cpp
     test/hider_seeker/projection/public_event_test.cpp
+    test/hider_seeker/api/service_connect_test.cpp
     test/hider_seeker/api/service_record_events_test.cpp
     test/hider_seeker/api/view_snapshots_test.cpp
     test/hider_seeker/api/service_snapshot_test.cpp
@@ -315,7 +316,6 @@ add_executable(test_target
     test/hider_seeker/server_metrics_test.cpp
     test/hider_seeker/api/service_metrics_integration_test.cpp
     test/hider_seeker/api/service_match_start_test.cpp
-    test/hider_seeker/api/service_connect_test.cpp
     test/hider_seeker/feature_extract_test.cpp
     test/hider_seeker/baseline_policy_test.cpp
     test/hider_seeker/ScriptedSeekerPolicy_test.cpp

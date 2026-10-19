@@ -4,6 +4,7 @@
 #include "../ruleset/loa_rules.hpp"
 #include "../ruleset/probe_rules.hpp"
 #include "../tick/tick_types.hpp"
+#include "../ruleset/match_end.hpp"
 
 namespace hider_seeker {
 
@@ -125,6 +126,13 @@ json renderCommon(const MatchState& state, const ViewContext& ctx, const char* a
     view["server_count"] = state.server_count;
     view["servers"] = renderServers(state);
     view["events"] = renderEvents(ctx);
+    // Add winner field
+    std::string_view winnerStr = winnerName(static_cast<MatchWinner>(state.winner));
+    if (winnerStr.empty()) {
+        view["winner"] = json(nullptr);
+    } else {
+        view["winner"] = winnerStr;
+    }
     return view;
 }
 
@@ -145,7 +153,7 @@ json renderSelf(const MatchState& state, const ViewContext& ctx, uint8_t hiderId
         {"account", accountJson(ctx, hiderId)},
         {"status", hiderStatusName(hider)},
         {"action_points", hider.action_points},
-        {"server_id", hider.server_id},
+        {"server_id", hider.server_id == NO_SERVER_ID ? json(nullptr) : json(hider.server_id)},
         {"loa", hider.resources[LOA_RESOURCE_INDEX]},
         {"resources", resources}
     };
@@ -163,7 +171,7 @@ json renderTeam(const MatchState& state, const ViewContext& ctx, uint8_t hiderId
             {"hider_id", slot},
             {"account", accountJson(ctx, slot)},
             {"status", hiderStatusName(hider)},
-            {"server_id", hasServerPosition(hider) ? json(hider.server_id) : json(nullptr)}
+            {"server_id", hider.server_id == NO_SERVER_ID ? json(nullptr) : json(hider.server_id)}
         });
     }
     return team;
@@ -225,6 +233,7 @@ nlohmann::json buildHiderView(const MatchState& state, const ViewContext& ctx, u
     view["self"] = renderSelf(state, ctx, hiderId);
     view["team"] = renderTeam(state, ctx, hiderId);
     view["pending"] = renderPending(state, ctx);
+    view["team_connections"] = state.hider_connection_pool;
     computeContentHash(view);
     return view;
 }

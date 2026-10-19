@@ -6,6 +6,7 @@
 #include "../domain/state.hpp"
 #include "../ruleset/action_rules.hpp"
 #include "../ruleset/lifecycle_events.hpp"
+#include "../ruleset/match_end.hpp"
 #include <cstdint>
 
 namespace hider_seeker {
@@ -37,6 +38,15 @@ inline const char* probeOutcomeName(uint8_t outcome) {
     switch (outcome) {
         case PROBE_OUTCOME_HIT:  return "HIT";
         case PROBE_OUTCOME_MISS: return "MISS";
+    }
+    return "";
+}
+
+inline std::string_view winnerName(MatchWinner winner) {
+    switch (winner) {
+        case MatchWinner::NONE:   return "";
+        case MatchWinner::SEEKER: return "SEEKER";
+        case MatchWinner::HIDERS: return "HIDERS";
     }
     return "";
 }

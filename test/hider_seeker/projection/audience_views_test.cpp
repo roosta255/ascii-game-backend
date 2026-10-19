@@ -17,6 +17,7 @@
 #include "lifecycle_events.hpp"
 #include "tick_types.hpp"
 #include "audience_views.hpp"
+#include "match_end.hpp"
 
 using namespace hider_seeker;
 using nlohmann::json;
@@ -41,6 +42,7 @@ MatchState baseState() {
     state.phase = PHASE_ACTIVE;
     state.hider_count = 2;
     state.server_count = 2;
+    state.hider_connection_pool = 6; // Initialize the connection pool for 2 hiders
 
     for (uint8_t slot = 0; slot < 2; ++slot) {
         HiderState& hider = state.hiders[slot];
@@ -115,9 +117,10 @@ PendingMove pendingMove(uint32_t moveId, uint32_t submitSeq, uint8_t hiderId, Ti
                        static_cast<uint8_t>(mode)};
 }
 
+// 5a4: view_version 2 adds winner and team_connections
 const std::set<std::string> COMMON_KEYS = {
     "match_id", "audience", "view_version", "schema_version", "ruleset_version", "revision", "tick", "phase",
-    "hider_count", "server_count", "servers", "events", "content_hash"
+    "hider_count", "server_count", "servers", "events", "winner", "content_hash"
 };
 
 } // namespace
@@ -127,7 +130,7 @@ TEST_CASE("PROJ-002/003: hider and public views have exactly their documented to
     const ViewContext ctx = baseContext();
 
     std::set<std::string> hiderKeys = COMMON_KEYS;
-    hiderKeys.insert({"hider_id", "self", "team", "pending"});
+    hiderKeys.insert({"hider_id", "self", "team", "pending", "team_connections"});
     std::set<std::string> publicKeys = COMMON_KEYS;
     publicKeys.insert("hiders");
 
@@ -149,6 +152,182 @@ TEST_CASE("PROJ-002/003: hider and public views have exactly their documented to
     REQUIRE(hider.at("hider_id") == 0);
     REQUIRE(hider.at("events") == json::array({json{{"type", "SERVER_ADDED"}, {"tick", 1}, {"revision", 4}}}));
     REQUIRE(pub.at("events") == hider.at("events"));
+}
+
+TEST_CASE("VIEW-010 (views): view_version 2 and winner handling", "[hider_seeker][projection]") {
+    MatchState state = baseState();
+    ViewContext ctx = baseContext();
+
+    // Test: both views have view_version 2 and winner null on an active match
+    const json hider = buildHiderView(state, ctx, 0);
+    const json pub = buildPublicView(state, ctx);
+    REQUIRE(hider.at("view_version") == 2);
+    REQUIRE(pub.at("view_version") == 2);
+    REQUIRE(hider.at("winner").is_null());
+    REQUIRE(pub.at("winner").is_null());
+
+    // Test: with phase = PHASE_COMPLETE and winner = SEEKER, both views show "winner": "SEEKER"
+    state.phase = PHASE_COMPLETE;
+    state.winner = static_cast<uint8_t>(MatchWinner::SEEKER);
+    const json hiderCompleteSeeker = buildHiderView(state, ctx, 0);
+    const json pubCompleteSeeker = buildPublicView(state, ctx);
+    REQUIRE(hiderCompleteSeeker.at("phase") == "COMPLETE");
+    REQUIRE(pubCompleteSeeker.at("phase") == "COMPLETE");
+    REQUIRE(hiderCompleteSeeker.at("winner") == "SEEKER");
+    REQUIRE(pubCompleteSeeker.at("winner") == "SEEKER");
+
+    // Test: with winner = HIDERS, both views show "winner": "HIDERS"
+    state.winner = static_cast<uint8_t>(MatchWinner::HIDERS);
+    const json hiderCompleteHiders = buildHiderView(state, ctx, 0);
+    const json pubCompleteHiders = buildPublicView(state, ctx);
+    REQUIRE(hiderCompleteHiders.at("winner") == "HIDERS");
+    REQUIRE(pubCompleteHiders.at("winner") == "HIDERS");
+}
+
+TEST_CASE("VIEW-010 (views): team_connections in hider view", "[hider_seeker][projection]") {
+    MatchState state = baseState();
+    const ViewContext ctx = baseContext();
+
+    // Test: the hider view's team_connections equals hider_connection_pool (6 for a freshly started 2-hider match)
+    const json hider = buildHiderView(state, ctx, 0);
+    REQUIRE(hider.at("team_connections") == 6);
+    
+    // Test: public view does not contain team_connections
+    const json pub = buildPublicView(state, ctx);
+    REQUIRE(pub.contains("team_connections") == false);
+}
+
+TEST_CASE("VIEW-010 (views): server_id null for disconnected hiders", "[hider_seeker][projection]") {
+    MatchState state = baseState();
+    const ViewContext ctx = baseContext();
+
+    // Test: disconnected hider's self.server_id is null
+    state.hiders[0].server_id = NO_SERVER_ID;
+    const json hider = buildHiderView(state, ctx, 0);
+    REQUIRE(hider.at("self").at("server_id").is_null());
+    
+    // Test: team member's server_id reflects actual connection status (not null)
+    const json team = hider.at("team");
+    REQUIRE(team.size() == 1);
+    REQUIRE(team.at(0).at("server_id") == 1);  // hider 1 is still connected to server 1
+
+    // Test: connected hider's server_id contains the correct server number
+    state.hiders[0].server_id = 0;
+    const json hiderConnected = buildHiderView(state, ctx, 0);
+    REQUIRE(hiderConnected.at("self").at("server_id") == 0);
+    REQUIRE(hiderConnected.at("team").at(0).at("server_id") == 1);
+}
+
+TEST_CASE("VIEW-010 (views): SERVER_PROBED entry in public view", "[hider_seeker][projection]") {
+    MatchState state = baseState();
+    ViewContext ctx = baseContext();
+
+    // Add a SERVER_PROBED event to the context
+    PublicEventEntry entry{"SERVER_PROBED", 2, 5, 2, "HIT"};
+    ctx.publicEvents.push_back(entry);
+    
+    const json pub = buildPublicView(state, ctx);
+    REQUIRE(pub.at("events").size() == 2);
+    REQUIRE(pub.at("events").at(1).at("type") == "SERVER_PROBED");
+    REQUIRE(pub.at("events").at(1).at("server_id") == 2);
+    REQUIRE(pub.at("events").at(1).at("outcome") == "HIT");
+}
+
+TEST_CASE("PROJ-006: hidden fields never change either view (extended for VIEW-010)", "[hider_seeker][projection]") {
+    const ViewContext ctx = baseContext();
+    const MatchState base = baseState();
+    const std::string hiderBefore = buildHiderView(base, ctx, 0).dump();
+    const std::string publicBefore = buildPublicView(base, ctx).dump();
+
+    using Mutation = std::function<void(MatchState&)>;
+    const std::vector<std::pair<std::string, Mutation>> hidden = {
+        {"rng_state", [](MatchState& s) { s.rng_state ^= 0xFFFF; }},
+        {"seeker.connection_tokens", [](MatchState& s) { s.seeker.connection_tokens = 7; }},
+        {"seeker.max_tokens", [](MatchState& s) { s.seeker.max_tokens = 3; }},
+        {"seeker.heat", [](MatchState& s) { s.seeker.heat = 99; }},
+        {"seeker.belief", [](MatchState& s) { s.seeker.belief[1] = 200; }},
+        {"seeker.target_ids", [](MatchState& s) { s.seeker.target_ids[0] = 1; }},
+        {"seeker.target_count", [](MatchState& s) { s.seeker.target_count = 1; }},
+        {"seeker.target_head", [](MatchState& s) { s.seeker.target_head = 4; }},
+        {"seeker.last_probe_tick", [](MatchState& s) { s.seeker.last_probe_tick[0] = 9; }},
+        {"server0.owner_hider_id", [](MatchState& s) { s.servers[0].owner_hider_id = 1; }},
+        {"server1.owner_hider_id", [](MatchState& s) { s.servers[1].owner_hider_id = 0xFF; }},
+        {"server0.trace_strength", [](MatchState& s) { s.servers[0].trace_strength = 50; }},
+        {"server1.trace_strength", [](MatchState& s) { s.servers[1].trace_strength = 51; }},
+        {"server0.trace_age", [](MatchState& s) { s.servers[0].trace_age = 9; }},
+        {"server1.trace_age", [](MatchState& s) { s.servers[1].trace_age = 8; }},
+        {"server0.public_flags", [](MatchState& s) { s.servers[0].public_flags = 0x80; }},
+        {"server1.public_flags", [](MatchState& s) { s.servers[1].public_flags = 0x40; }},
+        {"goals", [](MatchState& s) { s.goals[1].active = 1; s.goals[0].reward_amount = 77; }},
+        {"events ring", [](MatchState& s) { s.events[5] = Event{2, 9}; }},
+        {"event_head", [](MatchState& s) { s.event_head = 3; }},
+        {"event_count", [](MatchState& s) { s.event_count = 6; }},
+        {"next_submit_seq", [](MatchState& s) { s.next_submit_seq = 1234; }},
+        {"bob.action_points", [](MatchState& s) { s.hiders[1].action_points = 33; }},
+        {"bob.resources", [](MatchState& s) { s.hiders[1].resources[LOA_RESOURCE_INDEX] = 5; s.hiders[1].resources[7] = 3; }},
+        {"bob.goal_progress", [](MatchState& s) { s.hiders[1].goal_progress[3] = 9; }},
+        {"alice.goal_progress", [](MatchState& s) { s.hiders[0].goal_progress[3] = 9; }},
+    };
+    for (const auto& mutation : hidden) {
+        INFO(mutation.first);
+        MatchState changed = base;
+        mutation.second(changed);
+        REQUIRE(buildHiderView(changed, ctx, 0).dump() == hiderBefore);
+        REQUIRE(buildPublicView(changed, ctx).dump() == publicBefore);
+    }
+
+    SECTION("pending submit_seq never changes either view") {
+        MatchState withPending = base;
+        withPending.pending[0] =
+            pendingMove(1, 0, 0, TickActionKind::HIDER_ACTION, NO_SERVER_ID, HiderActionMode::BOOST_CPU);
+        withPending.pending_count = 1;
+        const std::string hiderWithPending = buildHiderView(withPending, ctx, 0).dump();
+
+        MatchState reseq = withPending;
+        reseq.pending[0].submit_seq = 99;
+        REQUIRE(buildHiderView(reseq, ctx, 0).dump() == hiderWithPending);
+        REQUIRE(buildPublicView(reseq, ctx).dump() == publicBefore);
+    }
+
+    SECTION("hider-private fields change only the hider view") {
+        const std::vector<std::pair<std::string, Mutation>> privateOnly = {
+            {"alice.action_points", [](MatchState& s) { s.hiders[0].action_points = 12; }},
+            {"alice.resources", [](MatchState& s) { s.hiders[0].resources[5] = 4; }},
+            {"alice.server_id", [](MatchState& s) { s.hiders[0].server_id = 1; }},
+            {"bob.server_id", [](MatchState& s) { s.hiders[1].server_id = 0; }},
+            {"pending", [](MatchState& s) {
+                s.pending[0] = pendingMove(1, 0, 1, TickActionKind::HIDER_ACTION, NO_SERVER_ID,
+                                           HiderActionMode::PAY_GOAL);
+                s.pending_count = 1;
+            }},
+        };
+        for (const auto& mutation : privateOnly) {
+            INFO(mutation.first);
+            MatchState changed = base;
+            mutation.second(changed);
+            REQUIRE(buildHiderView(changed, ctx, 0).dump() != hiderBefore);
+            REQUIRE(buildPublicView(changed, ctx).dump() == publicBefore);
+        }
+    }
+
+    SECTION("an active server's current metrics change both views") {
+        MatchState changed = base;
+        changed.servers[1].current.cpu = 250;
+        REQUIRE(buildHiderView(changed, ctx, 0).dump() != hiderBefore);
+        REQUIRE(buildPublicView(changed, ctx).dump() != publicBefore);
+    }
+
+    SECTION("hider_connection_pool changes only the hider view") {
+        MatchState changed = base;
+        changed.hider_connection_pool = 7; // Change the pool size
+        const std::string hiderAfter = buildHiderView(changed, ctx, 0).dump();
+        const std::string pubAfter = buildPublicView(changed, ctx).dump();
+        
+        // Hider view should change (has team_connections)
+        REQUIRE(hiderAfter != hiderBefore);
+        // Public view should remain the same
+        REQUIRE(pubAfter == publicBefore);
+    }
 }
 
 TEST_CASE("PROJ-002: phase uses the LOBBY/ACTIVE/COMPLETE spellings", "[hider_seeker][projection]") {

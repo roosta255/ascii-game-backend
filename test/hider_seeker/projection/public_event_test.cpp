@@ -1,5 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include "../../../src/hider_seeker/projection/public_event.hpp"
+#include "../../../src/hider_seeker/domain/state.hpp"
+#include "../../../src/hider_seeker/projection/audience_views.hpp"
 
 using namespace hider_seeker;
 
@@ -69,4 +71,27 @@ TEST_CASE("PublicEventEntry SERVER_PROBED invalid outcome rejection", "[public_e
     
     PublicEventEntry parsed;
     REQUIRE_FALSE(fromJson(badJson, parsed));
+}
+
+TEST_CASE("VIEW-006: SERVER_PROBED entries in public view JSON", "[public_event][projection]") {
+    // Test: a public view whose context holds a SERVER_PROBED entry (server_id 2, HIT)
+    // contains {"type": "SERVER_PROBED", "server_id": 2, "outcome": "HIT", ...}
+    
+    // Create a basic match state and context
+    MatchState state{};
+    ViewContext ctx;
+    ctx.matchId = "test-match";
+    ctx.accounts.assignValue(0, "alice");
+    ctx.accounts.assignValue(1, "bob");
+    
+    // Add a SERVER_PROBED event to the context
+    PublicEventEntry entry{"SERVER_PROBED", 2, 5, 2, "HIT"};
+    ctx.publicEvents.push_back(entry);
+    
+    const auto pub = buildPublicView(state, ctx);
+    
+    REQUIRE(pub.at("events").size() == 1);
+    REQUIRE(pub.at("events").at(0).at("type") == "SERVER_PROBED");
+    REQUIRE(pub.at("events").at(0).at("server_id") == 2);
+    REQUIRE(pub.at("events").at(0).at("outcome") == "HIT");
 }
