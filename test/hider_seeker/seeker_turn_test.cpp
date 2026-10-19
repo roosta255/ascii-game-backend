@@ -50,6 +50,13 @@ TEST_CASE("seeker turn wager rounding", "[seeker-turn]") {
     state.seeker_connection_mask = 0x0001; // connected to server 0
     state.seeker.connection_tokens = 5; // give some tokens so wager can be applied
     
+    // Make sure server 0 is active
+    state.servers[0].active = 1;
+    
+    // Add a hider to server 0 so that applyWager can work properly
+    state.hiders[0].active = 1;
+    state.hiders[0].server_id = 0;
+    
     ScriptedSeekerPolicy policy;
     policy.scores.access(0, [&](SeekerServerScores& s) { 
         s.open = 0; 
@@ -71,6 +78,13 @@ TEST_CASE("seeker turn wager rounding edge cases", "[seeker-turn]") {
     state.phase = PHASE_ACTIVE;
     state.seeker_connection_mask = 0x0001; // connected to server 0
     
+    // Make sure server 0 is active
+    state.servers[0].active = 1;
+    
+    // Add a hider to server 0 so that applyWager can work properly
+    state.hiders[0].active = 1;
+    state.hiders[0].server_id = 0;
+
     ScriptedSeekerPolicy policy;
     
     // Test score 384 → wager 2
@@ -131,6 +145,9 @@ TEST_CASE("seeker turn order: wager before close", "[seeker-turn]") {
     state.seeker_connection_mask = 0x0002; // connected to server 1
     state.seeker.connection_tokens = 5;
     
+    // Make sure server 1 is active
+    state.servers[1].active = 1;
+
     ScriptedSeekerPolicy policy;
     policy.scores.access(1, [&](SeekerServerScores& s) { 
         s.open = 0; 
@@ -181,6 +198,11 @@ TEST_CASE("seeker turn open logic", "[seeker-turn]") {
     // Make server 3 inactive
     state.servers[3].active = 0;
     
+    // Make sure servers 0, 1, 2 are active
+    state.servers[0].active = 1;
+    state.servers[1].active = 1;
+    state.servers[2].active = 1;
+
     TickOutput output{};
     
     runSeekerTurn(state, policy, output);
@@ -208,6 +230,10 @@ TEST_CASE("seeker turn open logic tie breaking", "[seeker-turn]") {
         s.wager = 0; 
     });
     
+    // Make sure servers 0 and 1 are active
+    state.servers[0].active = 1;
+    state.servers[1].active = 1;
+
     TickOutput output{};
     
     runSeekerTurn(state, policy, output);
@@ -270,6 +296,13 @@ TEST_CASE("seeker turn unconnected server ignored", "[seeker-turn]") {
     state.phase = PHASE_ACTIVE;
     state.seeker_connection_mask = 0x0001; // connected to server 0 only
     
+    // Make sure server 0 is active
+    state.servers[0].active = 1;
+    
+    // Add a hider to server 0 so that applyWager can work properly
+    state.hiders[0].active = 1;
+    state.hiders[0].server_id = 0;
+
     ScriptedSeekerPolicy policy;
     policy.scores.access(0, [&](SeekerServerScores& s) { 
         s.open = 0; 

@@ -19,10 +19,12 @@ void runSeekerTurn(MatchState& state, const iSeekerPolicy& policy, TickOutput& o
     for (int s = 0; s < MAX_SERVERS; ++s) {
         if ((state.seeker_connection_mask & (1u << s)) && state.servers[s].active) {
             int32_t w = 0;
-            scores.access(s, [&](const SeekerServerScores& score) {
-                w = score.wager <= 0 ? 0 : (score.wager + 128) / 256;
-            });
+            const SeekerServerScores& score = scores.getOrDefault(s, SeekerServerScores{0, 0, 0});
+            // Apply the rounding formula: (score + 128) / 256
+            w = (score.wager + 128) / 256;
             if (w > MAX_HIDERS) w = MAX_HIDERS;
+            // Debug: print what we computed
+            // std::cout << "Server " << s << ": wager=" << score.wager << ", w=" << w << std::endl;
             if (w >= 1) {
                 applyWager(state, s, static_cast<uint8_t>(w), output);
             }
@@ -31,11 +33,8 @@ void runSeekerTurn(MatchState& state, const iSeekerPolicy& policy, TickOutput& o
 
     // Close phase
     for (int s = 0; s < MAX_SERVERS; ++s) {
-        int32_t close_score = 0;
-        scores.access(s, [&](const SeekerServerScores& score) {
-            close_score = score.close;
-        });
-        if ((state.seeker_connection_mask & (1u << s)) && close_score > 0) {
+        const SeekerServerScores& score = scores.getOrDefault(s, SeekerServerScores{0, 0, 0});
+        if ((state.seeker_connection_mask & (1u << s)) && score.close > 0) {
             state.seeker_connection_mask &= ~(1u << s);
             // Increment connection_tokens with saturation at uint8_t max (255)
             if (state.seeker.connection_tokens < 255) {
@@ -54,15 +53,12 @@ void runSeekerTurn(MatchState& state, const iSeekerPolicy& policy, TickOutput& o
             if (!state.servers[s].active) continue;
             if (state.seeker_connection_mask & (1u << s)) continue; // already connected
             
-            int32_t open_score = 0;
-            scores.access(s, [&](const SeekerServerScores& score) {
-                open_score = score.open;
-            });
+            const SeekerServerScores& score = scores.getOrDefault(s, SeekerServerScores{0, 0, 0});
             
-            if (open_score <= 0) continue;
+            if (score.open <= 0) continue;
             
-            if (open_score > best_score || best_server == -1) {
-                best_score = open_score;
+            if (score.open > best_score || best_server == -1) {
+                best_score = score.open;
                 best_server = s;
             }
         }
