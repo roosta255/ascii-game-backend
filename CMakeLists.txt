@@ -58,6 +58,7 @@ set(PROJECT_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/projection
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/ruleset/connection_rules
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/seeker
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/ruleset
     /usr/include/jsoncpp
 )
 
@@ -225,6 +226,7 @@ add_library(core_backend STATIC
     src/hider_seeker/api/view_snapshots.cpp
     src/hider_seeker/seeker/feature_extract.cpp
     src/hider_seeker/seeker/baseline_policy.cpp
+    src/hider_seeker/seeker/seeker_turn.cpp
 )
 
 # 👇 CRITICAL: Apply include dirs to the library
@@ -321,6 +323,7 @@ add_executable(test_target
     test/hider_seeker/ScriptedSeekerPolicy_test.cpp
     test/hider_seeker/observation_leak_test.cpp
     test/hider_seeker/ScriptedSeekerPolicy.cpp
+    test/hider_seeker/seeker_turn_test.cpp
 )
 
 target_include_directories(test_target PRIVATE ${PROJECT_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/test)

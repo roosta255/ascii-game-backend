@@ -3,12 +3,11 @@
 #include "rule_types.hpp"
 #include "../domain/state.hpp"
 #include "target_ranking_interface.hpp"
+#include "hider_status.hpp"
 
 namespace hider_seeker {
 
 // Ruleset-defined HiderState::status values used by probe resolution.
-constexpr uint8_t HIDER_STATUS_ACTIVE = 0;
-constexpr uint8_t HIDER_STATUS_CAPTURED = 1;
 
 // ---------------------------------------------------------------------------
 // Replay contract (RULESET-001) exposed by this ruleset slice for the future
