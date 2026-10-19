@@ -14,7 +14,7 @@
 
 namespace hider_seeker {
 
-constexpr uint32_t VIEW_VERSION = 1;
+constexpr uint32_t VIEW_VERSION = 2;
 
 // Everything a view needs that is not part of MatchState.
 struct ViewContext {

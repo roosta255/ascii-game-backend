@@ -39,6 +39,14 @@ TEST_CASE("CONN-003c: CONNECT and DISCONNECT through the move API", "[hider_seek
         REQUIRE(disconnected.body.at("status") == "APPLIED");
         REQUIRE(fx.record().state.hider_connection_pool == 6);
         REQUIRE(fx.record().state.hiders[0].server_id == hider_seeker::NO_SERVER_ID);
+        
+        // Test: after disconnect, Alice's hider view should show server_id as null
+        const auto aliceView = fx.service.getLatestView(fx.matchId, "hider", "alice", "");
+        REQUIRE(aliceView.status == 200);
+        REQUIRE(aliceView.body.at("self").at("server_id").is_null());
+        
+        // Test: team_connections size should be 6
+        REQUIRE(aliceView.body.at("team_connections") == 6);
     }
 
     SECTION("bob CONNECT server 5 (inactive)") {
