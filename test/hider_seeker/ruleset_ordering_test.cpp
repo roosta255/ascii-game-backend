@@ -106,7 +106,7 @@ TEST_CASE("No function mutates MatchState::tick on AP/token exhaustion", "[order
     SECTION("LOA exhaustion: add/remove server are rejected and tick is unchanged") {
         match.hiders[0].resources[0] = 0;
         match.servers[0].owner_hider_id = 0;
-        Array<PublicLifecycleEvent, MAX_EVENTS> events;
+        Array<PublicLifecycleEvent, MAX_TICK_PUBLIC_EVENTS> events;
         uint8_t eventCount = 0;
         REQUIRE(applyAddServer(match, 0, events, eventCount) == RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE);
         REQUIRE(applyRemoveServer(match, 0, 0, events, eventCount) == RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE);

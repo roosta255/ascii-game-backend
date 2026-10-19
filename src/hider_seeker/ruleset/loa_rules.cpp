@@ -27,7 +27,7 @@ constexpr bool RULESET_SERVER_REMOVED_IS_PUBLIC = true;
 // Validation-phase check: a public event needs a free slot in the caller's
 // output array, so the action can be rejected before any state is modified.
 bool hasRoomForLifecycleEvent(bool isDefinedPublicByRuleset,
-                              const Array<PublicLifecycleEvent, MAX_EVENTS>& outPublicEvents,
+                              const Array<PublicLifecycleEvent, MAX_TICK_PUBLIC_EVENTS>& outPublicEvents,
                               uint8_t outPublicEventCount) {
     return !isDefinedPublicByRuleset || outPublicEvents.containsIndex(outPublicEventCount);
 }
@@ -38,7 +38,7 @@ bool hasRoomForLifecycleEvent(bool isDefinedPublicByRuleset,
 // PublicLifecycleEvent into the real domain Event pipeline is a later, explicitly
 // out-of-scope job.
 void emitLifecycleEvent(const MatchState& match, HiderSeekerEventType type, bool isDefinedPublicByRuleset,
-                        Array<PublicLifecycleEvent, MAX_EVENTS>& outPublicEvents,
+                        Array<PublicLifecycleEvent, MAX_TICK_PUBLIC_EVENTS>& outPublicEvents,
                         uint8_t& outPublicEventCount) {
     emitPublicLifecycleEventIfDefined(type, match.tick, isDefinedPublicByRuleset, outPublicEvents,
                                       outPublicEventCount);
@@ -47,7 +47,7 @@ void emitLifecycleEvent(const MatchState& match, HiderSeekerEventType type, bool
 } // namespace
 
 RuleOutcome applyAddServer(MatchState& match, uint8_t hiderId,
-                           Array<PublicLifecycleEvent, MAX_EVENTS>& outPublicEvents,
+                           Array<PublicLifecycleEvent, MAX_TICK_PUBLIC_EVENTS>& outPublicEvents,
                            uint8_t& outPublicEventCount) {
     if (hiderId >= MAX_HIDERS) {
         return RuleOutcome::REJECTED_INVALID_TARGET;
@@ -93,7 +93,7 @@ RuleOutcome applyAddServer(MatchState& match, uint8_t hiderId,
 }
 
 RuleOutcome applyRemoveServer(MatchState& match, uint8_t hiderId, uint8_t serverId,
-                              Array<PublicLifecycleEvent, MAX_EVENTS>& outPublicEvents,
+                              Array<PublicLifecycleEvent, MAX_TICK_PUBLIC_EVENTS>& outPublicEvents,
                               uint8_t& outPublicEventCount) {
     // ---- Validation phase: no state is modified until every check has passed. ----
     if (hiderId >= MAX_HIDERS || serverId >= MAX_SERVERS) {

@@ -1,12 +1,13 @@
 #include <catch2/catch_test_macros.hpp>
 #include "lifecycle_events.hpp"
+#include "tick_types.hpp"
 #include "state.hpp"
 #include "names.hpp"
 
 using namespace hider_seeker;
 
 TEST_CASE("emitPublicLifecycleEventIfDefined appends event only when public", "[lifecycle]") {
-    Array<PublicLifecycleEvent, MAX_EVENTS> events;
+    Array<PublicLifecycleEvent, MAX_TICK_PUBLIC_EVENTS> events;
     uint8_t count = 0;
     const PublicLifecycleEvent fallback = {HiderSeekerEventType::SERVER_ADDED, 0};
 
@@ -28,7 +29,7 @@ TEST_CASE("emitPublicLifecycleEventIfDefined appends event only when public", "[
 }
 
 TEST_CASE("emitPublicLifecycleEventIfDefined appends at the next free slot without overwriting", "[lifecycle]") {
-    Array<PublicLifecycleEvent, MAX_EVENTS> events;
+    Array<PublicLifecycleEvent, MAX_TICK_PUBLIC_EVENTS> events;
     uint8_t count = 0;
     const PublicLifecycleEvent fallback = {HiderSeekerEventType::SERVER_ADDED, 0};
 
@@ -49,20 +50,21 @@ TEST_CASE("emitPublicLifecycleEventIfDefined appends at the next free slot witho
 }
 
 TEST_CASE("emitPublicLifecycleEventIfDefined appends nothing when the array is full", "[lifecycle]") {
-    Array<PublicLifecycleEvent, MAX_EVENTS> events;
+    Array<PublicLifecycleEvent, MAX_TICK_PUBLIC_EVENTS> events;
     uint8_t count = 0;
-    for (int i = 0; i < MAX_EVENTS; ++i) {
+    for (int i = 0; i < MAX_TICK_PUBLIC_EVENTS; ++i) {
         REQUIRE(emitPublicLifecycleEventIfDefined(HiderSeekerEventType::SERVER_ADDED,
                                                   static_cast<uint32_t>(i), true, events, count)
                 == RuleOutcome::ACCEPTED);
     }
-    REQUIRE(count == MAX_EVENTS);
+    REQUIRE(count == MAX_TICK_PUBLIC_EVENTS);
 
     REQUIRE(emitPublicLifecycleEventIfDefined(HiderSeekerEventType::SERVER_REMOVED, 999, true, events, count)
             == RuleOutcome::REJECTED_NO_SLOT_AVAILABLE);
-    REQUIRE(count == MAX_EVENTS);
+    REQUIRE(count == MAX_TICK_PUBLIC_EVENTS);
     const PublicLifecycleEvent fallback = {HiderSeekerEventType::SERVER_ADDED, 0};
-    REQUIRE(events.getOrDefault(MAX_EVENTS - 1, fallback).tick == static_cast<uint32_t>(MAX_EVENTS - 1));
+    REQUIRE(events.getOrDefault(MAX_TICK_PUBLIC_EVENTS - 1, fallback).tick == static_cast<uint32_t>(MAX_TICK_PUBLIC_EVENTS - 1));
+    // 5a3c: a tick's public event array holds MAX_TICK_PUBLIC_EVENTS
 }
 
 TEST_CASE("PublicLifecycleEvent has no field capable of carrying hider ID", "[lifecycle]") {
@@ -99,4 +101,20 @@ TEST_CASE("PublicLifecycleEvent default field values", "[lifecycle]") {
     
     REQUIRE(event.server_id == NO_SERVER_ID); // Should be 0xFF
     REQUIRE(event.outcome == PROBE_OUTCOME_NONE); // Should be 0
+}
+
+TEST_CASE("TickOutput capacity and WagerRecord tests", "[lifecycle]") {
+    STATIC_REQUIRE(MAX_TICK_PUBLIC_EVENTS == MAX_INTENTS_PER_TICK + MAX_SERVERS);
+    
+    TickOutput tickOutput{};
+    REQUIRE(tickOutput.wagerCount == 0);
+    REQUIRE(tickOutput.publicEvents.containsIndex(MAX_TICK_PUBLIC_EVENTS - 1));
+    
+    // Test WagerRecord storage and retrieval
+    tickOutput.wagers.assignValue(0, WagerRecord{2, 1, 1, 0});
+    const WagerRecord& record = tickOutput.wagers.getOrDefault(0, WagerRecord{0, 0, 0, 0});
+    REQUIRE(record.serverId == 2);
+    REQUIRE(record.wager == 1);
+    REQUIRE(record.destroyed == 1);
+    REQUIRE(record.lost == 0);
 }

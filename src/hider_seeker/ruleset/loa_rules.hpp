@@ -26,7 +26,7 @@ constexpr uint8_t GOAL_STATUS_CANCELLED_SERVER_REMOVED = 0xFE;
 // already full, the whole action is rejected (REJECTED_NO_SLOT_AVAILABLE) with
 // no state change, so an accepted action never silently drops its event.
 RuleOutcome applyAddServer(MatchState&, uint8_t hiderId,
-                           Array<PublicLifecycleEvent, MAX_EVENTS>& outPublicEvents,
+                           Array<PublicLifecycleEvent, MAX_TICK_PUBLIC_EVENTS>& outPublicEvents,
                            uint8_t& outPublicEventCount);
 // REMOVE_SERVER carries only the slot being removed. If the removed slot is
 // occupied, the relocation target is computed internally as part of the same
@@ -35,7 +35,7 @@ RuleOutcome applyAddServer(MatchState&, uint8_t hiderId,
 // (REJECTED_RELOCATION_FAILED) with no state change. Slot ownership is not
 // checked: any hider with sufficient LOA may remove any active slot (LOA-002).
 RuleOutcome applyRemoveServer(MatchState&, uint8_t hiderId, uint8_t serverId,
-                              Array<PublicLifecycleEvent, MAX_EVENTS>& outPublicEvents,
+                              Array<PublicLifecycleEvent, MAX_TICK_PUBLIC_EVENTS>& outPublicEvents,
                               uint8_t& outPublicEventCount);
 void resetServerSlot(ServerState&);
 // LOA-004: called by applyRemoveServer inside the same committed operation.

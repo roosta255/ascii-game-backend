@@ -47,10 +47,20 @@ struct ConsumedKeySet {
 
 constexpr uint8_t MAX_PROBES_PER_TICK = MAX_SERVERS; // reusing the frozen MAX_SERVERS=16 constant
 
+// One seeker wager in a tick (5a3d's applyWager): the server, the wager
+// after capping, the hider connections it destroyed, and the seeker
+// connections it lost. Server-side only; never public.
+struct WagerRecord {
+    uint8_t serverId;
+    uint8_t wager;
+    uint8_t destroyed;
+    uint8_t lost;
+};
+
 // Each applied intent emits at most one public event, so one
 // tick's events always fit.
-static_assert(MAX_EVENTS >= MAX_INTENTS_PER_TICK,
-              "TickOutput::publicEvents must hold one event per intent");
+static_assert(MAX_TICK_PUBLIC_EVENTS >= MAX_INTENTS_PER_TICK + MAX_SERVERS,
+              "TickOutput::publicEvents must hold one event per intent and one per wager");
 
 struct TickOutput {
     Array<IdempotencyKeyT, MAX_INTENTS_PER_TICK> consumedKeys; 
@@ -65,8 +75,11 @@ struct TickOutput {
     
     // Public lifecycle events from ADD_SERVER/REMOVE_SERVER, in the
     // order the intents were applied.
-    Array<PublicLifecycleEvent, MAX_EVENTS> publicEvents;
+    Array<PublicLifecycleEvent, MAX_TICK_PUBLIC_EVENTS> publicEvents;
     uint8_t publicEventCount = 0;
+    
+    Array<WagerRecord, MAX_SERVERS> wagers;
+    uint8_t wagerCount = 0;
 };
 
 } // namespace hider_seeker
