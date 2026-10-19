@@ -47,9 +47,7 @@ struct ConsumedKeySet {
 
 constexpr uint8_t MAX_PROBES_PER_TICK = MAX_SERVERS; // reusing the frozen MAX_SERVERS=16 constant
 
-// One seeker wager in a tick (5a3d's applyWager): the server, the wager
-// after capping, the hider connections it destroyed, and the seeker
-// connections it lost. Server-side only; never public.
+// One seeker wager in a tick (5a3d's applyWager): the server, the wager after capping, the hider connections it destroyed, and the seeker connections it lost. Server-side only; never public.
 struct WagerRecord {
     uint8_t serverId;
     uint8_t wager;
@@ -57,8 +55,7 @@ struct WagerRecord {
     uint8_t lost;
 };
 
-// Each applied intent emits at most one public event, so one
-// tick's events always fit.
+// Each applied intent and each wager emits at most one public event, so one tick's events always fit.
 static_assert(MAX_TICK_PUBLIC_EVENTS >= MAX_INTENTS_PER_TICK + MAX_SERVERS,
               "TickOutput::publicEvents must hold one event per intent and one per wager");
 

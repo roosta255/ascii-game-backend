@@ -17,8 +17,7 @@ constexpr uint8_t PROBE_OUTCOME_NONE = 0;
 constexpr uint8_t PROBE_OUTCOME_HIT = 1;
 constexpr uint8_t PROBE_OUTCOME_MISS = 2;
 
-// One tick's public events: one per applied intent, plus one SERVER_PROBED
-// per wager (at most one wager per server).
+// One tick's public events: one per applied intent, plus one SERVER_PROBED per wager (at most one wager per server).
 constexpr uint8_t MAX_TICK_PUBLIC_EVENTS = MAX_INTENTS_PER_TICK + MAX_SERVERS;
 
 struct PublicLifecycleEvent {
