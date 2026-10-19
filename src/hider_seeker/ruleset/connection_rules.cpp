@@ -1,7 +1,9 @@
 #include "connection_rules.hpp"
 #include "../ruleset/action_rules.hpp"
 #include "../domain/state.hpp"
+#include "../tick/tick_types.hpp"
 #include <cstdint>
+#include <algorithm>
 
 namespace hider_seeker {
 
@@ -68,6 +70,63 @@ RuleOutcome applyDisconnect(MatchState& state, uint8_t hiderId) {
     state.hiders[hiderId].server_id = NO_SERVER_ID;
     
     return RuleOutcome::ACCEPTED;
+}
+
+void applyWager(MatchState& match, uint8_t serverId, uint8_t wager, TickOutput& output) {
+    // Cap the wager to available connection tokens
+    uint8_t capped_wager = std::min(wager, match.seeker.connection_tokens);
+    
+    // If capped_wager is 0, return immediately (no state change, no events)
+    if (capped_wager == 0) {
+        return;
+    }
+    
+    // Compute ordered set H of active hiders whose server_id == serverId
+    uint8_t hider_indices[16]; // MAX_HIDERS is 16
+    int hider_count = 0;
+    
+    for (int i = 0; i < MAX_HIDERS; ++i) {
+        if (match.hiders[i].active && match.hiders[i].server_id == serverId) {
+            hider_indices[hider_count++] = i;
+        }
+    }
+    
+    // destroyed = min(capped_wager, |H|)
+    uint8_t destroyed = std::min(capped_wager, static_cast<uint8_t>(hider_count));
+    
+    // For the first destroyed hiders in H, set server_id = NO_SERVER_ID
+    for (int i = 0; i < destroyed; ++i) {
+        match.hiders[hider_indices[i]].server_id = NO_SERVER_ID;
+    }
+    
+    // lost = capped_wager - destroyed
+    uint8_t lost = capped_wager - destroyed;
+    
+    // Decrement match.seeker.connection_tokens by lost
+    match.seeker.connection_tokens -= lost;
+    
+    // Set match.seeker.belief[serverId] = destroyed
+    match.seeker.belief[serverId] = destroyed;
+    
+    // Set match.seeker.last_probe_tick[serverId] = static_cast<uint8_t>(match.tick & 0xFF)
+    match.seeker.last_probe_tick[serverId] = static_cast<uint8_t>(match.tick & 0xFF);
+    
+    // If output.publicEvents.containsIndex(output.publicEventCount) is true, append PublicLifecycleEvent
+    if (output.publicEvents.containsIndex(output.publicEventCount)) {
+        uint8_t outcome = (destroyed > 0) ? PROBE_OUTCOME_HIT : PROBE_OUTCOME_MISS;
+        PublicLifecycleEvent event{HiderSeekerEventType::SERVER_PROBED, match.tick, serverId, outcome};
+        output.publicEvents.assignValue(output.publicEventCount, event);
+        output.publicEventCount++;
+    }
+    
+    // If output.wagers.containsIndex(output.wagerCount) is true, append WagerRecord
+    if (output.wagers.containsIndex(output.wagerCount)) {
+        WagerRecord wager_record{serverId, capped_wager, destroyed, lost};
+        output.wagers.assignValue(output.wagerCount, wager_record);
+        output.wagerCount++;
+    }
+    
+    // Do not modify match.seeker.seeker_connection_mask
 }
 
 } // namespace hider_seeker

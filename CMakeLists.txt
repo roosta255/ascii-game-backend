@@ -209,10 +209,10 @@ add_library(core_backend STATIC
     src/hider_seeker/ruleset/loa_rules.cpp
     src/hider_seeker/ruleset/action_rules.cpp
     src/hider_seeker/ruleset/connection_rules.cpp
+    src/hider_seeker/ruleset/match_end.cpp
     src/hider_seeker/ruleset/server_metrics.cpp
     src/hider_seeker/ruleset/probe_rules.cpp
     src/hider_seeker/ruleset/intent_ordering.cpp
-    src/hider_seeker/ruleset/connection_rules.cpp
     src/hider_seeker/ruleset/rng.cpp
     src/hider_seeker/ruleset/lifecycle_events.cpp
     src/hider_seeker/ruleset/ring_buffers.cpp
@@ -293,6 +293,7 @@ add_executable(test_target
     test/hider_seeker/turn_advance_loop_test.cpp
     test/hider_seeker/turn_pass_ticks_test.cpp
     test/hider_seeker/ruleset/connection_rules_test.cpp
+    test/hider_seeker/ruleset/match_end_test.cpp
     test/hider_seeker/ruleset/hider_action_enum_test.cpp
     test/hider_seeker/tick/tick_intent_dispatch_test.cpp
     test/hider_seeker/turn/turn_engine_connection_test.cpp
