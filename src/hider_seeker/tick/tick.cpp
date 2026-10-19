@@ -6,6 +6,8 @@
 #include "../ruleset/ring_buffers.hpp"
 #include "../ruleset/server_metrics.hpp"
 #include "../ruleset/connection_rules.hpp"
+#include "../seeker/seeker_turn.hpp"
+#include "../ruleset/match_end.hpp"
 
 #include <algorithm>
 
@@ -111,7 +113,7 @@ TickOutput runTick(MatchState& state,
                     const Array<TickIntent, MAX_INTENTS_PER_TICK>& candidateIntents,
                     uint8_t candidateIntentCount,
                     const ConsumedKeySet& alreadyConsumed,
-                    const iTargetRankingPolicy* seekerPolicy) {
+                    const iSeekerPolicy* seekerPolicy) {
     TickOutput output;
     
     // Step 1 (ELIGIBILITY): collect every candidate whose key isn't already
@@ -189,54 +191,13 @@ TickOutput runTick(MatchState& state,
         pushMetricFrame(server, server.current);
     }
     
-    // Step 6 (SEEKER-POLICY): resolve probes based on policy
-    if (seekerPolicy != nullptr) {
-        // Every slot starts as "no candidate" so slots the policy leaves
-        // untouched are skipped below (a zeroed slot would mean server 0).
-        Array<ProbeCandidate, MAX_SERVERS> candidates;
-        for (auto& slot : candidates) {
-            slot = ProbeCandidate{NO_SERVER_ID, 0};
-        }
-        seekerPolicy->rankTargets(state, candidates);
-        
-        // Step 7 (PROBES): process candidates in policy order within the token budget
-        // Snapshot the initial connection_tokens balance to prevent mid-tick token awards
-        // from allowing more applyProbe calls than permitted by the start-of-tick balance.
-        // The snapshot is never refreshed inside the loop: tokens awarded by
-        // resolveProbeConsequences during this tick do not raise the bound.
-        const uint8_t initialTokens = state.seeker.connection_tokens;
-        uint8_t probesIssued = 0;
-        for (const ProbeCandidate& candidate : candidates) {
-            // Skip invalid candidates (NO_SERVER_ID means no candidate)
-            if (candidate.serverId == NO_SERVER_ID) {
-                continue;
-            }
-
-            // Check against the initial token balance, not the current one
-            if (probesIssued >= initialTokens) {
-                break; // Start-of-probe-resolution budget exhausted
-            }
-
-            // A result applyProbe does not fill (rejected probe) is a miss against
-            // the candidate's own server id, so resolveProbeConsequences never acts
-            // on an unrelated server.
-            ProbeResult result{};
-            result.hit = false;
-            result.targetServerId = candidate.serverId;
-
-            // applyProbe deducts the per-probe token cost itself.
-            applyProbe(state, candidate.serverId, result);
-            probesIssued++;
-
-            // Unconditionally resolve consequences for every policy-selected
-            // candidate processed within the token budget (architecture plan).
-            ProbeConsequences consequences = resolveProbeConsequences(state, result);
-
-            output.probeResults.assignValue(output.probeCount, result);
-            output.probeConsequences.assignValue(output.probeCount, consequences);
-            output.probeCount++;
-        }
+    // Step 6 (SEEKER): the seeker's turn (score, wagers, closes, opens).
+    if (seekerPolicy != nullptr && state.phase == PHASE_ACTIVE) {
+        runSeekerTurn(state, *seekerPolicy, output);
     }
+
+    // Step 7 (MATCH END): checked at the end of every tick.
+    checkMatchEnd(state);
     
     return output;
 }

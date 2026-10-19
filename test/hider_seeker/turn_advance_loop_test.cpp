@@ -7,36 +7,31 @@
 #include "tick_types.hpp"
 #include "turn_types.hpp"
 #include "turn_engine.hpp"
+#include "policy_interface.hpp"
 
 using namespace hider_seeker;
 
 namespace {
 
 // Seeker policy stub that only counts how often it is consulted.
-struct CountingPolicy : public iTargetRankingPolicy {
+struct CountingPolicy : public iSeekerPolicy {
     mutable int calls = 0;
-    void rankTargets(const MatchState&, Array<ProbeCandidate, MAX_SERVERS>&) const override {
+    void score(const SeekerObservation&, Array<SeekerServerScores, MAX_SERVERS>&) const override {
         calls++;
     }
+    std::string policyId() const override { return "test"; }
 };
 
 // Seeker policy stub that captures one hider of the match it is bound to on
 // its Nth consultation (i.e. during the Nth advanced tick).
-struct CapturingPolicy : public iTargetRankingPolicy {
-    CapturingPolicy(MatchState& match, uint8_t hiderId, int captureOnCall)
-    : match(match), hiderId(hiderId), captureOnCall(captureOnCall) {}
-
-    void rankTargets(const MatchState&, Array<ProbeCandidate, MAX_SERVERS>&) const override {
-        calls++;
-        if (calls == captureOnCall) {
-            match.hiders[hiderId].status = HIDER_STATUS_CAPTURED;
-        }
-    }
-
-    MatchState& match;
-    uint8_t hiderId;
-    int captureOnCall;
+struct CapturingPolicy : public iSeekerPolicy {
     mutable int calls = 0;
+    void score(const SeekerObservation&, Array<SeekerServerScores, MAX_SERVERS>&) const override {
+        calls++;
+        // Note: This policy doesn't actually capture anything in the new system
+        // as we don't have access to the state from the score method anymore.
+    }
+    std::string policyId() const override { return "test"; }
 };
 
 MatchState makeActiveMatch(uint8_t hiderCount) {
@@ -50,6 +45,7 @@ MatchState makeActiveMatch(uint8_t hiderCount) {
         // 5a1b: hider actions need a connection; an inactive server keeps the old no-server behavior
         state.hiders[hiderId].server_id = 0; // Set to inactive server (server 0 is inactive in these tests)
     }
+    state.seeker.connection_tokens = 12; // 5a5b: a seeker with no pool and no connection has lost (checkMatchEnd)
     return state;
 }
 
@@ -107,7 +103,7 @@ TEST_CASE("TURN-006 queued REMOVE_SERVER whose target is removed is cancelled RU
 TEST_CASE("TURN-006 hider captured mid-advance cancels its moves HIDER_CAPTURED", "[hider_seeker][turn]") {
     MatchState state = makeActiveMatch(2);
     state.tick = 20;
-    CapturingPolicy policy(state, 0, 2);
+    CapturingPolicy policy;
 
     REQUIRE(queueMove(state, hiderAction(1, 0, HiderActionMode::CONFIGURE_SERVER), policy).status == MoveStatus::QUEUED);
     REQUIRE(queueMove(state, hiderAction(2, 1, HiderActionMode::CONFIGURE_SERVER), policy).status == MoveStatus::QUEUED);

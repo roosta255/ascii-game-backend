@@ -3,13 +3,14 @@
 #include "../../../src/hider_seeker/domain/state.hpp"
 #include "../../../src/hider_seeker/ruleset/rule_types.hpp"
 #include "../../../src/hider_seeker/ruleset/action_rules.hpp"
-#include "../../../src/hider_seeker/ruleset/target_ranking_interface.hpp"
+#include "../../../src/hider_seeker/seeker/policy_interface.hpp"
 
 using namespace hider_seeker;
 
 // Simple mock policy for testing
-struct MockTargetRankingPolicy : public iTargetRankingPolicy {
-    void rankTargets(const MatchState&, Array<ProbeCandidate, MAX_SERVERS>&) const override {}
+struct MockTargetRankingPolicy : public iSeekerPolicy {
+    void score(const SeekerObservation&, Array<SeekerServerScores, MAX_SERVERS>&) const override {}
+    std::string policyId() const override { return "test"; }
 };
 
 // CONN-009: A unit test confirms that a move rejected for lack of connections 

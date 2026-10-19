@@ -1,15 +1,16 @@
 #pragma once
 
-#include "../ruleset/target_ranking_interface.hpp"
+#include <string>
+#include "../seeker/policy_interface.hpp"
 
 namespace hider_seeker {
 
-// PLACEHOLDER pending SEEKER-005: a seeker policy that ranks nothing. It
-// writes no candidate slot, so every slot keeps the NO_SERVER_ID value runTick
-// pre-fills it with and no probe is ever issued.
-class NullSeekerPolicy : public iTargetRankingPolicy {
+// PLACEHOLDER pending SEEKER-005: a seeker policy that leaves every score at
+// 0, so the seeker never opens, closes or wagers.
+class NullSeekerPolicy : public iSeekerPolicy {
 public:
-    void rankTargets(const MatchState&, Array<ProbeCandidate, MAX_SERVERS>&) const override {}
+    void score(const SeekerObservation&, Array<SeekerServerScores, MAX_SERVERS>&) const override {}
+    std::string policyId() const override { return "null"; }
 };
 
 } // namespace hider_seeker

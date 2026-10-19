@@ -3,14 +3,15 @@
 #include "../../../src/hider_seeker/domain/state.hpp"
 #include "../../../src/hider_seeker/ruleset/rule_types.hpp"
 #include "../../../src/hider_seeker/ruleset/action_rules.hpp"
-#include "../../../src/hider_seeker/ruleset/target_ranking_interface.hpp"
+#include "../../../src/hider_seeker/seeker/policy_interface.hpp"
 #include "../../../src/hider_seeker/ruleset/connection_rules.hpp"
 
 using namespace hider_seeker;
 
 // Simple mock policy for testing
-struct MockTargetRankingPolicy : public iTargetRankingPolicy {
-    void rankTargets(const MatchState&, Array<ProbeCandidate, MAX_SERVERS>&) const override {}
+struct MockTargetRankingPolicy : public iSeekerPolicy {
+    void score(const SeekerObservation&, Array<SeekerServerScores, MAX_SERVERS>&) const override {}
+    std::string policyId() const override { return "test"; }
 };
 
 // This test validates that applyHiderAction rejects actions when server_id == NO_SERVER_ID
