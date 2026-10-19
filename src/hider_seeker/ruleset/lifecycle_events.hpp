@@ -8,12 +8,20 @@ namespace hider_seeker {
 
 enum class HiderSeekerEventType : uint8_t {
     SERVER_ADDED,
-    SERVER_REMOVED
+    SERVER_REMOVED,
+    SERVER_PROBED
 };
+
+// PublicLifecycleEvent::outcome values (SERVER_PROBED only).
+constexpr uint8_t PROBE_OUTCOME_NONE = 0;
+constexpr uint8_t PROBE_OUTCOME_HIT = 1;
+constexpr uint8_t PROBE_OUTCOME_MISS = 2;
 
 struct PublicLifecycleEvent {
     HiderSeekerEventType type;
     uint32_t tick;
+    uint8_t server_id = NO_SERVER_ID; // SERVER_PROBED only: the probed server
+    uint8_t outcome = PROBE_OUTCOME_NONE; // SERVER_PROBED only: HIT or MISS
 };
 
 // Appends {type, tick} at outPublicEvents[outPublicEventCount] and increments

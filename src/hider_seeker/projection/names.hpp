@@ -28,8 +28,17 @@ inline const char* eventTypeName(HiderSeekerEventType type) {
     switch (type) {
         case HiderSeekerEventType::SERVER_ADDED:   return "SERVER_ADDED";
         case HiderSeekerEventType::SERVER_REMOVED: return "SERVER_REMOVED";
+        case HiderSeekerEventType::SERVER_PROBED:  return "SERVER_PROBED";
     }
     return "UNKNOWN";
+}
+
+inline const char* probeOutcomeName(uint8_t outcome) {
+    switch (outcome) {
+        case PROBE_OUTCOME_HIT:  return "HIT";
+        case PROBE_OUTCOME_MISS: return "MISS";
+    }
+    return "";
 }
 
 } // namespace hider_seeker

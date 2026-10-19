@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include "lifecycle_events.hpp"
 #include "state.hpp"
+#include "names.hpp"
 
 using namespace hider_seeker;
 
@@ -70,12 +71,32 @@ TEST_CASE("PublicLifecycleEvent has no field capable of carrying hider ID", "[li
     
     // Compare against a struct with exactly the two allowed fields so that
     // alignment padding is accounted for identically on both sides.
-    struct TypeAndTickOnly {
+    struct AllowedFields {
         HiderSeekerEventType type;
         uint32_t tick;
+        uint8_t server_id;
+        uint8_t outcome;
     };
-    static_assert(sizeof(PublicLifecycleEvent) == sizeof(TypeAndTickOnly),
-                  "PublicLifecycleEvent should only contain type and tick fields");
+    static_assert(sizeof(PublicLifecycleEvent) == sizeof(AllowedFields),
+                  "PublicLifecycleEvent should contain type, tick, server_id and outcome fields");
     
     REQUIRE(true); // Placeholder - compile-time check is sufficient
+}
+
+TEST_CASE("eventTypeName returns correct wire names", "[lifecycle]") {
+    REQUIRE(eventTypeName(HiderSeekerEventType::SERVER_PROBED) == "SERVER_PROBED");
+}
+
+TEST_CASE("probeOutcomeName returns correct wire names", "[lifecycle]") {
+    REQUIRE(probeOutcomeName(PROBE_OUTCOME_HIT) == "HIT");
+    REQUIRE(probeOutcomeName(PROBE_OUTCOME_MISS) == "MISS");
+    REQUIRE(probeOutcomeName(PROBE_OUTCOME_NONE) == "");
+}
+
+TEST_CASE("PublicLifecycleEvent default field values", "[lifecycle]") {
+    // Test that a default PublicLifecycleEvent has correct default values
+    PublicLifecycleEvent event{HiderSeekerEventType::SERVER_ADDED, 5};
+    
+    REQUIRE(event.server_id == NO_SERVER_ID); // Should be 0xFF
+    REQUIRE(event.outcome == PROBE_OUTCOME_NONE); // Should be 0
 }

@@ -157,8 +157,14 @@ const char* ruleOutcomeName(RuleOutcome outcome) {
 void appendTurnPublicEvents(MatchRecord& record, const TurnResult& result) {
     for (int i = 0; i < result.publicEventCount; ++i) {
         result.publicEvents.accessConst(i, [&record](const PublicLifecycleEvent& event) {
-            appendPublicEvent(record, PublicEventEntry{eventTypeName(event.type), event.tick,
-                                                       record.state.revision});
+            if (event.type == HiderSeekerEventType::SERVER_PROBED) {
+                appendPublicEvent(record, PublicEventEntry{eventTypeName(event.type), event.tick,
+                                                           record.state.revision, event.server_id,
+                                                           probeOutcomeName(event.outcome)});
+            } else {
+                appendPublicEvent(record, PublicEventEntry{eventTypeName(event.type), event.tick,
+                                                           record.state.revision});
+            }
         });
     }
 }
