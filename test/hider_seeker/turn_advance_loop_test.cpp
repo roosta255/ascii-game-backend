@@ -7,31 +7,34 @@
 #include "tick_types.hpp"
 #include "turn_types.hpp"
 #include "turn_engine.hpp"
+#include "policy_interface.hpp"
 
 using namespace hider_seeker;
 
 namespace {
 
 // Seeker policy stub that only counts how often it is consulted.
-struct CountingPolicy : public iTargetRankingPolicy {
+struct CountingPolicy : public iSeekerPolicy {
     mutable int calls = 0;
-    void rankTargets(const MatchState&, Array<ProbeCandidate, MAX_SERVERS>&) const override {
+    void score(const SeekerObservation&, Array<SeekerServerScores, MAX_SERVERS>&) const override {
         calls++;
     }
+    std::string policyId() const override { return "test"; }
 };
 
 // Seeker policy stub that captures one hider of the match it is bound to on
 // its Nth consultation (i.e. during the Nth advanced tick).
-struct CapturingPolicy : public iTargetRankingPolicy {
+struct CapturingPolicy : public iSeekerPolicy {
     CapturingPolicy(MatchState& match, uint8_t hiderId, int captureOnCall)
     : match(match), hiderId(hiderId), captureOnCall(captureOnCall) {}
 
-    void rankTargets(const MatchState&, Array<ProbeCandidate, MAX_SERVERS>&) const override {
+    void score(const SeekerObservation&, Array<SeekerServerScores, MAX_SERVERS>&) const override {
         calls++;
         if (calls == captureOnCall) {
             match.hiders[hiderId].status = HIDER_STATUS_CAPTURED;
         }
     }
+    std::string policyId() const override { return "test"; }
 
     MatchState& match;
     uint8_t hiderId;
@@ -50,6 +53,7 @@ MatchState makeActiveMatch(uint8_t hiderCount) {
         // 5a1b: hider actions need a connection; an inactive server keeps the old no-server behavior
         state.hiders[hiderId].server_id = 0; // Set to inactive server (server 0 is inactive in these tests)
     }
+    state.seeker.connection_tokens = 12; // 5a5b: a seeker with no pool and no connection has lost (checkMatchEnd)
     return state;
 }
 

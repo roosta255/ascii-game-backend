@@ -8,17 +8,19 @@
 #include "tick_types.hpp"
 #include "turn_types.hpp"
 #include "turn_engine.hpp"
+#include "policy_interface.hpp"
 
 using namespace hider_seeker;
 
 namespace {
 
 // Seeker policy stub that only counts how often it is consulted.
-struct CountingPolicy : public iTargetRankingPolicy {
+struct CountingPolicy : public iSeekerPolicy {
     mutable int calls = 0;
-    void rankTargets(const MatchState&, Array<ProbeCandidate, MAX_SERVERS>&) const override {
+    void score(const SeekerObservation&, Array<SeekerServerScores, MAX_SERVERS>&) const override {
         calls++;
     }
+    std::string policyId() const override { return "test"; }
 };
 
 MatchState makeActiveMatch(uint8_t hiderCount) {
@@ -31,6 +33,7 @@ MatchState makeActiveMatch(uint8_t hiderCount) {
         state.hiders[hiderId].status = HIDER_STATUS_ACTIVE;
         state.hiders[hiderId].server_id = NO_SERVER_ID;
     }
+    state.seeker.connection_tokens = 12; // 5a5b: a seeker with no pool and no connection has lost (checkMatchEnd)
     return state;
 }
 

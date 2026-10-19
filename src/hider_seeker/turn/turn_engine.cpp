@@ -190,7 +190,7 @@ void appendPublicEvents(TurnResult& result, const TickOutput& output) {
 // without one (passTicks), runs the whole budget. Either way it stops early
 // when the match completes. Ticks that ran stay applied. Does not touch
 // state.revision (the caller bumps it once).
-void runAdvanceLoop(MatchState& state, iTargetRankingPolicy& seekerPolicy, uint8_t tickBudget,
+void runAdvanceLoop(MatchState& state, const iSeekerPolicy& seekerPolicy, uint8_t tickBudget,
                     bool hasTrigger, const MoveRequest& trigger, TurnResult& result) {
     // Outcome if the budget runs out.
     result.status = hasTrigger ? MoveStatus::CANCELLED : MoveStatus::APPLIED;
@@ -215,7 +215,7 @@ void runAdvanceLoop(MatchState& state, iTargetRankingPolicy& seekerPolicy, uint8
 
         const TickOutput output = runTick(state, candidates, candidateCount, NO_CONSUMED_KEYS, &seekerPolicy);
         appendPublicEvents(result, output);
-        result.probesIssued += output.probeCount;
+        result.probesIssued += output.wagerCount;
 
         // Pending moves: applied ones leave the ring and are reported;
         // rule-rejected ones are cancelled (RULE_REJECTED); still-unaffordable
@@ -262,8 +262,8 @@ void runAdvanceLoop(MatchState& state, iTargetRankingPolicy& seekerPolicy, uint8
         if (state.phase == PHASE_COMPLETE) {
             if (hasTrigger) {
                 result.status = MoveStatus::CANCELLED;
-                result.reason = TurnReason::MATCH_NOT_ACTIVE;
             }
+            result.reason = TurnReason::MATCH_NOT_ACTIVE;
             return;
         }
     }
@@ -271,7 +271,7 @@ void runAdvanceLoop(MatchState& state, iTargetRankingPolicy& seekerPolicy, uint8
 
 } // namespace
 
-TurnResult playMove(MatchState& state, const MoveRequest& move, iTargetRankingPolicy& seekerPolicy) {
+TurnResult playMove(MatchState& state, const MoveRequest& move, const iSeekerPolicy& seekerPolicy) {
     TurnResult result{};
     if (!passesMoveChecks(state, move, result)) {
         return result;
@@ -295,7 +295,7 @@ TurnResult playMove(MatchState& state, const MoveRequest& move, iTargetRankingPo
     return result;
 }
 
-TurnResult queueMove(MatchState& state, const MoveRequest& move, iTargetRankingPolicy& seekerPolicy) {
+TurnResult queueMove(MatchState& state, const MoveRequest& move, const iSeekerPolicy& seekerPolicy) {
     (void)seekerPolicy; // queueMove never advances a tick, so the policy is never consulted
     TurnResult result{};
     if (!passesMoveChecks(state, move, result)) {
@@ -336,7 +336,7 @@ TurnResult queueMove(MatchState& state, const MoveRequest& move, iTargetRankingP
     return result;
 }
 
-TurnResult passTicks(MatchState& state, uint8_t ticks, iTargetRankingPolicy& seekerPolicy) {
+TurnResult passTicks(MatchState& state, uint8_t ticks, const iSeekerPolicy& seekerPolicy) {
     if (state.phase != PHASE_ACTIVE) {
         return rejected(TurnReason::MATCH_NOT_ACTIVE);
     }

@@ -287,6 +287,7 @@ add_executable(test_target
     test/hider_seeker/ruleset_rng_test.cpp
     test/hider_seeker/ruleset_lifecycle_events_test.cpp
     test/hider_seeker/tick_test.cpp
+    test/hider_seeker/tick_match_end_test.cpp
     test/hider_seeker/serialization_pending_ring_test.cpp
     test/hider_seeker/regeneration_test.cpp
     test/hider_seeker/turn_immediate_apply_test.cpp

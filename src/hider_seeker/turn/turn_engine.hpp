@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../domain/state.hpp"
-#include "../ruleset/target_ranking_interface.hpp"
+#include "../seeker/policy_interface.hpp"
 #include "turn_types.hpp"
 
 namespace hider_seeker {
@@ -22,9 +22,9 @@ namespace hider_seeker {
 // passTicks: advances exactly `ticks` (1..MAX_ADVANCE_TICKS) ticks.
 // cancelPendingMove: removes hiderId's own pending move moveId, or NOT_FOUND.
 
-TurnResult playMove(MatchState& state, const MoveRequest& move, iTargetRankingPolicy& seekerPolicy);
-TurnResult queueMove(MatchState& state, const MoveRequest& move, iTargetRankingPolicy& seekerPolicy);
-TurnResult passTicks(MatchState& state, uint8_t ticks, iTargetRankingPolicy& seekerPolicy);
+TurnResult playMove(MatchState& state, const MoveRequest& move, const iSeekerPolicy& seekerPolicy);
+TurnResult queueMove(MatchState& state, const MoveRequest& move, const iSeekerPolicy& seekerPolicy);
+TurnResult passTicks(MatchState& state, uint8_t ticks, const iSeekerPolicy& seekerPolicy);
 TurnResult cancelPendingMove(MatchState& state, uint8_t hiderId, uint32_t moveId);
 
 } // namespace hider_seeker

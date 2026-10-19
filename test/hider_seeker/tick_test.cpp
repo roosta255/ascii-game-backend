@@ -5,30 +5,22 @@
 #include "action_rules.hpp"
 #include "loa_rules.hpp"
 #include "state.hpp"
+#include "null_seeker_policy.hpp"
 
 using namespace hider_seeker;
 
 namespace {
-    struct StubPolicy : public iTargetRankingPolicy {
-        void rankTargets(const MatchState&, Array<ProbeCandidate, MAX_SERVERS>& outCandidates) const override {
-            // Return no candidates - do nothing (leave array as is)
-        }
-    };
+    // Use NullSeekerPolicy as the no-op policy
+    using StubPolicy = NullSeekerPolicy;
 
-    struct MockPolicy : public iTargetRankingPolicy {
-        void rankTargets(const MatchState& state, Array<ProbeCandidate, MAX_SERVERS>& outCandidates) const override {
-            // Return some mock candidates for testing
-            outCandidates.assignValue(0, ProbeCandidate{1, 100}); // serverId=1, score=100
-            outCandidates.assignValue(1, ProbeCandidate{2, 50});  // serverId=2, score=50
+    struct MockPolicy : public iSeekerPolicy {
+        void score(const SeekerObservation&, Array<SeekerServerScores, MAX_SERVERS>& outCandidates) const override {
+            // Return some mock candidates for testing - set open = 256 for server 1 and wager = 128 for server 2
+            outCandidates.assignValue(0, SeekerServerScores{0, 0, 0}); // server 0
+            outCandidates.assignValue(1, SeekerServerScores{256, 0, 0}); // server 1: open = 256
+            outCandidates.assignValue(2, SeekerServerScores{0, 0, 128}); // server 2: wager = 128
         }
-    };
-
-    struct ThreeCandidatePolicy : public iTargetRankingPolicy {
-        void rankTargets(const MatchState&, Array<ProbeCandidate, MAX_SERVERS>& outCandidates) const override {
-            outCandidates.assignValue(0, ProbeCandidate{0, 300});
-            outCandidates.assignValue(1, ProbeCandidate{1, 200});
-            outCandidates.assignValue(2, ProbeCandidate{2, 100});
-        }
+        std::string policyId() const override { return "test"; }
     };
 
     // Returns the recorded outcome for the given idempotency key; fails the
@@ -139,7 +131,7 @@ TEST_CASE("Tick engine runs without crashing", "[tick]") {
     REQUIRE(outcomeForKey(output, 12346) == RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE);
     REQUIRE(state.server_count == 2);
     REQUIRE(state.servers[2].active == 0);
-    REQUIRE(output.probeCount == 0); // No probes since policy returns no candidates
+    REQUIRE(output.wagerCount == 0); // No wagers since policy returns no candidates
 }
 
 TEST_CASE("Tick engine ADD_SERVER dispatch and activation", "[tick]") {
@@ -621,7 +613,7 @@ TEST_CASE("Tick engine metrics placeholder correctness", "[tick]") {
     // Run tick
     StubPolicy policy;
     TickOutput output = runTick(state, intents, intentCount, alreadyConsumed, &policy);
-    REQUIRE(output.probeCount == 0);
+    REQUIRE(output.wagerCount == 0);
 
     // trace_age (a ServerState field) increments iff trace_strength > 0 after
     // trace's own drift
@@ -728,76 +720,7 @@ TEST_CASE("Tick engine METRICS step leaves inactive servers untouched", "[tick][
     REQUIRE(std::memcmp(&state.servers[4], &before, sizeof(ServerState)) == 0);
 }
 
-TEST_CASE("Tick engine probe-budget truncation", "[tick]") {
-    MatchState state{};
-    
-    // Initialize a basic state for testing
-    state.tick = 1;
-    state.hider_count = 1;
-    state.server_count = 3;
-    state.seeker.connection_tokens = 2; // Only 2 tokens available
-    
-    // Set up hider
-    state.hiders[0].active = 1;
-    state.hiders[0].action_points = 10;
-    state.hiders[0].server_id = 1;
-    
-    // Set up servers
-    state.servers[0].active = 1;
-    state.servers[0].current.cpu = 50;
-    state.servers[0].current.memory = 50;
-    state.servers[1].active = 1;
-    state.servers[1].current.cpu = 60;
-    state.servers[1].current.memory = 60;
-    state.servers[2].active = 1;
-    state.servers[2].current.cpu = 70;
-    state.servers[2].current.memory = 70;
-    
-    // Set up seeker with limited tokens
-    state.seeker.max_tokens = 5;
-    
-    // Create candidate intents
-    Array<TickIntent, MAX_INTENTS_PER_TICK> intents;
-    uint8_t intentCount = 0;
-    
-    // Create consumed key set
-    ConsumedKeySet alreadyConsumed{};
-    
-    // trace_strength 0 everywhere: every probe misses, so no capture rewards
-    // can refill the token budget mid-loop.
-
-    SECTION("3 candidates, 2 tokens: only the first 2 in policy order are probed") {
-        ThreeCandidatePolicy policy;
-        TickOutput output = runTick(state, intents, intentCount, alreadyConsumed, &policy);
-
-        REQUIRE(output.probeCount == 2);
-        REQUIRE(state.seeker.connection_tokens == 0);
-        ProbeResult none{};
-        REQUIRE(output.probeResults.getOrDefault(0, none).targetServerId == 0);
-        REQUIRE(output.probeResults.getOrDefault(1, none).targetServerId == 1);
-        REQUIRE(state.seeker.last_probe_tick[0] == 1);
-        REQUIRE(state.seeker.last_probe_tick[1] == 1);
-        REQUIRE(state.seeker.last_probe_tick[2] == 0); // truncated, never probed
-    }
-
-    SECTION("3 candidates, 1 token: exactly one probe and the budget never wraps") {
-        state.seeker.connection_tokens = 1;
-        ThreeCandidatePolicy policy;
-        TickOutput output = runTick(state, intents, intentCount, alreadyConsumed, &policy);
-
-        REQUIRE(output.probeCount == 1);
-        REQUIRE(state.seeker.connection_tokens == 0);
-    }
-
-    SECTION("3 candidates, 5 tokens: all 3 probed, one token each") {
-        state.seeker.connection_tokens = 5;
-        ThreeCandidatePolicy policy;
-        TickOutput output = runTick(state, intents, intentCount, alreadyConsumed, &policy);
-
-        REQUIRE(output.probeCount == 3);
-        REQUIRE(state.seeker.connection_tokens == 2);
-    }
-}
+// 5a5b: probe-budget truncation is gone; see seeker_turn_test.cpp
 
 TEST_CASE("Tick engine cross-call idempotency retry", "[tick]") {
     MatchState state{};
@@ -946,7 +869,7 @@ TEST_CASE("Tick engine resource-exhaustion visibility", "[tick]") {
         MockPolicy policy;
         TickOutput output = runTick(state, intents, 0, alreadyConsumed, &policy);
 
-        REQUIRE(output.probeCount == 0);
+        REQUIRE(output.wagerCount == 0);
         REQUIRE(state.seeker.connection_tokens == 0); // never wraps below zero
         REQUIRE(state.rng_state == rngBefore); // no draw was made
         REQUIRE(state.seeker.last_probe_tick[1] == 0);
@@ -1001,9 +924,8 @@ TEST_CASE("Tick engine determinism across independent invocations", "[tick]") {
     TickOutput output1 = runTick(state1, intents, intentCount, alreadyConsumed, &policy);
     TickOutput output2 = runTick(state2, intents, intentCount, alreadyConsumed, &policy);
 
-    // The tick actually exercised actions, metrics and probes
+    // The tick actually exercised actions and metrics (no probes anymore)
     REQUIRE(output1.intentOutcomeCount == 3);
-    REQUIRE(output1.probeCount == 2);
 
     // MatchState is byte-identical
     REQUIRE(std::memcmp(&state1, &state2, sizeof(MatchState)) == 0);
@@ -1021,23 +943,6 @@ TEST_CASE("Tick engine determinism across independent invocations", "[tick]") {
         const IntentOutcomeRecord& b = output2.intentOutcomes.getOrDefault(i, none);
         REQUIRE(a.idempotencyKey == b.idempotencyKey);
         REQUIRE(a.outcome == b.outcome);
-    }
-
-    REQUIRE(output1.probeCount == output2.probeCount);
-    for (int i = 0; i < output1.probeCount; ++i) {
-        ProbeResult noResult{};
-        const ProbeResult& ra = output1.probeResults.getOrDefault(i, noResult);
-        const ProbeResult& rb = output2.probeResults.getOrDefault(i, noResult);
-        REQUIRE(ra.hit == rb.hit);
-        REQUIRE(ra.targetServerId == rb.targetServerId);
-        REQUIRE(ra.rngStateBefore == rb.rngStateBefore);
-        REQUIRE(ra.rngCounter == rb.rngCounter);
-        REQUIRE(ra.randomValue == rb.randomValue);
-
-        ProbeConsequences noConsequences{};
-        const ProbeConsequences& ca = output1.probeConsequences.getOrDefault(i, noConsequences);
-        const ProbeConsequences& cb = output2.probeConsequences.getOrDefault(i, noConsequences);
-        REQUIRE(std::memcmp(&ca, &cb, sizeof(ProbeConsequences)) == 0);
     }
 }
 
