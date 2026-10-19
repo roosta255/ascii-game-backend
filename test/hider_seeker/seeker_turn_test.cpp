@@ -48,14 +48,13 @@ TEST_CASE("seeker turn wager rounding", "[seeker-turn]") {
     MatchState state{};
     state.phase = PHASE_ACTIVE;
     state.seeker_connection_mask = 0x0001; // connected to server 0
-    state.seeker.connection_tokens = 5; // give some tokens so wager can be applied
+    state.seeker.connection_tokens = 12; // give some tokens so wager can be applied
     
     // Make sure server 0 is active
     state.servers[0].active = 1;
     
-    // Add a hider to server 0 so that applyWager can work properly
-    state.hiders[0].active = 1;
-    state.hiders[0].server_id = 0;
+    // Remove hider from server 0 so that wager is all MISS and W shows in the WagerRecord
+    // (per OPERATOR-001 instruction)
     
     ScriptedSeekerPolicy policy;
     policy.scores.access(0, [&](SeekerServerScores& s) { 
@@ -77,13 +76,13 @@ TEST_CASE("seeker turn wager rounding edge cases", "[seeker-turn]") {
     MatchState state{};
     state.phase = PHASE_ACTIVE;
     state.seeker_connection_mask = 0x0001; // connected to server 0
+    state.seeker.connection_tokens = 12;
     
     // Make sure server 0 is active
     state.servers[0].active = 1;
     
-    // Add a hider to server 0 so that applyWager can work properly
-    state.hiders[0].active = 1;
-    state.hiders[0].server_id = 0;
+    // Remove hider from server 0 so that wager is all MISS and W shows in the WagerRecord
+    // (per OPERATOR-001 instruction)
 
     ScriptedSeekerPolicy policy;
     
@@ -295,13 +294,13 @@ TEST_CASE("seeker turn unconnected server ignored", "[seeker-turn]") {
     MatchState state{};
     state.phase = PHASE_ACTIVE;
     state.seeker_connection_mask = 0x0001; // connected to server 0 only
+    state.seeker.connection_tokens = 12;
     
     // Make sure server 0 is active
     state.servers[0].active = 1;
     
-    // Add a hider to server 0 so that applyWager can work properly
-    state.hiders[0].active = 1;
-    state.hiders[0].server_id = 0;
+    // Remove hider from server 0 so that wager is all MISS and W shows in the WagerRecord
+    // (per OPERATOR-001 instruction)
 
     ScriptedSeekerPolicy policy;
     policy.scores.access(0, [&](SeekerServerScores& s) { 
