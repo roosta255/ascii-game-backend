@@ -58,7 +58,7 @@ struct TurnResult {
     // rule rejection).
     RuleOutcome ruleOutcome = RuleOutcome::ACCEPTED;
     // Public lifecycle events of every intent applied by this call, in order.
-    Array<PublicLifecycleEvent, MAX_EVENTS> publicEvents;
+    Array<PublicLifecycleEvent, MAX_TICK_PUBLIC_EVENTS> publicEvents;
     uint8_t publicEventCount = 0;
     Array<PendingMoveApplied, MAX_PENDING_MOVES> pendingApplied;
     uint8_t pendingAppliedCount = 0;

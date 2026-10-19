@@ -16,7 +16,7 @@ namespace hider_seeker {
 // lifecycle event to outPublicEvents, the 2-argument form discards it. Neither
 // touches the seeker policy, probes, or metric frames.
 RuleOutcome applyTickIntent(MatchState& state, const TickIntent& intent,
-                            Array<PublicLifecycleEvent, MAX_EVENTS>& outPublicEvents,
+                            Array<PublicLifecycleEvent, MAX_TICK_PUBLIC_EVENTS>& outPublicEvents,
                             uint8_t& outPublicEventCount);
 RuleOutcome applyTickIntent(MatchState& state, const TickIntent& intent);
 TickOutput runTick(MatchState& state,

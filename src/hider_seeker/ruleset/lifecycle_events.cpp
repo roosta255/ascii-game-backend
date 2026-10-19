@@ -3,7 +3,7 @@
 namespace hider_seeker {
 
 RuleOutcome emitPublicLifecycleEventIfDefined(HiderSeekerEventType type, uint32_t tick, bool isDefinedPublicByRuleset,
-                                               Array<PublicLifecycleEvent, MAX_EVENTS>& outPublicEvents,
+                                               Array<PublicLifecycleEvent, MAX_TICK_PUBLIC_EVENTS>& outPublicEvents,
                                                uint8_t& outPublicEventCount) {
     // Not public under the ruleset: nothing is appended (not a rejection).
     if (!isDefinedPublicByRuleset) {

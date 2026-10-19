@@ -235,7 +235,7 @@ TEST_CASE("PROJ-002: self, team, and pending shapes", "[hider_seeker][projection
     }
 
     SECTION("bob removing server 1 via LOA relocates him to server 0 and drops server 1") {
-        Array<PublicLifecycleEvent, MAX_EVENTS> events;
+        Array<PublicLifecycleEvent, MAX_TICK_PUBLIC_EVENTS> events;
         uint8_t eventCount = 0;
         REQUIRE(applyRemoveServer(state, 1, 1, events, eventCount) == RuleOutcome::ACCEPTED);
         REQUIRE(state.hiders[1].server_id == 0);

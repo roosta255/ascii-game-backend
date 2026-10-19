@@ -17,6 +17,9 @@ constexpr uint8_t PROBE_OUTCOME_NONE = 0;
 constexpr uint8_t PROBE_OUTCOME_HIT = 1;
 constexpr uint8_t PROBE_OUTCOME_MISS = 2;
 
+// One tick's public events: one per applied intent, plus one SERVER_PROBED per wager (at most one wager per server).
+constexpr uint8_t MAX_TICK_PUBLIC_EVENTS = MAX_INTENTS_PER_TICK + MAX_SERVERS;
+
 struct PublicLifecycleEvent {
     HiderSeekerEventType type;
     uint32_t tick;
@@ -29,7 +32,7 @@ struct PublicLifecycleEvent {
 // batch several events into the same array by reusing the same count. Returns
 // REJECTED_NO_SLOT_AVAILABLE (appending nothing) if the array is already full.
 RuleOutcome emitPublicLifecycleEventIfDefined(HiderSeekerEventType, uint32_t tick, bool isDefinedPublicByRuleset,
-                                               Array<PublicLifecycleEvent, MAX_EVENTS>& outPublicEvents,
+                                               Array<PublicLifecycleEvent, MAX_TICK_PUBLIC_EVENTS>& outPublicEvents,
                                                uint8_t& outPublicEventCount);
 
 } // namespace hider_seeker

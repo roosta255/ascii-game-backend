@@ -12,7 +12,7 @@
 namespace hider_seeker {
 
 RuleOutcome applyTickIntent(MatchState& state, const TickIntent& intent,
-                            Array<PublicLifecycleEvent, MAX_EVENTS>& outPublicEvents,
+                            Array<PublicLifecycleEvent, MAX_TICK_PUBLIC_EVENTS>& outPublicEvents,
                             uint8_t& outPublicEventCount) {
     const IntentRecord& intentRecord = intent.intent;
 
@@ -50,7 +50,7 @@ RuleOutcome applyTickIntent(MatchState& state, const TickIntent& intent,
 
 RuleOutcome applyTickIntent(MatchState& state, const TickIntent& intent) {
     // Same single dispatch point; any public lifecycle event is discarded.
-    Array<PublicLifecycleEvent, MAX_EVENTS> discardedEvents;
+    Array<PublicLifecycleEvent, MAX_TICK_PUBLIC_EVENTS> discardedEvents;
     uint8_t discardedEventCount = 0;
     return applyTickIntent(state, intent, discardedEvents, discardedEventCount);
 }

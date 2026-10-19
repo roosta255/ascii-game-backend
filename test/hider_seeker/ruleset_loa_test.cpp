@@ -7,7 +7,7 @@ using namespace hider_seeker;
 
 namespace {
 // Scratch LOA-005 output channel for tests that do not inspect emitted events.
-Array<PublicLifecycleEvent, MAX_EVENTS> scratchEvents;
+Array<PublicLifecycleEvent, MAX_TICK_PUBLIC_EVENTS> scratchEvents;
 uint8_t scratchEventCount = 0;
 
 RuleOutcome addServer(MatchState& match, uint8_t hiderId) {
@@ -111,7 +111,7 @@ TEST_CASE("applyRemoveServer on an occupied slot relocates atomically or is full
     SECTION("no other active server to relocate to rejects with no state change") {
         resetServerSlot(match.servers[1]);
         match.server_count = 1;
-        Array<PublicLifecycleEvent, MAX_EVENTS> events;
+        Array<PublicLifecycleEvent, MAX_TICK_PUBLIC_EVENTS> events;
         uint8_t eventCount = 0;
         REQUIRE(applyRemoveServer(match, 0, 0, events, eventCount) == RuleOutcome::REJECTED_RELOCATION_FAILED);
         REQUIRE(eventCount == 0);
@@ -173,7 +173,7 @@ TEST_CASE("applyAddServer/applyRemoveServer expose the public lifecycle event to
     MatchState match = {};
     match.tick = 42;
     match.hiders[0].resources[LOA_RESOURCE_INDEX] = 2;
-    Array<PublicLifecycleEvent, MAX_EVENTS> events;
+    Array<PublicLifecycleEvent, MAX_TICK_PUBLIC_EVENTS> events;
     uint8_t eventCount = 0;
     const PublicLifecycleEvent fallback = {HiderSeekerEventType::SERVER_ADDED, 0};
 
