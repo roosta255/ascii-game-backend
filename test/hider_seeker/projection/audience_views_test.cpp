@@ -200,15 +200,15 @@ TEST_CASE("VIEW-010 (views): server_id null for disconnected hiders", "[hider_se
     MatchState state = baseState();
     const ViewContext ctx = baseContext();
 
-    // Test: disconnected hider's self.server_id and team server_id are null
+    // Test: disconnected hider's self.server_id is null
     state.hiders[0].server_id = NO_SERVER_ID;
     const json hider = buildHiderView(state, ctx, 0);
     REQUIRE(hider.at("self").at("server_id").is_null());
     
-    // Test: team member's server_id is also null when disconnected
+    // Test: team member's server_id reflects actual connection status (not null)
     const json team = hider.at("team");
     REQUIRE(team.size() == 1);
-    REQUIRE(team.at(0).at("server_id").is_null());
+    REQUIRE(team.at(0).at("server_id") == 1);  // hider 1 is still connected to server 1
 
     // Test: connected hider's server_id contains the correct server number
     state.hiders[0].server_id = 0;

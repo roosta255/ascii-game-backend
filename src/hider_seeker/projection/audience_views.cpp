@@ -127,14 +127,19 @@ json renderCommon(const MatchState& state, const ViewContext& ctx, const char* a
     view["servers"] = renderServers(state);
     view["events"] = renderEvents(ctx);
     // Add winner field
-    if (state.winner == static_cast<uint8_t>(MatchWinner::NONE)) {
-        view["winner"] = json(nullptr);  // MatchWinner::NONE
-    } else if (state.winner == static_cast<uint8_t>(MatchWinner::SEEKER)) {
-        view["winner"] = "SEEKER";
-    } else if (state.winner == static_cast<uint8_t>(MatchWinner::HIDERS)) {
-        view["winner"] = "HIDERS";
-    } else {
-        view["winner"] = json(nullptr);  // Default to null for unknown values
+    switch (static_cast<MatchWinner>(state.winner)) {
+        case MatchWinner::NONE:
+            view["winner"] = json(nullptr);  // MatchWinner::NONE
+            break;
+        case MatchWinner::SEEKER:
+            view["winner"] = "SEEKER";
+            break;
+        case MatchWinner::HIDERS:
+            view["winner"] = "HIDERS";
+            break;
+        default:
+            view["winner"] = json(nullptr);  // Default to null for unknown values
+            break;
     }
     return view;
 }
