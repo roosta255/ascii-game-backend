@@ -6,6 +6,16 @@ namespace hider_seeker {
 
 namespace {
 
+// Adds amount to value without exceeding cap. A value already above cap is
+// left as it is (regeneration never lowers a resource).
+uint8_t saturatingAdd(uint8_t value, uint8_t amount, uint8_t cap) {
+    if (value >= cap) {
+        return value;
+    }
+    const uint16_t sum = static_cast<uint16_t>(value) + amount;
+    return sum > cap ? cap : static_cast<uint8_t>(sum);
+}
+
 // LOA-005: whether each server lifecycle event is public.
 // TODO(LOA-005): PLACEHOLDER pending ruleset confirmation — this is an undecided
 // design choice listed in the implementation plan's open_questions, not settled
@@ -242,6 +252,13 @@ void invalidateServerReferences(MatchState& match, uint8_t serverId) {
     // Seeker per-slot knowledge is reset.
     seeker.belief[serverId] = 0;
     seeker.last_probe_tick[serverId] = 0;
+    
+    // CONN-007: If the seeker was connected to this server, refund a connection token
+    const uint16_t maskBit = 1u << serverId;
+    if (match.seeker_connection_mask & maskBit) {
+        match.seeker_connection_mask &= ~maskBit;  // Clear the bit
+        match.seeker.connection_tokens = saturatingAdd(match.seeker.connection_tokens, 1, 255);  // Increment with saturating addition at 255
+    }
 }
 
 } // namespace hider_seeker

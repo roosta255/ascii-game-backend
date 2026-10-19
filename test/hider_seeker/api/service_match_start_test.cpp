@@ -30,4 +30,8 @@ TEST_CASE("ServiceMatchStartTest", "[service][match-start]") {
     // CONN-002c: Check that all hiders start disconnected (server_id = NO_SERVER_ID)
     REQUIRE(state.hiders[0].server_id == NO_SERVER_ID);
     REQUIRE(state.hiders[1].server_id == NO_SERVER_ID);
+    
+    // CONN-002b: Check that seeker connection tokens are initialized to 12
+    REQUIRE(state.seeker.connection_tokens == 12);
+    REQUIRE(state.seeker.max_tokens == 12);
 }
