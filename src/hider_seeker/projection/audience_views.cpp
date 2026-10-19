@@ -127,8 +127,8 @@ json renderCommon(const MatchState& state, const ViewContext& ctx, const char* a
     view["servers"] = renderServers(state);
     view["events"] = renderEvents(ctx);
     // Add winner field
-    const char* winnerStr = winnerName(static_cast<MatchWinner>(state.winner));
-    if (winnerStr == nullptr) {
+    std::string_view winnerStr = winnerName(static_cast<MatchWinner>(state.winner));
+    if (winnerStr.empty()) {
         view["winner"] = json(nullptr);
     } else {
         view["winner"] = winnerStr;

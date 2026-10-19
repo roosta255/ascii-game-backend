@@ -42,13 +42,13 @@ inline const char* probeOutcomeName(uint8_t outcome) {
     return "";
 }
 
-inline const char* winnerName(MatchWinner winner) {
+inline std::string_view winnerName(MatchWinner winner) {
     switch (winner) {
-        case MatchWinner::NONE:   return nullptr;
+        case MatchWinner::NONE:   return "";
         case MatchWinner::SEEKER: return "SEEKER";
         case MatchWinner::HIDERS: return "HIDERS";
     }
-    return nullptr;
+    return "";
 }
 
 } // namespace hider_seeker
