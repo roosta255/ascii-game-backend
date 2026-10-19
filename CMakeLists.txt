@@ -213,7 +213,6 @@ add_library(core_backend STATIC
     src/hider_seeker/ruleset/server_metrics.cpp
     src/hider_seeker/ruleset/probe_rules.cpp
     src/hider_seeker/ruleset/intent_ordering.cpp
-    src/hider_seeker/ruleset/connection_rules.cpp
     src/hider_seeker/ruleset/rng.cpp
     src/hider_seeker/ruleset/lifecycle_events.cpp
     src/hider_seeker/ruleset/ring_buffers.cpp

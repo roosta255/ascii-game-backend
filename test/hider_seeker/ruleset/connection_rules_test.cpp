@@ -150,7 +150,8 @@ TEST_CASE("applyWager - basic test with one hider", "[connection]") {
     REQUIRE(match.hider_connection_pool == 5);
     
     // Check seeker mask unchanged
-    REQUIRE(match.seeker_connection_mask == (1u << 2) | (1u << 4));
+    uint16_t expected_mask = (1u << 2) | (1u << 4);
+    REQUIRE(match.seeker_connection_mask == expected_mask);
 }
 
 TEST_CASE("applyWager - test with multiple hiders", "[connection]") {
@@ -199,7 +200,8 @@ TEST_CASE("applyWager - test with multiple hiders", "[connection]") {
     REQUIRE(match.hider_connection_pool == 5);
     
     // Check seeker mask unchanged
-    REQUIRE(match.seeker_connection_mask == (1u << 2) | (1u << 4));
+    uint16_t expected_mask = (1u << 2) | (1u << 4);
+    REQUIRE(match.seeker_connection_mask == expected_mask);
 }
 
 TEST_CASE("applyWager - test with no hiders on server", "[connection]") {
@@ -243,7 +245,8 @@ TEST_CASE("applyWager - test with no hiders on server", "[connection]") {
     });
     
     // Check seeker mask unchanged
-    REQUIRE(match.seeker_connection_mask == (1u << 2) | (1u << 4));
+    uint16_t expected_mask = (1u << 2) | (1u << 4);
+    REQUIRE(match.seeker_connection_mask == expected_mask);
 }
 
 TEST_CASE("applyWager - test with capped wager", "[connection]") {
@@ -279,7 +282,8 @@ TEST_CASE("applyWager - test with capped wager", "[connection]") {
     });
     
     // Check seeker mask unchanged
-    REQUIRE(match.seeker_connection_mask == (1u << 2) | (1u << 4));
+    uint16_t expected_mask = (1u << 2) | (1u << 4);
+    REQUIRE(match.seeker_connection_mask == expected_mask);
 }
 
 TEST_CASE("applyWager - test with zero tokens", "[connection]") {
@@ -310,5 +314,6 @@ TEST_CASE("applyWager - test with zero tokens", "[connection]") {
     REQUIRE(output.wagerCount == 0);
     
     // Check seeker mask unchanged
-    REQUIRE(match.seeker_connection_mask == (1u << 2) | (1u << 4));
+    uint16_t expected_mask = (1u << 2) | (1u << 4);
+    REQUIRE(match.seeker_connection_mask == expected_mask);
 }
