@@ -7,6 +7,7 @@ using namespace hider_seeker;
 
 TEST_CASE("ServiceScriptedPolicyTest: end-to-end match end through API", "[service][policy][scripted]") {
     ScriptedSeekerPolicy policy;
+    policy.scores.assignValue(0, SeekerServerScores{256, 0, 256}); // open 256, close 0, wager 256
     ServiceFixture fixture(policy);
     
     // Setup two hiders (alice on server 0, bob on server 1)
@@ -31,10 +32,10 @@ TEST_CASE("ServiceScriptedPolicyTest: end-to-end match end through API", "[servi
     // Attempt another move - should be rejected with MATCH_NOT_ACTIVE
     response = fixture.pass("bob", 1);
     REQUIRE(response.status == 422);
-    REQUIRE(response.body["error"] == "MATCH_NOT_ACTIVE");
+    REQUIRE(response.body["rule_outcome"] == "MATCH_NOT_ACTIVE");
     
     // Check both public and hider views contain correct phase and winner
-    auto publicView = fixture.service.getMatch(fixture.matchId);
+    auto publicView = fixture.service.getLatestView(fixture.matchId, "public", "", "");
     REQUIRE(publicView.body["phase"] == "COMPLETE");
     REQUIRE(publicView.body["winner"] == "SEEKER");
     

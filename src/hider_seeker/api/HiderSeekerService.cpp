@@ -809,7 +809,9 @@ ApiResponse HiderSeekerService::submitMove(const std::string& matchId, const std
             }
         }
         pruneMoves(record);
-        return logged(ApiResponse{200, responseBody}, request);
+        json logBody = request;
+        logBody["seeker_policy"] = seekerPolicy_.policyId();
+        return logged(ApiResponse{200, responseBody}, logBody);
     });
 }
 
@@ -852,7 +854,6 @@ ApiResponse HiderSeekerService::cancelMove(const std::string& matchId, const std
 
         json logBody = request;
         logBody["intent_id"] = intentId;
-        logBody["seeker_policy"] = seekerPolicy_.policyId();
         return logged(ApiResponse{200, responseBody}, logBody);
     });
 }
