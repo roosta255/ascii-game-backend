@@ -811,7 +811,7 @@ ApiResponse HiderSeekerService::submitMove(const std::string& matchId, const std
         pruneMoves(record);
         // For submitMove, we need to add seeker_policy to the log body
         json logBody = request;
-        // Note: This approach won't work in lambda context - we'll handle this differently
+        logBody["seeker_policy"] = seekerPolicy_.policyId();
         return logged(ApiResponse{200, responseBody}, logBody);
     });
 }
