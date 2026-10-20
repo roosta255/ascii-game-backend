@@ -16,6 +16,7 @@
 #include "../tick/tick_types.hpp"
 #include "../turn/turn_engine.hpp"
 #include "../turn/turn_types.hpp"
+#include "../seeker/policy_interface.hpp"
 #include <algorithm>
 #include <random>
 #include <vector>
@@ -486,7 +487,13 @@ ApiResponse viewResponse(const json& view, const std::string& cacheControl, cons
 
 } // namespace
 
-HiderSeekerService::HiderSeekerService(iStore& store) : store_(store) {}
+const NullSeekerPolicy& defaultNullSeekerPolicy() {
+    static const NullSeekerPolicy policy;
+    return policy;
+}
+
+HiderSeekerService::HiderSeekerService(iStore& store) : HiderSeekerService(store, defaultNullSeekerPolicy()) {}
+HiderSeekerService::HiderSeekerService(iStore& store, const iSeekerPolicy& policy) : store_(store), seekerPolicy_(policy) {}
 
 std::mutex& HiderSeekerService::mutexFor(const std::string& matchId) {
     std::lock_guard<std::mutex> guard(matchMutexesGuard_);
@@ -762,12 +769,11 @@ ApiResponse HiderSeekerService::submitMove(const std::string& matchId, const std
         }
 
         // Dispatch into the turn engine.
-        NullSeekerPolicy seekerPolicy;
         const std::vector<uint32_t> pendingBefore = pendingMoveIds(state);
         const uint32_t moveNumber = record.next_move_id;
         TurnResult result;
         if (isPass) {
-            result = passTicks(state, static_cast<uint8_t>(ticks), seekerPolicy);
+            result = passTicks(state, static_cast<uint8_t>(ticks), seekerPolicy_);
         } else {
             MoveRequest move{};
             move.move_id = moveNumber;
@@ -779,7 +785,7 @@ ApiResponse HiderSeekerService::submitMove(const std::string& matchId, const std
                            ? static_cast<uint8_t>(serverId) : NO_SERVER_ID;
             move.target_id = NO_SERVER_ID;
             move.server_mode = static_cast<uint8_t>(intentMode(intentType));
-            result = playMode == "PLAY" ? playMove(state, move, seekerPolicy) : queueMove(state, move, seekerPolicy);
+            result = playMode == "PLAY" ? playMove(state, move, seekerPolicy_) : queueMove(state, move, seekerPolicy_);
         }
 
         if (result.status == MoveStatus::REJECTED) {
@@ -803,7 +809,10 @@ ApiResponse HiderSeekerService::submitMove(const std::string& matchId, const std
             }
         }
         pruneMoves(record);
-        return logged(ApiResponse{200, responseBody}, request);
+        // For submitMove, we need to add seeker_policy to the log body
+        json logBody = request;
+        logBody["seeker_policy"] = seekerPolicy_.policyId();
+        return logged(ApiResponse{200, responseBody}, logBody);
     });
 }
 

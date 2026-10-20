@@ -325,6 +325,10 @@ add_executable(test_target
     test/hider_seeker/observation_leak_test.cpp
     test/hider_seeker/ScriptedSeekerPolicy.cpp
     test/hider_seeker/seeker_turn_test.cpp
+    test/hider_seeker/api/service_seeker_policy_test.cpp
+    test/hider_seeker/api/service_scripted_policy_test.cpp
+    test/hider_seeker/api/service_baseline_seeker_test.cpp
+    test/hider_seeker/api/service_seeker_policy_test.cpp
 )
 
 target_include_directories(test_target PRIVATE ${PROJECT_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/test)

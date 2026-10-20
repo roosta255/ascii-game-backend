@@ -3,6 +3,7 @@
 #include "iStore.hpp"
 #include "../projection/audience_views.hpp"
 #include "view_snapshots.hpp"
+#include "../seeker/policy_interface.hpp"
 #include <map>
 #include <memory>
 #include <mutex>
@@ -28,6 +29,7 @@ struct ApiResponse {
 class HiderSeekerService {
 public:
     explicit HiderSeekerService(iStore& store);
+    HiderSeekerService(iStore& store, const iSeekerPolicy& policy);
 
     ApiResponse createMatch(const std::string& body);
     ApiResponse joinMatch(const std::string& matchId, const std::string& body);
@@ -50,6 +52,7 @@ private:
     std::mutex& mutexFor(const std::string& matchId);
 
     iStore& store_;
+    const iSeekerPolicy& seekerPolicy_;
     std::map<std::string, std::unique_ptr<std::mutex>> matchMutexes_;
     std::mutex matchMutexesGuard_;
 };
