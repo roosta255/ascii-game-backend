@@ -855,8 +855,6 @@ ApiResponse HiderSeekerService::cancelMove(const std::string& matchId, const std
 
         json logBody = request;
         logBody["intent_id"] = intentId;
-        // Remove seeker_policy from cancelMove entries (as per operator instruction)
-        // Note: seeker_policy should not be added to cancel entries
         return logged(ApiResponse{200, responseBody}, logBody);
     });
 }

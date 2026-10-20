@@ -68,8 +68,9 @@ TEST_CASE("ServiceBaselineSeekerTest: full baseline seeker flow", "[service][pol
     auto aliceView = fixture.service.getLatestView(fixture.matchId, "hider", "alice", "");
     REQUIRE(aliceView.body["self"]["server_id"].is_null());
     
-    // Verify all request-log entries have seeker_policy = "baseline"
+    // Verify all request-log move entries have seeker_policy = "baseline"
     for (const auto& logEntry : record.request_log) {
+        if (logEntry.kind != "move") continue;
         REQUIRE(logEntry.body.contains("seeker_policy"));
         REQUIRE(logEntry.body["seeker_policy"] == "baseline");
     }
