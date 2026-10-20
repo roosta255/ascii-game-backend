@@ -40,6 +40,10 @@ TEST_CASE("ServiceBaselineSeekerTest: full baseline seeker flow", "[service][pol
     // Check that seeker tokens reduced by 1 (from the turn)
     REQUIRE(record.state.seeker.connection_tokens == 11);  // Tokens become 11
     
+    // Check that alice's CPU is 15 after BOOST_CPU action
+    // Note: hider_id = 0, so we're checking hider[0] resources[0] (CPU)
+    REQUIRE(record.state.hiders[0].resources[0] == 15);
+    
     // Step 3: Bob passes 1 tick
     response = fixture.pass("bob", 1);
     REQUIRE(response.status == 200);
@@ -49,6 +53,9 @@ TEST_CASE("ServiceBaselineSeekerTest: full baseline seeker flow", "[service][pol
     
     // Verify state changes from second tick
     record = fixture.record();
+    
+    // Check that seeker tokens are 10 after opening server 1
+    REQUIRE(record.state.seeker.connection_tokens == 10);
     
     // Check SERVER_PROBED event in public view
     auto publicView = fixture.service.getLatestView(fixture.matchId, "public", "", "");
