@@ -14,6 +14,7 @@
 #include <nlohmann/json.hpp>
 #include "FileStore.hpp"
 #include "HiderSeekerService.hpp"
+#include "../seeker/policy_interface.hpp"
 #include "match_record.hpp"
 
 namespace hs_test {
@@ -71,6 +72,13 @@ private:
 struct ServiceFixture {
     TempStore temp;
     HiderSeekerService service{temp.store()};
+    
+    // Default constructor (uses NullSeekerPolicy)
+    ServiceFixture() = default;
+    
+    // Construct with a specific policy (policy object must outlive fixture)
+    explicit ServiceFixture(const hider_seeker::iSeekerPolicy& policy) : service(temp.store(), policy) {}
+
     std::string matchId;
     int keyCounter = 0;
 

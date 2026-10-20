@@ -3,12 +3,15 @@
 #include "HiderSeekerService.hpp"
 #include "FileStore.hpp"
 #include "StructuredLog.hpp"
+#include "../seeker/baseline_policy.hpp"
 
 using hider_seeker::ApiResponse;
 using hider_seeker::HiderSeekerService;
+using hider_seeker::BaselineSeekerPolicy;
 
 static FileStore hiderSeekerStore("var/state/hider_seeker_matches");
-static HiderSeekerService hiderSeekerService(hiderSeekerStore);
+static BaselineSeekerPolicy hiderSeekerPolicy;
+static HiderSeekerService hiderSeekerService(hiderSeekerStore, hiderSeekerPolicy);
 
 // Logs the service outcome and returns its body, status, and headers
 // unchanged. A 304 carries no body.
