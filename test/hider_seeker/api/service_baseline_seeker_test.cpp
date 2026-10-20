@@ -41,8 +41,8 @@ TEST_CASE("ServiceBaselineSeekerTest: full baseline seeker flow", "[service][pol
     REQUIRE(record.state.seeker.connection_tokens == 11);  // Tokens become 11
     
     // Check that alice's CPU is 15 after BOOST_CPU action
-    // Note: hider_id = 0, so we're checking hider[0] resources[0] (CPU)
-    REQUIRE(record.state.hiders[0].resources[0] == 15);
+    // BOOST_CPU: cpu 15; drift in tick 1: 14; drift in tick 2: 13 (as in service_metrics_integration_test.cpp)
+    REQUIRE(record.state.servers[0].current.cpu == 14);
     
     // Step 3: Bob passes 1 tick
     response = fixture.pass("bob", 1);
