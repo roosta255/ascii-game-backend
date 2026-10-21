@@ -230,6 +230,8 @@ add_library(core_backend STATIC
     src/hider_seeker/seeker/seeker_model.cpp
     src/hider_seeker/seeker/model_store.cpp
     src/hider_seeker/seeker/model_policy.cpp
+    src/hider_seeker/seeker/seeker_model_init.cpp
+    src/hider_seeker/seeker/seeker_policy_provider.cpp
 )
 
 # 👇 CRITICAL: Apply include dirs to the library
@@ -252,6 +254,11 @@ target_link_libraries(match_backend PRIVATE
     jsoncpp
     core_backend
 )
+
+# ------------ Seeker model init tool ------------
+add_executable(seeker_model_init tools/seeker_model_init_main.cpp)
+target_include_directories(seeker_model_init PRIVATE ${PROJECT_INCLUDE_DIRS})
+target_link_libraries(seeker_model_init PRIVATE Drogon::Drogon jsoncpp core_backend)
 
 # ------------ Test Target ------------
 add_subdirectory(extern/Catch2)
@@ -334,6 +341,9 @@ add_executable(test_target
     test/hider_seeker/api/service_scripted_policy_test.cpp
     test/hider_seeker/api/service_baseline_seeker_test.cpp
     test/hider_seeker/api/service_seeker_policy_test.cpp
+    test/hider_seeker/seeker_policy_provider_test.cpp
+    test/hider_seeker/api/service_model_policy_test.cpp
+    test/hider_seeker/seeker_model_init_test.cpp
 )
 
 target_include_directories(test_target PRIVATE ${PROJECT_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/test)

@@ -4,14 +4,21 @@
 #include "FileStore.hpp"
 #include "StructuredLog.hpp"
 #include "../seeker/baseline_policy.hpp"
+#include "../seeker/seeker_policy_provider.hpp"
 
 using hider_seeker::ApiResponse;
 using hider_seeker::HiderSeekerService;
-using hider_seeker::BaselineSeekerPolicy;
+
+static const hider_seeker::iSeekerPolicy& selectSeekerPolicy() {
+    static hider_seeker::SeekerPolicyProvider provider("var/models/seeker");
+    if (!provider.fallbackReason().empty()) {
+        LOG_WARN << "seeker model not loaded, using the baseline policy: " << provider.fallbackReason();
+    }
+    return provider.policy();
+}
 
 static FileStore hiderSeekerStore("var/state/hider_seeker_matches");
-static BaselineSeekerPolicy hiderSeekerPolicy;
-static HiderSeekerService hiderSeekerService(hiderSeekerStore, hiderSeekerPolicy);
+static HiderSeekerService hiderSeekerService(hiderSeekerStore, selectSeekerPolicy());
 
 // Logs the service outcome and returns its body, status, and headers
 // unchanged. A 304 carries no body.
