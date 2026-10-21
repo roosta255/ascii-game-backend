@@ -17,6 +17,7 @@
 #include "../turn/turn_engine.hpp"
 #include "../turn/turn_types.hpp"
 #include "../seeker/policy_interface.hpp"
+#include "../ruleset/goal_rules.hpp"
 #include <algorithm>
 #include <random>
 #include <vector>
@@ -655,6 +656,7 @@ ApiResponse HiderSeekerService::startMatch(const std::string& matchId, const std
         state.revision += 1;
         // Initialize new fields added in schema version 3
         state.hider_connection_pool = PLACEHOLDER_HIDER_CONNECTIONS_PER_HIDER * state.hider_count; // PLACEHOLDER pending BALANCE-001
+        seedPlaceholderGoals(state);
         state.seeker_connection_mask = 0;
         state.winner = static_cast<uint8_t>(MatchWinner::NONE);
         
