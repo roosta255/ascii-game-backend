@@ -15,6 +15,7 @@ int runSeekerModelInit(const std::vector<std::string>& args, std::ostream& out, 
     std::string version;
     int64_t seed = 0;
     bool activate = false;
+    bool seedProvided = false;
 
     // Parse arguments
     for (size_t i = 0; i < args.size(); ++i) {
@@ -25,6 +26,7 @@ int runSeekerModelInit(const std::vector<std::string>& args, std::ostream& out, 
         } else if (args[i] == "--seed" && i + 1 < args.size()) {
             try {
                 seed = std::stoll(args[++i]);
+                seedProvided = true;
                 if (seed < 0) {
                     return 2;
                 }
@@ -37,7 +39,7 @@ int runSeekerModelInit(const std::vector<std::string>& args, std::ostream& out, 
     }
 
     // Check required arguments
-    if (root.empty() || version.empty() || seed < 0) {
+    if (root.empty() || version.empty() || !seedProvided) {
         return 2;
     }
 
