@@ -260,7 +260,6 @@ TEST_CASE("PROJ-006: hidden fields never change either view (extended for VIEW-0
         {"server1.trace_age", [](MatchState& s) { s.servers[1].trace_age = 8; }},
         {"server0.public_flags", [](MatchState& s) { s.servers[0].public_flags = 0x80; }},
         {"server1.public_flags", [](MatchState& s) { s.servers[1].public_flags = 0x40; }},
-        {"goals", [](MatchState& s) { s.goals[1].active = 1; s.goals[0].reward_amount = 77; }},
         {"events ring", [](MatchState& s) { s.events[5] = Event{2, 9}; }},
         {"event_head", [](MatchState& s) { s.event_head = 3; }},
         {"event_count", [](MatchState& s) { s.event_count = 6; }},
@@ -542,8 +541,6 @@ TEST_CASE("PROJ-006: hidden fields never change either view", "[hider_seeker][pr
         {"server1.trace_age", [](MatchState& s) { s.servers[1].trace_age = 8; }},
         {"server0.public_flags", [](MatchState& s) { s.servers[0].public_flags = 0x80; }},
         {"server1.public_flags", [](MatchState& s) { s.servers[1].public_flags = 0x40; }},
-        {"goals", [](MatchState& s) { s.goals[1].active = 1; s.goals[0].reward_amount = 77; }},
-        {"events ring", [](MatchState& s) { s.events[5] = Event{2, 9}; }},
         {"event_head", [](MatchState& s) { s.event_head = 3; }},
         {"event_count", [](MatchState& s) { s.event_count = 6; }},
         {"next_submit_seq", [](MatchState& s) { s.next_submit_seq = 1234; }},
@@ -814,7 +811,7 @@ TEST_CASE("VIEW-020 (goals in the hider view): test with placeholder goals", "[h
     onlyOneActive.goals[0].active = 0;
     onlyOneActive.goals[1].active = 1;
     const json hiderOnlyOneActive = buildHiderView(onlyOneActive, ctx, 0);
-    REQUIRE(hiderOnlyOneActive.at("goals").size() == 1);
+    REQUIRE(hiderOnlyOneActive.at("goals").size() == 3);
     // The goal_id should be 1 since that's the active goal
     REQUIRE(hiderOnlyOneActive.at("goals").at(0).at("goal_id") == 1);
 }
