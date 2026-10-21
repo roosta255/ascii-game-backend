@@ -324,6 +324,7 @@ add_executable(test_target
     test/hider_seeker/projection/audience_views_test.cpp
     test/hider_seeker/projection/public_event_test.cpp
     test/hider_seeker/api/service_connect_test.cpp
+    test/hider_seeker/api/service_goals_test.cpp
     test/hider_seeker/api/service_record_events_test.cpp
     test/hider_seeker/api/view_snapshots_test.cpp
     test/hider_seeker/api/service_snapshot_test.cpp
