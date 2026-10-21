@@ -145,6 +145,131 @@ TEST_CASE("RunSeekerModelInferenceTests", "[seeker_model]") {
     REQUIRE(floorDiv(255, 256) == 0);
 }
 
+TEST_CASE("ModelSeekerPolicyInferenceTests", "[seeker_model]") {
+    // Test that ModelSeekerPolicy correctly uses the model inference for active servers
+    // and returns {0, 0, 0} for inactive servers
+    
+    SeekerModel model;
+    
+    // Set all weights to 0 (default)
+    for (auto& x : model.b1) {
+        x = int32_t{0};
+    }
+    for (auto& x : model.b2) {
+        x = int32_t{0};
+    }
+    
+    // Set output biases to the required values: {65536, -65536, 131072} 
+    // which correspond to Q8 outputs of {256, -256, 512}
+    model.b3.assignValue(0, int32_t{65536});   // open = 256 (Q8)
+    model.b3.assignValue(1, int32_t{-65536});  // close = -256 (Q8) 
+    model.b3.assignValue(2, int32_t{131072});  // wager = 512 (Q8)
+    
+    ModelSeekerPolicy policy(model, "test-version");
+    
+    // Create a simple observation
+    SeekerObservation obs;
+    
+    // Make server 0 active with all features set to zero except active flag
+    obs.server.access(0, [&](Array<int16_t, SEEKER_SERVER_FEATURES>& f) {
+        f.assignValue(0, int16_t{256});  // Server is active
+        // All other features are 0 (including seeker connected)
+    });
+    
+    // Set global features to zero
+    obs.global.assignValue(0, int16_t{0});
+    obs.global.assignValue(1, int16_t{0});
+    obs.global.assignValue(2, int16_t{0});
+    obs.global.assignValue(3, int16_t{0});
+    
+    Array<SeekerServerScores, MAX_SERVERS> scores;
+    
+    policy.score(obs, scores);
+    
+    // Check that server 0 (active) has the expected scores
+    scores.access(0, [&](const SeekerServerScores& s) {
+        REQUIRE(s.open == 256);   // Expected from b3[0] = 65536 -> 256
+        REQUIRE(s.close == -256); // Expected from b3[1] = -65536 -> -256  
+        REQUIRE(s.wager == 512);  // Expected from b3[2] = 131072 -> 512
+    });
+    
+    // Check that inactive servers (server 1) have zero scores
+    scores.access(1, [&](const SeekerServerScores& s) {
+        REQUIRE(s.open == 0);
+        REQUIRE(s.close == 0);
+        REQUIRE(s.wager == 0);
+    });
+}
+
+TEST_CASE("ModelSeekerPolicyConnectedServerTests", "[seeker_model]") {
+    // Test that connected server has correct wager score when only w1[0][1], w2[0][0] and w3[2][0] are 256
+    
+    SeekerModel model;
+    
+    // Set all weights to 0 (default)
+    for (auto& x : model.b1) {
+        x = int32_t{0};
+    }
+    for (auto& x : model.b2) {
+        x = int32_t{0};
+    }
+    for (auto& x : model.b3) {
+        x = int32_t{0};
+    }
+    
+    // Set specific weights to 256 as required
+    model.w1.access(0, [&](Array<int16_t, SEEKER_MODEL_INPUTS>& row) {
+        row.assignValue(1, int16_t{256});  // w1[0][1] = 256 (seeker connected feature)
+    });
+    
+    model.w2.access(0, [&](Array<int16_t, SEEKER_MODEL_HIDDEN1>& row) {
+        row.assignValue(0, int16_t{256});  // w2[0][0] = 256
+    });
+    
+    model.w3.access(2, [&](Array<int16_t, SEEKER_MODEL_HIDDEN2>& row) {
+        row.assignValue(0, int16_t{256});  // w3[2][0] = 256 (wager output)
+    });
+    
+    ModelSeekerPolicy policy(model, "test-version");
+    
+    // Create a simple observation
+    SeekerObservation obs;
+    
+    // Make server 0 active and connected
+    obs.server.access(0, [&](Array<int16_t, SEEKER_SERVER_FEATURES>& f) {
+        f.assignValue(0, int16_t{256});  // Server is active
+        f.assignValue(1, int16_t{256});  // Seeker connected (feature 1 = 256)
+    });
+    
+    // Set global features to zero
+    obs.global.assignValue(0, int16_t{0});
+    obs.global.assignValue(1, int16_t{0});
+    obs.global.assignValue(2, int16_t{0});
+    obs.global.assignValue(3, int16_t{0});
+    
+    Array<SeekerServerScores, MAX_SERVERS> scores;
+    
+    policy.score(obs, scores);
+    
+    // Check that connected server has wager = 256
+    scores.access(0, [&](const SeekerServerScores& s) {
+        REQUIRE(s.wager == 256);  // Should be 256 due to the specific weight configuration
+    });
+    
+    // Make server 1 active but not connected (should have wager = 0)
+    obs.server.access(1, [&](Array<int16_t, SEEKER_SERVER_FEATURES>& f) {
+        f.assignValue(0, int16_t{256});  // Server is active
+        f.assignValue(1, int16_t{0});   // Seeker not connected (feature 1 = 0)
+    });
+    
+    policy.score(obs, scores);
+    
+    // Check that unconnected server has wager = 0
+    scores.access(1, [&](const SeekerServerScores& s) {
+        REQUIRE(s.wager == 0);  // Should be 0 due to the specific weight configuration
+    });
+}
+
 TEST_CASE("ModelSeekerPolicyScoreTests", "[seeker_model]") {
     // Test ModelSeekerPolicy::score with a simple model
     SeekerModel model;
@@ -240,6 +365,36 @@ TEST_CASE("RandomInitAndByteLayoutTests", "[seeker_model]") {
     success = seekerModelFromBytes(shortBytes, modelInvalid);
     
     REQUIRE(success == false);
+    
+    // Test specific values from TEST-002: verify that weights are in [-64, 64] and biases are 0
+    SeekerModel testModel = makeRandomSeekerModel(7);
+    
+    // Check that all weights are in the expected range [-64, 64]
+    bool weightsInRange = true;
+    for (int j = 0; j < SEEKER_MODEL_HIDDEN1 && weightsInRange; ++j) {
+        testModel.w1.access(j, [&](const Array<int16_t, SEEKER_MODEL_INPUTS>& row) {
+            // Use range-based for loop as recommended
+            for (const auto& weight : row) {
+                if (weight < -64 || weight > 64) {
+                    weightsInRange = false;
+                }
+            }
+        });
+    }
+    
+    REQUIRE(weightsInRange == true);
+    
+    // Check that all biases are 0
+    // Use range-based for loops as recommended
+    for (const auto& bias : testModel.b1) {
+        REQUIRE(bias == 0);
+    }
+    for (const auto& bias : testModel.b2) {
+        REQUIRE(bias == 0);
+    }
+    for (const auto& bias : testModel.b3) {
+        REQUIRE(bias == 0);
+    }
 }
 
 TEST_CASE("ExistingTestsUnaffected", "[seeker_model]") {
