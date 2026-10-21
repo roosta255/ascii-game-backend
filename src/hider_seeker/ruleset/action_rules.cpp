@@ -1,5 +1,6 @@
 #include "action_rules.hpp"
 #include "server_metrics.hpp"
+#include "goal_rules.hpp"
 #include <array>
 #include <cstdint>
 #include <cstring>
@@ -81,6 +82,14 @@ RuleOutcome applyHiderAction(MatchState& match, uint8_t hiderId, HiderActionMode
         return RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE;
     }
     hider.action_points = static_cast<uint8_t>(hider.action_points - def.ap_cost);
+
+    // For PAY_GOAL, complete a goal after paying AP
+    if (mode == HiderActionMode::PAY_GOAL) {
+        int g = completableGoal(match);
+        if (g >= 0) {
+            match.goals[g].status = GOAL_STATUS_COMPLETED;
+        }
+    }
 
     // No occupied server, or an inactive one: the AP is paid and nothing else changes.
     if (hider.server_id >= MAX_SERVERS || !match.servers[hider.server_id].active) {
