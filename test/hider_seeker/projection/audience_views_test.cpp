@@ -301,6 +301,7 @@ TEST_CASE("PROJ-006: hidden fields never change either view (extended for VIEW-0
                                            HiderActionMode::PAY_GOAL);
                 s.pending_count = 1;
             }},
+            {"goals", [](MatchState& s) { s.goals[1].active = 1; s.goals[0].reward_amount = 77; }}, // 6c: goals are in the hider view now
         };
         for (const auto& mutation : privateOnly) {
             INFO(mutation.first);
@@ -581,6 +582,7 @@ TEST_CASE("PROJ-006: hidden fields never change either view", "[hider_seeker][pr
                                            HiderActionMode::PAY_GOAL);
                 s.pending_count = 1;
             }},
+            {"goals", [](MatchState& s) { s.goals[1].active = 1; s.goals[0].reward_amount = 77; }}, // 6c: goals are in the hider view now
         };
         for (const auto& mutation : privateOnly) {
             INFO(mutation.first);
