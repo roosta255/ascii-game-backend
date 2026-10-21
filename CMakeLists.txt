@@ -228,6 +228,7 @@ add_library(core_backend STATIC
     src/hider_seeker/seeker/baseline_policy.cpp
     src/hider_seeker/seeker/seeker_turn.cpp
     src/hider_seeker/seeker/seeker_model.cpp
+    src/hider_seeker/seeker/model_store.cpp
     src/hider_seeker/seeker/model_policy.cpp
 )
 
@@ -328,6 +329,7 @@ add_executable(test_target
     test/hider_seeker/ScriptedSeekerPolicy.cpp
     test/hider_seeker/seeker_turn_test.cpp
     test/hider_seeker/seeker_model_test.cpp
+    test/hider_seeker/seeker_model_store_test.cpp
     test/hider_seeker/api/service_seeker_policy_test.cpp
     test/hider_seeker/api/service_scripted_policy_test.cpp
     test/hider_seeker/api/service_baseline_seeker_test.cpp
