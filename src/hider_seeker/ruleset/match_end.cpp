@@ -1,11 +1,20 @@
 #include "match_end.hpp"
 #include "../domain/state.hpp"
+#include "goal_rules.hpp"
 
 namespace hider_seeker {
 
 void checkMatchEnd(MatchState& match) {
     // Do nothing unless the match is active
     if (match.phase != PHASE_ACTIVE) {
+        return;
+    }
+    
+    // The hiders win when their completed goals' rewards reach the target
+    // (checked first: a win in the same tick as a loss condition goes to the hiders).
+    if (teamReward(match) >= PLACEHOLDER_HIDER_REWARD_TARGET) {
+        match.phase = PHASE_COMPLETE;
+        match.winner = static_cast<uint8_t>(MatchWinner::HIDERS);
         return;
     }
     
