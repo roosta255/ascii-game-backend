@@ -37,7 +37,7 @@ int runSeekerModelInit(const std::vector<std::string>& args, std::ostream& out, 
     }
 
     // Check required arguments
-    if (root.empty() || version.empty()) {
+    if (root.empty() || version.empty() || seed < 0) {
         return 2;
     }
 

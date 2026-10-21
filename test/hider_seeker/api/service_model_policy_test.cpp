@@ -16,13 +16,6 @@ using hs_test::ServiceFixture;
 using hs_test::intentOf;
 
 TEST_CASE("End-to-end determinism with model policy", "[service_model_policy]") {
-    // Create a temporary directory for testing
-    std::string tempDir = "test_temp_" + std::to_string(std::time(nullptr));
-    
-    // Ensure the directory doesn't exist
-    std::filesystem::remove_all(tempDir);
-    std::filesystem::create_directories(tempDir);
-    
     // Construct ModelSeekerPolicy with a random model (seed 1) and version "r1"
     ModelSeekerPolicy policy(makeRandomSeekerModel(1), "r1");
     
@@ -35,12 +28,16 @@ TEST_CASE("End-to-end determinism with model policy", "[service_model_policy]") 
     b.setupTwoHiders();
     
     // Play BOOST_CPU for alice
-    a.play("alice", intentOf("BOOST_CPU"));
-    b.play("alice", intentOf("BOOST_CPU"));
+    auto alicePlayResponse = a.play("alice", intentOf("BOOST_CPU"));
+    auto bobPassResponse = a.pass("bob", 4);
+    auto alicePlayResponse2 = b.play("alice", intentOf("BOOST_CPU"));
+    auto bobPassResponse2 = b.pass("bob", 4);
     
-    // Pass 4 ticks for bob
-    a.pass("bob", 4);
-    b.pass("bob", 4);
+    // Verify all responses have status 200
+    REQUIRE(alicePlayResponse.status == 200);
+    REQUIRE(bobPassResponse.status == 200);
+    REQUIRE(alicePlayResponse2.status == 200);
+    REQUIRE(bobPassResponse2.status == 200);
     
     // Verify every request-log entry where kind == "move" has seeker_policy == "model:r1"
     for (const auto& entry : a.record().request_log) {
@@ -55,6 +52,39 @@ TEST_CASE("End-to-end determinism with model policy", "[service_model_policy]") 
         }
     }
     
+    // Compare public views
+    auto aPublicView = a.service.getLatestView(a.matchId, "public", "", "");
+    auto bPublicView = b.service.getLatestView(b.matchId, "public", "", "");
+    
+    REQUIRE(aPublicView.status == 200);
+    REQUIRE(bPublicView.status == 200);
+    
+    // Compare hider views for alice
+    auto aHiderView = a.service.getLatestView(a.matchId, "hider", "alice", "");
+    auto bHiderView = b.service.getLatestView(b.matchId, "hider", "alice", "");
+    
+    REQUIRE(aHiderView.status == 200);
+    REQUIRE(bHiderView.status == 200);
+    
+    // Remove match_id and content_hash from both views for comparison
+    auto aPublicBody = aPublicView.body;
+    auto bPublicBody = bPublicView.body;
+    aPublicBody.erase("match_id");
+    aPublicBody.erase("content_hash");
+    bPublicBody.erase("match_id");
+    bPublicBody.erase("content_hash");
+    
+    auto aHiderBody = aHiderView.body;
+    auto bHiderBody = bHiderView.body;
+    aHiderBody.erase("match_id");
+    aHiderBody.erase("content_hash");
+    bHiderBody.erase("match_id");
+    bHiderBody.erase("content_hash");
+    
+    // Compare the views
+    REQUIRE(aPublicBody.dump() == bPublicBody.dump());
+    REQUIRE(aHiderBody.dump() == bHiderBody.dump());
+    
     // Compare stored match states after serialization
     std::vector<uint8_t> aStateBytes, bStateBytes;
     saveMatchState(a.record().state, aStateBytes);
@@ -64,7 +94,4 @@ TEST_CASE("End-to-end determinism with model policy", "[service_model_policy]") 
     for (size_t i = 0; i < aStateBytes.size(); ++i) {
         REQUIRE(aStateBytes[i] == bStateBytes[i]);
     }
-    
-    // Clean up
-    std::filesystem::remove_all(tempDir);
 }
