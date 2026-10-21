@@ -5,6 +5,7 @@
 #include "../ruleset/hider_status.hpp"
 #include "../tick/tick_types.hpp"
 #include "../ruleset/match_end.hpp"
+#include "../ruleset/goal_rules.hpp"
 
 namespace hider_seeker {
 
@@ -109,6 +110,37 @@ json renderEvents(const ViewContext& ctx) {
         events.push_back(toJson(entry));
     }
     return events;
+}
+
+json renderRequirement(const Requirement& req) {
+    json requirement = json::object();
+    requirement["type"] = requirementTypeName(req.type);
+    
+    if (req.type == REQ_SERVER_METRIC_THRESHOLD) {
+        requirement["server_id"] = req.subject_id;
+        requirement["metric"] = serverMetricName(static_cast<ServerMetric>(req.amount));
+    } else {
+        requirement["server_id"] = nullptr;
+        requirement["metric"] = nullptr;
+    }
+    
+    requirement["threshold"] = req.threshold;
+    return requirement;
+}
+
+json renderGoal(const GoalState& goal) {
+    json g = json::object();
+    g["goal_id"] = goal.goal_id;
+    g["status"] = goalStatusName(goal.status);
+    g["reward_amount"] = goal.reward_amount;
+    
+    json requirements = json::array();
+    for (uint8_t i = 0; i < goal.requirement_count; ++i) {
+        requirements.push_back(renderRequirement(goal.requirements[i]));
+    }
+    g["requirements"] = requirements;
+    
+    return g;
 }
 
 // Top-level fields shared by every audience.
@@ -234,6 +266,21 @@ nlohmann::json buildHiderView(const MatchState& state, const ViewContext& ctx, u
     view["team"] = renderTeam(state, ctx, hiderId);
     view["pending"] = renderPending(state, ctx);
     view["team_connections"] = state.hider_connection_pool;
+    
+    // Add goals array after team_connections
+    json goals = json::array();
+    for (uint8_t i = 0; i < MAX_GOALS; ++i) {
+        const GoalState& goal = state.goals[i];
+        if (goal.active != 0) {
+            goals.push_back(renderGoal(goal));
+        }
+    }
+    view["goals"] = goals;
+    
+    // Add team_reward and reward_target
+    view["team_reward"] = teamReward(state);
+    view["reward_target"] = PLACEHOLDER_HIDER_REWARD_TARGET;
+    
     computeContentHash(view);
     return view;
 }

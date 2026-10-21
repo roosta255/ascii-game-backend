@@ -18,6 +18,7 @@
 #include "tick_types.hpp"
 #include "audience_views.hpp"
 #include "match_end.hpp"
+#include "goal_rules.hpp"
 
 using namespace hider_seeker;
 using nlohmann::json;
@@ -118,6 +119,7 @@ PendingMove pendingMove(uint32_t moveId, uint32_t submitSeq, uint8_t hiderId, Ti
 }
 
 // 5a4: view_version 2 adds winner and team_connections
+// 6c: view_version 3 adds goals to the hider view
 const std::set<std::string> COMMON_KEYS = {
     "match_id", "audience", "view_version", "schema_version", "ruleset_version", "revision", "tick", "phase",
     "hider_count", "server_count", "servers", "events", "winner", "content_hash"
@@ -130,7 +132,7 @@ TEST_CASE("PROJ-002/003: hider and public views have exactly their documented to
     const ViewContext ctx = baseContext();
 
     std::set<std::string> hiderKeys = COMMON_KEYS;
-    hiderKeys.insert({"hider_id", "self", "team", "pending", "team_connections"});
+    hiderKeys.insert({"hider_id", "self", "team", "pending", "team_connections", "goals", "team_reward", "reward_target"});
     std::set<std::string> publicKeys = COMMON_KEYS;
     publicKeys.insert("hiders");
 
@@ -158,11 +160,11 @@ TEST_CASE("VIEW-010 (views): view_version 2 and winner handling", "[hider_seeker
     MatchState state = baseState();
     ViewContext ctx = baseContext();
 
-    // Test: both views have view_version 2 and winner null on an active match
+    // Test: both views have view_version 3 and winner null on an active match
     const json hider = buildHiderView(state, ctx, 0);
     const json pub = buildPublicView(state, ctx);
-    REQUIRE(hider.at("view_version") == 2);
-    REQUIRE(pub.at("view_version") == 2);
+    REQUIRE(hider.at("view_version") == 3);
+    REQUIRE(pub.at("view_version") == 3);
     REQUIRE(hider.at("winner").is_null());
     REQUIRE(pub.at("winner").is_null());
 
@@ -258,7 +260,6 @@ TEST_CASE("PROJ-006: hidden fields never change either view (extended for VIEW-0
         {"server1.trace_age", [](MatchState& s) { s.servers[1].trace_age = 8; }},
         {"server0.public_flags", [](MatchState& s) { s.servers[0].public_flags = 0x80; }},
         {"server1.public_flags", [](MatchState& s) { s.servers[1].public_flags = 0x40; }},
-        {"goals", [](MatchState& s) { s.goals[1].active = 1; s.goals[0].reward_amount = 77; }},
         {"events ring", [](MatchState& s) { s.events[5] = Event{2, 9}; }},
         {"event_head", [](MatchState& s) { s.event_head = 3; }},
         {"event_count", [](MatchState& s) { s.event_count = 6; }},
@@ -300,6 +301,7 @@ TEST_CASE("PROJ-006: hidden fields never change either view (extended for VIEW-0
                                            HiderActionMode::PAY_GOAL);
                 s.pending_count = 1;
             }},
+            {"goals", [](MatchState& s) { s.goals[1].active = 1; s.goals[0].reward_amount = 77; }}, // 6c: goals are in the hider view now
         };
         for (const auto& mutation : privateOnly) {
             INFO(mutation.first);
@@ -540,8 +542,6 @@ TEST_CASE("PROJ-006: hidden fields never change either view", "[hider_seeker][pr
         {"server1.trace_age", [](MatchState& s) { s.servers[1].trace_age = 8; }},
         {"server0.public_flags", [](MatchState& s) { s.servers[0].public_flags = 0x80; }},
         {"server1.public_flags", [](MatchState& s) { s.servers[1].public_flags = 0x40; }},
-        {"goals", [](MatchState& s) { s.goals[1].active = 1; s.goals[0].reward_amount = 77; }},
-        {"events ring", [](MatchState& s) { s.events[5] = Event{2, 9}; }},
         {"event_head", [](MatchState& s) { s.event_head = 3; }},
         {"event_count", [](MatchState& s) { s.event_count = 6; }},
         {"next_submit_seq", [](MatchState& s) { s.next_submit_seq = 1234; }},
@@ -582,6 +582,7 @@ TEST_CASE("PROJ-006: hidden fields never change either view", "[hider_seeker][pr
                                            HiderActionMode::PAY_GOAL);
                 s.pending_count = 1;
             }},
+            {"goals", [](MatchState& s) { s.goals[1].active = 1; s.goals[0].reward_amount = 77; }}, // 6c: goals are in the hider view now
         };
         for (const auto& mutation : privateOnly) {
             INFO(mutation.first);
@@ -659,4 +660,180 @@ TEST_CASE("VIEW-002: trace raised by a hider action never reaches any view", "[h
     REQUIRE(buildHiderView(untraced, ctx, 0).dump() == hiderViews[0].dump());
     REQUIRE(buildHiderView(untraced, ctx, 1).dump() == hiderViews[1].dump());
     REQUIRE(buildPublicView(untraced, ctx).dump() == publicView.dump());
+}
+
+TEST_CASE("VIEW-020 (goals in the hider view): test with placeholder goals", "[hider_seeker][projection]") {
+    // Create a clean state without any pre-existing goals
+    MatchState state{};
+    state.schema_version = 2;
+    state.ruleset_version = 1;
+    state.revision = 7;
+    state.tick = 3;
+    state.phase = PHASE_ACTIVE;
+    state.hider_count = 2;
+    state.server_count = 2;
+    state.hider_connection_pool = 6;
+    
+    // Set up hiders and servers
+    for (uint8_t slot = 0; slot < 2; ++slot) {
+        HiderState& hider = state.hiders[slot];
+        hider.active = 1;
+        hider.status = HIDER_STATUS_ACTIVE;
+        hider.action_points = static_cast<uint8_t>(4 + slot);
+        hider.server_id = slot;
+        hider.resources[LOA_RESOURCE_INDEX] = 1;
+        hider.resources[3] = static_cast<uint16_t>(9 + slot);
+        
+        ServerState& server = state.servers[slot];
+        server.active = 1;
+        server.owner_hider_id = slot;
+        server.public_flags = 1;
+        server.trace_strength = 3;
+        server.trace_age = 2;
+        server.current = frameOf(static_cast<uint8_t>(10 * (slot + 1)));
+    }
+    
+    // Seed the placeholder goals
+    seedPlaceholderGoals(state);
+    
+    // Mark goal 0 as completed
+    state.goals[0].status = GOAL_STATUS_COMPLETED;
+    
+    const ViewContext ctx = baseContext();
+    const json hider = buildHiderView(state, ctx, 0);
+    
+    // Test: the hider view's goals array has 4 entries (all active goals)
+    REQUIRE(hider.at("goals").size() == 4);
+    
+    // Test: first entry (index 0) matches exactly
+    const json goal0 = hider.at("goals").at(0);
+    REQUIRE(goal0.at("goal_id") == 0);
+    REQUIRE(goal0.at("status") == "COMPLETED");
+    REQUIRE(goal0.at("reward_amount") == 1);
+    
+    // Test: first requirement of goal 0
+    const json req0 = goal0.at("requirements").at(0);
+    REQUIRE(req0.at("type") == "SERVER_METRIC_THRESHOLD");
+    REQUIRE(req0.at("server_id") == 0);
+    REQUIRE(req0.at("metric") == "CPU"); // serverMetricName(SERVER_METRIC_CPU)
+    REQUIRE(req0.at("threshold") == 40);
+    
+    // Test: entry at index 2 has a requirement exactly
+    const json goal2 = hider.at("goals").at(2);
+    const json req2 = goal2.at("requirements").at(0);
+    REQUIRE(req2.at("type") == "ACTIVE_SERVER_COUNT");
+    REQUIRE(req2.at("server_id").is_null());
+    REQUIRE(req2.at("metric").is_null());
+    REQUIRE(req2.at("threshold") == 3);
+    
+    // Test: team_reward is 1 and reward_target is 3
+    REQUIRE(hider.at("team_reward") == 1);
+    REQUIRE(hider.at("reward_target") == 3);
+    
+    // Test: a state with no active goal yields an empty "goals" array and "team_reward" 0
+    MatchState noActiveGoals{};
+    noActiveGoals.schema_version = 2;
+    noActiveGoals.ruleset_version = 1;
+    noActiveGoals.revision = 7;
+    noActiveGoals.tick = 3;
+    noActiveGoals.phase = PHASE_ACTIVE;
+    noActiveGoals.hider_count = 2;
+    noActiveGoals.server_count = 2;
+    noActiveGoals.hider_connection_pool = 6;
+    
+    // Set up hiders and servers
+    for (uint8_t slot = 0; slot < 2; ++slot) {
+        HiderState& hider = noActiveGoals.hiders[slot];
+        hider.active = 1;
+        hider.status = HIDER_STATUS_ACTIVE;
+        hider.action_points = static_cast<uint8_t>(4 + slot);
+        hider.server_id = slot;
+        hider.resources[LOA_RESOURCE_INDEX] = 1;
+        hider.resources[3] = static_cast<uint16_t>(9 + slot);
+        
+        ServerState& server = noActiveGoals.servers[slot];
+        server.active = 1;
+        server.owner_hider_id = slot;
+        server.public_flags = 1;
+        server.trace_strength = 3;
+        server.trace_age = 2;
+        server.current = frameOf(static_cast<uint8_t>(10 * (slot + 1)));
+    }
+    
+    // Need to explicitly set all goals to inactive for this test
+    for (int i = 0; i < MAX_GOALS; ++i) {
+        noActiveGoals.goals[i].active = 0;
+    }
+    const json hiderNoGoals = buildHiderView(noActiveGoals, ctx, 0);
+    REQUIRE(hiderNoGoals.at("goals").size() == 0);
+    REQUIRE(hiderNoGoals.at("team_reward") == 0);
+    
+    // Test: a goal with status GOAL_STATUS_CANCELLED_SERVER_REMOVED appears with "status":"CANCELLED"
+    noActiveGoals.goals[0].active = 1;
+    noActiveGoals.goals[0].status = GOAL_STATUS_CANCELLED_SERVER_REMOVED;
+    const json hiderCancelled = buildHiderView(noActiveGoals, ctx, 0);
+    REQUIRE(hiderCancelled.at("goals").size() == 1);
+    REQUIRE(hiderCancelled.at("goals").at(0).at("status") == "CANCELLED");
+    
+    // Test: inactive goal slots are omitted from the "goals" array
+    // Create a clean state with placeholder goals
+    MatchState onlyOneActive{};
+    onlyOneActive.schema_version = 2;
+    onlyOneActive.ruleset_version = 1;
+    onlyOneActive.revision = 7;
+    onlyOneActive.tick = 3;
+    onlyOneActive.phase = PHASE_ACTIVE;
+    onlyOneActive.hider_count = 2;
+    onlyOneActive.server_count = 2;
+    onlyOneActive.hider_connection_pool = 6;
+    
+    // Set up hiders and servers
+    for (uint8_t slot = 0; slot < 2; ++slot) {
+        HiderState& hider = onlyOneActive.hiders[slot];
+        hider.active = 1;
+        hider.status = HIDER_STATUS_ACTIVE;
+        hider.action_points = static_cast<uint8_t>(4 + slot);
+        hider.server_id = slot;
+        hider.resources[LOA_RESOURCE_INDEX] = 1;
+        hider.resources[3] = static_cast<uint16_t>(9 + slot);
+        
+        ServerState& server = onlyOneActive.servers[slot];
+        server.active = 1;
+        server.owner_hider_id = slot;
+        server.public_flags = 1;
+        server.trace_strength = 3;
+        server.trace_age = 2;
+        server.current = frameOf(static_cast<uint8_t>(10 * (slot + 1)));
+    }
+    
+    // Seed the placeholder goals - this will set all goals to active
+    seedPlaceholderGoals(onlyOneActive);
+    
+    // Now explicitly make goal 0 inactive and goal 1 active
+    onlyOneActive.goals[0].active = 0;
+    onlyOneActive.goals[1].active = 1;
+    const json hiderOnlyOneActive = buildHiderView(onlyOneActive, ctx, 0);
+    REQUIRE(hiderOnlyOneActive.at("goals").size() == 3);
+    // The goal_id should be 1 since that's the active goal
+    REQUIRE(hiderOnlyOneActive.at("goals").at(0).at("goal_id") == 1);
+}
+
+TEST_CASE("VIEW-021 (view_version 3): both views have view_version 3", "[hider_seeker][projection]") {
+    MatchState state = baseState();
+    const ViewContext ctx = baseContext();
+    
+    const json hider = buildHiderView(state, ctx, 0);
+    const json pub = buildPublicView(state, ctx);
+    
+    // Test: both views have view_version 3
+    REQUIRE(hider.at("view_version") == 3);
+    REQUIRE(pub.at("view_version") == 3);
+    
+    // Test: public view does not contain the new keys
+    REQUIRE(hider.contains("goals"));
+    REQUIRE(hider.contains("team_reward"));
+    REQUIRE(hider.contains("reward_target"));
+    REQUIRE(pub.contains("goals") == false);
+    REQUIRE(pub.contains("team_reward") == false);
+    REQUIRE(pub.contains("reward_target") == false);
 }

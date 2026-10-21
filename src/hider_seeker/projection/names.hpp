@@ -7,7 +7,11 @@
 #include "../ruleset/action_rules.hpp"
 #include "../ruleset/lifecycle_events.hpp"
 #include "../ruleset/match_end.hpp"
+#include "../ruleset/goal_rules.hpp"
+#include "../ruleset/loa_rules.hpp"
+#include "../ruleset/server_metrics.hpp"
 #include <cstdint>
+#include <string>
 
 namespace hider_seeker {
 
@@ -49,6 +53,30 @@ inline std::string_view winnerName(MatchWinner winner) {
         case MatchWinner::HIDERS: return "HIDERS";
     }
     return "";
+}
+
+// Returns the string name for a GOAL_STATUS value.
+inline std::string goalStatusName(uint8_t status) {
+    switch (status) {
+        case GOAL_STATUS_OPEN:                 return "OPEN";
+        case GOAL_STATUS_COMPLETED:            return "COMPLETED";
+        case GOAL_STATUS_CANCELLED_SERVER_REMOVED: return "CANCELLED";
+    }
+    return "UNKNOWN";
+}
+
+// Returns the string name for a RequirementType value, without the REQ_ prefix.
+inline std::string requirementTypeName(uint8_t type) {
+    switch (type) {
+        case REQ_RESOURCE_MIN:              return "RESOURCE_MIN";
+        case REQ_RESOURCE_SPEND:            return "RESOURCE_SPEND";
+        case REQ_ACTIVE_SERVER_COUNT:       return "ACTIVE_SERVER_COUNT";
+        case REQ_SERVER_METRIC_THRESHOLD:   return "SERVER_METRIC_THRESHOLD";
+        case REQ_ACTION_COUNT:              return "ACTION_COUNT";
+        case REQ_CONFIGURED_SERVER:         return "CONFIGURED_SERVER";
+        case REQ_CUSTOM_RULE:               return "CUSTOM_RULE";
+    }
+    return "UNKNOWN";
 }
 
 } // namespace hider_seeker
