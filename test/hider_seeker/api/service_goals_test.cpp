@@ -109,6 +109,11 @@ TEST_CASE("hiders win through API when placeholder reward target is reached", "[
     // state.winner should be HIDERS
     REQUIRE(finalState.winner == static_cast<uint8_t>(hider_seeker::MatchWinner::HIDERS));
     
+    // Verify the public view contains the required "phase":"COMPLETE" and "winner":"HIDERS" fields
+    auto publicView = fx.service.getLatestView(fx.matchId, "public", "", "");
+    REQUIRE(publicView.body["phase"] == "COMPLETE");
+    REQUIRE(publicView.body["winner"] == "HIDERS");
+    
     // Bob's next move should fail with MATCH_NOT_ACTIVE
     auto passResponse = fx.pass("bob", 1);
     REQUIRE(passResponse.status == 422);
