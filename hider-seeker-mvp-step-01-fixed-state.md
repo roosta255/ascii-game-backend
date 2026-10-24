@@ -50,6 +50,8 @@ constexpr uint8_t MAX_REQUIREMENTS_PER_GOAL = 16;
 constexpr uint8_t MAX_EVENTS = 64;
 constexpr uint8_t HISTORY_TICKS = 16;
 constexpr uint8_t MAX_INTENTS_PER_TICK = 64;
+constexpr uint8_t MAX_PENDING_MOVES = 16;
+constexpr uint8_t MAX_ADVANCE_TICKS = 16;   // per request
 constexpr uint8_t MAX_SEEKER_TARGETS = 16;
 constexpr uint8_t MAX_HIDER_PLAN_STEPS = 16;
 
@@ -119,6 +121,18 @@ struct SeekerState {
     uint8_t last_probe_tick[MAX_SERVERS];
 };
 
+// A QUEUE-mode move waiting until it is affordable (design doc section
+// 3.2). Lives in a fixed ring in MatchState, applied in submit_seq order.
+struct PendingMove {
+    uint32_t move_id;          // backend-assigned, stable
+    uint32_t submit_seq;       // receipt order; defines application order
+    uint8_t hider_id;
+    uint8_t action_type;
+    uint8_t server_id;
+    uint8_t target_id;         // relocation target, goal id, etc.
+    uint8_t server_mode;       // e.g. SUPPRESS_ERROR
+};
+
 struct Requirement {
     uint8_t type;   // RequirementType
     uint8_t subject_id;
@@ -162,8 +176,18 @@ struct MatchState {
     Event events[MAX_EVENTS];
     uint8_t event_head;
     uint8_t event_count;
+    PendingMove pending[MAX_PENDING_MOVES];  // ring, ordered by submit_seq
+    uint8_t pending_head;
+    uint8_t pending_count;
+    uint32_t next_submit_seq;
 };
 ```
+
+The game has no clock: ticks advance only while the backend handles a
+submitted move that needs them (design doc section 3.2). The pending-move
+ring is part of `MatchState` because queued moves must survive between
+requests and be replayed deterministically. This slice only stores and
+serializes it; applying pending moves belongs to the tick engine job.
 
 Requirements this state must satisfy (design doc section 3.1's own
 rules, restated as acceptance criteria):
@@ -212,7 +236,7 @@ off of), not simply `reinterpret_cast<uint8_t*>(&state)`.
 - **HIDER-SEEKER-001**: `src/hider_seeker/domain/state.hpp` defines the
   frozen rule constants, the `RewardType`/`RequirementType`/`MatchPhase`
   enums, and the `MetricFrame`/`ServerState`/`HiderState`/`SeekerState`/
-  `Requirement`/`GoalState`/`Event`/`MatchState` structs exactly as
+  `PendingMove`/`Requirement`/`GoalState`/`Event`/`MatchState` structs exactly as
   specified above, with no pointers, strings, or growing containers
   anywhere in `MatchState`.
   - Acceptance criteria:
@@ -225,7 +249,10 @@ off of), not simply `reinterpret_cast<uint8_t*>(&state)`.
   - Acceptance criteria:
     - A real test constructs a `MatchState` with genuinely varied field
       values (not all zeros/defaults), serializes it, deserializes the
-      result, and asserts the two states are equal field-by-field.
+      result, and asserts the two states are equal field-by-field. The
+      test state includes a non-empty pending-move ring that wraps past
+      the end of the array (`pending_head + pending_count >
+      MAX_PENDING_MOVES`) and a non-zero `next_submit_seq`.
     - A real test asserts `loadMatchState` returns `false` (not a crash,
       not a partially-populated `state`) for a buffer that isn't a valid
       encoding (e.g. an empty buffer, or one with a corrupted/unknown
@@ -233,10 +260,11 @@ off of), not simply `reinterpret_cast<uint8_t*>(&state)`.
 
 ## Out of scope for this job
 
-- The tick engine, intent validation, action resolution, probe
-  resolution, or anything else in `hider-seeker-complete-design.md`
-  section 3.2 onward.
-- The HTTP API (section 5).
+- The on-demand tick engine (advance loop, `PLAY`/`QUEUE`/`PASS`
+  handling, applying or cancelling pending moves), intent validation,
+  action resolution, probe resolution, or anything else in
+  `hider-seeker-complete-design.md` section 3.2 onward.
+- The HTTP move API (section 5).
 - Seeker/hider NPC policy code, training, or ONNX inference (sections 6,
   7, 9) — explicitly optional per the design doc itself, and out of
   scope for this first slice regardless.
