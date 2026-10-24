@@ -343,6 +343,7 @@ add_executable(test_target
     test/hider_seeker/ScriptedSeekerPolicy.cpp
     test/hider_seeker/seeker_turn_test.cpp
     test/hider_seeker/hider/hider_policy_eval_test.cpp
+    test/hider_seeker/hider/hider_policy_choice_test.cpp
     test/hider_seeker/seeker_model_test.cpp
     test/hider_seeker/seeker_model_store_test.cpp
     test/hider_seeker/api/service_seeker_policy_test.cpp
