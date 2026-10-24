@@ -115,11 +115,11 @@ TEST_CASE("NPC-023 (metric goal handling)", "[hider_policy_choice]") {
     REQUIRE(choice.intent == json{{"type", "CONNECT"}, {"server_id", 0}});
     REQUIRE(choice.goal_id == 0);
     
-    // With self connected to server 1, should connect to server 0 (since that's where the goal requires metric improvement)
+    // With self connected to server 1, should disconnect since it's not connected to the required server 0
     view["self"]["server_id"] = 1;
     choice = chooseHiderMove(view);
     REQUIRE(choice.has_move == true);
-    REQUIRE(choice.intent == json{{"type", "CONNECT"}, {"server_id", 0}});
+    REQUIRE(choice.intent == json{{"type", "DISCONNECT"}});
     
     // With self connected to server 0, should boost CPU
     view["self"]["server_id"] = 0;

@@ -253,8 +253,12 @@ HiderNpcChoice nextMove(const nlohmann::json& view, const nlohmann::json& goal) 
             } else if (metric == "NETWORK") {
                 choice.intent = {{"type", hiderActionName(HiderActionMode::ROTATE_ROUTE)}};
             }
+        } else if (!view["self"]["server_id"].is_null() && 
+                   view["self"]["server_id"] != serverId) {
+            // Hider is connected to a different server
+            choice.intent = {{"type", "DISCONNECT"}};
         } else if (view["team_connections"] > 0) {
-            // Hider is disconnected or connected to a different server, so connect
+            // Hider is disconnected, so connect to the required server
             choice.intent = {{"type", "CONNECT"}, {"server_id", serverId}};
         } else {
             // No connections available, no move possible
