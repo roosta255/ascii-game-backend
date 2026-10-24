@@ -152,4 +152,160 @@ int goalCost(const nlohmann::json& view, const nlohmann::json& goal) {
     return total;
 }
 
+namespace {
+bool hasOwnPending(const nlohmann::json& view) {
+    int selfId = view["self"]["hider_id"];
+    for (const auto& pending : view["pending"]) {
+        if (pending["hider_id"] == selfId) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool allRequirementsMet(const nlohmann::json& view, const nlohmann::json& goal) {
+    for (const auto& requirement : goal["requirements"]) {
+        if (!requirementMet(view, requirement)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+HiderNpcChoice payGoal(const nlohmann::json& view, const nlohmann::json& goal) {
+    HiderNpcChoice choice;
+    choice.has_move = true;
+    choice.goal_id = goal["goal_id"];
+    
+    if (!view["self"]["server_id"].is_null()) {
+        // We're connected to a server, so we can pay the goal
+        choice.intent = {{"type", "PAY_GOAL"}};
+    } else {
+        // We're disconnected, so we need to connect first
+        if (view["team_connections"] > 0 && view["servers"].size() > 0) {
+            choice.intent = {{"type", "CONNECT"}, {"server_id", view["servers"][0]["server_id"]}};
+        } else {
+            // No move possible due to no connections or no servers
+            choice.has_move = false;
+        }
+    }
+    
+    return choice;
+}
+
+int cheapestGoal(const nlohmann::json& view) {
+    int bestCost = GOAL_INFEASIBLE;
+    int bestId = -1;
+    
+    for (const auto& goal : view["goals"]) {
+        if (!goalSupported(goal)) {
+            continue;
+        }
+        
+        int cost = goalCost(view, goal);
+        if (cost != GOAL_INFEASIBLE) {
+            if (bestId == -1 || cost < bestCost || (cost == bestCost && goal["goal_id"] < bestId)) {
+                bestCost = cost;
+                bestId = goal["goal_id"];
+            }
+        }
+    }
+    
+    return bestId;
+}
+
+int firstUnmetRequirement(const nlohmann::json& view, const nlohmann::json& goal) {
+    for (size_t i = 0; i < goal["requirements"].size(); ++i) {
+        if (!requirementMet(view, goal["requirements"][i])) {
+            return i;
+        }
+    }
+    return -1; // All requirements met
+}
+
+HiderNpcChoice nextMove(const nlohmann::json& view, const nlohmann::json& goal) {
+    HiderNpcChoice choice;
+    choice.has_move = true;
+    choice.goal_id = goal["goal_id"];
+    
+    int unmetIndex = firstUnmetRequirement(view, goal);
+    if (unmetIndex == -1) {
+        // All requirements met - this shouldn't happen in step 3
+        return choice;
+    }
+    
+    const auto& requirement = goal["requirements"][unmetIndex];
+    
+    if (requirement["type"] == "ACTIVE_SERVER_COUNT") {
+        choice.intent = {{"type", "ADD_SERVER"}};
+    } else if (requirement["type"] == "SERVER_METRIC_THRESHOLD") {
+        int serverId = requirement["server_id"];
+        std::string metric = requirement["metric"].get<std::string>();
+        
+        // Check if hider is connected to this server
+        bool isConnected = !view["self"]["server_id"].is_null() && 
+                          view["self"]["server_id"] == serverId;
+        
+        if (isConnected) {
+            // Hider is connected to the target server, so boost the metric
+            if (metric == "CPU") {
+                choice.intent = {{"type", hiderActionName(HiderActionMode::BOOST_CPU)}};
+            } else if (metric == "NETWORK") {
+                choice.intent = {{"type", hiderActionName(HiderActionMode::ROTATE_ROUTE)}};
+            }
+        } else if (!view["self"]["server_id"].is_null() && 
+                   view["self"]["server_id"] != serverId) {
+            // Hider is connected to a different server
+            choice.intent = {{"type", "DISCONNECT"}};
+        } else if (view["team_connections"] > 0) {
+            // Hider is disconnected, so connect to the required server
+            choice.intent = {{"type", "CONNECT"}, {"server_id", serverId}};
+        } else {
+            // No connections available, no move possible
+            choice.has_move = false;
+        }
+    }
+    
+    return choice;
+}
+
+} // anonymous namespace
+
+HiderNpcChoice chooseHiderMove(const nlohmann::json& view) {
+    // Step 1: Return default if conditions are not met
+    if (view["phase"] != "ACTIVE" || 
+        view["self"]["status"] != "ACTIVE" || 
+        hasOwnPending(view)) {
+        return HiderNpcChoice{};
+    }
+    
+    // Step 2: Try to pay a met goal
+    for (const auto& goal : view["goals"]) {
+        if (!goalSupported(goal)) {
+            continue;
+        }
+        
+        if (allRequirementsMet(view, goal)) {
+            return payGoal(view, goal);
+        }
+    }
+    
+    // Step 3: Select cheapest feasible goal and map its first unmet requirement to an intent
+    int cheapestId = cheapestGoal(view);
+    if (cheapestId == -1) {
+        // No feasible goal found
+        return HiderNpcChoice{};
+    }
+    
+    // Find the cheapest goal by ID
+    for (const auto& goal : view["goals"]) {
+        if (goal["goal_id"] == cheapestId) {
+            return nextMove(view, goal);
+        }
+    }
+    
+    // Should not happen, but just in case
+    return HiderNpcChoice{};
+}
+
 } // namespace hider_seeker
