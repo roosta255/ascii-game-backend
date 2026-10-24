@@ -80,6 +80,14 @@ std::string formatMoveId(uint32_t moveNumber) {
     return "mv-" + std::to_string(moveNumber);
 }
 
+// NPC-002: accounts no human may join with; slot k's NPC is npc_<k>.
+const std::string NPC_ACCOUNT_PREFIX = "npc_";
+
+bool isNpcAccount(const std::string& account) {
+    return account.length() >= NPC_ACCOUNT_PREFIX.length() &&
+           account.compare(0, NPC_ACCOUNT_PREFIX.length(), NPC_ACCOUNT_PREFIX) == 0;
+}
+
 // Accepts exactly "mv-<n>" with n a positive uint32 written without leading zeros.
 bool parseMoveId(const std::string& intentId, uint32_t& out) {
     const std::string prefix = "mv-";
@@ -531,6 +539,13 @@ ApiResponse HiderSeekerService::createMatch(const std::string& body) {
         return invalidRequest("hider_count must be an integer from 1 to 8");
     }
 
+    int64_t npcHiders = 0;
+    if (request.contains("npc_hiders")) {
+        if (!readIntInRange(request, "npc_hiders", 0, hiderCount - 1, npcHiders)) {
+            return invalidRequest("npc_hiders must be an integer from 0 to hider_count - 1");
+        }
+    }
+
     std::random_device device;
     uint64_t seed = 0;
     const auto seedField = request.find("seed");
@@ -573,6 +588,16 @@ ApiResponse HiderSeekerService::createMatch(const std::string& body) {
     state.seeker.connection_tokens = PLACEHOLDER_SEEKER_START_CONNECTIONS;
     state.seeker.max_tokens = PLACEHOLDER_SEEKER_START_CONNECTIONS;
 
+    // NPC-042: bind NPC slots at match creation
+    for (int64_t slot = hiderCount - npcHiders; slot < hiderCount; ++slot) {
+        HiderState& hider = state.hiders[slot];
+        hider.active = 1;
+        hider.status = HIDER_STATUS_ACTIVE;
+        hider.action_points = PLACEHOLDER_START_ACTION_POINTS;
+        hider.resources[LOA_RESOURCE_INDEX] = PLACEHOLDER_START_LOA;
+        record.accounts.assignValue(slot, NPC_ACCOUNT_PREFIX + std::to_string(slot));
+    }
+
     record.request_log.push_back(RequestLogEntry{0, account, "create", request});
 
     ApiResponse failure = errorResponse(500, "STORE_ERROR", "Failed to allocate a match id");
@@ -598,6 +623,11 @@ ApiResponse HiderSeekerService::joinMatch(const std::string& matchId, const std:
     ApiResponse failure;
     if (!parseAccountRequest(body, matchId, request, account, failure)) {
         return failure;
+    }
+
+    // NPC-041: reject joinMatch attempts that use NPC-prefixed accounts
+    if (isNpcAccount(account)) {
+        return invalidRequest("Accounts starting with npc_ are reserved for NPC hiders");
     }
 
     std::lock_guard<std::mutex> lock(mutexFor(matchId));
@@ -659,7 +689,7 @@ ApiResponse HiderSeekerService::startMatch(const std::string& matchId, const std
             return unrecorded(errorResponse(409, "MATCH_NOT_IN_LOBBY", "The match is not in its lobby"));
         }
         const bool anyBound = std::any_of(record.accounts.begin(), record.accounts.end(),
-                                          [](const std::string& bound) { return !bound.empty(); });
+                                          [](const std::string& bound) { return !bound.empty() && !isNpcAccount(bound); });
         if (!anyBound) {
             return unrecorded(errorResponse(409, "NO_HIDERS", "No hider has joined the match"));
         }
