@@ -58,6 +58,7 @@ set(PROJECT_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/projection
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/ruleset/connection_rules
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/seeker
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/hider
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hider_seeker/ruleset
     /usr/include/jsoncpp
 )
@@ -212,6 +213,7 @@ add_library(core_backend STATIC
     src/hider_seeker/ruleset/connection_rules.cpp
     src/hider_seeker/ruleset/match_end.cpp
     src/hider_seeker/ruleset/goal_rules.cpp
+    src/hider_seeker/hider/hider_policy.cpp
     src/hider_seeker/ruleset/server_metrics.cpp
 
     src/hider_seeker/ruleset/intent_ordering.cpp
@@ -340,6 +342,7 @@ add_executable(test_target
     test/hider_seeker/observation_leak_test.cpp
     test/hider_seeker/ScriptedSeekerPolicy.cpp
     test/hider_seeker/seeker_turn_test.cpp
+    test/hider_seeker/hider/hider_policy_eval_test.cpp
     test/hider_seeker/seeker_model_test.cpp
     test/hider_seeker/seeker_model_store_test.cpp
     test/hider_seeker/api/service_seeker_policy_test.cpp
