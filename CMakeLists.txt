@@ -321,6 +321,7 @@ add_executable(test_target
     test/hider_seeker/api/service_submit_move_test.cpp
     test/hider_seeker/api/service_queue_pass_cancel_test.cpp
     test/hider_seeker/api/service_npc_slots_test.cpp
+    test/hider_seeker/api/service_npc_round_test.cpp
     test/hider_seeker/api/service_cancel_reasons_test.cpp
     test/hider_seeker/api/service_concurrency_test.cpp
     test/hider_seeker/api/service_idempotency_test.cpp

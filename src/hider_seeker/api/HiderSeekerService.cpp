@@ -18,6 +18,7 @@
 #include "../turn/turn_types.hpp"
 #include "../seeker/policy_interface.hpp"
 #include "../ruleset/goal_rules.hpp"
+#include "../hider/hider_policy.hpp"
 #include <algorithm>
 #include <random>
 #include <vector>
@@ -670,7 +671,7 @@ ApiResponse HiderSeekerService::joinMatch(const std::string& matchId, const std:
     });
 }
 
-ApiResponse HiderSeekerService::startMatch(const std::string& matchId, const std::string& body) {
+ApiResponse HiderSeekerService::startMatchOnce(const std::string& matchId, const std::string& body) {
     json request;
     std::string account;
     ApiResponse failure;
@@ -710,6 +711,14 @@ ApiResponse HiderSeekerService::startMatch(const std::string& matchId, const std
     });
 }
 
+ApiResponse HiderSeekerService::startMatch(const std::string& matchId, const std::string& body) {
+    ApiResponse response = startMatchOnce(matchId, body);
+    if (response.status == 200) {
+        runNpcRound(matchId);
+    }
+    return response;
+}
+
 ApiResponse HiderSeekerService::getMatch(const std::string& matchId) {
     if (!isValidMatchId(matchId)) {
         return invalidRequest("Invalid match id");
@@ -742,7 +751,7 @@ ApiResponse HiderSeekerService::getMatch(const std::string& matchId) {
     }};
 }
 
-ApiResponse HiderSeekerService::submitMove(const std::string& matchId, const std::string& body) {
+ApiResponse HiderSeekerService::submitMoveOnce(const std::string& matchId, const std::string& body) {
     json request;
     std::string account;
     ApiResponse failure;
@@ -860,8 +869,16 @@ ApiResponse HiderSeekerService::submitMove(const std::string& matchId, const std
     });
 }
 
-ApiResponse HiderSeekerService::cancelMove(const std::string& matchId, const std::string& intentId,
-                                           const std::string& body) {
+ApiResponse HiderSeekerService::submitMove(const std::string& matchId, const std::string& body) {
+    ApiResponse response = submitMoveOnce(matchId, body);
+    if (response.status == 200) {
+        runNpcRound(matchId);
+    }
+    return response;
+}
+
+ApiResponse HiderSeekerService::cancelMoveOnce(const std::string& matchId, const std::string& intentId,
+                                               const std::string& body) {
     json request;
     std::string account;
     ApiResponse failure;
@@ -901,6 +918,56 @@ ApiResponse HiderSeekerService::cancelMove(const std::string& matchId, const std
         logBody["intent_id"] = intentId;
         return logged(ApiResponse{200, responseBody}, logBody);
     });
+}
+
+ApiResponse HiderSeekerService::cancelMove(const std::string& matchId, const std::string& intentId,
+                                           const std::string& body) {
+    ApiResponse response = cancelMoveOnce(matchId, intentId, body);
+    if (response.status == 200) {
+        runNpcRound(matchId);
+    }
+    return response;
+}
+
+void HiderSeekerService::runNpcRound(const std::string& matchId) {
+    const ApiResponse match = getMatch(matchId);
+    if (match.status != 200 || match.body.at("phase").get<std::string>() != "ACTIVE") {
+        return;
+    }
+
+    const auto& hiders = match.body.at("hiders");
+    for (const auto& hider : hiders) {
+        const auto accountField = hider.find("account");
+        if (accountField == hider.end() || !accountField->is_string()) {
+            continue;
+        }
+        const std::string account = accountField->get<std::string>();
+        if (!isNpcAccount(account)) {
+            continue;
+        }
+
+        const ApiResponse view = getLatestView(matchId, "hider", account, "");
+        if (view.status != 200) {
+            continue;
+        }
+
+        const HiderNpcChoice choice = chooseHiderMove(view.body);
+        if (!choice.has_move) {
+            continue;
+        }
+
+        const uint64_t revision = view.body.at("revision").get<uint64_t>();
+        json body = {
+            {"account", account},
+            {"expected_revision", revision},
+            {"idempotency_key", account + "-r" + std::to_string(revision)},
+            {"play_mode", "QUEUE"},
+            {"intent", choice.intent}
+        };
+
+        // QUEUE applies an affordable move now and queues the rest, so an NPC never advances time.
+        submitMoveOnce(matchId, body.dump());
+    }
 }
 
 ApiResponse HiderSeekerService::getLatestView(const std::string& matchId, const std::string& audience,
