@@ -313,10 +313,12 @@ add_executable(test_target
     test/hider_seeker/tick/tick_intent_dispatch_test.cpp
     test/hider_seeker/turn/turn_engine_connection_test.cpp
     test/hider_seeker/turn/known_kind_bound_test.cpp
+    test/hider_seeker/turn_cancel_reasons_test.cpp
     test/hider_seeker/api/match_record_test.cpp
     test/hider_seeker/api/service_lifecycle_test.cpp
     test/hider_seeker/api/service_submit_move_test.cpp
     test/hider_seeker/api/service_queue_pass_cancel_test.cpp
+    test/hider_seeker/api/service_cancel_reasons_test.cpp
     test/hider_seeker/api/service_concurrency_test.cpp
     test/hider_seeker/api/service_idempotency_test.cpp
     test/hider_seeker/api/service_validation_test.cpp

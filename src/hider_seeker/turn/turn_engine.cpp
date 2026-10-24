@@ -121,6 +121,13 @@ uint8_t ringIndex(const MatchState& state, uint8_t offset) {
     return static_cast<uint8_t>((state.pending_head + offset) % MAX_PENDING_MOVES);
 }
 
+void recordCancelled(TurnResult& result, const PendingMove& pending, TurnReason reason, RuleOutcome ruleOutcome) {
+    if (result.pendingCancelled.containsIndex(result.pendingCancelledCount)) {
+        result.pendingCancelled.assignValue(result.pendingCancelledCount, PendingMoveCancelled{pending.move_id, pending.hider_id, reason, ruleOutcome});
+        result.pendingCancelledCount++;
+    }
+}
+
 uint8_t pendingCountForHider(const MatchState& state, uint8_t hiderId) {
     uint8_t count = 0;
     for (uint8_t offset = 0; offset < state.pending_count; ++offset) {
@@ -233,8 +240,10 @@ void runAdvanceLoop(MatchState& state, const iSeekerPolicy& seekerPolicy, uint8_
                 }
             } else if (outcome != RuleOutcome::REJECTED_INSUFFICIENT_RESOURCE) {
                 removeAtOffset[offset] = true; // cancelled: RULE_REJECTED
+                recordCancelled(result, pending, TurnReason::RULE_REJECTED, outcome);
             } else if (isCaptured(state, pending.hider_id)) {
                 removeAtOffset[offset] = true; // cancelled: HIDER_CAPTURED
+                recordCancelled(result, pending, TurnReason::HIDER_CAPTURED, outcome);
             }
         }
         compactPending(state, removeAtOffset);
@@ -364,6 +373,7 @@ TurnResult cancelPendingMove(MatchState& state, uint8_t hiderId, uint32_t moveId
         if (pending.hider_id == hiderId && pending.move_id == moveId) {
             removeAtOffset[offset] = true;
             found = true;
+            recordCancelled(result, pending, TurnReason::OWNER_CANCELLED, RuleOutcome::ACCEPTED);
         }
     }
     if (!found) {

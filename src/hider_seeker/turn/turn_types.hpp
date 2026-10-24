@@ -40,7 +40,8 @@ enum class TurnReason : uint8_t {
     MATCH_NOT_ACTIVE,
     ADVANCE_LIMIT,
     NOT_FOUND,
-    INVALID_TICK_COUNT
+    INVALID_TICK_COUNT,
+    OWNER_CANCELLED
 };
 
 // A previously queued move that was applied during an advance.
@@ -48,6 +49,13 @@ struct PendingMoveApplied {
     uint32_t move_id;
     uint8_t hider_id;
     uint32_t tick; // MatchState::tick of the tick it was applied in
+};
+
+struct PendingMoveCancelled {
+    uint32_t move_id;
+    uint8_t hider_id;
+    TurnReason reason;
+    RuleOutcome ruleOutcome;
 };
 
 struct TurnResult {
@@ -62,6 +70,8 @@ struct TurnResult {
     uint8_t publicEventCount = 0;
     Array<PendingMoveApplied, MAX_PENDING_MOVES> pendingApplied;
     uint8_t pendingAppliedCount = 0;
+    Array<PendingMoveCancelled, MAX_PENDING_MOVES> pendingCancelled;
+    uint8_t pendingCancelledCount = 0;
     uint32_t probesIssued = 0;
 };
 

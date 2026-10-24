@@ -137,6 +137,7 @@ const char* turnReasonName(TurnReason reason) {
         case TurnReason::ADVANCE_LIMIT:      return "ADVANCE_LIMIT";
         case TurnReason::NOT_FOUND:          return "NOT_FOUND";
         case TurnReason::INVALID_TICK_COUNT: return "INVALID_TICK_COUNT";
+        case TurnReason::OWNER_CANCELLED:    return "OWNER_CANCELLED";
     }
     return "UNKNOWN";
 }
@@ -261,6 +262,16 @@ json turnBody(const MatchRecord& record, const TurnResult& result, uint64_t acce
         }
     }
 
+    json cancelledReasons = json::array();
+    for (int i = 0; i < result.pendingCancelledCount; ++i) {
+        result.pendingCancelled.accessConst(i, [&](const PendingMoveCancelled& entry) {
+            cancelledReasons.push_back({
+                {"intent_id", formatMoveId(entry.move_id)},
+                {"reason", (entry.reason == TurnReason::RULE_REJECTED ? ruleOutcomeName(entry.ruleOutcome) : turnReasonName(entry.reason))}
+            });
+        });
+    }
+
     json events = json::array();
     for (int i = 0; i < result.publicEventCount; ++i) {
         result.publicEvents.accessConst(i, [&events](const PublicLifecycleEvent& event) {
@@ -277,6 +288,7 @@ json turnBody(const MatchRecord& record, const TurnResult& result, uint64_t acce
         {"ticks_advanced", result.ticksAdvanced},
         {"pending_applied", pendingApplied},
         {"pending_cancelled", pendingCancelled},
+        {"pending_cancelled_reasons", cancelledReasons},
         {"events", events}
     };
 }
