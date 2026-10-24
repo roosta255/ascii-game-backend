@@ -2,14 +2,16 @@
 ## MVP System Architecture, Game Mechanics, and NPC AI Design
 
 **Status:** Implementation-oriented MVP proposal  
-**Architecture:** Backend-authoritative, asynchronous ticks, HTTP snapshots, C++ simulation core  
+**Architecture:** Backend-authoritative, turn-based with on-demand ticks (no game clock), HTTP snapshots, C++ simulation core  
 **Hard capacity limits:** 1 seeker, 8 hiders, 16 servers; every bounded collection is at most 64 entries
 
 ---
 
 ## 1. Purpose and design principles
 
-This document specifies an asynchronous hider–seeker game in which hiders manage infrastructure, pursue reward-bearing goals, and interpret evidence, while a seeker NPC investigates likely hider infrastructure.
+This document specifies an asynchronous, turn-based, collaborative hider–seeker game in which hiders manage infrastructure, pursue reward-bearing goals, and interpret evidence, while a seeker NPC investigates likely hider infrastructure.
+
+The game does not play out over wall-clock time. Game time (ticks) advances only when a player's move requires it, so an idle match costs no server work. Any hider who can make a move may make it; hiders coordinate their plans on their own clients, and the backend only receives finished moves.
 
 The system is designed around these constraints:
 
@@ -34,11 +36,11 @@ This architecture is feasible for an MVP. The difficult parts are defining engag
 **Authoritative simulation core (C++)**  
 Contains fixed-size state, deterministic game rules, action validation, tick advancement, metric changes, goal evaluation, probe resolution, event generation, and policy interfaces. The same domain source may be compiled for server and WASM, but the WASM build must not contain private backend capabilities.
 
-**Backend tick runner**  
-Loads a match revision, applies queued intents, advances due ticks, invokes the server-only seeker policy, commits the result transactionally, and schedules future work. It is the only authority for match state.
+**Move handler**  
+Runs inside the request that submits a move. Loads the match revision, validates the move, applies it immediately or advances ticks until it can be applied (section 3.2), applies any queued moves that become playable along the way, invokes the server-only seeker policy on each advanced tick, and commits the result transactionally. It is the only authority for match state. There is no background tick worker, scheduler, or timer.
 
 **Intent API**  
-Authenticates players, validates authorization and request shape, applies idempotency and revision checks, and queues commands for backend execution.
+Authenticates players, validates authorization and request shape, applies idempotency and revision checks, and invokes the move handler synchronously.
 
 **Persistence and event log**  
 Stores versioned state, applied intents, events, ruleset/model versions, and deterministic replay information. A relational or transactional store can be used for MVP; the architecture does not require a particular database.
@@ -86,7 +88,7 @@ Anything delivered to a client—including WASM binaries, model weights, constan
     safe_bindings.cpp
   /server
     intent_api.cpp
-    tick_worker.cpp
+    move_handler.cpp
     persistence.cpp
     snapshot_publisher.cpp
 /training
@@ -115,6 +117,8 @@ constexpr uint8_t MAX_REQUIREMENTS_PER_GOAL = 16;
 constexpr uint8_t MAX_EVENTS = 64;
 constexpr uint8_t HISTORY_TICKS = 16;
 constexpr uint8_t MAX_INTENTS_PER_TICK = 64;
+constexpr uint8_t MAX_PENDING_MOVES = 16;
+constexpr uint8_t MAX_ADVANCE_TICKS = 16;   // per request
 constexpr uint8_t MAX_SEEKER_TARGETS = 16;
 constexpr uint8_t MAX_HIDER_PLAN_STEPS = 16;
 
@@ -154,6 +158,16 @@ struct SeekerState {
     uint8_t last_probe_tick[MAX_SERVERS];
 };
 
+struct PendingMove {
+    uint32_t move_id;          // backend-assigned, stable
+    uint32_t submit_seq;       // receipt order; defines application order
+    uint8_t hider_id;
+    uint8_t action_type;
+    uint8_t server_id;
+    uint8_t target_id;         // relocation target, goal id, etc.
+    uint8_t server_mode;       // e.g. SUPPRESS_ERROR
+};
+
 struct MatchState {
     uint32_t schema_version;
     uint32_t ruleset_version;
@@ -170,27 +184,56 @@ struct MatchState {
     Event events[MAX_EVENTS];
     uint8_t event_head;
     uint8_t event_count;
+    PendingMove pending[MAX_PENDING_MOVES];  // ring, ordered by submit_seq
+    uint8_t pending_head;
+    uint8_t pending_count;
+    uint32_t next_submit_seq;
 };
 ```
 
 `RESOURCE_TYPE_COUNT` is a compile-time bounded enum count, never above 64. The Letter of Authorization is one resource type. Store no pointers, strings, vectors, or owning containers inside the state block. Use IDs and fixed arrays. Serialize through an explicit versioned format; do not persist raw compiler memory layout. Check all array counts and IDs before indexing, use saturating arithmetic, and make migration rules explicit.
 
-### 3.2 Tick lifecycle
+### 3.2 Turn model and tick lifecycle
 
-Ticks represent game intervals, not necessarily wall-clock seconds. The backend advances a tick when its scheduled deadline arrives or a game rule closes the current action window. A tick proceeds in this order:
+Ticks are units of game time, not wall-clock intervals. Nothing advances on a timer. The match state changes only while the backend handles a submitted move, so a match nobody is playing is at rest and costs no server work.
 
-1. Lock/read the current match revision and determine eligible intents.
-2. Validate and order accepted hider intents using stable server receipt sequence and deterministic tie-breakers.
-3. Apply legal hider actions and immediate costs atomically.
-4. Advance server metrics, trace aging, temporary effects, and resource regeneration.
-5. Derive the seeker-visible evidence for this tick.
-6. Let the seeker policy rank legal targets and execute probes up to its token/probe limit.
-7. Resolve probe outcomes, capture/escape, goal qualification, rewards, and end conditions.
-8. Persist next state, consumed intent IDs, decisions, and events as a single committed revision.
-9. Publish audience-specific immutable snapshots for that revision.
-10. Schedule the next tick.
+**Play modes.** Every hider move is submitted with one of three `play_mode` values:
 
-The ordering of simultaneous actions must be part of the ruleset. A retry must not apply an intent twice. Token exhaustion does not trigger an implicit tick; callers receive an explicit rejection or queue status.
+| Mode | If affordable now | If not yet affordable |
+|---|---|---|
+| `PLAY` | Applied immediately; no tick passes | Ticks advance until it is affordable, then it is applied |
+| `QUEUE` | Applied immediately; no tick passes | Stored as a pending move; no tick passes. Applied later, on the first advanced tick at which it is affordable |
+| `PASS` | — | Advances a requested number of ticks (1–`MAX_ADVANCE_TICKS`) with no new move of its own |
+
+"Affordable" means every requirement of the move is met: action points, resources, LOAs, server capacity, phase, and target validity. Resources are deducted only when the move is applied; pending moves reserve nothing. A hider may cancel their own pending move at any time before it is applied.
+
+**Request handling.** Each submitted move is handled as one transaction:
+
+1. Load the match at revision `r` and verify `expected_revision` (section 10).
+2. Validate the move: authorization, IDs, phase, legality. Reject immediately if illegal.
+3. If the move is affordable now, apply it, then resolve goal qualification, rewards, and end conditions. No tick passes and the seeker does not act.
+4. Otherwise, for `QUEUE`, append it to the pending ring. Reject if the ring is full or the hider is over the ruleset's per-hider pending limit.
+5. Otherwise, for `PLAY`, estimate the ticks needed from the ruleset's regeneration rates. If the move can never become affordable, or needs more than `MAX_ADVANCE_TICKS`, reject immediately with no state change. Otherwise run the advance loop until the move is applied or interrupted.
+6. For `PASS`, run the advance loop for the requested number of ticks.
+7. Persist the next state, applied/queued/cancelled move IDs, decisions, and events as revision `r+1`.
+8. Publish audience-specific immutable snapshots for that revision.
+9. Return the result to the caller: final move status, `ticks_advanced`, the events this caller may see, and the new revision.
+
+**Advance loop.** Each advanced tick proceeds in this order:
+
+1. Increment the tick. Regenerate hider action points/resources and seeker tokens; advance server metrics, trace aging, and temporary effects.
+2. Walk the pending ring in `submit_seq` order. Apply each pending move that is now affordable and still valid. Cancel any that have become invalid (target removed, goal expired or completed, hider captured) with a recorded reason.
+3. If the triggering move is a `PLAY` move and is now affordable, apply it. It is newer than every pending move, so it goes after them.
+4. Derive the seeker-visible evidence for this tick.
+5. Let the seeker policy rank legal targets and execute probes up to its token/probe limit.
+6. Resolve probe outcomes, capture/escape, goal qualification, rewards, and end conditions.
+7. Stop if the triggering `PLAY` move was applied, the `PASS` count is reached, or an interruption occurs: the triggering move became invalid, its hider was captured, or the match ended. An interrupted `PLAY` move is cancelled with a reason. The ticks that already passed stay committed, because their events really happened.
+
+A `PLAY` move's estimate can grow during the loop, for example when the same hider's earlier pending move spends the action points it was waiting for. The loop re-checks affordability every tick instead of trusting the initial estimate. If it reaches `MAX_ADVANCE_TICKS` without applying the move, the move is cancelled with reason `ADVANCE_LIMIT`.
+
+**Who advances time.** Only human hiders' `PLAY` and `PASS` moves advance ticks. The seeker never advances time, and running out of seeker tokens never triggers a tick. Any hider may advance time when their move needs it; there is no turn order among hiders. Because advancing lets the seeker act, possibly against teammates' servers, clients must show how many ticks a move will advance before the player confirms. The client can compute this from public regeneration rates; it cannot preview the seeker's actions, which are hidden.
+
+**Determinism.** Application order is defined entirely by `submit_seq` (backend receipt order) and the per-tick order above, so a match is fully reproducible from its seed and its ordered list of accepted requests. A retry must not apply a move twice (idempotency keys, section 5.1).
 
 ### 3.3 Metrics and randomness
 
@@ -259,7 +302,7 @@ The **Letter of Authorization** is a spendable hider resource that permits addin
 - `ADD_SERVER` costs 1 LOA under the initial ruleset and activates an available slot, subject to the 16-server maximum.
 - `REMOVE_SERVER` costs 1 LOA and decommissions an active slot.
 - If a hider occupies the server being removed, the hider must relocate as part of the same atomic action or removal is rejected.
-- Goals, pending intents, and seeker targets referencing a removed server follow explicit ruleset behavior (cancel, rebind, or invalidate); never leave dangling references.
+- Goals, pending moves, and seeker targets referencing a removed server follow explicit ruleset behavior (cancel, rebind, or invalidate); never leave dangling references.
 - IDs are stable slots 0–15. Reusing a slot requires clearing its metrics, history, ownership, traces, and stale references.
 - Rejected actions spend no LOA. Accepted actions spend the LOA atomically with the lifecycle change.
 - Public lifecycle events are shown only when intended by the game rules and must not disclose hidden occupancy.
@@ -280,7 +323,7 @@ A stack is LIFO; a FIFO is a queue. Use a fixed ring buffer with `head` and `cou
 
 ## 5. API and snapshot protocol
 
-### 5.1 Submit intent
+### 5.1 Submit a move
 
 ```http
 POST /api/v1/matches/{match_id}/intents
@@ -292,6 +335,7 @@ Content-Type: application/json
 {
   "expected_revision": 104,
   "idempotency_key": "4d98b2b5-...",
+  "play_mode": "PLAY",
   "intent": {
     "type": "CONFIGURE_SERVER",
     "server_id": 4,
@@ -301,20 +345,34 @@ Content-Type: application/json
 }
 ```
 
-Identity comes from authentication, never from a body-supplied `client_id`. The request omits action cost, metric deltas, success result, reward amount, and hidden state. `ADD_SERVER` and `REMOVE_SERVER` carry only the necessary slot and relocation target. The backend derives LOA cost.
+`play_mode` is `PLAY`, `QUEUE`, or `PASS` (section 3.2). A `PASS` request carries `"intent": {"type": "PASS", "ticks": 3}`. Identity comes from authentication, never from a body-supplied `client_id`. The request omits action cost, metric deltas, success result, reward amount, and hidden state. `ADD_SERVER` and `REMOVE_SERVER` carry only the necessary slot and relocation target. The backend derives LOA cost.
 
-Example response:
+The move is handled synchronously; the response carries its outcome. Example response for a `PLAY` move that needed two ticks:
 
 ```json
 {
   "intent_id": "in_...",
-  "accepted": true,
-  "status": "QUEUED",
-  "accepted_against_revision": 104
+  "status": "APPLIED",
+  "accepted_against_revision": 104,
+  "revision": 105,
+  "tick": 47,
+  "ticks_advanced": 2,
+  "pending_applied": ["in_..."],
+  "pending_cancelled": [],
+  "events": []
 }
 ```
 
-Statuses include `QUEUED`, `APPLIED`, and `REJECTED`. Idempotency keys make retries safe. Revision conflicts return a conflict and the latest authorized revision. Validation never advances the tick as a side effect.
+Statuses:
+
+- `APPLIED`: the move was played, immediately or after advancing ticks.
+- `QUEUED`: a `QUEUE` move is pending; it will be applied on the first advanced tick at which it is affordable.
+- `CANCELLED`: a pending or advancing move was stopped before being applied (`ADVANCE_LIMIT`, target removed, goal expired, hider captured, match ended, or cancelled by its owner). The response or status record includes the reason.
+- `REJECTED`: the move was illegal or could never become affordable within `MAX_ADVANCE_TICKS`. No state changed.
+
+`events` contains only what the caller's audience may see, including seeker activity during any advanced ticks. Idempotency keys make retries safe: a retried request returns the original outcome and never applies or advances twice. If `expected_revision` is stale, the backend returns `409 Conflict` with the latest authorized revision and changes nothing; the client re-evaluates the move against the new state and resubmits if it still makes sense. The backend does not silently rebase moves, because a teammate's move may have changed the plan.
+
+A hider cancels their own pending move with `DELETE /api/v1/matches/{match_id}/intents/{intent_id}`, which also produces a new revision.
 
 ### 5.2 Read audience-specific snapshot
 
@@ -322,7 +380,7 @@ Statuses include `QUEUED`, `APPLIED`, and `REJECTED`. Idempotency keys make retr
 GET /api/v1/matches/{match_id}/views/{audience}/latest
 ```
 
-Audience is authenticated and authorized by the backend; a client cannot request another role's view just by changing a path parameter. A hider view may include that hider's private resources and LOA count, public server metrics/history/events, and visible goals. It omits other hiders' private resources, hidden ownership, raw traces, seeker beliefs, and model scores.
+Audience is authenticated and authorized by the backend; a client cannot request another role's view just by changing a path parameter. A hider view may include that hider's private resources and LOA count, public server metrics/history/events, and visible goals. It omits other hiders' private resources, hidden ownership, raw traces, seeker beliefs, and model scores. Because hiders play collaboratively, a hider view also lists the team's pending moves (owner, action, target, and queue order) so teammates can plan around them.
 
 Example abbreviated view:
 
@@ -373,7 +431,7 @@ Optional endpoints:
 - `GET /api/v1/matches/{id}/events?after_revision=N` — authorized event stream by polling
 - `POST /api/v1/matches/{id}/concede` — explicit concession
 
-No WebSocket connection is required. Polling and optional out-of-band notifications fit the asynchronous design.
+No WebSocket connection is required. The player who submits a move receives its outcome in the response. Teammates catch up by polling the `latest` pointer (cheap, cacheable, ETag-validated) or through optional out-of-band notifications.
 
 ---
 
@@ -538,6 +596,8 @@ The hider AI receives exactly the authorized hider view: its own resources/actio
 
 It outputs proposed intents only. Normal validation, authorization, revision, idempotency, and rate limits apply just as for a human hider.
 
+Because there is no game clock, an NPC hider acts only in response to a committed revision: after each revision, each NPC hider may submit at most one move. An NPC hider submits affordable moves with `PLAY` and unaffordable moves with `QUEUE`; it never uses `PASS` or advances time. This keeps time under human control and prevents NPC moves from triggering each other indefinitely. The offline simulator drives time explicitly with scripted `PASS` moves.
+
 ### 9.3 Decision pipeline
 
 ```text
@@ -613,16 +673,16 @@ Start with deterministic goal evaluation and planning. Train only after simulati
 
 ## 10. Transactionality, replay, and snapshot publication
 
-Treat every tick as a transaction:
+Treat every submitted move as one transaction, including any ticks it advances:
 
 1. Load state at revision `r`.
-2. Verify expected revision and acquire a lock or compare-and-swap token.
-3. Apply a bounded batch of intents and deterministic tick logic in memory.
-4. Persist next state, consumed intent IDs, events, policy versions, and replay data atomically as revision `r+1`.
+2. Verify expected revision and acquire a per-match lock or compare-and-swap token. Moves on the same match are serialized; moves on different matches are independent.
+3. Apply the move, pending moves, and up to `MAX_ADVANCE_TICKS` of deterministic tick logic in memory.
+4. Persist next state, applied/queued/cancelled move IDs, events, policy versions, and replay data atomically as revision `r+1`.
 5. Generate sanitized snapshots from committed state.
 6. Publish immutable revision objects, then update the latest pointer.
 
-Durable scheduling is still required even without sockets. A worker/job queue must find due matches and retry safely. Persist action logs, initial seed, ruleset version, seeker/hider policy versions, and nondeterministic inputs so decisions can be replayed or explained.
+No scheduler, job queue, or background worker is required: all state changes happen inside requests, and an idle match needs no server work. Request cost is bounded by `MAX_ADVANCE_TICKS`. A match is replayed by re-running its ordered list of accepted requests from the initial seed, so persist that request log, the ruleset version, seeker/hider policy versions, and any nondeterministic inputs so decisions can be replayed or explained.
 
 ---
 
@@ -646,14 +706,14 @@ Durable scheduling is still required even without sockets. A worker/job queue mu
 
 Collect structured, revision/tick-keyed metrics for:
 
-- Tick duration, queue delay, worker retry, transaction conflict, and stalled-match rate
+- Move request duration, ticks advanced per request, `ADVANCE_LIMIT` cancellations, pending-ring depth, and transaction conflict rate
 - Intents accepted/rejected by reason and duplicate retry count
 - Snapshot generation/publication lag, size, and cache behavior
 - Seeker tokens, probe count, hit/evidence rate, target diversity, model latency, invalid outputs, and fallback rate
 - Hider AI goal selections, reward outcomes, goal switches, plan recoveries, intent rejection, LOA use, model latency, and fallback rate
 - Match outcomes by ruleset, goal template, and policy/model version
 
-Use pseudonymous match IDs and avoid unnecessary personal data. Alert on stalled ticks, publication lag, repeated transaction conflicts, invalid model outputs, version mismatches, excessive fallbacks, and repeated invalid AI intents. Keep private diagnostics out of player-facing projections.
+Use pseudonymous match IDs and avoid unnecessary personal data. Alert on slow move requests, publication lag, repeated transaction conflicts, invalid model outputs, version mismatches, excessive fallbacks, and repeated invalid AI intents. Keep private diagnostics out of player-facing projections.
 
 ---
 
@@ -661,8 +721,8 @@ Use pseudonymous match IDs and avoid unnecessary personal data. Alert on stalled
 
 1. Freeze the rules: phases, actions, metric formulas, costs, probe consequences, goal/reward contract, LOA lifecycle, and victory conditions.
 2. Implement fixed-size state, bounded rings, explicit serialization, and schema migrations.
-3. Implement deterministic tick engine, resource accounting, server lifecycle, goal resolver, probe resolver, and replay.
-4. Implement authenticated intent API with idempotency and revision checks.
+3. Implement deterministic on-demand tick engine (advance loop and pending-move ring), resource accounting, server lifecycle, goal resolver, probe resolver, and replay.
+4. Implement authenticated move API (`PLAY`/`QUEUE`/`PASS`, cancel) with idempotency and revision checks.
 5. Implement audience projection and immutable revision snapshots; verify no hidden-field leakage.
 6. Build player analysis UI over permitted raw evidence without automatic hider searching.
 7. Implement seeker deterministic baseline, candidate mask, tokens, and probe resolution.
@@ -681,7 +741,9 @@ Use pseudonymous match IDs and avoid unnecessary personal data. Alert on stalled
 - **The hider agent can pursue any reward goal expressible in the shared schema.** Novel requirement types need evaluator and planner support; narrative conditions are not automatically understood.
 - **One shared hider model is enough initially.** Multiple neural networks are not required. A finite-state controller provides workflow continuity; a learned ranker can be added as a decision aid.
 - **Player analysis stays player-driven.** Do not expose automatic hider search or target recommendations to human clients if searching is intended gameplay.
-- **Static snapshots do not remove backend scheduling or transactional requirements.** They remove persistent client connections, not server work.
+- **Time advances only on demand.** There is no game clock or background worker. A hider's move advances ticks only when it needs resources that regenerate over time, and queued moves play on the first tick they become affordable.
+- **Collaboration happens on the clients.** Any hider may move at any time. The backend serializes moves per match with revision checks and leaves planning to the players.
+- **Static snapshots do not remove transactional requirements.** Every move still needs per-match serialization, idempotency, and atomic commits.
 - **Fixed arrays do not mean raw struct persistence.** Use explicit, versioned serialization and bounded buffers.
 - **Immutable snapshots need immutable revision paths.** A mutable latest pointer is separate from those objects.
 - **WASM separation is not secrecy.** Anything shipped to clients is inspectable.
