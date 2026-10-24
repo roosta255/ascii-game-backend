@@ -2,6 +2,8 @@
 #include <nlohmann/json.hpp>
 #include "service_test_support.hpp"
 #include "HiderSeekerService.hpp"
+#include "hider_status.hpp"
+#include "loa_rules.hpp"
 
 using json = nlohmann::json;
 
@@ -22,7 +24,7 @@ ApiResponse createWithNpcs(ServiceFixture& fx, int hiderCount, const json& npcHi
 
 } // namespace
 
-TEST_CASE("NPC-030 (slots bound at creation)") {
+TEST_CASE("NPC-030 (slots bound at creation)", "[hider_seeker][api][npc]") {
     hs_test::ServiceFixture fx;
     const ApiResponse response = createWithNpcs(fx, 3, 2);
     REQUIRE(response.status == 201);
@@ -45,25 +47,25 @@ TEST_CASE("NPC-030 (slots bound at creation)") {
     REQUIRE(state.revision == 0);
     REQUIRE(state.hiders[0].active == 0);
     
-    // Slots 1 and 2 should be active with correct properties (using constants from match_setup.hpp)
+    // Slots 1 and 2 should be active with correct properties
     REQUIRE(state.hiders[1].active == 1);
-    REQUIRE(state.hiders[1].status == 0);  // HIDER_STATUS_ACTIVE = 0
+    REQUIRE(state.hiders[1].status == HIDER_STATUS_ACTIVE);
     REQUIRE(state.hiders[1].action_points == 0);  // PLACEHOLDER_START_ACTION_POINTS = 0
-    REQUIRE(state.hiders[1].resources[0] == 1);   // LOA_RESOURCE_INDEX = 0, PLACEHOLDER_START_LOA = 1
+    REQUIRE(state.hiders[1].resources[LOA_RESOURCE_INDEX] == 1);   // PLACEHOLDER_START_LOA = 1
     
     REQUIRE(state.hiders[2].active == 1);
-    REQUIRE(state.hiders[2].status == 0);  // HIDER_STATUS_ACTIVE = 0
+    REQUIRE(state.hiders[2].status == HIDER_STATUS_ACTIVE);
     REQUIRE(state.hiders[2].action_points == 0);  // PLACEHOLDER_START_ACTION_POINTS = 0
-    REQUIRE(state.hiders[2].resources[0] == 1);   // LOA_RESOURCE_INDEX = 0, PLACEHOLDER_START_LOA = 1
+    REQUIRE(state.hiders[2].resources[LOA_RESOURCE_INDEX] == 1);   // PLACEHOLDER_START_LOA = 1
 }
 
-TEST_CASE("NPC-031 (range)") {
+TEST_CASE("NPC-031 (range)", "[hider_seeker][api][npc]") {
     hs_test::ServiceFixture fx;
     
     // Test invalid npc_hiders values
-    REQUIRE(createWithNpcs(fx, 2, 2).status == 400);      // Too many NPCs
-    REQUIRE(createWithNpcs(fx, 2, -1).status == 400);     // Negative value
-    REQUIRE(createWithNpcs(fx, 2, "1").status == 400);    // Non-integer
+    hs_test::requireError(createWithNpcs(fx, 2, 2), 400, "INVALID_REQUEST");      // Too many NPCs
+    hs_test::requireError(createWithNpcs(fx, 2, -1), 400, "INVALID_REQUEST");     // Negative value
+    hs_test::requireError(createWithNpcs(fx, 2, "1"), 400, "INVALID_REQUEST");    // Non-integer
     
     // Test valid case
     const ApiResponse response = createWithNpcs(fx, 2, 0);
@@ -75,17 +77,17 @@ TEST_CASE("NPC-031 (range)") {
     REQUIRE(hiders[1].at("account").is_null());
 }
 
-TEST_CASE("NPC-032 (joining and starting)") {
+TEST_CASE("NPC-032 (joining and starting)", "[hider_seeker][api][npc]") {
     hs_test::ServiceFixture fx;
     
     // Create a match with 1 NPC
     createWithNpcs(fx, 2, 1);
     
     // Joining an NPC account should fail
-    REQUIRE(fx.join("npc_0").status == 400);
+    hs_test::requireError(fx.join("npc_0"), 400, "INVALID_REQUEST");
     
     // Starting the match should fail because only NPCs are bound
-    REQUIRE(fx.start("host").status == 409);
+    hs_test::requireError(fx.start("host"), 409, "NO_HIDERS");
     
     // Joining a human account should succeed
     const ApiResponse joinResponse = fx.join("alice");
@@ -93,7 +95,7 @@ TEST_CASE("NPC-032 (joining and starting)") {
     REQUIRE(joinResponse.body.at("hider_id") == 0);
     
     // Joining another human should fail (match full)
-    REQUIRE(fx.join("bob").status == 409);
+    hs_test::requireError(fx.join("bob"), 409, "MATCH_FULL");
     
     // Starting the match should now succeed
     const ApiResponse startResponse = fx.start("host");
