@@ -51,6 +51,15 @@ private:
     // The mutex for matchId, created on first access under matchMutexesGuard_.
     std::mutex& mutexFor(const std::string& matchId);
 
+    // submitMove / cancelMove / startMatch without the NPC round that follows
+    // each of them.
+    ApiResponse submitMoveOnce(const std::string& matchId, const std::string& body);
+    ApiResponse cancelMoveOnce(const std::string& matchId, const std::string& intentId, const std::string& body);
+    ApiResponse startMatchOnce(const std::string& matchId, const std::string& body);
+    // NPC-001: after a committed revision, each NPC hider (account "npc_<slot>",
+    // ascending slot) reads its own hider view and submits at most one move.
+    void runNpcRound(const std::string& matchId);
+
     iStore& store_;
     const iSeekerPolicy& seekerPolicy_;
     std::map<std::string, std::unique_ptr<std::mutex>> matchMutexes_;
