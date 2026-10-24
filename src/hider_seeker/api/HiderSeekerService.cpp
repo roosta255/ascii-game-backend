@@ -877,8 +877,8 @@ ApiResponse HiderSeekerService::submitMove(const std::string& matchId, const std
     return response;
 }
 
-ApiResponse HiderSeekerService::cancelMove(const std::string& matchId, const std::string& intentId,
-                                           const std::string& body) {
+ApiResponse HiderSeekerService::cancelMoveOnce(const std::string& matchId, const std::string& intentId,
+                                               const std::string& body) {
     json request;
     std::string account;
     ApiResponse failure;
@@ -918,6 +918,15 @@ ApiResponse HiderSeekerService::cancelMove(const std::string& matchId, const std
         logBody["intent_id"] = intentId;
         return logged(ApiResponse{200, responseBody}, logBody);
     });
+}
+
+ApiResponse HiderSeekerService::cancelMove(const std::string& matchId, const std::string& intentId,
+                                           const std::string& body) {
+    ApiResponse response = cancelMoveOnce(matchId, intentId, body);
+    if (response.status == 200) {
+        runNpcRound(matchId);
+    }
+    return response;
 }
 
 void HiderSeekerService::runNpcRound(const std::string& matchId) {
