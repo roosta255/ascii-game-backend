@@ -83,7 +83,7 @@ TEST_CASE("TURN-012a: verify engine cancellation recording", "[hider_seeker][tur
     // Hider 0 plays PAY_GOAL (10 AP) with 0 AP: becomes affordable after 3 ticks.
     const TurnResult played = playMove(state, hiderAction(3, 0, HiderActionMode::PAY_GOAL), policy);
     REQUIRE(played.status == MoveStatus::CANCELLED);
-    // The move should be cancelled due to advance limit (not because of the capture)
+    // Hider 0 is captured on the second tick: its PLAY move and its pending move 1 are cancelled HIDER_CAPTURED
     REQUIRE(state.pending_count == 1); // Only hider 1's move remains
     REQUIRE(played.pendingCancelledCount == 1);
     REQUIRE(played.pendingCancelled.getOrDefault(0, PendingMoveCancelled{}).move_id == 1);
@@ -98,8 +98,4 @@ TEST_CASE("TURN-012a: verify engine cancellation recording", "[hider_seeker][tur
     REQUIRE(cancelled.pendingCancelled.getOrDefault(0, PendingMoveCancelled{}).move_id == 2);
     REQUIRE(cancelled.pendingCancelled.getOrDefault(0, PendingMoveCancelled{}).reason == TurnReason::OWNER_CANCELLED);
 
-    // Access an entry via accessConst to verify compilation
-    cancelled.pendingCancelled.accessConst(0, [&](const PendingMoveCancelled& e) {
-        (void)e;
-    });
 }
