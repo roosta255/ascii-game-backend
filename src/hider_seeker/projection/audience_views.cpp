@@ -1,6 +1,7 @@
 #include "audience_views.hpp"
 #include "names.hpp"
 #include "../ruleset/action_rules.hpp"
+#include "../ruleset/regeneration.hpp"
 #include "../ruleset/loa_rules.hpp"
 #include "../ruleset/hider_status.hpp"
 #include "../tick/tick_types.hpp"
@@ -174,6 +175,23 @@ void computeContentHash(json& view) {
     view["content_hash"] = fnv1a64Hex(view.dump());
 }
 
+// The tuning values a client needs to preview a move: AP regeneration per
+// tick, the AP cap, the advance limit, and each intent type's AP cost from
+// HiderAction.enum. Reads no MatchState.
+json renderRules() {
+    json costs = json::object();
+    for (uint8_t index = 0; index < HIDER_ACTION_MODE_COUNT; ++index) {
+        const HiderActionMode mode = static_cast<HiderActionMode>(index);
+        costs[actionModeName(mode)] = hiderActionDef(mode).ap_cost;
+    }
+    return {
+        {"ap_regen_per_tick", PLACEHOLDER_AP_REGEN_PER_TICK},
+        {"ap_cap", PLACEHOLDER_AP_CAP},
+        {"max_advance_ticks", MAX_ADVANCE_TICKS},
+        {"action_ap_costs", costs}
+    };
+}
+
 json renderSelf(const MatchState& state, const ViewContext& ctx, uint8_t hiderId) {
     const HiderState& hider = state.hiders[hiderId];
     json resources = json::array();
@@ -280,6 +298,7 @@ nlohmann::json buildHiderView(const MatchState& state, const ViewContext& ctx, u
     // Add team_reward and reward_target
     view["team_reward"] = teamReward(state);
     view["reward_target"] = PLACEHOLDER_HIDER_REWARD_TARGET;
+    view["rules"] = renderRules();
     
     computeContentHash(view);
     return view;
