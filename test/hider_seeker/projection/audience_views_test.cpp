@@ -12,6 +12,7 @@
 #include "state.hpp"
 #include "rule_types.hpp"
 #include "action_rules.hpp"
+#include "names.hpp"
 #include "loa_rules.hpp"
 #include "hider_status.hpp"
 #include "lifecycle_events.hpp"
@@ -120,6 +121,7 @@ PendingMove pendingMove(uint32_t moveId, uint32_t submitSeq, uint8_t hiderId, Ti
 
 // 5a4: view_version 2 adds winner and team_connections
 // 6c: view_version 3 adds goals to the hider view
+// 11a: view_version 4 adds rules to the hider view
 const std::set<std::string> COMMON_KEYS = {
     "match_id", "audience", "view_version", "schema_version", "ruleset_version", "revision", "tick", "phase",
     "hider_count", "server_count", "servers", "events", "winner", "content_hash"
@@ -132,7 +134,7 @@ TEST_CASE("PROJ-002/003: hider and public views have exactly their documented to
     const ViewContext ctx = baseContext();
 
     std::set<std::string> hiderKeys = COMMON_KEYS;
-    hiderKeys.insert({"hider_id", "self", "team", "pending", "team_connections", "goals", "team_reward", "reward_target"});
+    hiderKeys.insert({"hider_id", "self", "team", "pending", "team_connections", "goals", "team_reward", "reward_target", "rules"});
     std::set<std::string> publicKeys = COMMON_KEYS;
     publicKeys.insert("hiders");
 
@@ -160,11 +162,11 @@ TEST_CASE("VIEW-010 (views): view_version 2 and winner handling", "[hider_seeker
     MatchState state = baseState();
     ViewContext ctx = baseContext();
 
-    // Test: both views have view_version 3 and winner null on an active match
+    // Test: both views have view_version 4 and winner null on an active match
     const json hider = buildHiderView(state, ctx, 0);
     const json pub = buildPublicView(state, ctx);
-    REQUIRE(hider.at("view_version") == 3);
-    REQUIRE(pub.at("view_version") == 3);
+    REQUIRE(hider.at("view_version") == 4);
+    REQUIRE(pub.at("view_version") == 4);
     REQUIRE(hider.at("winner").is_null());
     REQUIRE(pub.at("winner").is_null());
 
@@ -826,8 +828,8 @@ TEST_CASE("VIEW-021 (view_version 3): both views have view_version 3", "[hider_s
     const json pub = buildPublicView(state, ctx);
     
     // Test: both views have view_version 3
-    REQUIRE(hider.at("view_version") == 3);
-    REQUIRE(pub.at("view_version") == 3);
+    REQUIRE(hider.at("view_version") == 4);
+    REQUIRE(pub.at("view_version") == 4);
     
     // Test: public view does not contain the new keys
     REQUIRE(hider.contains("goals"));
@@ -836,4 +838,32 @@ TEST_CASE("VIEW-021 (view_version 3): both views have view_version 3", "[hider_s
     REQUIRE(pub.contains("goals") == false);
     REQUIRE(pub.contains("team_reward") == false);
     REQUIRE(pub.contains("reward_target") == false);
+}
+
+TEST_CASE("VIEW-030 (rules in the hider view): rules object contains correct values", "[hider_seeker][projection]") {
+    const MatchState state = baseState();
+    const ViewContext ctx = baseContext();
+
+    const json rules = buildHiderView(state, ctx, 0).at("rules");
+    
+    // Check the top-level fields
+    REQUIRE(rules.at("ap_regen_per_tick") == 2);
+    REQUIRE(rules.at("ap_cap") == 10);
+    REQUIRE(rules.at("max_advance_ticks") == 16);
+    
+    // Check action_ap_costs has exactly HIDER_ACTION_MODE_COUNT entries
+    const json& actionCosts = rules.at("action_ap_costs");
+    REQUIRE(actionCosts.size() == HIDER_ACTION_MODE_COUNT);
+    
+    // Check each action cost matches the expected values
+    for (uint8_t index = 0; index < HIDER_ACTION_MODE_COUNT; ++index) {
+        const HiderActionMode mode = static_cast<HiderActionMode>(index);
+        const std::string actionName = actionModeName(mode);
+        REQUIRE(actionCosts.contains(actionName));
+        REQUIRE(actionCosts.at(actionName) == hiderActionDef(mode).ap_cost);
+    }
+    
+    // Check that public view does not contain rules
+    const json pub = buildPublicView(state, ctx);
+    REQUIRE(pub.contains("rules") == false);
 }
